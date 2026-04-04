@@ -1,5 +1,6 @@
 import { eq, and, desc, asc, gte, lte, sql, or, like, isNotNull, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
+import { createPool } from "mysql2";
 import { 
   InsertUser, users, sites, InsertSite, assetCategories, assets, InsertAsset,
   workOrders, InsertWorkOrder, maintenanceSchedules, InsertMaintenanceSchedule,
@@ -14,10 +15,21 @@ import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
+function useRdsTls(): boolean {
+  const v = process.env.DATABASE_SSL;
+  return v === "true" || v === "1";
+}
+
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      const pool = createPool({
+        uri: process.env.DATABASE_URL,
+        ...(useRdsTls()
+          ? { ssl: { rejectUnauthorized: true } }
+          : {}),
+      });
+      _db = drizzle(pool);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
