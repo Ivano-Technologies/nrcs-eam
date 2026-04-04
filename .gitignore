@@ -14,8 +14,8 @@ build/
 .env.test.local
 .env.production.local
 
-# Local tooling / agent artifacts
-.manus/
+# Manus IDE: SQL query caches under .manus/db/ embed DB connection metadata — do not commit
+.manus/db/
 
 # IDE and editor files
 .vscode/
