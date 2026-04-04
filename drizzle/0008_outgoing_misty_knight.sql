@@ -1,0 +1,1 @@
+ALTER TABLE `financialTransactions` MODIFY COLUMN `transactionType` enum('acquisition','maintenance','repair','disposal','depreciation','revenue','other') NOT NULL;
