@@ -40,6 +40,8 @@ Open the app at the URL printed by the dev server (typically `http://localhost:3
 
 This repo is the **canonical home** for NRCS EAM work. It is intentionally slimmer than the multi-tenant `techivano-eam` codebase and should stay maintainable for one organization.
 
+See **[CONTRIBUTING.md](CONTRIBUTING.md)** for branching, data-handling rules, and scope (single-organization).
+
 ## License
 
 MIT — see `LICENSE` if present; otherwise refer to your organization’s policy for deployment artifacts.
