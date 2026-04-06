@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { loadSecrets } from "../../shared/loadSecrets";
 import express from "express";
 import { createServer } from "http";
 import net from "net";
@@ -68,4 +69,9 @@ async function startServer() {
   });
 }
 
-startServer().catch(console.error);
+async function main() {
+  await loadSecrets();
+  await startServer();
+}
+
+main().catch(console.error);
