@@ -119,3 +119,4 @@ temp/
 .aws/
 .env
 .env.local
+certs/global-bundle.pem
