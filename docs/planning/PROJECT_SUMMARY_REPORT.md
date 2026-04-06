@@ -383,11 +383,11 @@ trpc.dashboard.stats.useQuery()
 ## 📝 Documentation
 
 ### Available Documents
-- `README.md` - Template documentation
-- `INACTIVE_FEATURES_AUDIT.md` - Feature audit report
-- `ENHANCEMENTS_STATUS.md` - Enhancement implementation status
-- `PROJECT_SUMMARY_REPORT.md` - This document
-- `todo.md` - Feature tracking (837 lines)
+- [README.md](../../README.md) — Project overview and setup
+- [INACTIVE_FEATURES_AUDIT.md](INACTIVE_FEATURES_AUDIT.md) — Feature audit report
+- [ENHANCEMENTS_STATUS.md](ENHANCEMENTS_STATUS.md) — Enhancement implementation status
+- [PROJECT_SUMMARY_REPORT.md](PROJECT_SUMMARY_REPORT.md) — This document
+- [todo.md](todo.md) — Feature tracking
 
 ### Legal Pages
 - Terms of Service (`/legal/terms`)
@@ -501,4 +501,4 @@ trpc.dashboard.stats.useQuery()
 
 **Report End**
 
-*For the latest updates and detailed implementation status, refer to `ENHANCEMENTS_STATUS.md` and `todo.md`.*
+*For the latest updates and detailed implementation status, refer to [ENHANCEMENTS_STATUS.md](ENHANCEMENTS_STATUS.md) and [todo.md](todo.md).*

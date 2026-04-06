@@ -5,7 +5,7 @@ import { dirname, join } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const dbPath = join(__dirname, '.data', 'sqlite.db');
+const dbPath = join(__dirname, '..', '..', '.data', 'sqlite.db');
 const db = new Database(dbPath);
 
 console.log('🗑️  Starting database cleanup...\n');

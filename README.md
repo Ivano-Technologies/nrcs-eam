@@ -7,6 +7,19 @@ Single-organization web application for the **Nigerian Red Cross Society** to ma
 - **Single-tenant:** one NRCS deployment—not a multi-tenant SaaS. There is no per-customer subdomain or org-isolation layer like the broader Techivano EAM platform.
 - **Straightforward stack:** Vite + React, Express + tRPC, Drizzle ORM, MySQL (via `DATABASE_URL`). Optional QuickBooks, S3, and email integrations as configured in your environment.
 
+## Repository layout
+
+| Path | Purpose |
+|------|---------|
+| `client/` | Vite + React SPA (`src/`, `public/`) |
+| `server/` | Express + tRPC API |
+| `shared/` | Types and constants used by client and server |
+| `drizzle/` | Drizzle schema and migrations |
+| `docs/` | **Documentation index:** [docs/README.md](docs/README.md) — AWS, Vercel, bulk import, PWA, deployment |
+| `docs/planning/` | Internal status reports, audits, backlog (optional reading) |
+| `scripts/` | Build helpers, deploy scripts, **`scripts/db/`** for DB utilities |
+| `.github/` | GitHub Actions workflows |
+
 ## Requirements
 
 - Node.js 22+

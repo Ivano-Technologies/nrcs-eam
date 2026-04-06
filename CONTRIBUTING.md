@@ -26,6 +26,8 @@ pnpm dev
 
 Run `pnpm run check` before pushing TypeScript changes.
 
+**Documentation:** operational and deployment guides are listed in **[docs/README.md](docs/README.md)** (AWS, Vercel, bulk import, PWA). Planning notes and backlogs live under **`docs/planning/`**.
+
 ## Relationship to Techivano EAM
 
 The broader **techivano-eam** codebase may include multi-tenant and platform features. When porting ideas from there, **adapt** them to this single-org model rather than copying tenant machinery wholesale.

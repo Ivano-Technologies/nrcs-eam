@@ -357,7 +357,7 @@ For accurate asset tracking on the map:
 
 For additional help with bulk imports:
 
-1. **Check the Implementation Plan** - Review `/IMPLEMENTATION_PLAN.md` for technical details
+1. **Check the Implementation Plan** — Review [IMPLEMENTATION_PLAN.md](planning/IMPLEMENTATION_PLAN.md) for technical details
 2. **Contact System Administrator** - Your admin can help troubleshoot import issues
 3. **Review Audit Logs** - Check Activity Log page for detailed error messages
 4. **Test Environment** - Practice imports in a test environment first

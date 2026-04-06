@@ -1,6 +1,12 @@
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import { drizzle } from 'drizzle-orm/mysql2';
 import mysql from 'mysql2/promise';
-import * as schema from './drizzle/schema.ts';
+import * as dotenv from 'dotenv';
+import * as schema from '../../drizzle/schema.ts';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: join(__dirname, '../../.env') });
 
 const DATABASE_URL = process.env.DATABASE_URL;
 
