@@ -25,6 +25,8 @@ pnpm dev
 
 **AWS RDS (MySQL):** use a standard `mysql://` URL, set **`DATABASE_SSL=true`** for TLS, then run migrations. See **[docs/AWS_RDS.md](docs/AWS_RDS.md)** for VPC, security groups, and checklist.
 
+**AWS App Runner:** production uses **`pnpm build`** then **`pnpm start`** (`node dist/index.js`). See **[docs/AWS_APP_RUNNER.md](docs/AWS_APP_RUNNER.md)** for build/start commands, VPC connector, and RDS security groups.
+
 Open the app at the URL printed by the dev server (typically `http://localhost:3000`).
 
 ## Scripts
