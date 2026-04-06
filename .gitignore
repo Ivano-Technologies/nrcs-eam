@@ -112,11 +112,16 @@ temp/
 *.sqlite
 *.sqlite3
 
-# Operational / sensitive spreadsheets (use templates in docs or share out-of-band)
-*NRCS*Asset register*.xlsx
-*Asset register*.xlsx
+# Operational data: spreadsheets, exports, local dumps (prefer seeds in repo code or docs/templates)
+*.xlsx
+*.xls
+*.csv
+/data/
+/uploads/
+/import-exports/
+# Allow checked-in templates only if you add them under docs/templates/:
+# !docs/templates/
+# !docs/templates/**
 
 .aws/
-.env
-.env.local
 certs/global-bundle.pem

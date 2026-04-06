@@ -16,6 +16,10 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "db:push": "drizzle-kit generate && drizzle-kit migrate",
+    "db:reset": "node scripts/db/reset-db.mjs",
+    "db:seed": "node scripts/db/seed-db.mjs",
+    "db:seed:sample": "node scripts/db/seed-sample-data.mjs",
+    "db:cleanup": "node scripts/db/cleanup-database.mjs",
     "test:pdfkit": "tsx scripts/pdfkit-smoke.ts"
   },
   "dependencies": {

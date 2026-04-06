@@ -12,7 +12,7 @@ This application is **single-organization** (Nigerian Red Cross Society). Featur
 ## Secrets and operational data
 
 - Do **not** commit real asset inventories, production exports, or credentials. Use `.env` (already gitignored) and share sample data via documented seed scripts if needed.
-- The repo ignores common patterns for operational asset-register spreadsheets; keep authoritative registers in your secure storage, not in Git.
+- **`.gitignore`** excludes common operational dumps: `*.xlsx`, `*.xls`, `*.csv`, `/data/`, `/uploads/`, `/import-exports/`. To add a vetted template under `docs/templates/`, adjust `.gitignore` with negated patterns. Keep authoritative registers in secure storage, not in Git.
 - The **`.manus/db/`** directory (Manus IDE SQL query caches) must stay ignored — those files are not auth source code and can embed **database host and usernames** in saved commands. See `.manus/README.md`.
 
 ## Local development

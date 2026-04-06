@@ -15,8 +15,9 @@ Single-organization web application for the **Nigerian Red Cross Society** to ma
 | `server/` | Express + tRPC API |
 | `shared/` | Types and constants used by client and server |
 | `drizzle/` | Drizzle schema and migrations |
-| `docs/` | **Documentation index:** [docs/README.md](docs/README.md) — AWS, Vercel, bulk import, PWA, deployment |
-| `docs/planning/` | Internal status reports, audits, backlog (optional reading) |
+| `docs/` | **Documentation index:** [docs/README.md](docs/README.md) — AWS, Vercel, architecture, ADRs, guides |
+| `docs/planning/` | Active planning notes; move obsolete docs to `docs/archive/` |
+| `docs/ADR/` | Architecture decision records |
 | `scripts/` | Build helpers, deploy scripts, **`scripts/db/`** for DB utilities |
 | `.github/` | GitHub Actions workflows |
 
@@ -52,6 +53,10 @@ Open the app at the URL printed by the dev server (typically `http://localhost:3
 | `pnpm check`  | Typecheck                                        |
 | `pnpm test`   | Vitest                                           |
 | `pnpm db:push`| Generate + apply Drizzle migrations              |
+| `pnpm db:reset` | Truncate app tables (keeps users); MySQL       |
+| `pnpm db:seed` | Seed minimal sites and categories               |
+| `pnpm db:seed:sample` | Larger sample dataset                    |
+| `pnpm db:cleanup` | Legacy SQLite cleanup (see `scripts/db/`)   |
 
 ## Repository
 
