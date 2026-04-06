@@ -1,5 +1,13 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import {
+  AuthBrandLogo,
+  AuthFooterNote,
+  AuthHeroLayout,
+  AuthSubtitle,
+  AuthTitle,
+  authPrimaryButtonClass,
+} from "@/components/auth/AuthPageShell";
 import { appPath } from "@/lib/routes";
 import { useEffect } from "react";
 import { Link, useLocation } from "wouter";
@@ -16,38 +24,34 @@ export default function LandingPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-white via-blue-50 to-red-50">
-        <p className="text-muted-foreground">Loading…</p>
-      </div>
+      <AuthHeroLayout>
+        <p className="text-base text-[#6b7280]">Loading…</p>
+      </AuthHeroLayout>
     );
   }
 
   if (user) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-white via-blue-50 to-red-50 px-4">
-        <div className="max-w-lg text-center space-y-6">
-          <p className="text-muted-foreground">Opening your dashboard…</p>
-          <Button asChild size="lg" className="shadow-lg">
-            <Link href={appPath("/")}>Go to Dashboard</Link>
-          </Button>
-        </div>
-      </div>
+      <AuthHeroLayout>
+        <AuthBrandLogo />
+        <AuthTitle>NRCS Asset Management</AuthTitle>
+        <AuthSubtitle>Opening your dashboard…</AuthSubtitle>
+        <Button asChild className={authPrimaryButtonClass}>
+          <Link href={appPath("/")}>Go to Dashboard</Link>
+        </Button>
+      </AuthHeroLayout>
     );
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-white via-blue-50 to-red-50 px-4">
-      <div className="max-w-lg text-center space-y-6">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">
-          NRCS Asset Management
-        </h1>
-        <p className="text-muted-foreground text-lg">
-          Enterprise Asset Management System — Nigerian Red Cross Society
-        </p>
-        <Button asChild size="lg" className="shadow-lg">
-          <Link href="/login">Sign In</Link>
-        </Button>
-      </div>
-    </div>
+    <AuthHeroLayout>
+      <AuthBrandLogo />
+      <AuthTitle>NRCS Asset Management</AuthTitle>
+      <AuthSubtitle>Enterprise Asset Management System — Nigerian Red Cross Society</AuthSubtitle>
+      <Button asChild className={authPrimaryButtonClass}>
+        <Link href="/login">Sign In</Link>
+      </Button>
+      <AuthFooterNote>Authorized personnel only.</AuthFooterNote>
+    </AuthHeroLayout>
   );
 }

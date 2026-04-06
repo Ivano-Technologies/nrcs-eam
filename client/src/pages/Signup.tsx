@@ -3,15 +3,22 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  AuthBrandLogo,
+  AuthFooterNote,
+  AuthHeroLayout,
+  AuthSubtitle,
+  AuthTitle,
+  authPrimaryButtonClass,
+} from "@/components/auth/AuthPageShell";
 import { trpc } from "@/lib/trpc";
 
 export default function Signup() {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
-  
+
   const signupMutation = trpc.auth.signup.useMutation({
     onSuccess: (data) => {
       if (data.success) {
@@ -30,7 +37,7 @@ export default function Signup() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setMessage(null);
-    
+
     if (!email || !name) {
       setMessage({ type: "error", text: "Please fill in all fields" });
       return;
@@ -40,77 +47,68 @@ export default function Signup() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1 text-center">
-          <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 bg-[#1E3A8A] rounded-full flex items-center justify-center">
-              <span className="text-white text-2xl font-bold">NR</span>
-            </div>
-          </div>
-          <CardTitle className="text-2xl font-bold">Create Account</CardTitle>
-          <CardDescription>
-            Nigerian Red Cross Society
-            <br />
-            Enterprise Asset Management
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {message && (
-              <Alert variant={message.type === "error" ? "destructive" : "default"}>
-                <AlertDescription>{message.text}</AlertDescription>
-              </Alert>
-            )}
+    <AuthHeroLayout>
+      <AuthBrandLogo />
+      <AuthTitle>Create your account</AuthTitle>
+      <AuthSubtitle>Access the NRCS asset management system</AuthSubtitle>
 
-            <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
-              <Input
-                id="name"
-                type="text"
-                placeholder="John Doe"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                disabled={signupMutation.isPending}
-                required
-              />
-            </div>
+      <form onSubmit={handleSubmit} className="mt-8 w-full space-y-4 text-left">
+        {message && (
+          <Alert variant={message.type === "error" ? "destructive" : "default"} className="text-left">
+            <AlertDescription>{message.text}</AlertDescription>
+          </Alert>
+        )}
 
-            <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="john@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={signupMutation.isPending}
-                required
-              />
-            </div>
+        <div className="space-y-2">
+          <Label htmlFor="name" className="text-[15px] text-neutral-700">
+            Full Name
+          </Label>
+          <Input
+            id="name"
+            type="text"
+            placeholder="John Doe"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            disabled={signupMutation.isPending}
+            required
+            className="h-12 rounded-[10px] text-[15px]"
+          />
+        </div>
 
-            <Button
-              type="submit"
-              className="w-full bg-[#1E3A8A] hover:bg-[#1E3A8A]/90"
-              disabled={signupMutation.isPending}
-            >
-              {signupMutation.isPending ? "Submitting..." : "Request Access"}
-            </Button>
+        <div className="space-y-2">
+          <Label htmlFor="email" className="text-[15px] text-neutral-700">
+            Email Address
+          </Label>
+          <Input
+            id="email"
+            type="email"
+            placeholder="john@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={signupMutation.isPending}
+            required
+            className="h-12 rounded-[10px] text-[15px]"
+          />
+        </div>
 
-            <div className="text-center text-sm text-gray-600">
-              Already have an account?{" "}
-              <Link href="/login" className="text-[#1E3A8A] hover:underline font-medium">
-                Sign In
-              </Link>
-            </div>
-          </form>
+        <Button type="submit" className={authPrimaryButtonClass} disabled={signupMutation.isPending}>
+          {signupMutation.isPending ? "Submitting..." : "Request Access"}
+        </Button>
 
-          <div className="mt-6 pt-6 border-t text-center text-xs text-gray-500">
-            <p>Your request will be reviewed by an administrator.</p>
-            <p className="mt-1">You'll receive an email once approved.</p>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+        <p className="pt-2 text-center text-sm text-[#6b7280]">
+          Already have an account?{" "}
+          <Link href="/login" className="font-medium text-[#ef4444] hover:underline">
+            Sign In
+          </Link>
+        </p>
+      </form>
+
+      <div className="mt-10 text-center text-xs leading-relaxed text-[#9ca3af]">
+        <p>Your request will be reviewed by an administrator.</p>
+        <p className="mt-1">You&apos;ll receive an email once approved.</p>
+      </div>
+
+      <AuthFooterNote>Authorized personnel only.</AuthFooterNote>
+    </AuthHeroLayout>
   );
 }
