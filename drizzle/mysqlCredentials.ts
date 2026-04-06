@@ -3,6 +3,8 @@
  * RDS: set DATABASE_SSL=true and use a standard mysql:// URL (see docs/AWS_RDS.md).
  */
 
+import { isDatabaseSslEnabled, mysql2SslRejectUnauthorized } from "../shared/mysqlSsl";
+
 export function getDrizzleMysqlCredentials():
   | { url: string }
   | {
@@ -18,8 +20,7 @@ export function getDrizzleMysqlCredentials():
     throw new Error("DATABASE_URL is required to run drizzle commands");
   }
 
-  const tls = process.env.DATABASE_SSL === "true" || process.env.DATABASE_SSL === "1";
-  if (!tls) {
+  if (!isDatabaseSslEnabled()) {
     return { url: connectionString };
   }
 
@@ -43,6 +44,6 @@ export function getDrizzleMysqlCredentials():
     user,
     password,
     database,
-    ssl: { rejectUnauthorized: true },
+    ssl: { rejectUnauthorized: mysql2SslRejectUnauthorized() },
   };
 }

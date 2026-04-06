@@ -52,15 +52,17 @@ Copy the **endpoint** hostname (e.g. `nrcs-eam.xxxxxxxxxxxx.us-east-1.rds.amazon
 
    **Special characters in the password** must be **URL-encoded** in `DATABASE_URL` (e.g. `@` → `%40`).
 
-3. **`DATABASE_SSL=true`** turns on TLS for `mysql2` (runtime and **Drizzle Kit** migrations). Use it for RDS in production.
+3. **TLS / `HANDSHAKE_SSL_ERROR` (self-signed certificate in chain)** — RDS uses AWS CAs; Node may not trust the chain unless you add the [RDS combined CA bundle](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/UsingWithRDS.SSL.html). By default this app uses TLS with **`rejectUnauthorized: false`** when `DATABASE_SSL=true` and **`DATABASE_SSL_REJECT_UNAUTHORIZED` is not `true`**, so connections work without bundling the PEM file (fine for most dev/staging paths). For **strict** verification in production, download `global-bundle.pem`, plan to wire `ca` in mysql2 (future enhancement), and set **`DATABASE_SSL_REJECT_UNAUTHORIZED=true`** only after the CA is configured.
 
-4. Apply schema:
+4. **`DATABASE_SSL=true`** turns on TLS for `mysql2` (runtime and **Drizzle Kit** migrations). Use it for RDS in production.
+
+5. Apply schema:
 
    ```bash
    pnpm db:push
    ```
 
-5. Run the app:
+6. Run the app:
 
    ```bash
    pnpm dev

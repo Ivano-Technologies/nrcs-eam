@@ -12,21 +12,17 @@ import {
   workOrderTemplates, InsertWorkOrderTemplate
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
+import { isDatabaseSslEnabled, mysql2SslRejectUnauthorized } from "../shared/mysqlSsl";
 
 let _db: ReturnType<typeof drizzle> | null = null;
-
-function useRdsTls(): boolean {
-  const v = process.env.DATABASE_SSL;
-  return v === "true" || v === "1";
-}
 
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
       const pool = createPool({
         uri: process.env.DATABASE_URL,
-        ...(useRdsTls()
-          ? { ssl: { rejectUnauthorized: true } }
+        ...(isDatabaseSslEnabled()
+          ? { ssl: { rejectUnauthorized: mysql2SslRejectUnauthorized() } }
           : {}),
       });
       _db = drizzle(pool);
