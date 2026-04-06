@@ -38,5 +38,5 @@ export async function loadSecrets(): Promise<void> {
     }
   }
 
-  console.log("[secrets] Loaded from AWS Secrets Manager:", secretId);
+  console.log("[secrets] Secrets loaded from AWS:", secretId);
 }

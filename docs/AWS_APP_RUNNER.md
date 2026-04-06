@@ -26,19 +26,37 @@ Do **not** use only `pnpm install` as the build step—you must run **`pnpm run 
 
 ## Environment variables
 
-Set in the service (or load everything from Secrets Manager and use only `AWS_SECRETS_SECRET_ID` + `AWS_REGION`—see [`shared/loadSecrets.ts`](../shared/loadSecrets.ts)).
+**Recommended:** store sensitive values in **AWS Secrets Manager** as a JSON object, then set only:
 
-Typical keys:
+| Variable | Notes |
+|----------|--------|
+| `AWS_SECRETS_SECRET_ID` | e.g. `nrcs-eam/prod/app` |
+| `AWS_REGION` | e.g. `eu-west-1` |
+
+The app loads the secret at startup ([`shared/loadSecrets.ts`](../shared/loadSecrets.ts)) and merges keys into `process.env`. The **App Runner instance role** (or access role) must allow **`secretsmanager:GetSecretValue`** on that secret’s ARN.
+
+Alternatively, set variables directly in App Runner (less ideal for secrets):
 
 | Variable | Notes |
 |----------|--------|
 | `DATABASE_URL` | MySQL URL to RDS |
 | `DATABASE_SSL` | `true` for RDS |
-| `DATABASE_SSL_REJECT_UNAUTHORIZED` | `true` only with RDS CA bundle configured; else `false` until then |
+| `DATABASE_SSL_REJECT_UNAUTHORIZED` | `true` in production when using RDS CA PEM |
+| `DATABASE_SSL_CA_PATH` | e.g. `./certs/global-bundle.pem` — see [AWS_RDS.md](AWS_RDS.md) Phase 2 |
 | `JWT_SECRET` | Session signing |
-| `AWS_REGION` | e.g. `eu-west-1` |
-| `AWS_SECRETS_SECRET_ID` | Optional; if set, secrets JSON is merged at startup (see gated loader) |
-| `PORT` | App Runner often injects; app respects `PORT` |
+| `PORT` | App Runner may inject; app respects `PORT` |
+
+## Startup order
+
+```mermaid
+sequenceDiagram
+  participant Dotenv
+  participant LoadSecrets
+  participant Server
+  Dotenv->>Dotenv: dotenv/config loads .env
+  LoadSecrets->>LoadSecrets: if AWS_SECRETS_SECRET_ID then SM merge
+  Server->>Server: startServer listen
+```
 
 ## VPC connector (required for private RDS)
 

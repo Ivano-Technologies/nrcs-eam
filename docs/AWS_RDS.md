@@ -52,17 +52,38 @@ Copy the **endpoint** hostname (e.g. `nrcs-eam.xxxxxxxxxxxx.us-east-1.rds.amazon
 
    **Special characters in the password** must be **URL-encoded** in `DATABASE_URL` (e.g. `@` → `%40`).
 
-3. **TLS / `HANDSHAKE_SSL_ERROR` (self-signed certificate in chain)** — RDS uses AWS CAs; Node may not trust the chain unless you add the [RDS combined CA bundle](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/UsingWithRDS.SSL.html). By default this app uses TLS with **`rejectUnauthorized: false`** when `DATABASE_SSL=true` and **`DATABASE_SSL_REJECT_UNAUTHORIZED` is not `true`**, so connections work without bundling the PEM file (fine for most dev/staging paths). For **strict** verification in production, download `global-bundle.pem`, plan to wire `ca` in mysql2 (future enhancement), and set **`DATABASE_SSL_REJECT_UNAUTHORIZED=true`** only after the CA is configured.
+3. **`DATABASE_SSL=true`** turns on TLS for `mysql2` (runtime and **Drizzle Kit** migrations). Use it for RDS in production.
 
-4. **`DATABASE_SSL=true`** turns on TLS for `mysql2` (runtime and **Drizzle Kit** migrations). Use it for RDS in production.
+### Phase 2 — Production TLS (RDS CA bundle)
 
-5. Apply schema:
+Without a CA file, you can use TLS with **`DATABASE_SSL_REJECT_UNAUTHORIZED=false`** (or omit it) so Node accepts the RDS chain without verifying it—useful for dev.
+
+For **verified** TLS in production:
+
+1. Download the [RDS global CA bundle](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/UsingWithRDS.SSL.html) (e.g. `global-bundle.pem`). See [`certs/README.md`](../certs/README.md).
+2. Set:
+
+   ```env
+   DATABASE_SSL=true
+   DATABASE_SSL_REJECT_UNAUTHORIZED=true
+   DATABASE_SSL_CA_PATH=./certs/global-bundle.pem
+   ```
+
+   Paths are resolved relative to the process **current working directory** unless absolute.
+
+3. The app and **`pnpm db:push`** both read the same `DATABASE_SSL_CA_PATH` via [`shared/mysqlSsl.ts`](../shared/mysqlSsl.ts).
+
+### AWS Secrets Manager (optional)
+
+At startup, if **`AWS_SECRETS_SECRET_ID`** is set, JSON from Secrets Manager is merged into `process.env` (after `.env`). The compute role must allow `secretsmanager:GetSecretValue` on that secret. See [`shared/loadSecrets.ts`](../shared/loadSecrets.ts).
+
+4. Apply schema:
 
    ```bash
    pnpm db:push
    ```
 
-6. Run the app:
+5. Run the app:
 
    ```bash
    pnpm dev

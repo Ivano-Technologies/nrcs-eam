@@ -3,7 +3,7 @@
  * RDS: set DATABASE_SSL=true and use a standard mysql:// URL (see docs/AWS_RDS.md).
  */
 
-import { isDatabaseSslEnabled, mysql2SslRejectUnauthorized } from "../shared/mysqlSsl";
+import { getMysql2SslOptions, isDatabaseSslEnabled } from "../shared/mysqlSsl";
 
 export function getDrizzleMysqlCredentials():
   | { url: string }
@@ -13,7 +13,10 @@ export function getDrizzleMysqlCredentials():
       user: string;
       password: string;
       database: string;
-      ssl: { rejectUnauthorized: boolean };
+      ssl: {
+        rejectUnauthorized: boolean;
+        ca?: string | Buffer;
+      };
     } {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
@@ -38,12 +41,17 @@ export function getDrizzleMysqlCredentials():
   const password = u.password ? decodeURIComponent(u.password) : "";
   const user = decodeURIComponent(u.username);
 
+  const ssl = getMysql2SslOptions();
+  if (!ssl) {
+    throw new Error("DATABASE_SSL is enabled but TLS options could not be built");
+  }
+
   return {
     host: u.hostname,
     port: u.port ? Number(u.port) : 3306,
     user,
     password,
     database,
-    ssl: { rejectUnauthorized: mysql2SslRejectUnauthorized() },
+    ssl,
   };
 }
