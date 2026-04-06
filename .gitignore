@@ -42,6 +42,9 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# PDFKit smoke test output
+scripts/test-output.pdf
+
 # Runtime data
 pids
 *.pid
@@ -112,3 +115,7 @@ temp/
 # Operational / sensitive spreadsheets (use templates in docs or share out-of-band)
 *NRCS*Asset register*.xlsx
 *Asset register*.xlsx
+
+.aws/
+.env
+.env.local

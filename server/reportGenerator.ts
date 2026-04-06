@@ -1,14 +1,7 @@
-let PDFDocument: any = null;
-try {
-  PDFDocument = require('pdfkit');
-} catch (e) {
-  console.warn('PDFKit not available - PDF generation disabled');
-}
+import PDFDocument from "pdfkit";
+import ExcelJS from "exceljs";
 
-import ExcelJS from 'exceljs';
-import { Readable } from 'stream';
-
-// PDF Report Generator
+// PDF Report Generator (Node-only; PDFKit is a runtime dependency)
 export async function generatePDFReport(
   title: string,
   data: any[],
@@ -19,10 +12,6 @@ export async function generatePDFReport(
     includeCharts?: boolean;
   }
 ): Promise<Buffer> {
-  if (!PDFDocument) {
-    throw new Error('PDF generation not available in this environment');
-  }
-  
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'A4', margin: 50 });
     const chunks: Buffer[] = [];
