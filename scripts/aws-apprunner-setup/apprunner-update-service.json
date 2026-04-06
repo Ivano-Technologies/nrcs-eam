@@ -1,0 +1,50 @@
+{
+  "ServiceArn": "arn:aws:apprunner:eu-west-1:279127167519:service/nrcs-eam-api/62007c1a6a9c4312bec0c1b342312be1",
+  "SourceConfiguration": {
+    "AuthenticationConfiguration": {
+      "ConnectionArn": "arn:aws:apprunner:eu-west-1:279127167519:connection/nrcs-eam-github-connection/fd859744eaaa4dcf90ced2483221fa4f"
+    },
+    "AutoDeploymentsEnabled": true,
+    "CodeRepository": {
+      "RepositoryUrl": "https://github.com/Ivano-Technologies/nrcs-eam",
+      "SourceCodeVersion": {
+        "Type": "BRANCH",
+        "Value": "main"
+      },
+      "SourceDirectory": "/",
+      "CodeConfiguration": {
+        "ConfigurationSource": "API",
+        "CodeConfigurationValues": {
+          "Runtime": "NODEJS_22",
+          "BuildCommand": "npm install -g pnpm && pnpm install && pnpm run build",
+          "StartCommand": "node dist/index.js",
+          "Port": "3000",
+          "RuntimeEnvironmentVariables": {
+            "NODE_ENV": "production",
+            "PORT": "3000",
+            "AWS_REGION": "eu-west-1",
+            "AWS_SECRETS_SECRET_ID": "nrcs-eam/prod/app",
+            "FRONTEND_ORIGIN": "https://nrcseam.techivano.com",
+            "CORS_ORIGINS": "https://nrcseam.techivano.com",
+            "DATABASE_SSL": "true",
+            "DATABASE_SSL_REJECT_UNAUTHORIZED": "true",
+            "DATABASE_SSL_CA_PATH": "./certs/global-bundle.pem"
+          }
+        }
+      }
+    }
+  },
+  "InstanceConfiguration": {
+    "Cpu": "1024",
+    "Memory": "2048",
+    "InstanceRoleArn": "arn:aws:iam::279127167519:role/nrcs-eam-apprunner-role"
+  },
+  "HealthCheckConfiguration": {
+    "Protocol": "HTTP",
+    "Path": "/health",
+    "Interval": 10,
+    "Timeout": 5,
+    "HealthyThreshold": 1,
+    "UnhealthyThreshold": 5
+  }
+}
