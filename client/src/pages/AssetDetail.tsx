@@ -16,7 +16,7 @@ import AssetDepreciation from "@/components/AssetDepreciation";
 import { AssetMaintenanceTimeline } from "@/components/AssetMaintenanceTimeline";
 
 export default function AssetDetail() {
-  const [, params] = useRoute("/assets/:id");
+  const [, params] = useRoute("/app/assets/:id");
   const [, setLocation] = useLocation();
   const { user } = useAuth();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -203,7 +203,7 @@ export default function AssetDetail() {
       <div className="flex flex-col items-center justify-center h-96">
         <Package className="h-16 w-16 text-muted-foreground mb-4" />
         <p className="text-xl text-muted-foreground">Asset not found</p>
-        <Button onClick={() => setLocation("/assets")} className="mt-4">
+        <Button onClick={() => setLocation("/app/assets")} className="mt-4">
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Assets
         </Button>
@@ -215,7 +215,7 @@ export default function AssetDetail() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="outline" size="icon" onClick={() => setLocation("/assets")}>
+          <Button variant="outline" size="icon" onClick={() => setLocation("/app/assets")}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>

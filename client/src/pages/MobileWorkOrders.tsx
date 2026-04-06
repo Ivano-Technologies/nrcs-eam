@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle2, Clock, AlertCircle, XCircle, ChevronRight, Camera } from "lucide-react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
+import { appPath } from "@/lib/routes";
 
 export default function MobileWorkOrders() {
   const [, setLocation] = useLocation();
@@ -120,7 +121,7 @@ export default function MobileWorkOrders() {
             <Card
               key={wo.id}
               className="cursor-pointer active:scale-98 transition-transform"
-              onClick={() => setLocation(`/mobile-work-order/${wo.id}`)}
+              onClick={() => setLocation(appPath(`/mobile-work-order/${wo.id}`))}
             >
               <CardContent className="p-4">
                 <div className="flex items-start justify-between mb-3">

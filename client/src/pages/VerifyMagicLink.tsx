@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2 } from "lucide-react";
+import { appPath } from "@/lib/routes";
 
 export default function VerifyMagicLink() {
   const [, setLocation] = useLocation();
@@ -30,7 +31,7 @@ export default function VerifyMagicLink() {
           setStatus("success");
           setMessage("Successfully signed in! Redirecting...");
           setTimeout(() => {
-            setLocation("/");
+            setLocation(appPath("/"));
           }, 2000);
         } else {
           setStatus("error");

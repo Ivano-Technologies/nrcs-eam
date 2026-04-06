@@ -19,41 +19,40 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
+import { appPath } from "@/lib/routes";
 import { LayoutDashboard, LogOut, Users, UserPlus, Package, Wrench, Calendar, TrendingUp, FileText, MapPin, Building2, DollarSign, Map, Settings, Download, Maximize2, Mail, Scan, Search, AlertTriangle, BarChart3, History } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
-import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 import { NotificationCenter } from "./NotificationCenter";
 import Footer from "./Footer";
 
 const allMenuItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/", adminOnly: false, sortOrder: 0 },
-  { icon: Settings, label: "Dashboard Settings", path: "/dashboard-settings", adminOnly: false },
-  { icon: Package, label: "Assets", path: "/assets", adminOnly: false },
-  { icon: Map, label: "Asset Map", path: "/asset-map", adminOnly: false },
-  { icon: Scan, label: "Asset Scanner", path: "/scanner", adminOnly: false },
-  { icon: FileText, label: "Compliance", path: "/compliance", adminOnly: false },
-  { icon: Mail, label: "Email Notifications", path: "/email-notifications", adminOnly: true },
-  { icon: DollarSign, label: "Financial", path: "/financial", adminOnly: false },
-  { icon: TrendingUp, label: "Inventory", path: "/inventory", adminOnly: false },
-  { icon: Calendar, label: "Maintenance", path: "/maintenance", adminOnly: false },
-  { icon: DollarSign, label: "QuickBooks", path: "/quickbooks", adminOnly: true },
-  { icon: FileText, label: "Reports", path: "/reports", adminOnly: false },
-  { icon: Calendar, label: "Report Scheduling", path: "/report-scheduling", adminOnly: false },
-  { icon: MapPin, label: "Sites", path: "/sites", adminOnly: false },
-  { icon: Users, label: "Users", path: "/users", adminOnly: true },
-  { icon: UserPlus, label: "Pending Users", path: "/pending-users", adminOnly: true },
-  { icon: Building2, label: "Vendors", path: "/vendors", adminOnly: false },
-  { icon: Wrench, label: "Work Orders", path: "/work-orders", adminOnly: false },
-  { icon: FileText, label: "Work Order Templates", path: "/work-order-templates", adminOnly: false },
-  { icon: AlertTriangle, label: "Warranty Alerts", path: "/warranty-alerts", adminOnly: false },
-  { icon: BarChart3, label: "Cost Analytics", path: "/cost-analytics", adminOnly: false },
-  { icon: History, label: "Audit Trail", path: "/audit-trail", adminOnly: true },
-  { icon: History, label: "Activity Log", path: "/activity-log", adminOnly: false },
+  { icon: LayoutDashboard, label: "Dashboard", path: appPath("/"), adminOnly: false, sortOrder: 0 },
+  { icon: Settings, label: "Dashboard Settings", path: appPath("/dashboard-settings"), adminOnly: false },
+  { icon: Package, label: "Assets", path: appPath("/assets"), adminOnly: false },
+  { icon: Map, label: "Asset Map", path: appPath("/asset-map"), adminOnly: false },
+  { icon: Scan, label: "Asset Scanner", path: appPath("/scanner"), adminOnly: false },
+  { icon: FileText, label: "Compliance", path: appPath("/compliance"), adminOnly: false },
+  { icon: Mail, label: "Email Notifications", path: appPath("/email-notifications"), adminOnly: true },
+  { icon: DollarSign, label: "Financial", path: appPath("/financial"), adminOnly: false },
+  { icon: TrendingUp, label: "Inventory", path: appPath("/inventory"), adminOnly: false },
+  { icon: Calendar, label: "Maintenance", path: appPath("/maintenance"), adminOnly: false },
+  { icon: DollarSign, label: "QuickBooks", path: appPath("/quickbooks"), adminOnly: true },
+  { icon: FileText, label: "Reports", path: appPath("/reports"), adminOnly: false },
+  { icon: Calendar, label: "Report Scheduling", path: appPath("/report-scheduling"), adminOnly: false },
+  { icon: MapPin, label: "Sites", path: appPath("/sites"), adminOnly: false },
+  { icon: Users, label: "Users", path: appPath("/users"), adminOnly: true },
+  { icon: UserPlus, label: "Pending Users", path: appPath("/pending-users"), adminOnly: true },
+  { icon: Building2, label: "Vendors", path: appPath("/vendors"), adminOnly: false },
+  { icon: Wrench, label: "Work Orders", path: appPath("/work-orders"), adminOnly: false },
+  { icon: FileText, label: "Work Order Templates", path: appPath("/work-order-templates"), adminOnly: false },
+  { icon: AlertTriangle, label: "Warranty Alerts", path: appPath("/warranty-alerts"), adminOnly: false },
+  { icon: BarChart3, label: "Cost Analytics", path: appPath("/cost-analytics"), adminOnly: false },
+  { icon: History, label: "Audit Trail", path: appPath("/audit-trail"), adminOnly: true },
+  { icon: History, label: "Activity Log", path: appPath("/activity-log"), adminOnly: false },
 ];
 
 const getMenuItems = (userRole?: string) => {
@@ -83,7 +82,7 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { loading, user } = useAuth();
+  const { user } = useAuth();
   const { data: userPrefs } = trpc.userPreferences.get.useQuery(undefined, { enabled: !!user });
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem(SIDEBAR_WIDTH_KEY);
@@ -101,47 +100,8 @@ export default function DashboardLayout({
     localStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString());
   }, [sidebarWidth]);
 
-  if (loading) {
-    return <DashboardLayoutSkeleton />
-  }
-
   if (!user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-white via-blue-50 to-red-50">
-        <div className="flex flex-col items-center gap-8 p-8 max-w-md w-full bg-white rounded-2xl shadow-2xl border border-border">
-          <div className="flex flex-col items-center gap-6">
-            <img 
-              src="/nrcs-logo.png" 
-              alt="Nigerian Red Cross Society" 
-              className="h-24 w-24"
-            />
-            <div className="text-center">
-              <h1 className="text-2xl font-bold tracking-tight mb-2">
-                NRCS Asset Management
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                Nigerian Red Cross Society
-              </p>
-            </div>
-            <p className="text-sm text-muted-foreground text-center max-w-sm">
-              Sign in to access the Enterprise Asset Management System
-            </p>
-          </div>
-          <Button
-            onClick={() => {
-              window.location.href = getLoginUrl();
-            }}
-            size="lg"
-            className="w-full shadow-lg hover:shadow-xl transition-all bg-primary hover:bg-primary/90"
-          >
-            Sign In
-          </Button>
-          <p className="text-xs text-muted-foreground text-center">
-            Authorized personnel only
-          </p>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   return (
@@ -175,8 +135,8 @@ function DashboardLayoutContent({
   
   // Auto-redirect first-time users to welcome page
   useEffect(() => {
-    if (user && !user.hasCompletedOnboarding && location !== '/welcome') {
-      setLocation('/welcome');
+    if (user && !user.hasCompletedOnboarding && location !== appPath("/welcome")) {
+      setLocation(appPath("/welcome"));
     }
   }, [user, location, setLocation]);
   const { state } = useSidebar();
@@ -386,7 +346,7 @@ function DashboardLayoutContent({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem
-                  onClick={() => setLocation("/notification-preferences")}
+                  onClick={() => setLocation(appPath("/notification-preferences"))}
                   className="cursor-pointer"
                 >
                   <Settings className="mr-2 h-4 w-4" />

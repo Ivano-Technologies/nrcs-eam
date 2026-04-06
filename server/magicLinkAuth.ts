@@ -5,7 +5,10 @@ import { authTokens, pendingUsers, users } from "../drizzle/schema";
 import { eq, and, gt } from "drizzle-orm";
 
 const MAGIC_LINK_EXPIRY_MINUTES = 15;
-const BASE_URL = process.env.VITE_APP_URL || "http://localhost:3000";
+const BASE_URL =
+  process.env.FRONTEND_ORIGIN?.replace(/\/$/, "") ||
+  process.env.VITE_APP_URL ||
+  "http://localhost:3000";
 
 /**
  * Generate a secure random token

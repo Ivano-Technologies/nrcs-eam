@@ -4,6 +4,7 @@ import { Package, Wrench, AlertTriangle, DollarSign, Calendar, TrendingUp } from
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { appPath } from "@/lib/routes";
 
 export default function Home() {
   const { user } = useAuth();
@@ -130,7 +131,7 @@ export default function Home() {
                     </div>
                   </div>
                 ))}
-                <Link href="/maintenance">
+                <Link href={appPath("/maintenance")}>
                   <Button variant="outline" size="sm" className="w-full">
                     View All Schedules
                   </Button>
@@ -171,7 +172,7 @@ export default function Home() {
                     </span>
                   </div>
                 ))}
-                <Link href="/inventory">
+                <Link href={appPath("/inventory")}>
                   <Button variant="outline" size="sm" className="w-full">
                     View Inventory
                   </Button>
@@ -243,7 +244,7 @@ export default function Home() {
               <div className="text-4xl font-bold text-red-600">{(stats as any)?.overdueMaintenance || 0}</div>
               <p className="text-sm text-muted-foreground mt-2">Tasks past due date</p>
               {((stats as any)?.overdueMaintenance || 0) > 0 && (
-                <Link href="/maintenance">
+                <Link href={appPath("/maintenance")}>
                   <Button size="sm" variant="outline" className="mt-4">
                     View Tasks
                   </Button>
@@ -284,25 +285,25 @@ export default function Home() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Link href="/assets">
+            <Link href={appPath("/assets")}>
               <Button variant="outline" className="w-full justify-start">
                 <Package className="mr-2 h-4 w-4" />
                 View Assets
               </Button>
             </Link>
-            <Link href="/work-orders">
+            <Link href={appPath("/work-orders")}>
               <Button variant="outline" className="w-full justify-start">
                 <Wrench className="mr-2 h-4 w-4" />
                 Work Orders
               </Button>
             </Link>
-            <Link href="/maintenance">
+            <Link href={appPath("/maintenance")}>
               <Button variant="outline" className="w-full justify-start">
                 <Calendar className="mr-2 h-4 w-4" />
                 Maintenance
               </Button>
             </Link>
-            <Link href="/inventory">
+            <Link href={appPath("/inventory")}>
               <Button variant="outline" className="w-full justify-start">
                 <TrendingUp className="mr-2 h-4 w-4" />
                 Inventory

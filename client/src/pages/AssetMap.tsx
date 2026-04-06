@@ -59,7 +59,7 @@ export default function AssetMap() {
               <p style="margin: 4px 0; font-size: 14px;"><strong>City:</strong> ${site.city || 'N/A'}, ${site.state || 'N/A'}</p>
               <p style="margin: 4px 0; font-size: 14px;"><strong>Contact:</strong> ${site.contactPerson || 'N/A'}</p>
               <p style="margin: 4px 0; font-size: 14px;"><strong>Phone:</strong> ${site.contactPhone || 'N/A'}</p>
-              <a href="/sites" style="display: inline-block; margin-top: 8px; color: #DC2626; text-decoration: none; font-weight: 500;">View All Sites →</a>
+              <a href="/app/sites" style="display: inline-block; margin-top: 8px; color: #DC2626; text-decoration: none; font-weight: 500;">View All Sites →</a>
             </div>
           `,
         });
@@ -137,7 +137,7 @@ export default function AssetMap() {
             <p style="margin: 4px 0; font-size: 14px;"><strong>Tag:</strong> ${asset.assetTag}</p>
             <p style="margin: 4px 0; font-size: 14px;"><strong>Status:</strong> ${asset.status}</p>
             <p style="margin: 4px 0; font-size: 14px;"><strong>Location:</strong> ${asset.location || 'N/A'}</p>
-            <a href="/assets/${asset.id}" style="display: inline-block; margin-top: 8px; color: #DC2626; text-decoration: none; font-weight: 500;">View Details →</a>
+            <a href="/app/assets/${asset.id}" style="display: inline-block; margin-top: 8px; color: #DC2626; text-decoration: none; font-weight: 500;">View Details →</a>
           </div>
         `,
       });

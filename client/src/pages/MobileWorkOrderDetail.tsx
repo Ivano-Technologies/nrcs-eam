@@ -9,7 +9,7 @@ import { ArrowLeft, CheckCircle2, Camera, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 
 export default function MobileWorkOrderDetail() {
-  const [, params] = useRoute("/mobile-work-order/:id");
+  const [, params] = useRoute("/app/mobile-work-order/:id");
   const [, setLocation] = useLocation();
   const [notes, setNotes] = useState("");
 
@@ -100,7 +100,7 @@ export default function MobileWorkOrderDetail() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setLocation("/mobile-work-orders")}
+            onClick={() => setLocation("/app/mobile-work-orders")}
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>

@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Camera, Search, Package, MapPin, CheckCircle, XCircle } from "lucide-react";
+import { appPath } from "@/lib/routes";
 
 export default function AssetScanner() {
   const [, setLocation] = useLocation();
@@ -272,7 +273,7 @@ ${updateForm.notes}`
 
                 <Button
                   variant="outline"
-                  onClick={() => setLocation(`/assets/${scannedAsset.id}`)}
+                  onClick={() => setLocation(appPath(`/assets/${scannedAsset.id}`))}
                   className="w-full"
                 >
                   View Full Details

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle2, Package, Wrench, FileText, DollarSign, Users, ArrowRight } from "lucide-react";
+import { appPath } from "@/lib/routes";
 
 export default function Welcome() {
   const [, setLocation] = useLocation();
@@ -12,7 +13,7 @@ export default function Welcome() {
   const completeOnboarding = trpc.users.completeOnboarding.useMutation({
     onSuccess: () => {
       utils.auth.me.invalidate();
-      setLocation("/");
+      setLocation(appPath("/"));
     },
   });
 
@@ -136,11 +137,11 @@ export default function Welcome() {
             </p>
           </div>
           <div className="grid gap-4 md:grid-cols-2 max-w-2xl mx-auto">
-            <Button size="lg" onClick={() => setLocation("/sites")}>
+            <Button size="lg" onClick={() => setLocation(appPath("/sites"))}>
               <Package className="mr-2 h-5 w-5" />
               Add First Site
             </Button>
-            <Button size="lg" variant="outline" onClick={() => setLocation("/")}>
+            <Button size="lg" variant="outline" onClick={() => setLocation(appPath("/"))}>
               View Dashboard
             </Button>
           </div>

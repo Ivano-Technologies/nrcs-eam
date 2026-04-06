@@ -29,7 +29,7 @@ Use one of these approaches:
 
 Do **not** set Output to `dist` only — the build writes to **`dist/public`**. [`vercel.json`](../vercel.json) in the repo pins these for convenience.
 
-**SPA client routes:** [`vercel.json`](../vercel.json) includes **`rewrites`** so deep links (e.g. `/dashboard`) serve `index.html` instead of 404, similar to CloudFront custom error responses. Vite emits asset URLs under `/assets/...`; those files are served as static assets before the rewrite applies.
+**SPA client routes:** [`vercel.json`](../vercel.json) includes **`rewrites`** so deep links (e.g. `/app/assets`) serve `index.html` instead of 404, similar to CloudFront custom error responses. Vite emits built JS/CSS under `/assets/...` (static filenames); those are served as files before the SPA rewrite applies.
 
 ### Alternative: Root Directory = `client`
 
@@ -63,17 +63,22 @@ After changing **`VITE_*`** variables in Vercel, trigger a **new deployment** so
 | Variable | Example |
 |----------|---------|
 | `CORS_ORIGINS` | `https://nrcseam.techivano.com` |
-| `FRONTEND_ORIGIN` | `https://nrcseam.techivano.com` (OAuth redirect after login) |
+| `FRONTEND_ORIGIN` | `https://nrcseam.techivano.com` (OAuth redirect after login; magic-link email base URL) |
 | `SESSION_COOKIE_DOMAIN` | `.techivano.com` (optional; cookie across subdomains) |
 
 `VITE_*` is only for **Vite build** (Vercel / CI), not for the Node process on App Runner.
+
+### OAuth and magic links (do not confuse the URLs)
+
+- **OAuth redirect URI:** The IdP allowlist must include the **API** callback URL, e.g. `https://api.nrcseam.techivano.com/api/oauth/callback` (see [`client/src/lib/apiBase.ts`](../client/src/lib/apiBase.ts)). It is **not** the SPA host’s `/app` routes and **not** `https://nrcseam.techivano.com/app-auth` — the `/app-auth` path (if used) belongs to the **OAuth portal** host (`VITE_OAUTH_PORTAL_URL`), not this app’s SPA.
+- **Magic links:** Verification links use the public frontend origin, e.g. `https://nrcseam.techivano.com/auth/verify?...`. Set **`FRONTEND_ORIGIN`** on the API so email links are correct when `VITE_APP_URL` is unset on App Runner (see [`server/magicLinkAuth.ts`](../server/magicLinkAuth.ts)).
 
 ## Verification
 
 - `https://nrcseam.techivano.com` — SPA loads.
 - `https://api.nrcseam.techivano.com/health` — `{ "ok": true }` ([`server/_core/index.ts`](../server/_core/index.ts)); use for manual checks and uptime monitors.
 - DevTools → Network: tRPC to `https://api.nrcseam.techivano.com/api/trpc`, CORS preflight **200**; no mixed content (HTTPS only).
-- Refresh a deep route (e.g. `/dashboard`) — should not 404 (depends on [`vercel.json`](../vercel.json) rewrites).
+- Refresh a deep route (e.g. `/app/assets`) — should not 404 (depends on [`vercel.json`](../vercel.json) rewrites).
 
 ## Go-live checklist
 
@@ -82,7 +87,7 @@ After changing **`VITE_*`** variables in Vercel, trigger a **new deployment** so
 - [ ] Production build succeeds.
 - [ ] Domain `nrcseam.techivano.com` attached; page loads over HTTPS.
 - [ ] `VITE_API_BASE_URL` set for Production; redeployed after any change.
-- [ ] Deep routes work (e.g. `/dashboard`, `/settings`) after hard refresh.
+- [ ] Deep routes work (e.g. `/app`, `/app/assets`) after hard refresh.
 
 **Backend (App Runner)**
 

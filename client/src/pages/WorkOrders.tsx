@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { appPath } from "@/lib/routes";
 
 export default function WorkOrders() {
   const { user } = useAuth();
@@ -276,7 +277,7 @@ export default function WorkOrders() {
       ) : workOrders && workOrders.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {workOrders.map((wo) => (
-            <Link key={wo.id} href={`/work-orders/${wo.id}`}>
+            <Link key={wo.id} href={appPath(`/work-orders/${wo.id}`)}>
               <Card className="hover:shadow-lg transition-shadow cursor-pointer">
                 <CardHeader>
                   <div className="flex items-start justify-between">

@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { appPath } from "@/lib/routes";
 
 export default function Assets() {
   const { user } = useAuth();
@@ -419,7 +420,7 @@ export default function Assets() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredAssets.map((asset) => (
             <div key={asset.id} className="relative">
-              <Link href={`/assets/${asset.id}`}>
+              <Link href={appPath(`/assets/${asset.id}`)}>
                 <Card className="hover:shadow-lg transition-shadow cursor-pointer">
                   <CardHeader>
                     <div className="flex items-start justify-between">

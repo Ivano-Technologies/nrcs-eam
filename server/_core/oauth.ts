@@ -47,8 +47,8 @@ export function registerOAuthRoutes(app: Express) {
       const frontendOrigin = process.env.FRONTEND_ORIGIN?.trim();
       const redirectTarget =
         frontendOrigin && frontendOrigin.length > 0
-          ? frontendOrigin.replace(/\/+$/, "") + "/"
-          : "/";
+          ? `${frontendOrigin.replace(/\/+$/, "")}/app`
+          : "/app";
       res.redirect(302, redirectTarget);
     } catch (error) {
       console.error("[OAuth] Callback failed", error);

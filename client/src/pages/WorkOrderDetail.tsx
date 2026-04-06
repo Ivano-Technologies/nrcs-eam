@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
 export default function WorkOrderDetail() {
-  const [, params] = useRoute("/work-orders/:id");
+  const [, params] = useRoute("/app/work-orders/:id");
   const [, setLocation] = useLocation();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
@@ -44,7 +44,7 @@ export default function WorkOrderDetail() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="outline" size="icon" onClick={() => setLocation("/work-orders")}><ArrowLeft className="h-4 w-4" /></Button>
+          <Button variant="outline" size="icon" onClick={() => setLocation("/app/work-orders")}><ArrowLeft className="h-4 w-4" /></Button>
           <div>
             <h1 className="text-3xl font-bold">{workOrder.title}</h1>
             <p className="text-muted-foreground">{workOrder.workOrderNumber}</p>

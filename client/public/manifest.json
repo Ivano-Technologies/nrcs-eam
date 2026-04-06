@@ -42,21 +42,21 @@
       "name": "Dashboard",
       "short_name": "Dashboard",
       "description": "View asset management dashboard",
-      "url": "/",
+      "url": "/app",
       "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Assets",
       "short_name": "Assets",
       "description": "Manage assets",
-      "url": "/assets",
+      "url": "/app/assets",
       "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Work Orders",
       "short_name": "Work Orders",
       "description": "View and create work orders",
-      "url": "/work-orders",
+      "url": "/app/work-orders",
       "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     }
   ]
