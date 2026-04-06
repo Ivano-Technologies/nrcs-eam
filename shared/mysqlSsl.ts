@@ -14,7 +14,10 @@ export function isDatabaseSslEnabled(): boolean {
   return v === "true" || v === "1";
 }
 
-/** When false/omitted with TLS, allows RDS without bundling AWS CA (dev / typical RDS). */
+/**
+ * Strict TLS verification (use with AWS RDS CA bundle in production).
+ * Must use === "true" only — do not use truthy checks: the string "false" is truthy in JS.
+ */
 export function mysql2SslRejectUnauthorized(): boolean {
   return process.env.DATABASE_SSL_REJECT_UNAUTHORIZED === "true";
 }
