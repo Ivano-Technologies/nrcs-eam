@@ -5,10 +5,21 @@ import { authTokens, pendingUsers, users } from "../drizzle/schema";
 import { eq, and, gt } from "drizzle-orm";
 
 const MAGIC_LINK_EXPIRY_MINUTES = 15;
-const BASE_URL =
-  process.env.FRONTEND_ORIGIN?.replace(/\/$/, "") ||
-  process.env.VITE_APP_URL ||
-  "http://localhost:3000";
+
+function getMagicLinkBaseUrl(): string {
+  const fromEnv =
+    process.env.FRONTEND_ORIGIN?.replace(/\/$/, "") ||
+    process.env.VITE_APP_URL?.replace(/\/$/, "");
+  if (fromEnv) {
+    return fromEnv;
+  }
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "[magicLink] FRONTEND_ORIGIN or VITE_APP_URL must be set in production"
+    );
+  }
+  return "http://localhost:3000";
+}
 
 /**
  * Generate a secure random token
@@ -77,7 +88,7 @@ export async function verifyMagicLinkToken(token: string): Promise<number | null
  * Send magic link email to user
  */
 export async function sendMagicLink(email: string, token: string): Promise<boolean> {
-  const magicLink = `${BASE_URL}/auth/verify?token=${token}`;
+  const magicLink = `${getMagicLinkBaseUrl()}/auth/verify?token=${token}`;
 
   const htmlBody = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">

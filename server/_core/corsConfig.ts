@@ -2,7 +2,10 @@ import type { CorsOptions } from "cors";
 
 const DEV_ORIGINS = ["http://localhost:3000", "http://localhost:5173"] as const;
 
-/** Split CORS_ORIGINS by comma, trim, drop empties. Never returns "*". */
+/**
+ * Split `process.env.CORS_ORIGINS` by comma, trim, drop empties. Never returns "*".
+ * Production example: `https://nrcseam.techivano.com` (set on the API host, not Vercel).
+ */
 export function parseCorsOriginsEnv(): string[] {
   const raw = process.env.CORS_ORIGINS?.trim();
   if (!raw) return [];

@@ -60,6 +60,7 @@ Replace `ACCOUNT_ID` and the suffix AWS appends to the secret name. Prefer **one
 | `AWS_SECRETS_SECRET_ID` | e.g. `nrcs-eam/prod/app` |
 | `NODE_ENV` | `production` |
 | `CORS_ORIGINS` | **Required** if the SPA is on another origin than the API (split hosting). Exact HTTPS origins, comma-separated, **no trailing slashes** (e.g. `https://nrcseam.techivano.com`). Loaded at process start—redeploy after changing. See [`CUSTOM_DOMAINS_VERCEL_AWS.md`](CUSTOM_DOMAINS_VERCEL_AWS.md). |
+| `FRONTEND_ORIGIN` or `VITE_APP_URL` | **Required in production** (validated at startup): public SPA origin for magic-link URLs (`/auth/verify`). Prefer `FRONTEND_ORIGIN` on App Runner. |
 | `DATABASE_SSL` | `true` |
 | `DATABASE_SSL_REJECT_UNAUTHORIZED` | `true` |
 | `DATABASE_SSL_CA_PATH` | e.g. `./certs/global-bundle.pem` |

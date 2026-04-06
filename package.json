@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "cross-env NODE_ENV=development tsx watch server/_core/index.ts",
-    "build": "node scripts/fetch-rds-ca.mjs && vite build && esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
+    "build": "node scripts/fetch-rds-ca.mjs && vite build && esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outfile=dist/index.js",
     "build:frontend": "vite build",
     "deploy:frontend": "powershell -ExecutionPolicy Bypass -File ./scripts/deploy-frontend.ps1",
     "start": "cross-env NODE_ENV=production node dist/index.js",

@@ -30,6 +30,20 @@ export function validateProductionSecrets(): void {
       "[startup] Production requires JWT_SECRET (from .env or Secrets Manager JSON)"
     );
   }
+
+  const frontendOrigin =
+    process.env.FRONTEND_ORIGIN?.trim() || process.env.VITE_APP_URL?.trim();
+  if (!frontendOrigin) {
+    throw new Error(
+      "[startup] Production requires FRONTEND_ORIGIN or VITE_APP_URL (magic-link links and post-login redirects)"
+    );
+  }
+
+  if (!process.env.CORS_ORIGINS?.trim()) {
+    console.warn(
+      "[startup] CORS_ORIGINS is empty — browsers on another origin (e.g. Vercel SPA) cannot call this API until you set it (comma-separated HTTPS origins)."
+    );
+  }
 }
 
 /**
