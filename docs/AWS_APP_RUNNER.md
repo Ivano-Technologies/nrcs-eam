@@ -35,6 +35,37 @@ Do **not** use only `pnpm install` as the build step—you must run **`pnpm run 
 
 The app loads the secret at startup ([`shared/loadSecrets.ts`](../shared/loadSecrets.ts)) and merges keys into `process.env`. The **App Runner instance role** (or access role) must allow **`secretsmanager:GetSecretValue`** on that secret’s ARN.
 
+**Least-privilege IAM (recommended):** scope `GetSecretValue` to this secret only, not `Resource: "*"`:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "secretsmanager:GetSecretValue",
+      "Resource": "arn:aws:secretsmanager:eu-west-1:ACCOUNT_ID:secret:nrcs-eam/prod/app-XXXXXX"
+    }
+  ]
+}
+```
+
+Replace `ACCOUNT_ID` and the suffix AWS appends to the secret name. Prefer **one secret** for app config to keep the blast radius small.
+
+**After Secrets Manager is working:** avoid duplicating **`DATABASE_URL`** (and other secrets) in the App Runner console. Keep non-secret wiring in env, for example:
+
+| Variable | Notes |
+|----------|--------|
+| `AWS_REGION` | e.g. `eu-west-1` |
+| `AWS_SECRETS_SECRET_ID` | e.g. `nrcs-eam/prod/app` |
+| `NODE_ENV` | `production` |
+| `DATABASE_SSL` | `true` |
+| `DATABASE_SSL_REJECT_UNAUTHORIZED` | `true` |
+| `DATABASE_SSL_CA_PATH` | e.g. `./certs/global-bundle.pem` |
+| `PORT` | If required by App Runner |
+
+Let **`DATABASE_URL`**, **`JWT_SECRET`**, etc. come **only** from the secret JSON.
+
 Alternatively, set variables directly in App Runner (less ideal for secrets):
 
 | Variable | Notes |
@@ -45,6 +76,10 @@ Alternatively, set variables directly in App Runner (less ideal for secrets):
 | `DATABASE_SSL_CA_PATH` | e.g. `./certs/global-bundle.pem` — see [AWS_RDS.md](AWS_RDS.md) Phase 2 |
 | `JWT_SECRET` | Session signing |
 | `PORT` | App Runner may inject; app respects `PORT` |
+
+## Health check
+
+The server exposes **`GET /health`** with `{ "ok": true }`. Configure App Runner’s health check path to **`/health`** when you enable it.
 
 ## Startup order
 
@@ -89,3 +124,16 @@ flowchart LR
 ```
 
 Frontend can be hosted separately (e.g. Vercel) calling this API origin, or serve the built SPA from the same process (`dist/public`).
+
+## Go-live checklist
+
+1. **Build:** `npm install -g pnpm && pnpm install && pnpm build` — produces `dist/index.js` and `dist/public/`, and fetches the RDS CA bundle if missing (`scripts/fetch-rds-ca.mjs`).
+2. **Start:** `pnpm start` — listens on `PORT` (default `3000`), production binds `0.0.0.0`.
+3. **VPC connector:** Same VPC as RDS; use **2+ subnets**; attach the connector security group.
+4. **Security groups:** RDS inbound **MySQL (3306)** from the **App Runner connector SG** only — not `0.0.0.0/0`.
+5. **IAM:** Instance role with **`secretsmanager:GetSecretValue`** on your app secret ARN (least privilege above).
+6. **Secrets JSON:** Includes at least **`DATABASE_URL`**, **`JWT_SECRET`**, plus any other keys the app expects.
+7. **TLS env:** `DATABASE_SSL=true`, `DATABASE_SSL_REJECT_UNAUTHORIZED=true`, `DATABASE_SSL_CA_PATH=./certs/global-bundle.pem` (bundle from build or committed).
+8. **Logs to expect:** `[startup] Environment: production` → Secrets source → TLS `enabled (strict)` → **`DB connectivity check passed`** (production only) → **`Listening on port … (bound to 0.0.0.0)`**.
+
+**Residual risk:** Build must reach `truststore.pki.rds.amazonaws.com` to download the CA unless **`certs/global-bundle.pem`** is committed or copied into the image.

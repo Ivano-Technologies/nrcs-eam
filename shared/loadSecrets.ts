@@ -3,6 +3,13 @@ import {
   GetSecretValueCommand,
 } from "@aws-sdk/client-secrets-manager";
 
+let secretsSource: "aws" | "env" = "env";
+
+/** Where DATABASE_URL / JWT_SECRET etc. were merged from (after loadSecrets). */
+export function getSecretsSource(): "aws" | "env" {
+  return secretsSource;
+}
+
 /**
  * Merge JSON key/value pairs from AWS Secrets Manager into `process.env`.
  * Gated: skips unless `AWS_SECRETS_SECRET_ID` is set (local dev uses `.env` only).
@@ -11,6 +18,7 @@ export async function loadSecrets(): Promise<void> {
   const secretId = process.env.AWS_SECRETS_SECRET_ID;
 
   if (!secretId) {
+    secretsSource = "env";
     console.log(
       "[secrets] Skipping AWS Secrets Manager (AWS_SECRETS_SECRET_ID not set)"
     );
@@ -38,5 +46,6 @@ export async function loadSecrets(): Promise<void> {
     }
   }
 
+  secretsSource = "aws";
   console.log("[secrets] Secrets loaded from AWS:", secretId);
 }

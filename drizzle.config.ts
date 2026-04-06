@@ -1,3 +1,5 @@
+import * as dotenv from "dotenv";
+dotenv.config();
 import { defineConfig } from "drizzle-kit";
 import { getDrizzleMysqlCredentials } from "./drizzle/mysqlCredentials";
 

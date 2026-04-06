@@ -1,12 +1,12 @@
 /**
  * MySQL TLS options for mysql2 + AWS RDS.
  *
- * RDS uses a chain signed by AWS CAs. For production verification, download the
- * [RDS global bundle](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/UsingWithRDS.SSL.html),
- * set `DATABASE_SSL_CA_PATH`, and `DATABASE_SSL_REJECT_UNAUTHORIZED=true`.
+ * When `DATABASE_SSL_REJECT_UNAUTHORIZED=true`, `DATABASE_SSL_CA_PATH` must point to the
+ * [RDS global bundle](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/UsingWithRDS.SSL.html)
+ * (e.g. `./certs/global-bundle.pem`). Build runs `scripts/fetch-rds-ca.mjs` if the file is missing.
  *
- * Without `DATABASE_SSL_CA_PATH`, only `rejectUnauthorized` is sent (often `false`
- * for dev until the PEM is configured).
+ * When `rejectUnauthorized` is false (dev), CA is optional; if `DATABASE_SSL_CA_PATH` is set,
+ * the file must exist.
  */
 
 import fs from "fs";
@@ -32,7 +32,8 @@ export type Mysql2SslConfig = {
 
 /**
  * Options for mysql2 `ssl` when `DATABASE_SSL` is on.
- * If `DATABASE_SSL_CA_PATH` is set, reads the PEM and includes `ca`.
+ * If `DATABASE_SSL_REJECT_UNAUTHORIZED=true`, `DATABASE_SSL_CA_PATH` must point to a readable PEM (e.g. RDS global-bundle.pem).
+ * If `rejectUnauthorized` is false, CA is optional (dev / transitional).
  */
 export function getMysql2SslOptions(): Mysql2SslConfig | undefined {
   if (!isDatabaseSslEnabled()) {
@@ -42,13 +43,37 @@ export function getMysql2SslOptions(): Mysql2SslConfig | undefined {
   const rejectUnauthorized = mysql2SslRejectUnauthorized();
   const caPath = process.env.DATABASE_SSL_CA_PATH?.trim();
 
+  if (rejectUnauthorized) {
+    if (!caPath) {
+      throw new Error(
+        "Strict TLS enabled but DATABASE_SSL_CA_PATH not set. " +
+          "Provide path to RDS CA bundle (e.g., ./certs/global-bundle.pem). See certs/README.md"
+      );
+    }
+    const resolved = path.isAbsolute(caPath)
+      ? caPath
+      : path.resolve(process.cwd(), caPath);
+    if (!fs.existsSync(resolved)) {
+      throw new Error(
+        `DATABASE_SSL_CA_PATH file not found: ${resolved}`
+      );
+    }
+    const ca = fs.readFileSync(resolved);
+    return { rejectUnauthorized: true, ca };
+  }
+
   if (caPath) {
     const resolved = path.isAbsolute(caPath)
       ? caPath
       : path.resolve(process.cwd(), caPath);
+    if (!fs.existsSync(resolved)) {
+      throw new Error(
+        `DATABASE_SSL_CA_PATH file not found: ${resolved}`
+      );
+    }
     const ca = fs.readFileSync(resolved);
-    return { rejectUnauthorized, ca };
+    return { rejectUnauthorized: false, ca };
   }
 
-  return { rejectUnauthorized };
+  return { rejectUnauthorized: false };
 }

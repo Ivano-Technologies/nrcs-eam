@@ -1,3 +1,5 @@
+import { initAnalytics } from "@/lib/analytics";
+import { getTrpcUrl } from "@/lib/apiBase";
 import { trpc } from "@/lib/trpc";
 import { UNAUTHED_ERR_MSG } from '@shared/const';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -7,6 +9,8 @@ import superjson from "superjson";
 import App from "./App";
 import { getLoginUrl } from "./const";
 import "./index.css";
+
+initAnalytics();
 
 const queryClient = new QueryClient();
 
@@ -40,7 +44,7 @@ queryClient.getMutationCache().subscribe(event => {
 const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
-      url: "/api/trpc",
+      url: getTrpcUrl(),
       transformer: superjson,
       fetch(input, init) {
         return globalThis.fetch(input, {
