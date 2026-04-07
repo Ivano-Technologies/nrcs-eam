@@ -7,9 +7,38 @@ interface EmailOptions {
 }
 
 /**
- * Send email using Manus built-in email service
+ * When SMTP_HOST is set (e.g. Mailpit on 1025), send via nodemailer.
+ * Otherwise use Manus Forge API if configured.
  */
 export async function sendEmail(options: EmailOptions): Promise<boolean> {
+  const smtpHost = process.env.SMTP_HOST ?? process.env.MAILPIT_SMTP_HOST;
+  if (smtpHost) {
+    try {
+      const nodemailer = await import("nodemailer");
+      const port = Number(process.env.SMTP_PORT ?? process.env.MAILPIT_SMTP_PORT ?? 1025);
+      const transporter = nodemailer.default.createTransport({
+        host: smtpHost,
+        port,
+        secure: false,
+        ignoreTLS: true,
+      } as import("nodemailer").TransportOptions);
+      const from = process.env.SMTP_FROM ?? "noreply@localhost";
+      await transporter.sendMail({
+        from,
+        to: options.to,
+        subject: options.subject,
+        html: options.html,
+      });
+      return true;
+    } catch (error) {
+      console.error("[email] SMTP send failed:", error);
+      return false;
+    }
+  }
+  if (!ENV.forgeApiUrl || !ENV.forgeApiKey) {
+    console.error("[email] No SMTP_HOST or Forge API configured; email not sent");
+    return false;
+  }
   try {
     const response = await fetch(`${ENV.forgeApiUrl}/email/send`, {
       method: 'POST',
