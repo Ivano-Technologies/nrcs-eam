@@ -17,16 +17,16 @@ const PROJECT_ROOT = path.join(__dirname, "..", "..", "..");
 
 function seedE2E() {
   try {
-    execSync("pnpm exec tsx scripts/db/seed-e2e.ts", {
+    execSync("pnpm run seed-e2e:local", {
       cwd: PROJECT_ROOT,
       stdio: "pipe",
       encoding: "utf-8",
     });
   } catch {
     throw new Error(
-      "seed-e2e failed. Ensure MySQL is reachable (DATABASE_URL in .env), then run:\n" +
-        "  pnpm db:seed\n" +
-        "  pnpm exec tsx scripts/db/seed-e2e.ts",
+      "seed-e2e failed. Ensure .env.e2e is configured and MySQL is reachable, then run:\n" +
+        "  pnpm run db:seed:e2e\n" +
+        "  pnpm run seed-e2e:local",
     );
   }
 }

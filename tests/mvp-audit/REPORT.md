@@ -11,12 +11,14 @@
 
 ## Step 0 — Environment (local Windows)
 
-1. **DB:** `pnpm run db:check` — must print `DB OK`.  
+1. **`.env.e2e`:** Copy from [`.env.e2e.example`](../../.env.e2e.example); merge other keys from `.env` if needed (never copy production `DATABASE_URL`).
+2. **DB:** `pnpm run db:migrate:e2e` then `pnpm run db:check:e2e` — must print `DB OK`.  
    Script: [`scripts/db-check.ts`](../../scripts/db-check.ts) (`getDb()` + `SELECT 1`).
-2. **Seed:** `pnpm db:seed` then `pnpm exec tsx scripts/db/seed-e2e.ts` — both exit 0.
-3. **Mailpit:** `npx mailpit` (SMTP `127.0.0.1:1025`, UI `http://127.0.0.1:8025`).  
+3. **Seed:** `pnpm run db:seed:e2e` then `pnpm run seed-e2e:local` — both exit 0.
+4. **Mailpit:** `pnpm run mailpit` (SMTP `127.0.0.1:1025`, UI `http://127.0.0.1:8025`).  
    Email tests use **`127.0.0.1`** for the Mailpit API so Playwright does not hit IPv6 `::1` only.
-4. **Health:** `curl http://127.0.0.1:3000/health` → `{"ok":true}` (or rely on Playwright `webServer`).
+5. **Dev server:** `pnpm run dev:e2e` (loads `.env.e2e`; same `tsx watch` pattern as `pnpm run dev`).
+6. **Health:** `curl http://127.0.0.1:3000/health` → `{"ok":true}` (or rely on Playwright `webServer`).
 
 ---
 

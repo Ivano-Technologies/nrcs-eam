@@ -8,14 +8,14 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..",
 
 export function runSeedE2E() {
   try {
-    execSync("pnpm exec tsx scripts/db/seed-e2e.ts", {
+    execSync("pnpm run seed-e2e:local", {
       cwd: ROOT,
       stdio: "pipe",
       encoding: "utf-8",
     });
   } catch {
     throw new Error(
-      "seed-e2e failed — ensure MySQL is running and DATABASE_URL in .env is correct.",
+      "seed-e2e failed — ensure .env.e2e exists, MySQL is running, and DATABASE_URL targets local E2E DB. Run: pnpm run seed-e2e:local",
     );
   }
 }

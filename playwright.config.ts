@@ -2,8 +2,9 @@ import { defineConfig } from "@playwright/test";
 
 /**
  * MVP audit: headed Chrome, base URL from local dev server.
- * Start DB + seed before tests: `pnpm db:seed && pnpm exec tsx scripts/db/seed-e2e.ts`
- * Mailpit (optional): `npx mailpit` then SMTP_HOST=127.0.0.1 SMTP_PORT=1025
+ * Local E2E: create `.env.e2e` from `.env.e2e.example`, then
+ * `pnpm run db:migrate:e2e && pnpm run db:seed:e2e && pnpm run seed-e2e:local`
+ * Mailpit: `pnpm run mailpit` (SMTP 127.0.0.1:1025, UI 127.0.0.1:8025)
  */
 export default defineConfig({
   testDir: "./tests/mvp-audit",

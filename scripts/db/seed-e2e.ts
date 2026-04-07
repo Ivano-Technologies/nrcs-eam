@@ -1,6 +1,6 @@
 /**
  * Playwright E2E seed — idempotent (requires existing `sites` row).
- *   pnpm exec tsx scripts/db/seed-e2e.ts
+ * Prefer: `pnpm run seed-e2e:local` (loads `.env.e2e` for local MySQL).
  */
 import "dotenv/config";
 import { eq } from "drizzle-orm";

@@ -85,14 +85,13 @@ async function startServer() {
     serveStatic(app);
   }
 
-  const preferredPort = parseInt(process.env.PORT || "3000", 10);
   const isProd = process.env.NODE_ENV === "production";
-  const port = isProd
-    ? preferredPort
-    : await findAvailablePort(preferredPort);
+  // Same as: Number(process.env.PORT || 3000) — App Runner sets PORT; default 3000 locally.
+  const basePort = Number(process.env.PORT) || 3000;
+  const port = isProd ? basePort : await findAvailablePort(basePort);
 
-  if (!isProd && port !== preferredPort) {
-    console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
+  if (!isProd && port !== basePort) {
+    console.log(`Port ${basePort} is busy, using port ${port} instead`);
   }
 
   const onListen = () => {
@@ -103,11 +102,7 @@ async function startServer() {
     }
   };
 
-  if (isProd) {
-    server.listen(port, "0.0.0.0", onListen);
-  } else {
-    server.listen(port, onListen);
-  }
+  server.listen(port, "0.0.0.0", onListen);
 }
 
 async function main() {
