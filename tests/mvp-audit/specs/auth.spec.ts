@@ -8,10 +8,26 @@ import { shot } from "../helpers/shot";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.join(__dirname, "..", "..", "..");
 
+function seedE2E() {
+  try {
+    execSync("pnpm exec tsx scripts/db/seed-e2e.ts", {
+      cwd: PROJECT_ROOT,
+      stdio: "pipe",
+      encoding: "utf-8",
+    });
+  } catch {
+    throw new Error(
+      "seed-e2e failed. Ensure MySQL is reachable (DATABASE_URL in .env), then run:\n" +
+        "  pnpm db:seed\n" +
+        "  pnpm exec tsx scripts/db/seed-e2e.ts",
+    );
+  }
+}
+
 test.describe.configure({ mode: "serial" });
 
 test.describe("Authentication (2a)", () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 1280, height: 720 });
     page.on("console", (msg) => {
       if (msg.type() === "error") {
@@ -25,27 +41,17 @@ test.describe("Authentication (2a)", () => {
         console.warn(`HTTP ${response.status()} — ${response.url()}`);
       }
     });
-  });
 
-  test.beforeAll(() => {
-    try {
-      execSync("pnpm exec tsx scripts/db/seed-e2e.ts", {
-        cwd: PROJECT_ROOT,
-        stdio: "pipe",
-        encoding: "utf-8",
-      });
-    } catch {
-      throw new Error(
-        "seed-e2e failed. Ensure MySQL is reachable (DATABASE_URL in .env), then run:\n" +
-          "  pnpm db:seed\n" +
-          "  pnpm exec tsx scripts/db/seed-e2e.ts",
-      );
+    if (testInfo.title.includes("protected route redirects")) {
+      return;
     }
+
+    seedE2E();
+    await page.goto(`/auth/verify?token=${testUser.magicToken}`);
+    await page.waitForURL(/\/app(\/|$)/, { timeout: 30_000 });
   });
 
   test("magic-link login redirects to dashboard", async ({ page }) => {
-    await page.goto(`/auth/verify?token=${testUser.magicToken}`);
-    await page.waitForURL(/\/app(\/|$)/, { timeout: 30_000 });
     await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible({
       timeout: 15_000,
     });

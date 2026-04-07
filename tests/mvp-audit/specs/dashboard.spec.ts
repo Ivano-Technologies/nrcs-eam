@@ -34,22 +34,17 @@ function seedE2E() {
 test.describe.configure({ mode: "serial" });
 
 test.describe("Dashboard (2b)", () => {
-  let guard: GuardState;
-
-  /** Fail fast if DB / seed pipeline is broken (matches auth.spec.ts). */
-  test.beforeAll(() => {
-    seedE2E();
-  });
+  let guard!: GuardState;
 
   /**
    * Fresh magic-link token + login each test: Playwright uses an isolated browser
    * context per test, and tokens are single-use.
    */
   test.beforeEach(async ({ page }) => {
-    seedE2E();
     await page.setViewportSize({ width: 1280, height: 720 });
     guard = createGuardState();
     attachGuards(page, guard);
+    seedE2E();
     await page.goto(`/auth/verify?token=${testUser.magicToken}`);
     await page.waitForURL(/\/app(\/|$)/, { timeout: 30_000 });
     await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible({

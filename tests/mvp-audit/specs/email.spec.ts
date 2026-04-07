@@ -3,7 +3,8 @@ import { loginViaMagicLink } from "../helpers/e2eAuth";
 import { shot } from "../helpers/shot";
 import { testUser } from "../fixtures/testUser";
 
-const MAILPIT = "http://localhost:8025/api/v1";
+/** Use 127.0.0.1 so Node/Playwright does not resolve `localhost` to ::1 (IPv6) when Mailpit listens on IPv4 only. */
+const MAILPIT = "http://127.0.0.1:8025/api/v1";
 
 test.describe.configure({ mode: "serial" });
 
@@ -30,7 +31,7 @@ test.describe("Email — Mailpit (2f)", () => {
     expect(msg.Subject).toMatch(/sign in|nrcs/i);
     expect(msg.Snippet || msg.Text || "").not.toBe("");
 
-    await page.goto("http://localhost:8025");
+    await page.goto("http://127.0.0.1:8025");
     await page.waitForLoadState("networkidle");
     await shot(page, "email-magic-link");
   });
@@ -55,7 +56,7 @@ test.describe("Email — Mailpit (2f)", () => {
     expect(msg.Subject).toContain("E2E notification");
     expect(msg.Snippet || msg.Text || "").not.toBe("");
 
-    await page.goto("http://localhost:8025");
+    await page.goto("http://127.0.0.1:8025");
     await page.waitForLoadState("networkidle");
     await shot(page, "email-bulk-notification");
   });
