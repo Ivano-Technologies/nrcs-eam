@@ -1,23 +1,27 @@
-# MVP audit report (partial)
+# MVP audit report
 
-## Automated status
+## Step 2a — Authentication (`specs/auth.spec.ts`)
 
-| Check | Result |
+| Check | Status |
 |-------|--------|
-| Playwright installed | OK (`npx playwright install --with-deps`) |
-| Smoke `GET /health` | **PASS** (~39s first run incl. browser download) |
-| Full route/tRPC/email/PDF matrix | **Deferred** — scaffold in `CHECKLIST.md`, expand incrementally |
+| Spec file created | Done |
+| `data-testid="user-menu-trigger"` on user menu | Added in `DashboardLayout.tsx` |
+| Pre-flight `pnpm db:seed` + `seed-e2e` | **Required** — must reach MySQL (`DATABASE_URL`) |
+| Playwright run in this environment | **Blocked** — DB `ETIMEDOUT` (no local RDS) |
 
-## Screenshots
+Run locally (after pre-flight):
 
-Template: `tests/mvp-audit/screenshots/*.png` — populate as specs grow.
+```bash
+pnpm test:e2e tests/mvp-audit/specs/auth.spec.ts
+```
 
-## Infra notes
+Expected screenshots (when green):
 
-- **DB**: `DATABASE_URL` + `pnpm db:seed` + `pnpm exec tsx scripts/db/seed-e2e.ts` before deep tests.
-- **Mailpit**: `npx mailpit` → set `SMTP_HOST=127.0.0.1` `SMTP_PORT=1025` for local email.
-- **SMTP branch**: `server/emailService.ts` uses nodemailer when `SMTP_HOST` set.
+- `tests/mvp-audit/screenshots/auth-login-success.png`
+- `tests/mvp-audit/screenshots/auth-logout.png`
 
-## Bugs fixed
+## Smoke
 
-- (none in this pass — smoke only)
+| Check | Status |
+|-------|--------|
+| `GET /health` | Pass (`smoke.spec.ts`) |

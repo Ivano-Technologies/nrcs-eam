@@ -326,7 +326,11 @@ function DashboardLayoutContent({
             )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className={`flex items-center gap-3 rounded-lg px-1 py-1 hover:bg-accent/50 transition-colors w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${sidebarWidth === PRESET_WIDTHS.narrow ? 'justify-center' : ''}`}>
+                <button
+                  type="button"
+                  data-testid="user-menu-trigger"
+                  className={`flex items-center gap-3 rounded-lg px-1 py-1 hover:bg-accent/50 transition-colors w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${sidebarWidth === PRESET_WIDTHS.narrow ? 'justify-center' : ''}`}
+                >
                   <Avatar className="h-[47px] w-[47px] border shrink-0">
                     <AvatarFallback className="text-[16px] font-medium">
                       {user?.name?.charAt(0).toUpperCase()}
