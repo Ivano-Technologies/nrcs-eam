@@ -20,11 +20,13 @@ export function getSessionCookieOptions(
   const domain =
     explicitDomain && explicitDomain.length > 0 ? explicitDomain : undefined;
 
+  const secure = isSecureRequest(req);
+  // SameSite=None requires Secure; on plain HTTP (local dev) browsers reject that pair. Use lax for same-site cookies.
   return {
     ...(domain ? { domain } : {}),
     httpOnly: true,
     path: "/",
-    sameSite: "none",
-    secure: isSecureRequest(req),
+    sameSite: secure ? "none" : "lax",
+    secure,
   };
 }

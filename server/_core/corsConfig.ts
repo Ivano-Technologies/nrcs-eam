@@ -1,6 +1,12 @@
 import type { CorsOptions } from "cors";
 
-const DEV_ORIGINS = ["http://localhost:3000", "http://localhost:5173"] as const;
+const DEV_ORIGINS = [
+  "http://localhost:3000",
+  "http://localhost:5173",
+  // Playwright and local E2E use 127.0.0.1 (avoids IPv6 / ::1 surprises).
+  "http://127.0.0.1:3000",
+  "http://127.0.0.1:5173",
+] as const;
 
 /**
  * Split `process.env.CORS_ORIGINS` by comma, trim, drop empties. Never returns "*".

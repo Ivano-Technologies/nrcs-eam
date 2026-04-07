@@ -7,6 +7,7 @@ import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import * as db from "./db";
 import * as notificationHelper from "./notificationHelper";
 import { generatePDFReport, generateExcelReport } from "./reportGenerator";
+import { generateEmailTemplate, sendBulkEmails } from "./emailService";
 
 // Role-based middleware
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -1645,8 +1646,6 @@ export const appRouter = router({
         recipientRole: z.enum(['admin', 'manager', 'user']).optional(),
       }))
       .mutation(async ({ input, ctx }) => {
-        const { sendBulkEmails, generateEmailTemplate } = require('./emailService');
-        
         // Get recipient emails based on type
         let recipients: string[] = [];
         

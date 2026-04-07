@@ -3,8 +3,7 @@ import { verifyMagicLinkToken } from "../magicLinkAuth";
 import * as db from "../db";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./cookies";
-import jwt from "jsonwebtoken";
-import { ENV } from "./env";
+import { sdk } from "./sdk";
 
 /**
  * Handle magic link verification endpoint
@@ -40,17 +39,11 @@ export async function handleMagicLinkVerification(req: Request, res: Response) {
       });
     }
 
-    // Create session token using JWT
-    const sessionToken = jwt.sign(
-      {
-        userId: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-      },
-      ENV.cookieSecret,
-      { expiresIn: "7d" }
-    );
+    // Same session shape as OAuth (openId / appId / name) so tRPC auth.me works.
+    const sessionToken = await sdk.createSessionToken(user.openId, {
+      name: user.name ?? "",
+      expiresInMs: 7 * 24 * 60 * 60 * 1000,
+    });
 
     // Set session cookie
     const cookieOptions = getSessionCookieOptions(req);

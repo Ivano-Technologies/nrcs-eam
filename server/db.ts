@@ -12,17 +12,18 @@ import {
   workOrderTemplates, InsertWorkOrderTemplate
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
-import { getMysql2SslOptions } from "../shared/mysqlSsl";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      const ssl = getMysql2SslOptions();
+      const isLocal =
+        (process.env.DATABASE_URL ?? '').includes('127.0.0.1') ||
+        (process.env.DATABASE_URL ?? '').includes('localhost');
       const pool = createPool({
         uri: process.env.DATABASE_URL,
-        ...(ssl ? { ssl } : {}),
+        ssl: isLocal ? false : { rejectUnauthorized: false },
       });
       _db = drizzle(pool);
     } catch (error) {
@@ -916,19 +917,29 @@ export async function getUserPreferences(userId: number) {
 export async function upsertUserPreferences(prefs: InsertUserPreferences) {
   const db = await getDb();
   if (!db) return null;
-  
-  const existing = await getUserPreferences(prefs.userId);
-  
-  if (existing) {
-    await db.update(userPreferences)
+
+  const existingRow = await db
+    .select()
+    .from(userPreferences)
+    .where(eq(userPreferences.userId, prefs.userId))
+    .limit(1);
+
+  if (existingRow.length > 0) {
+    await db
+      .update(userPreferences)
       .set({ ...prefs, updatedAt: new Date() })
       .where(eq(userPreferences.userId, prefs.userId));
-    return await getUserPreferences(prefs.userId);
   } else {
-    const result = await db.insert(userPreferences).values(prefs);
-    const insertId = result[0].insertId;
-    return await db.select().from(userPreferences).where(eq(userPreferences.id, Number(insertId))).limit(1).then(r => r[0]);
+    await db.insert(userPreferences).values({
+      userId: prefs.userId,
+      sidebarWidth: prefs.sidebarWidth ?? 280,
+      sidebarCollapsed: prefs.sidebarCollapsed ?? 0,
+      dashboardWidgets: prefs.dashboardWidgets ?? null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
   }
+  return await getUserPreferences(prefs.userId);
 }
 
 
@@ -938,8 +949,11 @@ export async function createEmailNotification(notification: InsertEmailNotificat
   if (!db) return null;
   
   const result = await db.insert(emailNotifications).values(notification);
-  const insertId = result[0].insertId;
-  return await db.select().from(emailNotifications).where(eq(emailNotifications.id, Number(insertId))).limit(1).then(r => r[0]);
+  const insertId = Number((result as any)[0]?.insertId ?? (result as any).insertId);
+  if (!insertId || Number.isNaN(insertId)) {
+    throw new Error("Failed to get insert ID for email notification");
+  }
+  return await db.select().from(emailNotifications).where(eq(emailNotifications.id, insertId)).limit(1).then(r => r[0]);
 }
 
 export async function getEmailNotificationHistory(limit: number = 50) {
@@ -979,7 +993,11 @@ export async function createWorkOrderTemplate(data: InsertWorkOrderTemplate) {
   if (!db) throw new Error("Database not available");
   
   const result = await db.insert(workOrderTemplates).values(data);
-  return Number(result[0].insertId);
+  const insertId = Number((result as any)[0]?.insertId ?? (result as any).insertId);
+  if (!insertId || Number.isNaN(insertId)) {
+    throw new Error("Failed to get insert ID for work order template");
+  }
+  return insertId;
 }
 
 export async function getWorkOrderTemplates(filters?: {

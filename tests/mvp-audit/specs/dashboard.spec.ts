@@ -53,14 +53,14 @@ test.describe("Dashboard (2b)", () => {
   });
 
   test.afterEach(() => {
+    expect(
+      guard.http4xx5xx,
+      `HTTP 4xx/5xx: ${JSON.stringify(guard.http4xx5xx)}`,
+    ).toEqual([]);
     const bad = filterBenignConsoleErrors(guard.consoleErrors);
     expect(
       bad,
       `Unexpected console.error: ${JSON.stringify(bad)}`,
-    ).toEqual([]);
-    expect(
-      guard.http4xx5xx,
-      `HTTP 4xx/5xx: ${JSON.stringify(guard.http4xx5xx)}`,
     ).toEqual([]);
   });
 
@@ -101,7 +101,7 @@ test.describe("Dashboard (2b)", () => {
       await expect(
         page.getByText("An unexpected error occurred."),
       ).toHaveCount(0);
-      const main = page.locator("main");
+      const main = page.getByTestId("app-page-main");
       await expect(main).toBeVisible();
       const text = await main.innerText();
       expect(text.length).toBeGreaterThan(20);

@@ -10,11 +10,32 @@ export function getSecretsSource(): "aws" | "env" {
   return secretsSource;
 }
 
+function isLocalMysqlDatabaseUrl(url: string | undefined): boolean {
+  if (!url) return false;
+  try {
+    const u = new URL(url);
+    if (u.protocol !== "mysql:") return false;
+    const h = u.hostname.toLowerCase();
+    return h === "localhost" || h === "127.0.0.1" || h === "::1";
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Merge JSON key/value pairs from AWS Secrets Manager into `process.env`.
  * Gated: skips unless `AWS_SECRETS_SECRET_ID` is set (local dev uses `.env` only).
+ * Skips AWS when `DATABASE_URL` targets local MySQL (avoids `.env` merging `AWS_*` into E2E runs).
  */
 export async function loadSecrets(): Promise<void> {
+  if (isLocalMysqlDatabaseUrl(process.env.DATABASE_URL)) {
+    secretsSource = "env";
+    console.log(
+      "[secrets] Skipping AWS Secrets Manager (local DATABASE_URL host)"
+    );
+    return;
+  }
+
   const secretId = process.env.AWS_SECRETS_SECRET_ID;
 
   if (!secretId) {

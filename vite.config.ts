@@ -7,7 +7,13 @@ import { defineConfig } from "vite";
 import { vitePluginManusRuntime } from "vite-plugin-manus-runtime";
 
 
-const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime()];
+// jsx-loc can throw during transform under concurrent Playwright loads (Windows).
+const plugins = [
+  react(),
+  tailwindcss(),
+  ...(process.env.DISABLE_VITE_JSX_LOC === "1" ? [] : [jsxLocPlugin()]),
+  vitePluginManusRuntime(),
+];
 
 export default defineConfig({
   plugins,

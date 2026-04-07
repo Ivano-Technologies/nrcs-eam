@@ -26,9 +26,9 @@
     "db:seed:sample": "node scripts/db/seed-sample-data.mjs",
     "db:cleanup": "node scripts/db/cleanup-database.mjs",
     "test:pdfkit": "tsx scripts/pdfkit-smoke.ts",
-    "dev:e2e": "dotenv -e .env.e2e -- cross-env NODE_ENV=development tsx watch server/_core/index.ts",
-    "mailpit": "npx mailpit --smtp-listen 127.0.0.1:1025 --listen 127.0.0.1:8025",
-    "test:e2e": "playwright test",
+    "dev:e2e": "dotenv -e .env.e2e -- cross-env NODE_ENV=development tsx server/_core/index.ts",
+    "mailpit": "C:\\Antigravity\\Tools\\mailpit\\mailpit.exe --smtp 127.0.0.1:1025 --listen 127.0.0.1:8025",
+    "test:e2e": "cross-env DISABLE_VITE_JSX_LOC=1 playwright test",
     "test:e2e:headed": "playwright test --headed"
   },
   "dependencies": {

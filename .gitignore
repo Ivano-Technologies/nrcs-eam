@@ -126,3 +126,10 @@ temp/
 
 .aws/
 certs/global-bundle.pem
+
+# Playwright (local runs)
+test-results/
+
+# MVP audit: regenerate with `pnpm test:e2e`
+tests/mvp-audit/screenshots/*
+!tests/mvp-audit/screenshots/.gitkeep

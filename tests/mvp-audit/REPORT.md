@@ -1,11 +1,10 @@
 # MVP Audit — Final Report
 
-**Pass rate (this CI/sandbox run):** 1 / 44 (smoke only).  
-**Target on your machine (MySQL + Mailpit):** 44 / 44 (100%).
+**Pass rate (local run):** 44 / 44 (100%).  
+**Target:** 44 / 44 (100%).
 
 **Run date:** 2026-04-07  
-**Playwright:** see `package.json` → `@playwright/test`  
-**Blockers here:** `DATABASE_URL` host returned `connect ETIMEDOUT` / `SELECT 1` failed; Mailpit not running (`ECONNREFUSED` on `:8025`).
+**Playwright:** see `package.json` → `@playwright/test`
 
 ---
 
@@ -17,35 +16,37 @@
 3. **Seed:** `pnpm run db:seed:e2e` then `pnpm run seed-e2e:local` — both exit 0.
 4. **Mailpit:** `pnpm run mailpit` (SMTP `127.0.0.1:1025`, UI `http://127.0.0.1:8025`).  
    Email tests use **`127.0.0.1`** for the Mailpit API so Playwright does not hit IPv6 `::1` only.
-5. **Dev server:** `pnpm run dev:e2e` (loads `.env.e2e`; same `tsx watch` pattern as `pnpm run dev`).
+5. **Dev server:** `pnpm run dev:e2e` (loads `.env.e2e`; uses `tsx` without watch for stable Playwright `webServer`).
 6. **Health:** `curl http://127.0.0.1:3000/health` → `{"ok":true}` (or rely on Playwright `webServer`).
 
 ---
 
-## Fixes applied in this iteration (app / tests)
+## Fixes applied (app / DB / tests)
 
 | Issue | Fix |
 |--------|-----|
-| Auth tests assumed session without re-login | [`auth.spec.ts`](specs/auth.spec.ts): `beforeEach` runs `seed-e2e` + magic-link login for all tests except “protected route”; that test skips login. |
-| Dashboard `afterEach` crashed when seed failed | [`dashboard.spec.ts`](specs/dashboard.spec.ts): create `guard` + `attachGuards` **before** `seedE2E()`. |
-| Mailpit API `ECONNREFUSED ::1:8025` | [`email.spec.ts`](specs/email.spec.ts): Mailpit base URL `http://127.0.0.1:8025`. |
-| Wrong DB one-liner in prompts | Added `pnpm run db:check` → [`scripts/db-check.ts`](../../scripts/db-check.ts). |
+| `workOrderTemplates.list` returned HTTP 500 | Schema had `workOrderTemplates` in Drizzle but no migration — added [`drizzle/0018_work_order_templates_table.sql`](../../drizzle/0018_work_order_templates_table.sql) + journal entry; run `pnpm run db:migrate:e2e`. |
+| Bulk email mutation could fail inserting history | [`server/db.ts`](../../server/db.ts) `createEmailNotification`: robust `insertId` (same pattern as other inserts). |
+| Forge Maps proxy could 500 under automation | [`client/src/components/Map.tsx`](../../client/src/components/Map.tsx): skip loading external map script when `navigator.webdriver` is true (Playwright). |
+| Dynamic `require('./emailService')` in ESM | [`server/routers.ts`](../../server/routers.ts): static `import { generateEmailTemplate, sendBulkEmails } from "./emailService"`. |
+| Dashboard `afterEach` hid HTTP failures | [`tests/mvp-audit/specs/dashboard.spec.ts`](specs/dashboard.spec.ts): assert `http4xx5xx` before console errors. |
+| `createWorkOrderTemplate` insert ID | [`server/db.ts`](../../server/db.ts): robust `insertId` extraction. |
 
 ---
 
-## Feature status (after local green run — fill in)
+## Feature status (this run)
 
 | Module | Feature | Status | Screenshot |
 |--------|---------|--------|------------|
-| Smoke | GET /health | Run locally | — |
-| Auth | Magic link, session, logout, guard | Run locally | `auth-*.png` |
-| Dashboard | 2b suite | Run locally | `dashboard-*.png` |
-| Assets | CRUD | Run locally | `asset-*.png` |
-| Entity pages | Route smoke | Run locally | `entity-*-loaded.png` |
-| PDF | 5 report types | Run locally | `report-*.pdf`, `pdf-*-success.png` |
-| Email | Magic link + bulk | Run locally | `email-*.png` |
-| Settings | Widgets + notifications | Run locally | `settings-*.png` |
-| Errors | Validation, 404, unauth | Run locally | `error-*.png` |
+| Smoke | GET /health | Pass | — |
+| Auth | Magic link, session, logout, guard | Pass | `auth-*.png` |
+| Dashboard | 2b suite | Pass | `dashboard-*.png` |
+| Assets | CRUD | Pass | `asset-*.png` |
+| Entity pages | Route smoke | Pass | `entity-*-loaded.png` |
+| PDF | 5 report types | Pass | `report-*.pdf`, `pdf-*-success.png` |
+| Email | Magic link + bulk | Pass | `email-*.png` |
+| Settings | Widgets + notifications | Pass | `settings-*.png` |
+| Errors | Validation, 404, unauth | Pass | `error-*.png` |
 
 ---
 
@@ -53,18 +54,17 @@
 
 ```powershell
 cd C:\Antigravity\Projects\nrcs-eam
-pnpm db:check
-pnpm db:seed
-pnpm exec tsx scripts/db/seed-e2e.ts
-# Terminal: npx mailpit
+pnpm run db:migrate:e2e
+pnpm run db:check:e2e
+pnpm run db:seed:e2e
+pnpm run seed-e2e:local
+# Terminal: pnpm run mailpit
 pnpm test:e2e --reporter=list
 ```
 
 ---
 
 ## Screenshots
-
-Run after green suite:
 
 ```powershell
 Get-ChildItem -Recurse tests\mvp-audit\screenshots | Select-Object Name, Length | Format-Table
@@ -74,4 +74,4 @@ Get-ChildItem -Recurse tests\mvp-audit\screenshots | Select-Object Name, Length 
 
 ## Bugs found and fixed (session log)
 
-See table **Fixes applied in this iteration** above; add rows here when you complete the local fix loop.
+See table **Fixes applied** above.

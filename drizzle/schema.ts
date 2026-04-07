@@ -512,7 +512,7 @@ export const emailTemplates = mysqlTable("email_templates", {
   updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
 });
 
-export const emailNotifications = mysqlTable("emailNotifications", {
+export const emailNotifications = mysqlTable("email_notifications", {
   id: int("id").autoincrement().primaryKey(),
   subject: varchar("subject", { length: 255 }).notNull(),
   body: text("body").notNull(),

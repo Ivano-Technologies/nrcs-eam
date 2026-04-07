@@ -120,6 +120,13 @@
       "when": 1768912044923,
       "tag": "0016_moaning_guardsmen",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "5",
+      "when": 1768912500000,
+      "tag": "0018_work_order_templates_table",
+      "breakpoints": true
     }
   ]
 }

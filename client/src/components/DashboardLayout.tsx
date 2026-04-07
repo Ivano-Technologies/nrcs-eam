@@ -405,7 +405,9 @@ function DashboardLayoutContent({
             <NotificationCenter />
           </div>
         )}
-        <main className="flex-1 p-4">{children}</main>
+        <main data-testid="app-page-main" className="flex-1 p-4">
+          {children}
+        </main>
         <Footer />
       </SidebarInset>
     </>

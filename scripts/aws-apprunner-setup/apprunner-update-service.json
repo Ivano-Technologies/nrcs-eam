@@ -16,7 +16,7 @@
         "ConfigurationSource": "API",
         "CodeConfigurationValues": {
           "Runtime": "NODEJS_22",
-          "BuildCommand": "npm install -g pnpm && pnpm install && pnpm run build",
+          "BuildCommand": "corepack enable && corepack prepare pnpm@9.15.4 --activate && pnpm install && pnpm run build",
           "StartCommand": "node dist/index.js",
           "Port": "3000",
           "RuntimeEnvironmentVariables": {
@@ -43,8 +43,18 @@
     "Protocol": "HTTP",
     "Path": "/health",
     "Interval": 10,
-    "Timeout": 5,
+    "Timeout": 6,
     "HealthyThreshold": 1,
     "UnhealthyThreshold": 5
+  },
+  "NetworkConfiguration": {
+    "EgressConfiguration": {
+      "EgressType": "VPC",
+      "VpcConnectorArn": "arn:aws:apprunner:eu-west-1:279127167519:vpcconnector/nrcs-eam-rds/1/29d33cf34990434e9529c61a0959e7b7"
+    },
+    "IngressConfiguration": {
+      "IsPubliclyAccessible": true
+    },
+    "IpAddressType": "IPV4"
   }
 }

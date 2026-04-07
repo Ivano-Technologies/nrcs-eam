@@ -456,12 +456,13 @@ export default function Assets() {
         </CardContent>
       </Card>
 
-      {isLoading ? (
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        </div>
-      ) : filteredAssets && filteredAssets.length > 0 ? (
-        <div data-testid="asset-list-table" className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div data-testid="asset-list-table">
+        {isLoading ? (
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          </div>
+        ) : filteredAssets && filteredAssets.length > 0 ? (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredAssets.map((asset) => (
             <div key={asset.id} className="relative">
               <Link href={appPath(`/assets/${asset.id}`)}>
@@ -534,15 +535,16 @@ export default function Assets() {
               </Link>
             </div>
           ))}
-        </div>
-      ) : (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center h-64">
-            <Package className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">No assets found</p>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        ) : (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center h-64">
+              <Package className="h-12 w-12 text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">No assets found</p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
 
       {/* Edit Asset Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>

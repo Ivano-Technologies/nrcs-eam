@@ -16,7 +16,7 @@ You should see `Server running on http://localhost:3000/` (or another port if 30
 
 | Field | Value |
 |--------|--------|
-| **Build** | `npm install -g pnpm && pnpm install && pnpm run build` |
+| **Build** | `corepack enable && corepack prepare pnpm@9.15.4 --activate && pnpm install && pnpm run build` (do **not** use `npm install -g pnpm` on App Runner — `pnpm` is not on `PATH` in the build container; use **Corepack** or `npx pnpm`) |
 | **Start** | `pnpm start` |
 | **Port** | `3000` (or set `PORT` in env) |
 
@@ -97,10 +97,11 @@ sequenceDiagram
 
 ## VPC connector (required for private RDS)
 
-1. App Runner → **Networking** → enable **VPC access**.
-2. Create a **VPC connector** in the **same VPC** as RDS.
-3. Use **private subnets** with routes that can reach RDS (and NAT for outbound if needed).
-4. Attach a **security group** for the connector.
+1. App Runner → **Networking** → set egress to **VPC** and choose a **VPC connector** in the **same VPC** as RDS (see `NetworkConfiguration` in [`scripts/aws-apprunner-setup/apprunner-update-service.json`](../scripts/aws-apprunner-setup/apprunner-update-service.json)).
+2. Use **two or more subnets** in that VPC for the connector (same subnets as RDS or other subnets in the VPC with routes to RDS).
+3. Attach a **security group** for the connector (outbound is typically allow-all; inbound rules are usually unused for this SG).
+
+**Secrets Manager over VPC:** Connector ENIs often have **no public IP**, so calls to the **public** Secrets Manager endpoint may **time out** even though RDS is reachable. Add an **interface VPC endpoint** for **`com.amazonaws.REGION.secretsmanager`** with **private DNS** enabled, and a security group on the endpoint that allows **inbound TCP 443** from the **connector** security group.
 
 ## RDS security group
 
@@ -129,7 +130,7 @@ Frontend can be hosted separately (e.g. Vercel) calling this API origin, or serv
 
 ## Go-live checklist
 
-1. **Build:** `npm install -g pnpm && pnpm install && pnpm build` — produces `dist/index.js` and `dist/public/`, and fetches the RDS CA bundle if missing (`scripts/fetch-rds-ca.mjs`).
+1. **Build:** `corepack enable && corepack prepare pnpm@9.15.4 --activate && pnpm install && pnpm run build` — produces `dist/index.js` and `dist/public/`, and fetches the RDS CA bundle if missing (`scripts/fetch-rds-ca.mjs`). Do **not** rely on `npm install -g pnpm` on App Runner (`pnpm` may not be on `PATH`).
 2. **Start:** `pnpm start` — listens on `PORT` (default `3000`), production binds `0.0.0.0`.
 3. **VPC connector:** Same VPC as RDS; use **2+ subnets**; attach the connector security group.
 4. **Security groups:** RDS inbound **MySQL (3306)** from the **App Runner connector SG** only — not `0.0.0.0/0`.
