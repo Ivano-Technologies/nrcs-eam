@@ -68,6 +68,13 @@ const getMenuItems = (userRole?: string) => {
   });
 };
 
+/** Stable `data-testid` for Playwright (sidebar navigation). */
+function sidebarNavTestId(path: string): string {
+  if (path === "/app" || path === "/app/") return "sidebar-nav-dashboard";
+  const sub = path.replace(/^\/app\/?/, "").replace(/\//g, "-") || "home";
+  return `sidebar-nav-${sub}`;
+}
+
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
 const DEFAULT_WIDTH = 360;
 const MIN_WIDTH = 80;
@@ -297,6 +304,7 @@ function DashboardLayoutContent({
                   <SidebarMenuItem key={item.path}>
                     <SidebarMenuButton
                       isActive={isActive}
+                      data-testid={sidebarNavTestId(item.path)}
                       onClick={() => setLocation(item.path)}
                       tooltip={item.label}
                       className={`h-10 transition-all font-normal ${sidebarWidth === PRESET_WIDTHS.narrow ? 'justify-center' : ''}`}

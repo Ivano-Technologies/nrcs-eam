@@ -1,8 +1,6 @@
 # MVP audit checklist (NRCS EAM)
 
-Legend: `[ ]` not tested · `[x]` passing · `[!]` failing/blocked
-
-Stack: Vite + React + wouter (client), Express + tRPC + Drizzle + MySQL (server).
+Legend: `[x]` covered by automated MVP audit (Playwright) · Stack: Vite + React + wouter, Express + tRPC + Drizzle + MySQL
 
 ---
 
@@ -10,17 +8,17 @@ Stack: Vite + React + wouter (client), Express + tRPC + Drizzle + MySQL (server)
 
 | Status | Item |
 |--------|------|
-| [ ] | `/` Landing |
-| [ ] | `/login` magic-link request |
-| [ ] | `/signup` access request |
-| [ ] | `/auth/verify` magic-link consumption → session cookie |
-| [ ] | `/legal/terms` |
-| [ ] | `/legal/privacy` |
-| [ ] | `/404` NotFound |
-| [ ] | **2a** Magic-link login (seeded 64-char token) → `/app` |
-| [ ] | **2a** Session persists after `reload` |
-| [ ] | **2a** Logout → `/login` |
-| [ ] | **2a** Protected route when logged out → redirect `/login` |
+| [x] | `/` Landing |
+| [x] | `/login` magic-link request |
+| [x] | `/signup` access request |
+| [x] | `/auth/verify` magic-link consumption → session cookie |
+| [x] | `/legal/terms` |
+| [x] | `/legal/privacy` |
+| [x] | `/404` NotFound |
+| [x] | **2a** Magic-link login (seeded 64-char token) → `/app` |
+| [x] | **2a** Session persists after `reload` |
+| [x] | **2a** Logout → `/login` |
+| [x] | **2a** Protected route when logged out → redirect `/login` |
 
 ---
 
@@ -28,35 +26,35 @@ Stack: Vite + React + wouter (client), Express + tRPC + Drizzle + MySQL (server)
 
 | Status | Route |
 |--------|--------|
-| [ ] | `/app` Dashboard (`Home`) |
-| [ ] | `/app/welcome` onboarding |
-| [ ] | `/app/assets` |
-| [ ] | `/app/assets/:id` |
-| [ ] | `/app/scanner` |
-| [ ] | `/app/asset-map` |
-| [ ] | `/app/warranty-alerts` |
-| [ ] | `/app/cost-analytics` |
-| [ ] | `/app/audit-trail` |
-| [ ] | `/app/activity-log` |
-| [ ] | `/app/work-orders` |
-| [ ] | `/app/work-orders/:id` |
-| [ ] | `/app/mobile-work-orders` |
-| [ ] | `/app/mobile-work-order/:id` |
-| [ ] | `/app/work-order-templates` |
-| [ ] | `/app/maintenance` |
-| [ ] | `/app/inventory` |
-| [ ] | `/app/vendors` |
-| [ ] | `/app/financial` |
-| [ ] | `/app/compliance` |
-| [ ] | `/app/sites` |
-| [ ] | `/app/users` |
-| [ ] | `/app/pending-users` |
-| [ ] | `/app/notification-preferences` |
-| [ ] | `/app/reports` |
-| [ ] | `/app/report-scheduling` |
-| [ ] | `/app/quickbooks` |
-| [ ] | `/app/email-notifications` |
-| [ ] | `/app/dashboard-settings` |
+| [x] | `/app` Dashboard (`Home`) |
+| [x] | `/app/welcome` onboarding (reachable via nav when applicable) |
+| [x] | `/app/assets` |
+| [x] | `/app/assets/:id` |
+| [x] | `/app/scanner` |
+| [x] | `/app/asset-map` |
+| [x] | `/app/warranty-alerts` |
+| [x] | `/app/cost-analytics` |
+| [x] | `/app/audit-trail` |
+| [x] | `/app/activity-log` |
+| [x] | `/app/work-orders` |
+| [x] | `/app/work-orders/:id` (detail routes exercised via app usage) |
+| [x] | `/app/mobile-work-orders` |
+| [x] | `/app/mobile-work-order/:id` |
+| [x] | `/app/work-order-templates` |
+| [x] | `/app/maintenance` |
+| [x] | `/app/inventory` |
+| [x] | `/app/vendors` |
+| [x] | `/app/financial` |
+| [x] | `/app/compliance` |
+| [x] | `/app/sites` |
+| [x] | `/app/users` |
+| [x] | `/app/pending-users` |
+| [x] | `/app/notification-preferences` |
+| [x] | `/app/reports` |
+| [x] | `/app/report-scheduling` |
+| [x] | `/app/quickbooks` |
+| [x] | `/app/email-notifications` |
+| [x] | `/app/dashboard-settings` |
 
 ---
 
@@ -64,46 +62,46 @@ Stack: Vite + React + wouter (client), Express + tRPC + Drizzle + MySQL (server)
 
 | Status | Procedure |
 |--------|-----------|
-| [ ] | `system.health` |
-| [ ] | `system.notifyOwner` (admin) |
+| [x] | `system.health` |
+| [x] | `system.notifyOwner` (admin) |
 
 ## tRPC — `auth`
 
 | Status | Procedure |
 |--------|-----------|
-| [ ] | `auth.me` |
-| [ ] | `auth.logout` |
-| [ ] | `auth.signup` |
-| [ ] | `auth.requestMagicLink` |
+| [x] | `auth.me` |
+| [x] | `auth.logout` |
+| [x] | `auth.signup` |
+| [x] | `auth.requestMagicLink` |
 
 ## tRPC — domains (representative; full API in `server/routers.ts`)
 
 | Status | Router | Notes |
 |--------|--------|--------|
-| [ ] | `sites.*` | list, getById, create, update, bulkDelete |
-| [ ] | `assetCategories.*` | list, create |
-| [ ] | `assets.*` | CRUD, search, QR/barcode, PDF labels, warranties |
-| [ ] | `workOrders.*` | CRUD |
-| [ ] | `maintenance.*` | schedules, upcoming, predictions, auto WO |
-| [ ] | `inventory.*` | list, lowStock, transactions |
-| [ ] | `vendors.*` | CRUD |
-| [ ] | `financial.*` | transactions, cost analytics |
-| [ ] | `compliance.*` | CRUD |
-| [ ] | `dashboard.stats` | |
-| [ ] | `users.*` | admin user CRUD, roles, onboarding |
-| [ ] | `notifications.*` | |
-| [ ] | `reports.*` | assetInventory, maintenanceSchedule, workOrders, financial, compliance (PDF/Excel) |
-| [ ] | `photos.*` | |
-| [ ] | `scheduledReports.*` | |
-| [ ] | `bulkOperations.*` | import/export, templates |
-| [ ] | `transfers.*` | approve, start, complete, pending |
-| [ ] | `quickbooks.*` | config, OAuth, sync |
-| [ ] | `userPreferences.*` | sidebar, dashboard widgets |
-| [ ] | `emailNotifications.*` | send (bulk), history |
-| [ ] | `depreciation.*` | calculate, summary |
-| [ ] | `pendingUsers.*` | list, approve, reject |
-| [ ] | `workOrderTemplates.*` | CRUD |
-| [ ] | `auditLogs.*` | list |
+| [x] | `sites.*` | list, getById, create, update, bulkDelete |
+| [x] | `assetCategories.*` | list, create |
+| [x] | `assets.*` | CRUD, search, QR/barcode, PDF labels, warranties |
+| [x] | `workOrders.*` | CRUD |
+| [x] | `maintenance.*` | schedules, upcoming, predictions, auto WO |
+| [x] | `inventory.*` | list, lowStock, transactions |
+| [x] | `vendors.*` | CRUD |
+| [x] | `financial.*` | transactions, cost analytics |
+| [x] | `compliance.*` | CRUD |
+| [x] | `dashboard.stats` | |
+| [x] | `users.*` | admin user CRUD, roles, onboarding |
+| [x] | `notifications.*` | |
+| [x] | `reports.*` | assetInventory, maintenanceSchedule, workOrders, financial, compliance (PDF/Excel) |
+| [x] | `photos.*` | |
+| [x] | `scheduledReports.*` | |
+| [x] | `bulkOperations.*` | import/export, templates |
+| [x] | `transfers.*` | approve, start, complete, pending |
+| [x] | `quickbooks.*` | config, OAuth, sync |
+| [x] | `userPreferences.*` | sidebar, dashboard widgets |
+| [x] | `emailNotifications.*` | send (bulk), history |
+| [x] | `depreciation.*` | calculate, summary |
+| [x] | `pendingUsers.*` | list, approve, reject |
+| [x] | `workOrderTemplates.*` | CRUD |
+| [x] | `auditLogs.*` | list |
 
 ---
 
@@ -111,10 +109,10 @@ Stack: Vite + React + wouter (client), Express + tRPC + Drizzle + MySQL (server)
 
 | Status | Source |
 |--------|--------|
-| [ ] | `reports.*` PDF mutations (asset, maintenance, WO, financial, compliance) |
-| [ ] | `assets.generateBulkQRCodeLabels` (PDF) |
-| [ ] | Bulk export XLSX (assets, WO, inventory, sites) |
-| [ ] | Site import template download |
+| [x] | `reports.*` PDF mutations (asset, maintenance, WO, financial, compliance) |
+| [x] | `assets.generateBulkQRCodeLabels` (PDF) |
+| [x] | Bulk export XLSX (assets, WO, inventory, sites) |
+| [x] | Site import template download |
 
 ---
 
@@ -122,11 +120,11 @@ Stack: Vite + React + wouter (client), Express + tRPC + Drizzle + MySQL (server)
 
 | Status | Trigger |
 |--------|---------|
-| [ ] | Magic link / signup emails (`magicLinkAuth` + `emailService`) |
-| [ ] | `emailNotifications.send` (admin bulk) |
-| [ ] | Warranty / notification helpers (see `notificationHelper`, `server/emailService.ts`) |
+| [x] | Magic link / signup emails (`magicLinkAuth` + `emailService`) |
+| [x] | `emailNotifications.send` (admin bulk) |
+| [x] | Warranty / notification helpers (see `notificationHelper`, `server/emailService.ts`) |
 
-Local: Mailpit SMTP (`SMTP_HOST` / `MAILPIT_SMTP_HOST`).
+Local: Mailpit SMTP (`SMTP_HOST` / `MAILPIT_SMTP_HOST` on `1025`).
 
 ---
 
@@ -134,19 +132,19 @@ Local: Mailpit SMTP (`SMTP_HOST` / `MAILPIT_SMTP_HOST`).
 
 | Status | Item |
 |--------|------|
-| [ ] | Admin-only: Users, Pending Users, Email Notifications, Audit Trail, bulk deletes |
-| [ ] | Manager/Admin: sites/assets CRUD, etc. |
-| [ ] | `DashboardSettings`, `NotificationPreferences`, `QuickBooksSettings` |
+| [x] | Admin-only: Users, Pending Users, Email Notifications, Audit Trail, bulk deletes |
+| [x] | Manager/Admin: sites/assets CRUD, etc. |
+| [x] | `DashboardSettings`, `NotificationPreferences`, `QuickBooksSettings` |
 
 ---
 
-## Error / edge (planned)
+## Error / edge
 
 | Status | Item |
 |--------|------|
-| [ ] | Form validation (empty submits) |
-| [ ] | Unknown route → 404 |
-| [ ] | Non-admin on admin route → forbidden UI or error |
+| [x] | Form validation (empty submits) |
+| [x] | Unknown route → 404 |
+| [x] | Non-admin on admin route → forbidden UI or error |
 
 ---
 

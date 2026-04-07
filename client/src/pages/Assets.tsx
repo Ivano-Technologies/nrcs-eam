@@ -5,8 +5,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Package, MapPin, Download, Upload, Edit2 } from "lucide-react";
+import { Plus, Search, Package, MapPin, Download, Upload, Edit2, Trash2 } from "lucide-react";
 import { Link } from "wouter";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -22,6 +32,8 @@ export default function Assets() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingAsset, setEditingAsset] = useState<any>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
+  const [createFormError, setCreateFormError] = useState("");
 
   const { data: assets, isLoading, refetch } = trpc.assets.list.useQuery({
     siteId: siteFilter !== "all" ? Number(siteFilter) : undefined,
@@ -91,6 +103,7 @@ export default function Assets() {
   const createAssetMutation = trpc.assets.create.useMutation({
     onSuccess: () => {
       toast.success("Asset created successfully");
+      setCreateFormError("");
       setIsCreateDialogOpen(false);
       refetch();
       setNewAsset({
@@ -107,6 +120,17 @@ export default function Assets() {
     },
     onError: (error: any) => {
       toast.error(`Failed to create asset: ${error.message}`);
+    },
+  });
+
+  const bulkDeleteMutation = trpc.assets.bulkDelete.useMutation({
+    onSuccess: () => {
+      toast.success("Asset deleted");
+      setDeleteTarget(null);
+      refetch();
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to delete: ${error.message}`);
     },
   });
 
@@ -135,8 +159,11 @@ export default function Assets() {
   });
 
   const handleCreateAsset = () => {
+    setCreateFormError("");
     if (!newAsset.assetTag || !newAsset.name || !newAsset.categoryId || !newAsset.siteId) {
-      toast.error("Please fill in all required fields");
+      const msg = "Please fill in all required fields";
+      setCreateFormError(msg);
+      toast.error(msg);
       return;
     }
 
@@ -212,6 +239,7 @@ export default function Assets() {
   };
 
   const canCreateAsset = user?.role === "admin" || user?.role === "manager";
+  const canDeleteAsset = user?.role === "admin";
 
   return (
     <div className="space-y-6">
@@ -239,9 +267,15 @@ export default function Assets() {
               <Upload className="mr-2 h-4 w-4" />
               Import
             </Button>
-            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <Dialog
+              open={isCreateDialogOpen}
+              onOpenChange={(open) => {
+                setIsCreateDialogOpen(open);
+                if (!open) setCreateFormError("");
+              }}
+            >
               <DialogTrigger asChild>
-                <Button>
+                <Button data-testid="asset-create-btn">
                   <Plus className="mr-2 h-4 w-4" />
                   Add Asset
                 </Button>
@@ -253,6 +287,11 @@ export default function Assets() {
                   Create a new asset record in the system
                 </DialogDescription>
               </DialogHeader>
+              {createFormError ? (
+                <p data-testid="form-error" className="text-sm text-destructive">
+                  {createFormError}
+                </p>
+              ) : null}
               <div className="grid gap-4 py-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -287,7 +326,7 @@ export default function Assets() {
                   <div className="space-y-2">
                     <Label htmlFor="category">Category *</Label>
                     <Select value={newAsset.categoryId} onValueChange={(value) => setNewAsset({ ...newAsset, categoryId: value })}>
-                      <SelectTrigger>
+                      <SelectTrigger data-testid="asset-form-category">
                         <SelectValue placeholder="Select category" />
                       </SelectTrigger>
                       <SelectContent>
@@ -302,7 +341,7 @@ export default function Assets() {
                   <div className="space-y-2">
                     <Label htmlFor="site">Site *</Label>
                     <Select value={newAsset.siteId} onValueChange={(value) => setNewAsset({ ...newAsset, siteId: value })}>
-                      <SelectTrigger>
+                      <SelectTrigger data-testid="asset-form-site">
                         <SelectValue placeholder="Select site" />
                       </SelectTrigger>
                       <SelectContent>
@@ -357,7 +396,11 @@ export default function Assets() {
                 <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button onClick={handleCreateAsset} disabled={createAssetMutation.isPending}>
+                <Button
+                  data-testid="asset-form-submit"
+                  onClick={handleCreateAsset}
+                  disabled={createAssetMutation.isPending}
+                >
                   {createAssetMutation.isPending ? "Creating..." : "Create Asset"}
                 </Button>
               </DialogFooter>
@@ -376,6 +419,7 @@ export default function Assets() {
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
+                data-testid="asset-search-input"
                 placeholder="Search assets..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -417,7 +461,7 @@ export default function Assets() {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
       ) : filteredAssets && filteredAssets.length > 0 ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div data-testid="asset-list-table" className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredAssets.map((asset) => (
             <div key={asset.id} className="relative">
               <Link href={appPath(`/assets/${asset.id}`)}>
@@ -438,13 +482,29 @@ export default function Assets() {
                           {asset.status}
                         </Badge>
                         {canCreateAsset && (
-                          <Button 
-                            size="sm" 
-                            variant="ghost" 
+                          <Button
+                            data-testid="asset-edit-btn"
+                            size="sm"
+                            variant="ghost"
                             onClick={(e) => handleStartEdit(asset, e)}
                             className="h-8 w-8 p-0"
                           >
                             <Edit2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {canDeleteAsset && (
+                          <Button
+                            data-testid="asset-delete-btn"
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 w-8 p-0 text-destructive"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setDeleteTarget({ id: asset.id, name: asset.name });
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         )}
                       </div>
@@ -610,12 +670,41 @@ export default function Assets() {
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSaveEdit} disabled={updateAssetMutation.isPending}>
+            <Button
+              data-testid="asset-form-submit"
+              onClick={handleSaveEdit}
+              disabled={updateAssetMutation.isPending}
+            >
               {updateAssetMutation.isPending ? "Saving..." : "Save Changes"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete asset?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove {deleteTarget?.name ?? "this asset"} from the registry.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              data-testid="asset-delete-confirm"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (deleteTarget) {
+                  bulkDeleteMutation.mutate({ ids: [deleteTarget.id] });
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Import Dialog */}
       <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>

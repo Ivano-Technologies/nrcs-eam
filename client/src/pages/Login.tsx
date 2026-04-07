@@ -62,6 +62,7 @@ export default function Login() {
           </Label>
           <Input
             id="email"
+            data-testid="login-email-input"
             type="email"
             placeholder="your@email.com"
             value={email}
@@ -72,7 +73,12 @@ export default function Login() {
           />
         </div>
 
-        <Button type="submit" className={authPrimaryButtonClass} disabled={loginMutation.isPending}>
+        <Button
+          type="submit"
+          data-testid="login-send-magic-link"
+          className={authPrimaryButtonClass}
+          disabled={loginMutation.isPending}
+        >
           {loginMutation.isPending ? "Sending..." : "Send Magic Link"}
         </Button>
 

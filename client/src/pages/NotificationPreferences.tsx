@@ -137,6 +137,7 @@ export default function NotificationPreferences() {
                   </div>
                   <Switch
                     id={type.key}
+                    data-testid={`settings-notify-${type.key}`}
                     checked={isEnabled}
                     onCheckedChange={(checked) => handleToggle(type.key, checked)}
                     disabled={updatePreferencesMutation.isPending}

@@ -62,6 +62,7 @@ export function DashboardWidgetSettings() {
             </div>
             <Switch
               id={key}
+              data-testid={`settings-widget-${key}`}
               checked={widgets[key as keyof typeof widgets]}
               onCheckedChange={(checked) => handleToggle(key, checked)}
             />

@@ -142,7 +142,7 @@ export default function Reports() {
             <div className="space-y-2">
               <Label>Report Type</Label>
               <Select value={reportType} onValueChange={setReportType}>
-                <SelectTrigger>
+                <SelectTrigger data-testid="report-type-select">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -158,7 +158,7 @@ export default function Reports() {
             <div className="space-y-2">
               <Label>Export Format</Label>
               <Select value={format} onValueChange={(v) => setFormat(v as "pdf" | "excel")}>
-                <SelectTrigger>
+                <SelectTrigger data-testid="report-format-select">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -272,7 +272,12 @@ export default function Reports() {
               </>
             )}
 
-            <Button onClick={handleGenerateReport} disabled={isGenerating} className="w-full">
+            <Button
+              data-testid={`pdf-generate-${reportType}`}
+              onClick={handleGenerateReport}
+              disabled={isGenerating}
+              className="w-full"
+            >
               {isGenerating ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

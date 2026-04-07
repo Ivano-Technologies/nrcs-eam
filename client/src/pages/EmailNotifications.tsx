@@ -59,7 +59,7 @@ export default function EmailNotifications() {
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button data-testid="email-compose-trigger">
               <Mail className="mr-2 h-4 w-4" />
               Compose Email
             </Button>
@@ -103,6 +103,7 @@ export default function EmailNotifications() {
               <div className="space-y-2">
                 <Label>Subject</Label>
                 <Input
+                  data-testid="email-subject-input"
                   placeholder="Email subject..."
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
@@ -112,6 +113,7 @@ export default function EmailNotifications() {
               <div className="space-y-2">
                 <Label>Message Body</Label>
                 <Textarea
+                  data-testid="email-body-input"
                   placeholder="Email message..."
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
@@ -127,7 +129,7 @@ export default function EmailNotifications() {
                 <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button onClick={handleSend} disabled={sendMutation.isPending}>
+                <Button data-testid="email-send-submit" onClick={handleSend} disabled={sendMutation.isPending}>
                   {sendMutation.isPending ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
