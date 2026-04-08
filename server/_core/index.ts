@@ -17,6 +17,7 @@ import { createContext } from "./context";
 import cors from "cors";
 import { createCorsMiddlewareOptions, getAllowedOriginsList, logCorsStartup } from "./corsConfig";
 import { serveStatic, setupVite } from "./vite";
+import setupRouter from "../routes/setup";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -62,6 +63,7 @@ async function startServer() {
   // Only parse JSON/urlencoded for API routes — global parsers can interfere with Vite dev middleware.
   app.use("/api", express.json({ limit: "50mb" }));
   app.use("/api", express.urlencoded({ limit: "50mb", extended: true }));
+  app.use("/api", setupRouter);
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
   
