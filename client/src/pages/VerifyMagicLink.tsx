@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2 } from "lucide-react";
 import { appPath } from "@/lib/routes";
+import { AuthBrandLogo, AuthSubtitle, AuthTitle } from "@/components/auth/AuthPageShell";
+import { AuthPageLayout } from "@/components/auth/AuthPageLayout";
+import { GlassCard } from "@/components/auth/GlassCard";
 
 export default function VerifyMagicLink() {
   const [, setLocation] = useLocation();
@@ -20,7 +22,6 @@ export default function VerifyMagicLink() {
       return;
     }
 
-    // Call verification endpoint
     fetch(`/api/auth/verify-magic-link?token=${token}`, {
       method: "POST",
       credentials: "include",
@@ -44,27 +45,21 @@ export default function VerifyMagicLink() {
       });
   }, [setLocation]);
 
+  const title =
+    status === "verifying" ? "Verifying..." : status === "success" ? "Success!" : "Verification Failed";
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1 text-center">
-          <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 bg-[#1E3A8A] rounded-full flex items-center justify-center">
-              <span className="text-white text-2xl font-bold">NRCS</span>
-            </div>
-          </div>
-          <CardTitle className="text-2xl font-bold">
-            {status === "verifying" && "Verifying..."}
-            {status === "success" && "Success!"}
-            {status === "error" && "Verification Failed"}
-          </CardTitle>
-          <CardDescription>
-            Nigerian Red Cross Society
-            <br />
-            Enterprise Asset Management
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+    <AuthPageLayout>
+      <GlassCard className="text-center">
+        <AuthBrandLogo />
+        <AuthTitle>{title}</AuthTitle>
+        <AuthSubtitle className="text-center">
+          Nigerian Red Cross Society
+          <br />
+          Enterprise Asset Management
+        </AuthSubtitle>
+
+        <div className="mt-6 text-left">
           {status === "verifying" && (
             <div className="flex flex-col items-center gap-4">
               <Loader2 className="h-8 w-8 animate-spin text-[#1E3A8A]" />
@@ -74,7 +69,7 @@ export default function VerifyMagicLink() {
 
           {status === "success" && (
             <Alert>
-              <AlertDescription className="text-center">{message}</AlertDescription>
+              <AlertDescription className="text-center text-gray-800">{message}</AlertDescription>
             </Alert>
           )}
 
@@ -83,8 +78,8 @@ export default function VerifyMagicLink() {
               <AlertDescription className="text-center">{message}</AlertDescription>
             </Alert>
           )}
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      </GlassCard>
+    </AuthPageLayout>
   );
 }

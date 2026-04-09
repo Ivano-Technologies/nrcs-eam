@@ -6,10 +6,12 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AuthBrandLogo,
-  AuthHeroLayout,
   AuthTitle,
+  authInputClass,
   authPrimaryButtonClass,
 } from "@/components/auth/AuthPageShell";
+import { AuthPageLayout } from "@/components/auth/AuthPageLayout";
+import { GlassCard } from "@/components/auth/GlassCard";
 import { trpc } from "@/lib/trpc";
 
 export default function Login() {
@@ -42,50 +44,52 @@ export default function Login() {
   };
 
   return (
-    <AuthHeroLayout>
-      <AuthBrandLogo />
-      <AuthTitle>Log in to NRCS EAM</AuthTitle>
+    <AuthPageLayout>
+      <GlassCard className="text-center">
+        <AuthBrandLogo />
+        <AuthTitle>Log in to NRCS EAM</AuthTitle>
 
-      <form onSubmit={handleSubmit} className="mt-8 w-full space-y-4 text-left">
-        {message && (
-          <Alert variant={message.type === "error" ? "destructive" : "default"} className="text-left">
-            <AlertDescription>{message.text}</AlertDescription>
-          </Alert>
-        )}
+        <form onSubmit={handleSubmit} className="mt-8 w-full space-y-4 text-left">
+          {message && (
+            <Alert variant={message.type === "error" ? "destructive" : "default"} className="text-left">
+              <AlertDescription>{message.text}</AlertDescription>
+            </Alert>
+          )}
 
-        <div className="space-y-2">
-          <Label htmlFor="email" className="text-[15px] text-neutral-700">
-            Email Address
-          </Label>
-          <Input
-            id="email"
-            data-testid="login-email-input"
-            type="email"
-            placeholder="your@email.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+          <div className="space-y-2">
+            <Label htmlFor="email" className="text-[15px] text-gray-800">
+              Email Address
+            </Label>
+            <Input
+              id="email"
+              data-testid="login-email-input"
+              type="email"
+              placeholder="your@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={loginMutation.isPending}
+              required
+              className={authInputClass}
+            />
+          </div>
+
+          <Button
+            type="submit"
+            data-testid="login-send-magic-link"
+            className={authPrimaryButtonClass}
             disabled={loginMutation.isPending}
-            required
-            className="h-12 rounded-[10px] text-[15px]"
-          />
-        </div>
+          >
+            {loginMutation.isPending ? "Sending..." : "Send Magic Link"}
+          </Button>
 
-        <Button
-          type="submit"
-          data-testid="login-send-magic-link"
-          className={authPrimaryButtonClass}
-          disabled={loginMutation.isPending}
-        >
-          {loginMutation.isPending ? "Sending..." : "Send Magic Link"}
-        </Button>
-
-        <p className="pt-2 text-center text-sm text-[#6b7280]">
-          Don&apos;t have an account?{" "}
-          <Link href="/signup" className="font-medium text-[#ef4444] hover:underline">
-            Request Access
-          </Link>
-        </p>
-      </form>
-    </AuthHeroLayout>
+          <p className="pt-2 text-center text-sm text-gray-600">
+            Don&apos;t have an account?{" "}
+            <Link href="/signup" className="font-medium text-[#ef4444] hover:underline">
+              Request Access
+            </Link>
+          </p>
+        </form>
+      </GlassCard>
+    </AuthPageLayout>
   );
 }

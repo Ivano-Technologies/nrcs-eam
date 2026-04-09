@@ -1,8 +1,9 @@
 import { cn } from "@/lib/utils";
+import { AuthPageLayout } from "./AuthPageLayout";
+import { GlassCard } from "./GlassCard";
 
 /**
- * Centered Hero Auth Layout — cardless, structured column on the gradient.
- * Single pattern for landing, login, signup, magic-link verification.
+ * Full-page gradient + iOS-style glass card. Prefer importing `AuthPageLayout` + `GlassCard` directly in new code.
  */
 export function AuthHeroLayout({
   children,
@@ -12,16 +13,9 @@ export function AuthHeroLayout({
   className?: string;
 }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-white via-blue-50 to-red-50 px-6 py-10">
-      <div
-        className={cn(
-          "auth-container w-full max-w-[480px] px-6 py-8 text-center sm:px-8",
-          className
-        )}
-      >
-        {children}
-      </div>
-    </div>
+    <AuthPageLayout>
+      <GlassCard className={className}>{children}</GlassCard>
+    </AuthPageLayout>
   );
 }
 
@@ -33,7 +27,7 @@ export function AuthTitle({ children, className }: { children: React.ReactNode; 
   return (
     <h1
       className={cn(
-        "mt-2 text-[34px] font-bold leading-tight tracking-tight text-neutral-900",
+        "mt-2 text-[34px] font-bold leading-tight tracking-tight text-gray-900",
         className
       )}
     >
@@ -54,14 +48,19 @@ export function AuthFooterNote({ children }: { children: React.ReactNode }) {
   return <p className="mt-8 text-[13px] leading-relaxed text-[#9ca3af]">{children}</p>;
 }
 
-/** Logo — `public/nrcs-logo.png`; `mb-4` (16px) before title. */
+/** Logo — `public/nrcs-logo.png`; spacing before title. */
 export function AuthBrandLogo({ className }: { className?: string }) {
   return (
-    <div className={cn("mb-4 flex shrink-0 justify-center", className)}>
+    <div className={cn("mb-6 flex shrink-0 justify-center", className)}>
       <img src="/nrcs-logo.png" alt="Nigerian Red Cross Society" className="mx-auto h-16 w-auto object-contain" />
     </div>
   );
 }
+
+/** Inputs on glass surfaces — light frosted fill for contrast. */
+export const authInputClass = cn(
+  "h-12 rounded-[10px] text-[15px] bg-white/50 border-white/40 placeholder:text-gray-500"
+);
 
 /** Primary CTA — full width, red, elevated shadow (conversion anchor). */
 export const authPrimaryButtonClass = cn(
