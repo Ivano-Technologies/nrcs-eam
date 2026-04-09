@@ -54,32 +54,22 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Only handle GET requests
+  // Do not intercept cross-origin requests, App Runner hosts, or API calls — let the browser handle them
+  if (
+    url.origin !== self.location.origin ||
+    url.hostname.includes('awsapprunner.com') ||
+    url.pathname.startsWith('/api/') ||
+    url.href.includes('/api/trpc')
+  ) {
+    return;
+  }
+
+  // Only handle GET requests (same-origin, non-API)
   if (request.method !== 'GET') {
     return;
   }
 
-  // Strategy 1: Network-only for API requests (with offline fallback)
-  if (url.pathname.startsWith('/api/')) {
-    event.respondWith(
-      fetch(request)
-        .catch(() => {
-          return new Response(
-            JSON.stringify({ 
-              error: 'Offline - API unavailable',
-              message: 'You are currently offline. Please check your connection.' 
-            }),
-            {
-              status: 503,
-              headers: { 'Content-Type': 'application/json' },
-            }
-          );
-        })
-    );
-    return;
-  }
-
-  // Strategy 2: Cache-first for images
+  // Strategy 1: Cache-first for images
   if (request.destination === 'image') {
     event.respondWith(
       caches.open(IMAGE_CACHE).then((cache) => {
@@ -100,7 +90,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Strategy 3: Network-first with cache fallback for app shell and assets
+  // Strategy 2: Network-first with cache fallback for app shell and assets
   event.respondWith(
     fetch(request)
       .then((response) => {
