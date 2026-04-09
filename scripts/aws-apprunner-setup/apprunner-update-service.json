@@ -17,7 +17,7 @@
         "CodeConfigurationValues": {
           "Runtime": "NODEJS_22",
           "BuildCommand": "corepack enable && corepack prepare pnpm@9.15.4 --activate && pnpm install && pnpm run build",
-          "StartCommand": "node dist/index.js",
+          "StartCommand": "corepack enable && corepack prepare pnpm@9.15.4 --activate && pnpm run start:prod",
           "Port": "3000",
           "RuntimeEnvironmentVariables": {
             "NODE_ENV": "production",

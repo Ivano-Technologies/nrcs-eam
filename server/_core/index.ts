@@ -6,6 +6,7 @@ import {
   validateAwsProductionTls,
   validateProductionSecrets,
 } from "../../shared/startupValidation";
+import { runProdMigrations } from "./runProdMigrations";
 import { getDb } from "../db";
 import express from "express";
 import { createServer } from "http";
@@ -112,6 +113,7 @@ async function main() {
   validateProductionSecrets();
   validateAwsProductionTls();
   if (process.env.NODE_ENV === "production") {
+    await runProdMigrations();
     await verifyDbConnection();
   }
   logStartupSummary();
