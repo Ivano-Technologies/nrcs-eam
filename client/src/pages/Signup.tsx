@@ -17,6 +17,8 @@ import { trpc } from "@/lib/trpc";
 export default function Signup() {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
+  const [designation, setDesignation] = useState("");
+  const [department, setDepartment] = useState("");
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const signupMutation = trpc.auth.signup.useMutation({
@@ -25,6 +27,8 @@ export default function Signup() {
         setMessage({ type: "success", text: data.message });
         setEmail("");
         setName("");
+        setDesignation("");
+        setDepartment("");
       } else {
         setMessage({ type: "error", text: data.message });
       }
@@ -38,19 +42,24 @@ export default function Signup() {
     e.preventDefault();
     setMessage(null);
 
-    if (!email || !name) {
+    if (!email || !name || !designation.trim() || !department.trim()) {
       setMessage({ type: "error", text: "Please fill in all fields" });
       return;
     }
 
-    signupMutation.mutate({ email, name });
+    signupMutation.mutate({
+      email,
+      name,
+      designation: designation.trim(),
+      department: department.trim(),
+    });
   };
 
   return (
     <AuthHeroLayout>
       <AuthBrandLogo />
-      <AuthTitle>Create your account</AuthTitle>
-      <AuthSubtitle>Access the NRCS asset management system</AuthSubtitle>
+      <AuthTitle>Create account</AuthTitle>
+      <AuthSubtitle>To access the NRCS EAM system</AuthSubtitle>
 
       <form onSubmit={handleSubmit} className="mt-8 w-full space-y-4 text-left">
         {message && (
@@ -85,6 +94,38 @@ export default function Signup() {
             placeholder="john@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            disabled={signupMutation.isPending}
+            required
+            className="h-12 rounded-[10px] text-[15px]"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="designation" className="text-[15px] text-neutral-700">
+            Designation
+          </Label>
+          <Input
+            id="designation"
+            type="text"
+            placeholder="e.g. Senior Officer"
+            value={designation}
+            onChange={(e) => setDesignation(e.target.value)}
+            disabled={signupMutation.isPending}
+            required
+            className="h-12 rounded-[10px] text-[15px]"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="department" className="text-[15px] text-neutral-700">
+            Department
+          </Label>
+          <Input
+            id="department"
+            type="text"
+            placeholder="e.g. Logistics"
+            value={department}
+            onChange={(e) => setDepartment(e.target.value)}
             disabled={signupMutation.isPending}
             required
             className="h-12 rounded-[10px] text-[15px]"

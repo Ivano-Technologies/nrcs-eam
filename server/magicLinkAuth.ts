@@ -134,7 +134,8 @@ export async function sendMagicLink(email: string, token: string): Promise<boole
 export async function createSignupRequest(
   email: string,
   name: string,
-  requestedRole: "user" | "manager" = "user"
+  requestedRole: "user" | "manager" = "user",
+  opts?: { designation?: string | null; department?: string | null }
 ): Promise<{ success: boolean; message: string }> {
   const database = await db.getDb();
   if (!database) return { success: false, message: "Database not available" };
@@ -166,10 +167,15 @@ export async function createSignupRequest(
     }
   }
 
+  const designation = opts?.designation?.trim() || null;
+  const department = opts?.department?.trim() || null;
+
   // Create pending user
   await database.insert(pendingUsers).values({
     email,
     name,
+    designation,
+    department,
     requestedRole,
     status: "pending",
   });

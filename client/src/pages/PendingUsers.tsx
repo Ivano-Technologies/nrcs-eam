@@ -90,6 +90,16 @@ export default function PendingUsers() {
                 <div className="space-y-4">
                   <div className="text-sm text-gray-600">
                     <p><strong>Requested Role:</strong> {user.requestedRole || "user"}</p>
+                    {user.designation ? (
+                      <p>
+                        <strong>Designation:</strong> {user.designation}
+                      </p>
+                    ) : null}
+                    {user.department ? (
+                      <p>
+                        <strong>Department:</strong> {user.department}
+                      </p>
+                    ) : null}
                     <p><strong>Requested:</strong> {new Date(user.createdAt).toLocaleString()}</p>
                   </div>
                   

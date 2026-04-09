@@ -127,6 +127,13 @@
       "when": 1768912500000,
       "tag": "0018_work_order_templates_table",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "5",
+      "when": 1769000000000,
+      "tag": "0019_pending_users_designation_department",
+      "breakpoints": true
     }
   ]
 }

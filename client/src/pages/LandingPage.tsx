@@ -34,7 +34,7 @@ export default function LandingPage() {
     return (
       <AuthHeroLayout>
         <AuthBrandLogo />
-        <AuthTitle>NRCS Asset Management</AuthTitle>
+        <AuthTitle>Nigerian Red Cross Society</AuthTitle>
         <AuthSubtitle>Opening your dashboard…</AuthSubtitle>
         <Button asChild className={authPrimaryButtonClass}>
           <Link href={appPath("/")}>Go to Dashboard</Link>
@@ -46,8 +46,10 @@ export default function LandingPage() {
   return (
     <AuthHeroLayout>
       <AuthBrandLogo />
-      <AuthTitle>NRCS Asset Management</AuthTitle>
-      <AuthSubtitle>Enterprise Asset Management System — Nigerian Red Cross Society</AuthSubtitle>
+      <AuthTitle>Nigerian Red Cross Society</AuthTitle>
+      <AuthSubtitle className="text-[1.2rem]">
+        Enterprise Asset Management System
+      </AuthSubtitle>
       <Button asChild className={authPrimaryButtonClass}>
         <Link href="/login">Sign In</Link>
       </Button>

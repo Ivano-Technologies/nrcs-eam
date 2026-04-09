@@ -38,6 +38,8 @@ export const appRouter = router({
       .input(z.object({
         email: z.string().email(),
         name: z.string().min(1),
+        designation: z.string().min(1),
+        department: z.string().min(1),
       }))
       .mutation(async ({ input }) => {
         // Email domain whitelist
@@ -50,7 +52,10 @@ export const appRouter = router({
           });
         }
         const { createSignupRequest } = await import("./magicLinkAuth");
-        return await createSignupRequest(input.email, input.name);
+        return await createSignupRequest(input.email, input.name, "user", {
+          designation: input.designation,
+          department: input.department,
+        });
       }),
     requestMagicLink: publicProcedure
       .input(z.object({ email: z.string().email() }))

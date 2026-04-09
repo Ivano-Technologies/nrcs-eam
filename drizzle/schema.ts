@@ -489,6 +489,8 @@ export const pendingUsers = mysqlTable("pending_users", {
   id: int("id").autoincrement().primaryKey(),
   email: varchar("email", { length: 320 }).notNull().unique(),
   name: varchar("name", { length: 255 }).notNull(),
+  designation: varchar("designation", { length: 255 }),
+  department: varchar("department", { length: 255 }),
   requestedRole: mysqlEnum("requested_role", ["user", "manager"]).notNull().default("user"),
   status: mysqlEnum("status", ["pending", "approved", "rejected"]).notNull().default("pending"),
   approvedBy: int("approved_by").references(() => users.id),

@@ -6,9 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AuthBrandLogo,
-  AuthFooterNote,
   AuthHeroLayout,
-  AuthSubtitle,
   AuthTitle,
   authPrimaryButtonClass,
 } from "@/components/auth/AuthPageShell";
@@ -46,8 +44,7 @@ export default function Login() {
   return (
     <AuthHeroLayout>
       <AuthBrandLogo />
-      <AuthTitle>Sign in to NRCS Asset Management</AuthTitle>
-      <AuthSubtitle>Use your work account to continue</AuthSubtitle>
+      <AuthTitle>Log in to NRCS EAM</AuthTitle>
 
       <form onSubmit={handleSubmit} className="mt-8 w-full space-y-4 text-left">
         {message && (
@@ -89,13 +86,6 @@ export default function Login() {
           </Link>
         </p>
       </form>
-
-      <div className="mt-10 text-center text-xs leading-relaxed text-[#9ca3af]">
-        <p>We&apos;ll send a secure sign-in link to your email.</p>
-        <p className="mt-1">No password required.</p>
-      </div>
-
-      <AuthFooterNote>Authorized personnel only.</AuthFooterNote>
     </AuthHeroLayout>
   );
 }
