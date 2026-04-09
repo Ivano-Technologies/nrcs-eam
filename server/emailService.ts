@@ -11,6 +11,13 @@ interface EmailOptions {
  * Otherwise use Manus Forge API if configured.
  */
 export async function sendEmail(options: EmailOptions): Promise<boolean> {
+  console.log("[email-debug] sendEmail called, SMTP_HOST:",
+    process.env.SMTP_HOST ? "SET" : "NOT SET",
+    "RESEND_API_KEY:",
+    process.env.RESEND_API_KEY ? "SET" : "NOT SET",
+    "forgeApiUrl:",
+    ENV.forgeApiUrl ? "SET" : "NOT SET"
+  );
   const smtpHost = process.env.SMTP_HOST ?? process.env.MAILPIT_SMTP_HOST;
   if (smtpHost) {
     try {
