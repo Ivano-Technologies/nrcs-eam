@@ -2,6 +2,7 @@ import { eq, and, desc, asc, gte, lte, sql, or, like, isNotNull, isNull } from "
 import { drizzle } from "drizzle-orm/mysql2";
 import { createPool } from "mysql2";
 import { 
+  appSettings,
   InsertUser, users, sites, InsertSite, assetCategories, assets, InsertAsset,
   workOrders, InsertWorkOrder, maintenanceSchedules, InsertMaintenanceSchedule,
   inventoryItems, InsertInventoryItem, inventoryTransactions, vendors, InsertVendor,
@@ -32,6 +33,44 @@ export async function getDb() {
     }
   }
   return _db;
+}
+
+const OPEN_REGISTRATION_KEY = "openRegistration";
+
+/** When no row exists, registration is open (default true). */
+export async function getOpenRegistration(): Promise<boolean> {
+  const database = await getDb();
+  if (!database) return true;
+  const rows = await database
+    .select()
+    .from(appSettings)
+    .where(eq(appSettings.key, OPEN_REGISTRATION_KEY))
+    .limit(1);
+  if (rows.length === 0) return true;
+  const v = rows[0].value.trim().toLowerCase();
+  return v === "true" || v === "1";
+}
+
+export async function setOpenRegistration(open: boolean): Promise<void> {
+  const database = await getDb();
+  if (!database) throw new Error("Database not available");
+  const value = open ? "true" : "false";
+  const existing = await database
+    .select()
+    .from(appSettings)
+    .where(eq(appSettings.key, OPEN_REGISTRATION_KEY))
+    .limit(1);
+  if (existing.length > 0) {
+    await database
+      .update(appSettings)
+      .set({ value, updatedAt: new Date() })
+      .where(eq(appSettings.key, OPEN_REGISTRATION_KEY));
+  } else {
+    await database.insert(appSettings).values({
+      key: OPEN_REGISTRATION_KEY,
+      value,
+    });
+  }
 }
 
 // ============= USER MANAGEMENT =============

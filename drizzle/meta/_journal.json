@@ -134,6 +134,13 @@
       "when": 1769000000000,
       "tag": "0019_pending_users_designation_department",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "5",
+      "when": 1769100000000,
+      "tag": "0020_app_settings",
+      "breakpoints": true
     }
   ]
 }

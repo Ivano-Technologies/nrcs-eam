@@ -47,7 +47,7 @@ export default function Login() {
     <AuthPageLayout>
       <GlassCard className="text-center">
         <AuthBrandLogo />
-        <AuthTitle>Log in to NRCS EAM</AuthTitle>
+        <AuthTitle className="text-[23.8px]">Log in to NRCS EAM</AuthTitle>
 
         <form onSubmit={handleSubmit} className="mt-8 w-full space-y-4 text-left">
           {message && (

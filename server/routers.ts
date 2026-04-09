@@ -51,6 +51,14 @@ export const appRouter = router({
             message: `Email domain @${emailDomain} is not allowed. Please contact your administrator.`,
           });
         }
+        const openRegistration = await db.getOpenRegistration();
+        if (openRegistration) {
+          const { createUserDirectSignup } = await import("./magicLinkAuth");
+          return await createUserDirectSignup(input.email, input.name, "user", {
+            designation: input.designation,
+            department: input.department,
+          });
+        }
         const { createSignupRequest } = await import("./magicLinkAuth");
         return await createSignupRequest(input.email, input.name, "user", {
           designation: input.designation,
@@ -71,6 +79,19 @@ export const appRouter = router({
           return { success: true, message: "Magic link sent to your email" };
         }
         return { success: false, message: "Failed to send magic link" };
+      }),
+  }),
+
+  // ============= APP SETTINGS (admin) =============
+  appSettings: router({
+    getOpenRegistration: adminProcedure.query(async () => ({
+      openRegistration: await db.getOpenRegistration(),
+    })),
+    setOpenRegistration: adminProcedure
+      .input(z.object({ openRegistration: z.boolean() }))
+      .mutation(async ({ input }) => {
+        await db.setOpenRegistration(input.openRegistration);
+        return { ok: true as const };
       }),
   }),
 

@@ -17,6 +17,16 @@ export const users = mysqlTable("users", {
   hasCompletedOnboarding: boolean("has_completed_onboarding").default(false).notNull(),
 });
 
+/** System-wide key/value settings (e.g. openRegistration). */
+export const appSettings = mysqlTable("app_settings", {
+  key: varchar("key", { length: 64 }).primaryKey(),
+  value: text("value").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+
+export type AppSetting = typeof appSettings.$inferSelect;
+export type InsertAppSetting = typeof appSettings.$inferInsert;
+
 /**
  * Sites/Locations for multi-site management
  */

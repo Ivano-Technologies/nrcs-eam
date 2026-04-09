@@ -6,7 +6,6 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AuthBrandLogo,
-  AuthFooterNote,
   AuthSubtitle,
   AuthTitle,
   authInputClass,
@@ -61,7 +60,7 @@ export default function Signup() {
     <AuthPageLayout>
       <GlassCard className="max-w-lg text-center">
         <AuthBrandLogo />
-        <AuthTitle>Create account</AuthTitle>
+        <AuthTitle className="text-[23.8px]">Create account</AuthTitle>
         <AuthSubtitle>To access the NRCS EAM system</AuthSubtitle>
 
         <form onSubmit={handleSubmit} className="mt-8 w-full space-y-4 text-left">
@@ -146,13 +145,6 @@ export default function Signup() {
             </Link>
           </p>
         </form>
-
-        <div className="mt-10 text-center text-xs leading-relaxed text-gray-500">
-          <p>Your request will be reviewed by an administrator.</p>
-          <p className="mt-1">You&apos;ll receive an email once approved.</p>
-        </div>
-
-        <AuthFooterNote>Authorized personnel only.</AuthFooterNote>
       </GlassCard>
     </AuthPageLayout>
   );

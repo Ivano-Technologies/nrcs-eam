@@ -185,7 +185,82 @@ export async function createSignupRequest(
 
   return {
     success: true,
-    message: "Signup request submitted successfully. An administrator will review your request.",
+    message:
+      "Your request will be reviewed by an administrator. You'll receive an email once approved.",
+  };
+}
+
+/**
+ * Create an active user and send a magic link immediately (open registration).
+ */
+export async function createUserDirectSignup(
+  email: string,
+  name: string,
+  requestedRole: "user" | "manager" = "user",
+  _opts?: { designation?: string | null; department?: string | null }
+): Promise<{ success: boolean; message: string }> {
+  const database = await db.getDb();
+  if (!database) return { success: false, message: "Database not available" };
+
+  const existingUser = await database
+    .select()
+    .from(users)
+    .where(eq(users.email, email))
+    .limit(1);
+
+  if (existingUser.length > 0) {
+    return { success: false, message: "An account with this email already exists" };
+  }
+
+  const existingPending = await database
+    .select()
+    .from(pendingUsers)
+    .where(eq(pendingUsers.email, email))
+    .limit(1);
+
+  if (existingPending.length > 0) {
+    const status = existingPending[0].status;
+    if (status === "pending") {
+      return {
+        success: false,
+        message: "Your signup request is pending admin approval",
+      };
+    }
+    if (status === "rejected") {
+      return {
+        success: false,
+        message:
+          "Your signup request was rejected. Please contact an administrator.",
+      };
+    }
+  }
+
+  const openId = `magic_${crypto.randomBytes(16).toString("hex")}`;
+  const result: any = await database.insert(users).values({
+    openId,
+    name,
+    email,
+    loginMethod: "magic_link",
+    role: requestedRole === "manager" ? "manager" : "user",
+  });
+
+  const userId = Number(result.insertId);
+  if (!Number.isFinite(userId)) {
+    return { success: false, message: "Failed to create account" };
+  }
+
+  const token = await createMagicLinkToken(userId);
+  const sent = await sendMagicLink(email, token);
+  if (!sent) {
+    return {
+      success: false,
+      message: "Account created but failed to send email. Please contact support.",
+    };
+  }
+
+  return {
+    success: true,
+    message: "Account created! Check your email for a sign-in link.",
   };
 }
 

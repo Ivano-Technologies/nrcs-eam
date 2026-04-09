@@ -10,7 +10,7 @@ export function AuthPageLayout({ children, className }: AuthPageLayoutProps) {
     <div
       className={cn(
         "min-h-screen w-full flex items-center justify-center p-4",
-        "bg-gradient-to-br from-red-50 via-white to-red-100",
+        "bg-gradient-to-br from-red-50/40 via-white to-rose-50/30",
         className
       )}
     >
