@@ -57,7 +57,7 @@ export default function Login() {
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="email" className="text-[15px] text-gray-800">
+            <Label htmlFor="email" className="text-[15px] text-gray-800 dark:text-gray-200">
               Email Address
             </Label>
             <Input

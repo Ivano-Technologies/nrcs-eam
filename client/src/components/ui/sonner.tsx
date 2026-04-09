@@ -1,4 +1,4 @@
-import { useTheme } from "@/contexts/ThemeContext";
+import { useTheme } from "next-themes";
 import { Toaster as Sonner, type ToasterProps } from "sonner";
 import { useEffect } from "react";
 
@@ -20,12 +20,12 @@ function useToastTestIds() {
 }
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "light" } = useTheme();
+  const { resolvedTheme } = useTheme();
   useToastTestIds();
 
   return (
     <Sonner
-      theme={theme as ToasterProps["theme"]}
+      theme={(resolvedTheme === "dark" ? "dark" : "light") as ToasterProps["theme"]}
       className="toaster group"
       style={
         {

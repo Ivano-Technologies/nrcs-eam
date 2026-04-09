@@ -6,7 +6,7 @@ import Signup from "./pages/Signup";
 import Login from "./pages/Login";
 import VerifyMagicLink from "@/pages/VerifyMagicLink";
 import ErrorBoundary from "./components/ErrorBoundary";
-import { ThemeProvider } from "./contexts/ThemeContext";
+import { ThemeProvider } from "next-themes";
 import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
@@ -33,7 +33,12 @@ function Router() {
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider defaultTheme="light">
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="system"
+        enableSystem
+        storageKey="nrcs-theme"
+      >
         <TooltipProvider>
           <Toaster />
           <PWAInstallPrompt />

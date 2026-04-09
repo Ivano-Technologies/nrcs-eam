@@ -27,7 +27,7 @@ export function AuthTitle({ children, className }: { children: React.ReactNode; 
   return (
     <h1
       className={cn(
-        "mt-2 text-[34px] font-bold leading-tight tracking-tight text-gray-900",
+        "mt-2 text-[34px] font-bold leading-tight tracking-tight text-gray-900 dark:text-gray-100",
         className
       )}
     >
@@ -39,13 +39,22 @@ export function AuthTitle({ children, className }: { children: React.ReactNode; 
 /** Hero subtitle — 16px, muted. */
 export function AuthSubtitle({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <p className={cn("mt-2.5 text-base leading-relaxed text-[#6b7280]", className)}>{children}</p>
+    <p
+      className={cn(
+        "mt-2.5 text-base leading-relaxed text-[#6b7280] dark:text-gray-400",
+        className
+      )}
+    >
+      {children}
+    </p>
   );
 }
 
 /** Footer line — 13px, light gray. */
 export function AuthFooterNote({ children }: { children: React.ReactNode }) {
-  return <p className="mt-8 text-[13px] leading-relaxed text-[#9ca3af]">{children}</p>;
+  return (
+    <p className="mt-8 text-[13px] leading-relaxed text-[#9ca3af] dark:text-gray-500">{children}</p>
+  );
 }
 
 /** Logo — `public/nrcs-logo.png`; spacing before title. */
@@ -59,7 +68,8 @@ export function AuthBrandLogo({ className }: { className?: string }) {
 
 /** Inputs on glass surfaces — light frosted fill for contrast. */
 export const authInputClass = cn(
-  "h-12 rounded-[10px] text-[15px] bg-white/50 border-white/40 placeholder:text-gray-500"
+  "h-12 rounded-[10px] text-[15px] bg-white/50 border-white/40 placeholder:text-gray-500",
+  "dark:bg-white/10 dark:border-white/20 dark:text-white dark:placeholder:text-white/50"
 );
 
 /** Primary CTA — full width, red, elevated shadow (conversion anchor). */

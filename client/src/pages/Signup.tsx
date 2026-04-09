@@ -71,7 +71,7 @@ export default function Signup() {
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="name" className="text-[15px] text-gray-800">
+            <Label htmlFor="name" className="text-[15px] text-gray-800 dark:text-gray-200">
               Full Name
             </Label>
             <Input
@@ -87,7 +87,7 @@ export default function Signup() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="email" className="text-[15px] text-gray-800">
+            <Label htmlFor="email" className="text-[15px] text-gray-800 dark:text-gray-200">
               Email Address
             </Label>
             <Input
@@ -103,7 +103,7 @@ export default function Signup() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="designation" className="text-[15px] text-gray-800">
+            <Label htmlFor="designation" className="text-[15px] text-gray-800 dark:text-gray-200">
               Designation
             </Label>
             <Input
@@ -119,7 +119,7 @@ export default function Signup() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="department" className="text-[15px] text-gray-800">
+            <Label htmlFor="department" className="text-[15px] text-gray-800 dark:text-gray-200">
               Department
             </Label>
             <Input

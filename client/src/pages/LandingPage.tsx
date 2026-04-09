@@ -27,7 +27,7 @@ export default function LandingPage() {
     return (
       <AuthPageLayout>
         <GlassCard className="text-center">
-          <p className="text-base text-gray-600">Loading…</p>
+          <p className="text-base text-gray-600 dark:text-gray-400">Loading…</p>
         </GlassCard>
       </AuthPageLayout>
     );

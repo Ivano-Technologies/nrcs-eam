@@ -1,8 +1,10 @@
+import { PublicPageChrome } from "@/components/PublicPageChrome";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function PrivacyPolicy() {
   return (
-    <div className="container mx-auto py-8 max-w-4xl">
+    <PublicPageChrome>
+    <div className="container mx-auto py-8 max-w-4xl pt-16">
       <Card>
         <CardHeader>
           <CardTitle className="text-3xl">Privacy Policy</CardTitle>
@@ -165,5 +167,6 @@ export default function PrivacyPolicy() {
         </CardContent>
       </Card>
     </div>
+    </PublicPageChrome>
   );
 }

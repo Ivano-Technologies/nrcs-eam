@@ -28,6 +28,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "./ui/button";
 import { NotificationCenter } from "./NotificationCenter";
 import Footer from "./Footer";
+import { ThemeToggle } from "./ui/ThemeToggle";
 
 const allMenuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: appPath("/"), adminOnly: false, sortOrder: 0 },
@@ -384,9 +385,9 @@ function DashboardLayoutContent({
         />
       </div>
 
-      <SidebarInset>
+      <SidebarInset className="min-h-svh bg-background dark:bg-[#232323]">
         {isMobile && (
-          <div className="flex border-b h-14 items-center justify-between bg-background/95 px-2 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
+          <div className="flex border-b h-14 items-center justify-between bg-background/95 dark:bg-[#232323]/95 px-2 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
             <div className="flex items-center gap-2">
               <SidebarTrigger className="h-9 w-9 rounded-lg bg-background" />
               <div className="flex items-center gap-3">
@@ -397,11 +398,15 @@ function DashboardLayoutContent({
                 </div>
               </div>
             </div>
-            <NotificationCenter />
+            <div className="flex items-center gap-1">
+              <ThemeToggle />
+              <NotificationCenter />
+            </div>
           </div>
         )}
         {!isMobile && (
-          <div className="flex border-b h-14 items-center justify-end bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
+          <div className="flex border-b h-14 items-center justify-end gap-2 bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40 dark:bg-[#232323]/95">
+            <ThemeToggle />
             <NotificationCenter />
           </div>
         )}
