@@ -7,7 +7,7 @@ interface EmailOptions {
 }
 
 /**
- * When SMTP_HOST is set (e.g. Mailpit on 1025), send via nodemailer.
+ * When SMTP_HOST is set (e.g. Mailpit on 1025, Resend smtp.resend.com:465 in prod), send via nodemailer.
  * Otherwise use Manus Forge API if configured.
  */
 export async function sendEmail(options: EmailOptions): Promise<boolean> {
@@ -16,11 +16,19 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
     try {
       const nodemailer = await import("nodemailer");
       const port = Number(process.env.SMTP_PORT ?? process.env.MAILPIT_SMTP_PORT ?? 1025);
+      const secure = port === 465 || process.env.SMTP_SECURE === "true";
       const transporter = nodemailer.default.createTransport({
         host: smtpHost,
         port,
-        secure: false,
-        ignoreTLS: true,
+        secure,
+        auth:
+          process.env.SMTP_USER || process.env.RESEND_API_KEY
+            ? {
+                user: process.env.SMTP_USER ?? "resend",
+                pass: process.env.SMTP_PASS ?? process.env.RESEND_API_KEY,
+              }
+            : undefined,
+        ...(!secure ? { ignoreTLS: true } : {}),
       } as import("nodemailer").TransportOptions);
       const from = process.env.SMTP_FROM ?? "noreply@localhost";
       await transporter.sendMail({
