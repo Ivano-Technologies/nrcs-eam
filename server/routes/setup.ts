@@ -38,6 +38,11 @@ function readSetupSecretFromEnv(): string | undefined {
   return process.env.SETUP_SECRET?.trim();
 }
 
+/** Health check for setup routes (no secret). */
+router.get("/setup/ping", (_req, res) => {
+  res.status(200).json({ ok: true, service: "setup" });
+});
+
 router.post("/setup/create-admin", async (req, res) => {
   const expected = readSetupSecretFromEnv();
   if (!expected) {
