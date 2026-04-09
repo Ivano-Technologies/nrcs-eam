@@ -9,7 +9,6 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "next-themes";
 import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
-import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
 import LandingPage from "@/pages/LandingPage";
 import ProtectedAppSection from "@/components/ProtectedAppSection";
 import { APP_ROUTE_PATTERN } from "@/lib/routes";
@@ -41,7 +40,6 @@ function App() {
       >
         <TooltipProvider>
           <Toaster />
-          <PWAInstallPrompt />
           <Router />
         </TooltipProvider>
       </ThemeProvider>

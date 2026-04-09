@@ -1,4 +1,6 @@
+import { useAuth } from "@/_core/hooks/useAuth";
 import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Download, X } from "lucide-react";
@@ -8,27 +10,38 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
+/**
+ * PWA install UI — only when logged in and on `/app/*` (mounted from ProtectedAppSection).
+ */
 export function PWAInstallPrompt() {
+  const { user } = useAuth();
+  const [location] = useLocation();
+  const allowInstallUi = !!user && location.startsWith("/app");
+
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {
-    // Check if already installed
-    if (window.matchMedia('(display-mode: standalone)').matches || 
-        (window.navigator as any).standalone === true) {
+    if (!allowInstallUi) {
+      return;
+    }
+
+    if (
+      window.matchMedia("(display-mode: standalone)").matches ||
+      (window.navigator as unknown as { standalone?: boolean }).standalone === true
+    ) {
       setIsInstalled(true);
       return;
     }
 
-    // Check if user previously dismissed the prompt
-    const dismissed = localStorage.getItem('pwa-install-dismissed');
+    const dismissed = localStorage.getItem("pwa-install-dismissed");
     if (dismissed) {
       const dismissedDate = new Date(dismissed);
       const now = new Date();
-      const daysSinceDismissed = (now.getTime() - dismissedDate.getTime()) / (1000 * 60 * 60 * 24);
-      
-      // Show again after 7 days
+      const daysSinceDismissed =
+        (now.getTime() - dismissedDate.getTime()) / (1000 * 60 * 60 * 24);
+
       if (daysSinceDismissed < 7) {
         return;
       }
@@ -37,57 +50,54 @@ export function PWAInstallPrompt() {
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
-      
-      // Show prompt after a short delay
+
       setTimeout(() => {
         setShowPrompt(true);
       }, 3000);
     };
 
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
 
-    // Detect if app was installed
-    window.addEventListener('appinstalled', () => {
+    const handleAppInstalled = () => {
       setIsInstalled(true);
       setShowPrompt(false);
       setDeferredPrompt(null);
-    });
+    };
+    window.addEventListener("appinstalled", handleAppInstalled);
 
     return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+      window.removeEventListener("appinstalled", handleAppInstalled);
     };
-  }, []);
+  }, [allowInstallUi]);
+
+  if (!allowInstallUi || isInstalled || !showPrompt || !deferredPrompt) {
+    return null;
+  }
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) {
       return;
     }
 
-    // Show the install prompt
     await deferredPrompt.prompt();
 
-    // Wait for the user's response
     const { outcome } = await deferredPrompt.userChoice;
 
-    if (outcome === 'accepted') {
-      console.log('User accepted the install prompt');
+    if (outcome === "accepted") {
+      console.log("User accepted the install prompt");
     } else {
-      console.log('User dismissed the install prompt');
+      console.log("User dismissed the install prompt");
     }
 
-    // Clear the deferredPrompt
     setDeferredPrompt(null);
     setShowPrompt(false);
   };
 
   const handleDismiss = () => {
     setShowPrompt(false);
-    localStorage.setItem('pwa-install-dismissed', new Date().toISOString());
+    localStorage.setItem("pwa-install-dismissed", new Date().toISOString());
   };
-
-  if (isInstalled || !showPrompt || !deferredPrompt) {
-    return null;
-  }
 
   return (
     <div className="fixed bottom-4 right-4 z-50 max-w-sm animate-in slide-in-from-bottom-5">
@@ -103,28 +113,15 @@ export function PWAInstallPrompt() {
                 Install this app on your device for quick access and offline use
               </p>
               <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  onClick={handleInstallClick}
-                  className="flex-1"
-                >
+                <Button size="sm" onClick={handleInstallClick} className="flex-1">
                   Install
                 </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={handleDismiss}
-                >
+                <Button size="sm" variant="ghost" onClick={handleDismiss}>
                   Later
                 </Button>
               </div>
             </div>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-6 w-6 shrink-0"
-              onClick={handleDismiss}
-            >
+            <Button size="icon" variant="ghost" className="h-6 w-6 shrink-0" onClick={handleDismiss}>
               <X className="h-4 w-4" />
             </Button>
           </div>

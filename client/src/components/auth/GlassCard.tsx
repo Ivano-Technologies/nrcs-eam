@@ -17,12 +17,12 @@ export function GlassCard({ children, className }: GlassCardProps) {
   const isDark = mounted && resolvedTheme === "dark";
 
   const glassStyle: CSSProperties = {
-    background: isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(255, 255, 255, 0.08)",
+    background: isDark ? "rgba(255, 255, 255, 0.06)" : "rgba(255, 255, 255, 0.08)",
     backdropFilter: "blur(40px) saturate(180%)",
     WebkitBackdropFilter: "blur(40px) saturate(180%)",
-    border: isDark ? "1px solid rgba(255, 255, 255, 0.1)" : "1px solid rgba(255, 255, 255, 0.2)",
+    border: isDark ? "1px solid rgba(255, 255, 255, 0.15)" : "1px solid rgba(255, 255, 255, 0.2)",
     boxShadow: isDark
-      ? "0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1)"
+      ? "0 8px 32px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08)"
       : "0 8px 32px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.4)",
   };
 

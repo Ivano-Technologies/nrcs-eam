@@ -44,6 +44,26 @@ export function createCorsMiddlewareOptions(allowedOrigins: string[]): CorsOptio
   };
 }
 
+/**
+ * CORS that calls `getAllowedOriginsList()` on every request so `CORS_ORIGINS`
+ * reflects values set after startup (e.g. AWS Secrets Manager merged into `process.env`).
+ */
+export function createDynamicCorsMiddlewareOptions(): CorsOptions {
+  return {
+    origin: (origin, callback) => {
+      const allowedOrigins = getAllowedOriginsList();
+      if (!origin) {
+        return callback(null, true);
+      }
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error("Not allowed by CORS"));
+    },
+    credentials: true,
+  };
+}
+
 export function logCorsStartup(allowedOrigins: string[]): void {
   const line =
     allowedOrigins.length > 0

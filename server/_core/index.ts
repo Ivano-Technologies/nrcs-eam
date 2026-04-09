@@ -16,7 +16,7 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import cors from "cors";
-import { createCorsMiddlewareOptions, getAllowedOriginsList, logCorsStartup } from "./corsConfig";
+import { createDynamicCorsMiddlewareOptions, getAllowedOriginsList, logCorsStartup } from "./corsConfig";
 import { serveStatic, setupVite } from "./vite";
 import setupRouter from "../routes/setup";
 
@@ -54,9 +54,8 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
 
-  const allowedOrigins = getAllowedOriginsList();
-  logCorsStartup(allowedOrigins);
-  app.use(cors(createCorsMiddlewareOptions(allowedOrigins)));
+  logCorsStartup(getAllowedOriginsList());
+  app.use(cors(createDynamicCorsMiddlewareOptions()));
 
   app.get("/health", (_req, res) => {
     res.status(200).json({ ok: true });
