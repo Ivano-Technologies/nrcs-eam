@@ -55,6 +55,8 @@ async function startServer() {
   const server = createServer(app);
 
   logCorsStartup(getAllowedOriginsList());
+  // Handle OPTIONS preflight explicitly
+  app.options("*", cors(createDynamicCorsMiddlewareOptions()));
   app.use(cors(createDynamicCorsMiddlewareOptions()));
 
   app.get("/health", (_req, res) => {

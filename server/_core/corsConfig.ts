@@ -60,7 +60,10 @@ export function createDynamicCorsMiddlewareOptions(): CorsOptions {
       }
       return callback(new Error("Not allowed by CORS"));
     },
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "x-setup-secret"],
     credentials: true,
+    optionsSuccessStatus: 204,
   };
 }
 
