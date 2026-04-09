@@ -33,8 +33,13 @@ function secretsMatch(provided: string, expected: string): boolean {
   }
 }
 
+/** Call only from a route handler — reads `process.env.SETUP_SECRET` at request time, not at module load. */
+function readSetupSecretFromEnv(): string | undefined {
+  return process.env.SETUP_SECRET?.trim();
+}
+
 router.post("/setup/create-admin", async (req, res) => {
-  const expected = process.env.SETUP_SECRET?.trim();
+  const expected = readSetupSecretFromEnv();
   if (!expected) {
     return res.status(503).json({
       error: "Setup disabled",
