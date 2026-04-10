@@ -1,0 +1,31 @@
+{
+  "installCommand": "cd .. && pnpm install --no-frozen-lockfile",
+  "buildCommand": "cd .. && pnpm run build:frontend",
+  "outputDirectory": "../dist/public",
+  "rewrites": [
+    {
+      "source": "/health",
+      "destination": "https://vy3xagmuzx.eu-west-1.awsapprunner.com/health"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, must-revalidate"
+        }
+      ]
+    }
+  ],
+  "functions": {
+    "api/[[...path]].js": {
+      "maxDuration": 60
+    }
+  }
+}
