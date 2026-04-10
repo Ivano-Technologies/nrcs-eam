@@ -27,6 +27,7 @@ test.describe("Proxy + Magic Link end-to-end", () => {
   });
 
   test("3. POST tRPC magic link request succeeds", async ({ request }) => {
+    test.setTimeout(60_000);
     const res = await request.post(
       `${BASE}/api/trpc/auth.requestMagicLink?batch=1`,
       {

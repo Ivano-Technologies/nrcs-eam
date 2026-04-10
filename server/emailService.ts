@@ -28,6 +28,9 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
         host: smtpHost,
         port,
         secure,
+        connectionTimeout: 15_000,
+        greetingTimeout: 10_000,
+        socketTimeout: 20_000,
         auth:
           process.env.SMTP_USER || process.env.RESEND_API_KEY
             ? {
