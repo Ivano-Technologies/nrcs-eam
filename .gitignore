@@ -133,3 +133,6 @@ test-results/
 # MVP audit: regenerate with `pnpm test:e2e`
 tests/mvp-audit/screenshots/*
 !tests/mvp-audit/screenshots/.gitkeep
+
+# SES zone file (upload via Vercel DNS; do not commit)
+ses-dns-records.txt
