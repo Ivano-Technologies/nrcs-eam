@@ -4,23 +4,8 @@
   "outputDirectory": "dist/public",
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "https://vy3xagmuzx.eu-west-1.awsapprunner.com/api/:path*"
-    },
-    {
       "source": "/(.*)",
       "destination": "/index.html"
-    }
-  ],
-  "headers": [
-    {
-      "source": "/api/:path*",
-      "headers": [
-        {
-          "key": "X-Forwarded-Host",
-          "value": "nrcseam.techivano.com"
-        }
-      ]
     }
   ]
 }
