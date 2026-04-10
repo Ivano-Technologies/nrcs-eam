@@ -1,4 +1,5 @@
-// Node.js serverless proxy to App Runner (not Edge — avoids cross-region latency/timeouts)
+// Node.js serverless proxy to App Runner — lives at /api/* so Vercel matches this
+// function before the SPA rewrite (no /api → /api/proxy rewrite needed).
 const APP_RUNNER_URL = "https://vy3xagmuzx.eu-west-1.awsapprunner.com";
 
 const HOP_BY_HOP = new Set([
@@ -26,15 +27,22 @@ function buildForwardHeaders(req) {
 
 export default async function handler(req, res) {
   const rawUrl = req.url || "/";
-  const pathAfterProxy = rawUrl.replace(/^\/api\/proxy/, "") || "/";
+  const u = new URL(rawUrl, "http://localhost");
+  let suffix = u.pathname.startsWith("/api")
+    ? u.pathname.slice("/api".length)
+    : u.pathname;
+  if (suffix === "" || suffix === "/") suffix = "/";
+  else if (!suffix.startsWith("/")) suffix = "/" + suffix;
+  const pathAndQuery = suffix + u.search;
+
   console.log("[proxy-debug] req.url:", req.url);
   console.log("[proxy-debug] method:", req.method);
   console.log(
     "[proxy-debug] targetUrl will be:",
-    "https://vy3xagmuzx.eu-west-1.awsapprunner.com" + "/api" + pathAfterProxy
+    "https://vy3xagmuzx.eu-west-1.awsapprunner.com" + "/api" + pathAndQuery
   );
 
-  const targetUrl = APP_RUNNER_URL + "/api" + pathAfterProxy;
+  const targetUrl = APP_RUNNER_URL + "/api" + pathAndQuery;
 
   try {
     const headers = buildForwardHeaders(req);
