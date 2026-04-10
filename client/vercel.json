@@ -4,6 +4,10 @@
   "outputDirectory": "../dist/public",
   "rewrites": [
     {
+      "source": "/api/:path*",
+      "destination": "https://vy3xagmuzx.eu-west-1.awsapprunner.com/api/:path*"
+    },
+    {
       "source": "/health",
       "destination": "https://vy3xagmuzx.eu-west-1.awsapprunner.com/health"
     },
