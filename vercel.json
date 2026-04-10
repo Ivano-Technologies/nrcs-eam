@@ -4,8 +4,17 @@
   "outputDirectory": "dist/public",
   "rewrites": [
     {
+      "source": "/api/:path*",
+      "destination": "/api/proxy/:path*"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
-  ]
+  ],
+  "functions": {
+    "api/proxy/[...path].js": {
+      "maxDuration": 60
+    }
+  }
 }

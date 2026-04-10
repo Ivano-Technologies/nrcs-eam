@@ -1,0 +1,76 @@
+// Node.js serverless proxy to App Runner (not Edge — avoids cross-region latency/timeouts)
+const APP_RUNNER_URL = "https://vy3xagmuzx.eu-west-1.awsapprunner.com";
+
+const HOP_BY_HOP = new Set([
+  "connection",
+  "keep-alive",
+  "transfer-encoding",
+  "upgrade",
+  "http2-settings",
+]);
+
+function buildForwardHeaders(req) {
+  /** @type {Record<string, string>} */
+  const headers = {};
+  for (const [key, value] of Object.entries(req.headers)) {
+    if (value === undefined) continue;
+    const lower = key.toLowerCase();
+    if (HOP_BY_HOP.has(lower) || lower === "content-length") continue;
+    headers[key] = Array.isArray(value) ? value.join(", ") : String(value);
+  }
+  headers.host = "vy3xagmuzx.eu-west-1.awsapprunner.com";
+  headers["x-forwarded-host"] = "nrcseam.techivano.com";
+  headers["x-forwarded-proto"] = "https";
+  return headers;
+}
+
+export default async function handler(req, res) {
+  const rawUrl = req.url || "/";
+  const targetPath = rawUrl.replace(/^\/api\/proxy/, "") || "/";
+  const targetUrl = APP_RUNNER_URL + "/api" + targetPath;
+
+  try {
+    const headers = buildForwardHeaders(req);
+
+    const body =
+      req.method !== "GET" && req.method !== "HEAD"
+        ? await new Promise((resolve, reject) => {
+            const chunks = [];
+            req.on("data", (chunk) => chunks.push(chunk));
+            req.on("end", () => resolve(Buffer.concat(chunks)));
+            req.on("error", reject);
+          })
+        : undefined;
+
+    const response = await fetch(targetUrl, {
+      method: req.method,
+      headers,
+      body:
+        req.method !== "GET" && req.method !== "HEAD" ? body : undefined,
+    });
+
+    const responseBody = await response.arrayBuffer();
+
+    response.headers.forEach((value, key) => {
+      const lower = key.toLowerCase();
+      if (!["transfer-encoding", "connection"].includes(lower)) {
+        res.setHeader(key, value);
+      }
+    });
+
+    res.status(response.status).send(Buffer.from(responseBody));
+  } catch (error) {
+    console.error("[proxy] Error:", error);
+    res
+      .status(502)
+      .json({ error: "Proxy error", detail: String(error?.message ?? error) });
+  }
+}
+
+export const config = {
+  api: {
+    bodyParser: false,
+    responseLimit: false,
+    externalResolver: true,
+  },
+};
