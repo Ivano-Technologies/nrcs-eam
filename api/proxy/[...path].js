@@ -26,8 +26,15 @@ function buildForwardHeaders(req) {
 
 export default async function handler(req, res) {
   const rawUrl = req.url || "/";
-  const targetPath = rawUrl.replace(/^\/api\/proxy/, "") || "/";
-  const targetUrl = APP_RUNNER_URL + "/api" + targetPath;
+  const pathAfterProxy = rawUrl.replace(/^\/api\/proxy/, "") || "/";
+  console.log("[proxy-debug] req.url:", req.url);
+  console.log("[proxy-debug] method:", req.method);
+  console.log(
+    "[proxy-debug] targetUrl will be:",
+    "https://vy3xagmuzx.eu-west-1.awsapprunner.com" + "/api" + pathAfterProxy
+  );
+
+  const targetUrl = APP_RUNNER_URL + "/api" + pathAfterProxy;
 
   try {
     const headers = buildForwardHeaders(req);
