@@ -38,7 +38,13 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
       if (response.ok) {
         return true;
       }
-      console.error("[email] Resend API failed:", await response.text());
+      const errText = await response.text();
+      console.error(
+        "[email] Resend API failed:",
+        response.status,
+        response.statusText,
+        errText
+      );
     } catch (error) {
       console.error("[email] Resend API error:", error);
     }
