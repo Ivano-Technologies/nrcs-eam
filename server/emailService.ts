@@ -18,6 +18,31 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
     "forgeApiUrl:",
     ENV.forgeApiUrl ? "SET" : "NOT SET"
   );
+  if (process.env.RESEND_API_KEY) {
+    try {
+      const from = process.env.SMTP_FROM ?? "onboarding@resend.dev";
+      const response = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from,
+          to: [options.to],
+          subject: options.subject,
+          html: options.html,
+        }),
+        signal: AbortSignal.timeout(30_000),
+      });
+      if (response.ok) {
+        return true;
+      }
+      console.error("[email] Resend API failed:", await response.text());
+    } catch (error) {
+      console.error("[email] Resend API error:", error);
+    }
+  }
   const smtpHost = process.env.SMTP_HOST ?? process.env.MAILPIT_SMTP_HOST;
   if (smtpHost) {
     try {
@@ -53,34 +78,9 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
       return false;
     }
   }
-  if (!smtpHost && process.env.RESEND_API_KEY) {
-    try {
-      const from = process.env.SMTP_FROM ?? "onboarding@resend.dev";
-      const response = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from,
-          to: [options.to],
-          subject: options.subject,
-          html: options.html,
-        }),
-        signal: AbortSignal.timeout(30_000),
-      });
-      if (response.ok) {
-        return true;
-      }
-      console.error("[email] Resend API failed:", await response.text());
-    } catch (error) {
-      console.error("[email] Resend API error:", error);
-    }
-  }
   if (!ENV.forgeApiUrl || !ENV.forgeApiKey) {
     console.error(
-      "[email] No SMTP_HOST, working RESEND_API_KEY (HTTP), or Forge API; email not sent"
+      "[email] No working Resend API, SMTP, or Forge API; email not sent"
     );
     return false;
   }
