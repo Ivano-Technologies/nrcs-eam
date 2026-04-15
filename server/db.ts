@@ -1051,19 +1051,45 @@ export async function getUserByEmail(email: string) {
 
 /** Case-insensitive email lookup (for password login). */
 export async function getUserByEmailForLogin(email: string) {
-  const database = await getDb();
-  if (!database) return null;
   const normalized = email.trim().toLowerCase();
-  const result = await database
-    .select({
-      openId: users.openId,
-      name: users.name,
-      passwordHash: users.passwordHash,
-    })
-    .from(users)
-    .where(sql`LOWER(${users.email}) = ${normalized}`)
-    .limit(1);
-  return result.length > 0 ? result[0] : null;
+  const maxAttempts = Number(process.env.AUTH_LOGIN_DB_MAX_ATTEMPTS ?? "4");
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const database = await getDb();
+      if (!database) return null;
+      const result = await database
+        .select({
+          openId: users.openId,
+          name: users.name,
+          passwordHash: users.passwordHash,
+        })
+        .from(users)
+        .where(sql`LOWER(${users.email}) = ${normalized}`)
+        .limit(1);
+      return result.length > 0 ? result[0] : null;
+    } catch (e) {
+      lastError = e;
+      const text = e instanceof Error ? `${e.message}\n${e.stack ?? ""}` : String(e);
+      const transient = /ECONNRESET|ETIMEDOUT|EPIPE|ENOTFOUND|TLS|SSL|timeout|socket/i.test(
+        text
+      );
+      if (!transient || attempt === maxAttempts) {
+        throw e;
+      }
+      await resetDbConnection();
+      const delayMs = 500 * attempt;
+      console.warn(
+        `[auth/login] transient DB lookup failure (${attempt}/${maxAttempts}), retrying in ${delayMs}ms`
+      );
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error(String(lastError ?? "getUserByEmailForLogin failed"));
 }
 
 
