@@ -14,7 +14,7 @@
       "destination": "/api/health"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
   ],
