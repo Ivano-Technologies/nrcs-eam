@@ -1,1 +1,0 @@
-ALTER TABLE `userPreferences` ADD `dashboardWidgets` text DEFAULT ('{"totalAssets":true,"assetsInMaintenance":true,"pendingWorkOrders":true,"lowStockItems":true,"upcomingMaintenance":true,"lowStockAlerts":true}');

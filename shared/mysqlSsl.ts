@@ -1,5 +1,5 @@
 /**
- * MySQL TLS options for mysql2 + AWS RDS.
+ * Database TLS options for postgres.js + AWS RDS / Supabase.
  *
  * When `DATABASE_SSL_REJECT_UNAUTHORIZED=true`, `DATABASE_SSL_CA_PATH` must point to the
  * [RDS global bundle](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/UsingWithRDS.SSL.html)
@@ -31,10 +31,42 @@ export type Mysql2SslConfig = {
 };
 
 /**
- * Options for mysql2 `ssl` when `DATABASE_SSL` is on.
+ * Options for mysql2 `ssl` when `DATABASE_SSL` is on (legacy name; used for CA loading).
  * If `DATABASE_SSL_REJECT_UNAUTHORIZED=true`, `DATABASE_SSL_CA_PATH` must point to a readable PEM (e.g. RDS global-bundle.pem).
  * If `rejectUnauthorized` is false, CA is optional (dev / transitional).
  */
+
+/**
+ * SSL option for the `postgres` npm package (non-local hosts).
+ * When `DATABASE_SSL` is unset, returns `{ rejectUnauthorized: false }` for remote URLs
+ * so Supabase/Postgres TLS still works without a CA bundle.
+ */
+export function getPostgresJsSslOption():
+  | undefined
+  | { rejectUnauthorized: boolean; ca?: string | Buffer } {
+  const url = process.env.DATABASE_URL;
+  if (!url) return undefined;
+  try {
+    const u = new URL(url);
+    const h = u.hostname.toLowerCase();
+    if (h === "localhost" || h === "127.0.0.1" || h === "::1") {
+      return undefined;
+    }
+  } catch {
+    return undefined;
+  }
+
+  const strict = getMysql2SslOptions();
+  if (strict) {
+    return {
+      rejectUnauthorized: strict.rejectUnauthorized,
+      ca: strict.ca,
+    };
+  }
+
+  return { rejectUnauthorized: false };
+}
+
 export function getMysql2SslOptions(): Mysql2SslConfig | undefined {
   if (!isDatabaseSslEnabled()) {
     return undefined;

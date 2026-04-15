@@ -1,27 +1,164 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, boolean, bigint } from "drizzle-orm/mysql-core";
+import {
+  pgTable,
+  serial,
+  varchar,
+  text,
+  timestamp,
+  boolean,
+  integer,
+  decimal,
+  bigint,
+  pgEnum,
+} from "drizzle-orm/pg-core";
+
+export const userRoleEnum = pgEnum("user_role", [
+  "admin",
+  "manager",
+  "technician",
+  "user",
+]);
+
+export const assetStatusEnum = pgEnum("asset_status", [
+  "operational",
+  "maintenance",
+  "repair",
+  "retired",
+  "disposed",
+]);
+
+export const workOrderTypeEnum = pgEnum("work_order_type", [
+  "corrective",
+  "preventive",
+  "inspection",
+  "emergency",
+]);
+
+export const workOrderPriorityEnum = pgEnum("work_order_priority", [
+  "low",
+  "medium",
+  "high",
+  "critical",
+]);
+
+export const workOrderStatusEnum = pgEnum("work_order_status", [
+  "pending",
+  "assigned",
+  "in_progress",
+  "on_hold",
+  "completed",
+  "cancelled",
+]);
+
+export const maintenanceFrequencyEnum = pgEnum("maintenance_frequency", [
+  "daily",
+  "weekly",
+  "monthly",
+  "quarterly",
+  "semi_annual",
+  "annual",
+]);
+
+export const inventoryTxTypeEnum = pgEnum("inventory_tx_type", [
+  "in",
+  "out",
+  "adjustment",
+  "transfer",
+]);
+
+export const financialTxTypeEnum = pgEnum("financial_tx_type", [
+  "acquisition",
+  "maintenance",
+  "repair",
+  "disposal",
+  "depreciation",
+  "revenue",
+  "other",
+]);
+
+export const complianceStatusEnum = pgEnum("compliance_status", [
+  "compliant",
+  "non_compliant",
+  "pending",
+  "expired",
+]);
+
+export const notificationTypeEnum = pgEnum("notification_type", [
+  "maintenance_due",
+  "low_stock",
+  "work_order_assigned",
+  "work_order_completed",
+  "asset_status_change",
+  "compliance_due",
+  "system_alert",
+]);
+
+export const scheduledReportTypeEnum = pgEnum("scheduled_report_type", [
+  "assetInventory",
+  "maintenanceSchedule",
+  "workOrders",
+  "financial",
+  "compliance",
+]);
+
+export const reportFormatEnum = pgEnum("report_format", ["pdf", "excel"]);
+
+export const reportScheduleEnum = pgEnum("report_schedule", [
+  "daily",
+  "weekly",
+  "monthly",
+]);
+
+export const assetTransferStatusEnum = pgEnum("asset_transfer_status", [
+  "pending",
+  "approved",
+  "rejected",
+  "in_transit",
+  "completed",
+  "cancelled",
+]);
+
+export const authTokenTypeEnum = pgEnum("auth_token_type", [
+  "magic_link",
+  "signup_verification",
+]);
+
+export const pendingRequestedRoleEnum = pgEnum("pending_requested_role", [
+  "user",
+  "manager",
+]);
+
+export const pendingUserStatusEnum = pgEnum("pending_user_status", [
+  "pending",
+  "approved",
+  "rejected",
+]);
 
 /**
  * Core user table backing auth flow with extended roles for EAM system
  */
-export const users = mysqlTable("users", {
-  id: int("id").autoincrement().primaryKey(),
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["admin", "manager", "technician", "user"]).default("user").notNull(),
-  siteId: int("siteId"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-  lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
-  hasCompletedOnboarding: boolean("has_completed_onboarding").default(false).notNull(),
+  role: userRoleEnum("role").default("user").notNull(),
+  siteId: integer("siteId"),
+  createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
+  lastSignedIn: timestamp("lastSignedIn", { mode: "date" }).defaultNow().notNull(),
+  hasCompletedOnboarding: boolean("has_completed_onboarding")
+    .default(false)
+    .notNull(),
+  /** Bcrypt hash; null until set by admin or migration. */
+  passwordHash: varchar("password_hash", { length: 255 }),
 });
 
 /** System-wide key/value settings (e.g. openRegistration). */
-export const appSettings = mysqlTable("app_settings", {
+export const appSettings = pgTable("app_settings", {
   key: varchar("key", { length: 64 }).primaryKey(),
   value: text("value").notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
 });
 
 export type AppSetting = typeof appSettings.$inferSelect;
@@ -30,8 +167,8 @@ export type InsertAppSetting = typeof appSettings.$inferInsert;
 /**
  * Sites/Locations for multi-site management
  */
-export const sites = mysqlTable("sites", {
-  id: int("id").autoincrement().primaryKey(),
+export const sites = pgTable("sites", {
+  id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   address: text("address"),
   city: varchar("city", { length: 100 }),
@@ -43,41 +180,41 @@ export const sites = mysqlTable("sites", {
   isActive: boolean("isActive").default(true).notNull(),
   latitude: decimal("latitude", { precision: 10, scale: 8 }),
   longitude: decimal("longitude", { precision: 11, scale: 8 }),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
 });
 
 /**
  * Asset Categories (e.g., Machinery, Buildings, Vehicles, Equipment)
  */
-export const assetCategories = mysqlTable("assetCategories", {
-  id: int("id").autoincrement().primaryKey(),
+export const assetCategories = pgTable("assetCategories", {
+  id: serial("id").primaryKey(),
   name: varchar("name", { length: 100 }).notNull(),
   description: text("description"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
 });
 
 /**
  * Assets - Core asset inventory
  */
-export const assets = mysqlTable("assets", {
-  id: int("id").autoincrement().primaryKey(),
+export const assets = pgTable("assets", {
+  id: serial("id").primaryKey(),
   assetTag: varchar("assetTag", { length: 100 }).notNull().unique(),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
-  categoryId: int("categoryId").notNull(),
-  siteId: int("siteId").notNull(),
-  status: mysqlEnum("status", ["operational", "maintenance", "repair", "retired", "disposed"]).default("operational").notNull(),
+  categoryId: integer("categoryId").notNull(),
+  siteId: integer("siteId").notNull(),
+  status: assetStatusEnum("status").default("operational").notNull(),
   manufacturer: varchar("manufacturer", { length: 255 }),
   model: varchar("model", { length: 255 }),
   serialNumber: varchar("serialNumber", { length: 255 }),
-  acquisitionDate: timestamp("acquisitionDate"),
+  acquisitionDate: timestamp("acquisitionDate", { mode: "date" }),
   acquisitionCost: decimal("acquisitionCost", { precision: 15, scale: 2 }),
   currentValue: decimal("currentValue", { precision: 15, scale: 2 }),
   depreciationRate: decimal("depreciationRate", { precision: 5, scale: 2 }),
-  warrantyExpiry: timestamp("warrantyExpiry"),
+  warrantyExpiry: timestamp("warrantyExpiry", { mode: "date" }),
   location: varchar("location", { length: 255 }),
-  assignedTo: int("assignedTo"),
+  assignedTo: integer("assignedTo"),
   imageUrl: text("imageUrl"),
   notes: text("notes"),
   qrCode: text("qrCode"),
@@ -85,109 +222,108 @@ export const assets = mysqlTable("assets", {
   barcodeFormat: varchar("barcodeFormat", { length: 50 }),
   latitude: decimal("latitude", { precision: 10, scale: 8 }),
   longitude: decimal("longitude", { precision: 11, scale: 8 }),
-  
-  // Depreciation fields
-  depreciationMethod: varchar("depreciationMethod", { length: 50 }), // 'straight-line', 'declining-balance', 'none'
-  usefulLifeYears: int("usefulLifeYears"), // Expected useful life in years
-  residualValue: decimal("residualValue", { precision: 12, scale: 2 }), // Salvage value at end of life
-  depreciationStartDate: timestamp("depreciationStartDate"), // When depreciation starts
-  
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+
+  depreciationMethod: varchar("depreciationMethod", { length: 50 }),
+  usefulLifeYears: integer("usefulLifeYears"),
+  residualValue: decimal("residualValue", { precision: 12, scale: 2 }),
+  depreciationStartDate: timestamp("depreciationStartDate", { mode: "date" }),
+
+  createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
 });
 
 /**
  * Work Orders
  */
-export const workOrders = mysqlTable("workOrders", {
-  id: int("id").autoincrement().primaryKey(),
+export const workOrders = pgTable("workOrders", {
+  id: serial("id").primaryKey(),
   workOrderNumber: varchar("workOrderNumber", { length: 100 }).notNull().unique(),
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
-  assetId: int("assetId").notNull(),
-  siteId: int("siteId").notNull(),
-  type: mysqlEnum("type", ["corrective", "preventive", "inspection", "emergency"]).notNull(),
-  priority: mysqlEnum("priority", ["low", "medium", "high", "critical"]).default("medium").notNull(),
-  status: mysqlEnum("status", ["pending", "assigned", "in_progress", "on_hold", "completed", "cancelled"]).default("pending").notNull(),
-  assignedTo: int("assignedTo"),
-  requestedBy: int("requestedBy").notNull(),
-  scheduledStart: timestamp("scheduledStart"),
-  scheduledEnd: timestamp("scheduledEnd"),
-  actualStart: timestamp("actualStart"),
-  actualEnd: timestamp("actualEnd"),
+  assetId: integer("assetId").notNull(),
+  siteId: integer("siteId").notNull(),
+  type: workOrderTypeEnum("type").notNull(),
+  priority: workOrderPriorityEnum("priority").default("medium").notNull(),
+  status: workOrderStatusEnum("status").default("pending").notNull(),
+  assignedTo: integer("assignedTo"),
+  requestedBy: integer("requestedBy").notNull(),
+  scheduledStart: timestamp("scheduledStart", { mode: "date" }),
+  scheduledEnd: timestamp("scheduledEnd", { mode: "date" }),
+  actualStart: timestamp("actualStart", { mode: "date" }),
+  actualEnd: timestamp("actualEnd", { mode: "date" }),
   estimatedCost: decimal("estimatedCost", { precision: 15, scale: 2 }),
   actualCost: decimal("actualCost", { precision: 15, scale: 2 }),
   completionNotes: text("completionNotes"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
 });
 
 /**
  * Preventive Maintenance Schedules
  */
-export const maintenanceSchedules = mysqlTable("maintenanceSchedules", {
-  id: int("id").autoincrement().primaryKey(),
+export const maintenanceSchedules = pgTable("maintenanceSchedules", {
+  id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
-  assetId: int("assetId").notNull(),
-  frequency: mysqlEnum("frequency", ["daily", "weekly", "monthly", "quarterly", "semi_annual", "annual"]).notNull(),
-  frequencyValue: int("frequencyValue").default(1).notNull(),
-  lastPerformed: timestamp("lastPerformed"),
-  nextDue: timestamp("nextDue").notNull(),
-  assignedTo: int("assignedTo"),
+  assetId: integer("assetId").notNull(),
+  frequency: maintenanceFrequencyEnum("frequency").notNull(),
+  frequencyValue: integer("frequencyValue").default(1).notNull(),
+  lastPerformed: timestamp("lastPerformed", { mode: "date" }),
+  nextDue: timestamp("nextDue", { mode: "date" }).notNull(),
+  assignedTo: integer("assignedTo"),
   isActive: boolean("isActive").default(true).notNull(),
   taskTemplate: text("taskTemplate"),
-  estimatedDuration: int("estimatedDuration"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  estimatedDuration: integer("estimatedDuration"),
+  createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
 });
 
 /**
  * Inventory Items (spare parts and supplies)
  */
-export const inventoryItems = mysqlTable("inventoryItems", {
-  id: int("id").autoincrement().primaryKey(),
+export const inventoryItems = pgTable("inventoryItems", {
+  id: serial("id").primaryKey(),
   itemCode: varchar("itemCode", { length: 100 }).notNull().unique(),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
   category: varchar("category", { length: 100 }),
-  siteId: int("siteId").notNull(),
-  currentStock: int("currentStock").default(0).notNull(),
-  minStockLevel: int("minStockLevel").default(0).notNull(),
-  reorderPoint: int("reorderPoint").default(0).notNull(),
-  maxStockLevel: int("maxStockLevel"),
+  siteId: integer("siteId").notNull(),
+  currentStock: integer("currentStock").default(0).notNull(),
+  minStockLevel: integer("minStockLevel").default(0).notNull(),
+  reorderPoint: integer("reorderPoint").default(0).notNull(),
+  maxStockLevel: integer("maxStockLevel"),
   unitOfMeasure: varchar("unitOfMeasure", { length: 50 }),
   unitCost: decimal("unitCost", { precision: 15, scale: 2 }),
-  vendorId: int("vendorId"),
+  vendorId: integer("vendorId"),
   location: varchar("location", { length: 255 }),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
 });
 
 /**
  * Inventory Transactions
  */
-export const inventoryTransactions = mysqlTable("inventoryTransactions", {
-  id: int("id").autoincrement().primaryKey(),
-  itemId: int("itemId").notNull(),
-  type: mysqlEnum("type", ["in", "out", "adjustment", "transfer"]).notNull(),
-  quantity: int("quantity").notNull(),
-  workOrderId: int("workOrderId"),
-  fromSiteId: int("fromSiteId"),
-  toSiteId: int("toSiteId"),
+export const inventoryTransactions = pgTable("inventoryTransactions", {
+  id: serial("id").primaryKey(),
+  itemId: integer("itemId").notNull(),
+  type: inventoryTxTypeEnum("type").notNull(),
+  quantity: integer("quantity").notNull(),
+  workOrderId: integer("workOrderId"),
+  fromSiteId: integer("fromSiteId"),
+  toSiteId: integer("toSiteId"),
   unitCost: decimal("unitCost", { precision: 15, scale: 2 }),
   totalCost: decimal("totalCost", { precision: 15, scale: 2 }),
-  performedBy: int("performedBy").notNull(),
+  performedBy: integer("performedBy").notNull(),
   notes: text("notes"),
-  transactionDate: timestamp("transactionDate").defaultNow().notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  transactionDate: timestamp("transactionDate", { mode: "date" }).defaultNow().notNull(),
+  createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
 });
 
 /**
  * Vendors
  */
-export const vendors = mysqlTable("vendors", {
-  id: int("id").autoincrement().primaryKey(),
+export const vendors = pgTable("vendors", {
+  id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   vendorCode: varchar("vendorCode", { length: 100 }).unique(),
   contactPerson: varchar("contactPerson", { length: 255 }),
@@ -200,70 +336,70 @@ export const vendors = mysqlTable("vendors", {
   website: varchar("website", { length: 255 }),
   notes: text("notes"),
   isActive: boolean("isActive").default(true).notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
 });
 
 /**
  * Financial Transactions
  */
-export const financialTransactions = mysqlTable("financialTransactions", {
-  id: int("id").autoincrement().primaryKey(),
-  transactionType: mysqlEnum("transactionType", ["acquisition", "maintenance", "repair", "disposal", "depreciation", "revenue", "other"]).notNull(),
-  assetId: int("assetId"),
-  workOrderId: int("workOrderId"),
+export const financialTransactions = pgTable("financialTransactions", {
+  id: serial("id").primaryKey(),
+  transactionType: financialTxTypeEnum("transactionType").notNull(),
+  assetId: integer("assetId"),
+  workOrderId: integer("workOrderId"),
   amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
   currency: varchar("currency", { length: 10 }).default("NGN").notNull(),
   description: text("description"),
-  transactionDate: timestamp("transactionDate").notNull(),
-  vendorId: int("vendorId"),
+  transactionDate: timestamp("transactionDate", { mode: "date" }).notNull(),
+  vendorId: integer("vendorId"),
   receiptNumber: varchar("receiptNumber", { length: 100 }),
-  approvedBy: int("approvedBy"),
-  createdBy: int("createdBy").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  approvedBy: integer("approvedBy"),
+  createdBy: integer("createdBy").notNull(),
+  createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
 });
 
 /**
  * Compliance Records
  */
-export const complianceRecords = mysqlTable("complianceRecords", {
-  id: int("id").autoincrement().primaryKey(),
-  assetId: int("assetId"),
+export const complianceRecords = pgTable("complianceRecords", {
+  id: serial("id").primaryKey(),
+  assetId: integer("assetId"),
   title: varchar("title", { length: 255 }).notNull(),
   regulatoryBody: varchar("regulatoryBody", { length: 255 }),
   requirementType: varchar("requirementType", { length: 100 }),
   description: text("description"),
-  status: mysqlEnum("status", ["compliant", "non_compliant", "pending", "expired"]).default("pending").notNull(),
-  dueDate: timestamp("dueDate"),
-  completionDate: timestamp("completionDate"),
-  nextReviewDate: timestamp("nextReviewDate"),
-  assignedTo: int("assignedTo"),
+  status: complianceStatusEnum("status").default("pending").notNull(),
+  dueDate: timestamp("dueDate", { mode: "date" }),
+  completionDate: timestamp("completionDate", { mode: "date" }),
+  nextReviewDate: timestamp("nextReviewDate", { mode: "date" }),
+  assignedTo: integer("assignedTo"),
   documentUrl: text("documentUrl"),
   notes: text("notes"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
 });
 
 /**
  * Audit Trail for compliance and tracking
  */
-export const auditLogs = mysqlTable("auditLogs", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
+export const auditLogs = pgTable("auditLogs", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull(),
   action: varchar("action", { length: 100 }).notNull(),
   entityType: varchar("entityType", { length: 100 }),
-  entityId: int("entityId"),
+  entityId: integer("entityId"),
   changes: text("changes"),
   ipAddress: varchar("ipAddress", { length: 50 }),
   userAgent: text("userAgent"),
-  timestamp: timestamp("timestamp").defaultNow().notNull(),
+  timestamp: timestamp("timestamp", { mode: "date" }).defaultNow().notNull(),
 });
 
 /**
  * Documents and Attachments
  */
-export const documents = mysqlTable("documents", {
-  id: int("id").autoincrement().primaryKey(),
+export const documents = pgTable("documents", {
+  id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
   fileUrl: text("fileUrl").notNull(),
@@ -271,9 +407,9 @@ export const documents = mysqlTable("documents", {
   fileType: varchar("fileType", { length: 100 }),
   fileSize: bigint("fileSize", { mode: "number" }),
   entityType: varchar("entityType", { length: 100 }),
-  entityId: int("entityId"),
-  uploadedBy: int("uploadedBy").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  entityId: integer("entityId"),
+  uploadedBy: integer("uploadedBy").notNull(),
+  createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
 });
 
 // Type exports
@@ -301,33 +437,25 @@ export type Document = typeof documents.$inferSelect;
 /**
  * Notifications - In-app notification system
  */
-export const notifications = mysqlTable("notifications", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  type: mysqlEnum("type", [
-    "maintenance_due",
-    "low_stock",
-    "work_order_assigned",
-    "work_order_completed",
-    "asset_status_change",
-    "compliance_due",
-    "system_alert"
-  ]).notNull(),
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull(),
+  type: notificationTypeEnum("type").notNull(),
   title: varchar("title", { length: 255 }).notNull(),
   message: text("message").notNull(),
-  relatedEntityType: varchar("relatedEntityType", { length: 50 }), // asset, workOrder, inventory, etc.
-  relatedEntityId: int("relatedEntityId"),
+  relatedEntityType: varchar("relatedEntityType", { length: 50 }),
+  relatedEntityId: integer("relatedEntityId"),
   isRead: boolean("isRead").default(false).notNull(),
-  readAt: timestamp("readAt"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  readAt: timestamp("readAt", { mode: "date" }),
+  createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
 });
 
 /**
  * Notification Preferences - User notification settings
  */
-export const notificationPreferences = mysqlTable("notificationPreferences", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull().unique(),
+export const notificationPreferences = pgTable("notificationPreferences", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull().unique(),
   maintenanceDue: boolean("maintenanceDue").default(true).notNull(),
   lowStock: boolean("lowStock").default(true).notNull(),
   workOrderAssigned: boolean("workOrderAssigned").default(true).notNull(),
@@ -335,55 +463,50 @@ export const notificationPreferences = mysqlTable("notificationPreferences", {
   assetStatusChange: boolean("assetStatusChange").default(true).notNull(),
   complianceDue: boolean("complianceDue").default(true).notNull(),
   systemAlert: boolean("systemAlert").default(true).notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
 });
 
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = typeof notifications.$inferInsert;
 export type NotificationPreferences = typeof notificationPreferences.$inferSelect;
-export type InsertNotificationPreferences = typeof notificationPreferences.$inferInsert;
+export type InsertNotificationPreferences =
+  typeof notificationPreferences.$inferInsert;
 
 /**
  * Asset Photos - Store photos for assets and work orders
  */
-export const assetPhotos = mysqlTable("assetPhotos", {
-  id: int("id").autoincrement().primaryKey(),
-  assetId: int("assetId"),
-  workOrderId: int("workOrderId"),
+export const assetPhotos = pgTable("assetPhotos", {
+  id: serial("id").primaryKey(),
+  assetId: integer("assetId"),
+  workOrderId: integer("workOrderId"),
   photoUrl: text("photoUrl").notNull(),
   photoKey: varchar("photoKey", { length: 500 }).notNull(),
   caption: text("caption"),
-  uploadedBy: int("uploadedBy").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  uploadedBy: integer("uploadedBy").notNull(),
+  createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
 });
 
 /**
  * Scheduled Reports - Email report scheduling
  */
-export const scheduledReports = mysqlTable("scheduledReports", {
-  id: int("id").autoincrement().primaryKey(),
+export const scheduledReports = pgTable("scheduledReports", {
+  id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
-  reportType: mysqlEnum("reportType", [
-    "assetInventory",
-    "maintenanceSchedule",
-    "workOrders",
-    "financial",
-    "compliance"
-  ]).notNull(),
-  format: mysqlEnum("format", ["pdf", "excel"]).notNull(),
-  schedule: mysqlEnum("schedule", ["daily", "weekly", "monthly"]).notNull(),
-  dayOfWeek: int("dayOfWeek"), // 0-6 for weekly
-  dayOfMonth: int("dayOfMonth"), // 1-31 for monthly
-  time: varchar("time", { length: 5 }).notNull(), // HH:MM format
-  recipients: text("recipients").notNull(), // Comma-separated email addresses
-  filters: text("filters"), // JSON string of filter options
+  reportType: scheduledReportTypeEnum("reportType").notNull(),
+  format: reportFormatEnum("format").notNull(),
+  schedule: reportScheduleEnum("schedule").notNull(),
+  dayOfWeek: integer("dayOfWeek"),
+  dayOfMonth: integer("dayOfMonth"),
+  time: varchar("time", { length: 5 }).notNull(),
+  recipients: text("recipients").notNull(),
+  filters: text("filters"),
   isActive: boolean("isActive").default(true).notNull(),
-  lastRun: timestamp("lastRun"),
-  nextRun: timestamp("nextRun"),
-  createdBy: int("createdBy").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  lastRun: timestamp("lastRun", { mode: "date" }),
+  nextRun: timestamp("nextRun", { mode: "date" }),
+  createdBy: integer("createdBy").notNull(),
+  createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
 });
 
 export type AssetPhoto = typeof assetPhotos.$inferSelect;
@@ -391,73 +514,70 @@ export type InsertAssetPhoto = typeof assetPhotos.$inferInsert;
 export type ScheduledReport = typeof scheduledReports.$inferSelect;
 export type InsertScheduledReport = typeof scheduledReports.$inferInsert;
 
-
 /**
  * Asset Transfer Requests
  */
-export const assetTransfers = mysqlTable("assetTransfers", {
-  id: int("id").autoincrement().primaryKey(),
-  assetId: int("assetId").notNull(),
-  fromSiteId: int("fromSiteId").notNull(),
-  toSiteId: int("toSiteId").notNull(),
-  requestedBy: int("requestedBy").notNull(),
-  approvedBy: int("approvedBy"),
-  status: mysqlEnum("status", ["pending", "approved", "rejected", "in_transit", "completed", "cancelled"]).default("pending").notNull(),
-  requestDate: timestamp("requestDate").defaultNow().notNull(),
-  approvalDate: timestamp("approvalDate"),
-  transferDate: timestamp("transferDate"),
-  completionDate: timestamp("completionDate"),
+export const assetTransfers = pgTable("assetTransfers", {
+  id: serial("id").primaryKey(),
+  assetId: integer("assetId").notNull(),
+  fromSiteId: integer("fromSiteId").notNull(),
+  toSiteId: integer("toSiteId").notNull(),
+  requestedBy: integer("requestedBy").notNull(),
+  approvedBy: integer("approvedBy"),
+  status: assetTransferStatusEnum("status").default("pending").notNull(),
+  requestDate: timestamp("requestDate", { mode: "date" }).defaultNow().notNull(),
+  approvalDate: timestamp("approvalDate", { mode: "date" }),
+  transferDate: timestamp("transferDate", { mode: "date" }),
+  completionDate: timestamp("completionDate", { mode: "date" }),
   reason: text("reason"),
   notes: text("notes"),
-  handoverChecklist: text("handoverChecklist"), // JSON string
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  handoverChecklist: text("handoverChecklist"),
+  createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
 });
 
 export type AssetTransfer = typeof assetTransfers.$inferSelect;
 export type InsertAssetTransfer = typeof assetTransfers.$inferInsert;
 
-
 /**
  * Work Order Templates - Reusable templates for common maintenance tasks
  */
-export const workOrderTemplates = mysqlTable("workOrderTemplates", {
-  id: int("id").autoincrement().primaryKey(),
+export const workOrderTemplates = pgTable("workOrderTemplates", {
+  id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
-  type: mysqlEnum("type", ["corrective", "preventive", "inspection", "emergency"]).notNull(),
-  priority: mysqlEnum("priority", ["low", "medium", "high", "critical"]).default("medium").notNull(),
-  estimatedDuration: int("estimatedDuration"), // in minutes
-  checklistItems: text("checklistItems"), // JSON string of checklist items
+  type: workOrderTypeEnum("type").notNull(),
+  priority: workOrderPriorityEnum("priority").default("medium").notNull(),
+  estimatedDuration: integer("estimatedDuration"),
+  checklistItems: text("checklistItems"),
   instructions: text("instructions"),
-  categoryId: int("categoryId"), // Optional: link to asset category
-  createdBy: int("createdBy").notNull(),
+  categoryId: integer("categoryId"),
+  createdBy: integer("createdBy").notNull(),
   isActive: boolean("isActive").default(true).notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
 });
 
 export type WorkOrderTemplate = typeof workOrderTemplates.$inferSelect;
 export type InsertWorkOrderTemplate = typeof workOrderTemplates.$inferInsert;
 
-
 /**
  * QuickBooks Integration Configuration
  */
-export const quickbooksConfig = mysqlTable("quickbooksConfig", {
-  id: int("id").autoincrement().primaryKey(),
+export const quickbooksConfig = pgTable("quickbooksConfig", {
+  id: serial("id").primaryKey(),
   clientId: varchar("clientId", { length: 255 }).notNull(),
   clientSecret: varchar("clientSecret", { length: 255 }).notNull(),
   redirectUri: varchar("redirectUri", { length: 500 }).notNull(),
-  realmId: varchar("realmId", { length: 255 }).notNull(), // Company ID
+  realmId: varchar("realmId", { length: 255 }).notNull(),
   accessToken: text("accessToken"),
   refreshToken: text("refreshToken"),
-  tokenExpiresAt: timestamp("tokenExpiresAt"),
-  isActive: int("isActive").default(1).notNull(), // 1 = active, 0 = inactive
-  lastSyncAt: timestamp("lastSyncAt"),
-  autoSync: int("autoSync").default(1).notNull(), // 1 = enabled, 0 = disabled
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  tokenExpiresAt: timestamp("tokenExpiresAt", { mode: "date" }),
+  isActive: integer("isActive").default(1).notNull(),
+  lastSyncAt: timestamp("lastSyncAt", { mode: "date" }),
+  autoSync: integer("autoSync").default(1).notNull(),
+  createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
 });
 
 export type QuickBooksConfig = typeof quickbooksConfig.$inferSelect;
@@ -466,14 +586,14 @@ export type InsertQuickBooksConfig = typeof quickbooksConfig.$inferInsert;
 /**
  * User Preferences for UI state
  */
-export const userPreferences = mysqlTable("userPreferences", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull().unique(),
-  sidebarWidth: int("sidebarWidth").default(280),
-  sidebarCollapsed: int("sidebarCollapsed").default(0), // 0 = expanded, 1 = collapsed
+export const userPreferences = pgTable("userPreferences", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull().unique(),
+  sidebarWidth: integer("sidebarWidth").default(280),
+  sidebarCollapsed: integer("sidebarCollapsed").default(0),
   dashboardWidgets: text("dashboardWidgets"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
 });
 
 export type InsertUserPreferences = typeof userPreferences.$inferInsert;
@@ -482,59 +602,61 @@ export type InsertUserPreferences = typeof userPreferences.$inferInsert;
  * Email Notification History
  */
 // Magic Link Authentication
-export const authTokens = mysqlTable("auth_tokens", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("user_id").references(() => users.id, { onDelete: "cascade" }),
+export const authTokens = pgTable("auth_tokens", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
   token: varchar("token", { length: 255 }).notNull().unique(),
-  type: mysqlEnum("type", ["magic_link", "signup_verification"]).notNull(),
-  expiresAt: timestamp("expires_at").notNull(),
-  usedAt: timestamp("used_at"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  type: authTokenTypeEnum("type").notNull(),
+  expiresAt: timestamp("expires_at", { mode: "date" }).notNull(),
+  usedAt: timestamp("used_at", { mode: "date" }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
 });
 
 export type AuthToken = typeof authTokens.$inferSelect;
 export type InsertAuthToken = typeof authTokens.$inferInsert;
 
-export const pendingUsers = mysqlTable("pending_users", {
-  id: int("id").autoincrement().primaryKey(),
+export const pendingUsers = pgTable("pending_users", {
+  id: serial("id").primaryKey(),
   email: varchar("email", { length: 320 }).notNull().unique(),
   name: varchar("name", { length: 255 }).notNull(),
   designation: varchar("designation", { length: 255 }),
   department: varchar("department", { length: 255 }),
-  requestedRole: mysqlEnum("requested_role", ["user", "manager"]).notNull().default("user"),
-  status: mysqlEnum("status", ["pending", "approved", "rejected"]).notNull().default("pending"),
-  approvedBy: int("approved_by").references(() => users.id),
-  approvedAt: timestamp("approved_at"),
+  requestedRole: pendingRequestedRoleEnum("requested_role")
+    .notNull()
+    .default("user"),
+  status: pendingUserStatusEnum("status").notNull().default("pending"),
+  approvedBy: integer("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at", { mode: "date" }),
   rejectionReason: text("rejection_reason"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
 });
 
 export type PendingUser = typeof pendingUsers.$inferSelect;
 export type InsertPendingUser = typeof pendingUsers.$inferInsert;
 
-export const emailTemplates = mysqlTable("email_templates", {
-  id: int("id").autoincrement().primaryKey(),
-  templateType: varchar("template_type", { length: 50 }).notNull(), // 'magic_link', 'welcome', 'approval'
+export const emailTemplates = pgTable("email_templates", {
+  id: serial("id").primaryKey(),
+  templateType: varchar("template_type", { length: 50 }).notNull(),
   subject: varchar("subject", { length: 255 }).notNull(),
   htmlContent: text("html_content").notNull(),
   textContent: text("text_content"),
   isActive: boolean("is_active").default(true),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow(),
 });
 
-export const emailNotifications = mysqlTable("email_notifications", {
-  id: int("id").autoincrement().primaryKey(),
+export const emailNotifications = pgTable("email_notifications", {
+  id: serial("id").primaryKey(),
   subject: varchar("subject", { length: 255 }).notNull(),
   body: text("body").notNull(),
-  recipientType: varchar("recipientType", { length: 50 }).notNull(), // 'all', 'individual', 'role'
-  recipientIds: text("recipientIds"), // JSON array of user IDs if individual
-  recipientRole: varchar("recipientRole", { length: 50 }), // 'admin', 'manager', 'user' if by role
-  sentBy: int("sentBy").notNull(),
-  sentAt: timestamp("sentAt").defaultNow().notNull(),
-  status: varchar("status", { length: 50 }).default("sent").notNull(), // 'sent', 'failed'
-  recipientCount: int("recipientCount").default(0),
+  recipientType: varchar("recipientType", { length: 50 }).notNull(),
+  recipientIds: text("recipientIds"),
+  recipientRole: varchar("recipientRole", { length: 50 }),
+  sentBy: integer("sentBy").notNull(),
+  sentAt: timestamp("sentAt", { mode: "date" }).defaultNow().notNull(),
+  status: varchar("status", { length: 50 }).default("sent").notNull(),
+  recipientCount: integer("recipientCount").default(0),
 });
 
 export type EmailNotification = typeof emailNotifications.$inferSelect;

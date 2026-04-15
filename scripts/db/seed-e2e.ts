@@ -1,6 +1,6 @@
 /**
  * Playwright E2E seed — idempotent (requires existing `sites` row).
- * Prefer: `pnpm run seed-e2e:local` (loads `.env.e2e` for local MySQL).
+ * Prefer: `pnpm run seed-e2e:local` (loads `.env.e2e` for local Postgres).
  */
 import "dotenv/config";
 import { eq } from "drizzle-orm";
@@ -30,7 +30,8 @@ export async function runSeedE2e() {
       siteId: 1,
       hasCompletedOnboarding: true,
     })
-    .onDuplicateKeyUpdate({
+    .onConflictDoUpdate({
+      target: users.openId,
       set: {
         name: "E2E Admin",
         email: E2E_EMAIL,

@@ -1,7 +1,7 @@
 import { eq, and, desc, asc, gte, lte, sql, or, like, isNotNull, isNull } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
-import { createPool } from "mysql2";
-import { 
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
+import {
   appSettings,
   InsertUser, users, sites, InsertSite, assetCategories, assets, InsertAsset,
   workOrders, InsertWorkOrder, maintenanceSchedules, InsertMaintenanceSchedule,
@@ -12,24 +12,32 @@ import {
   userPreferences, InsertUserPreferences, emailNotifications, InsertEmailNotification,
   workOrderTemplates, InsertWorkOrderTemplate
 } from "../drizzle/schema";
+import { getPostgresJsSslOption } from "../shared/mysqlSsl";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
+let _sql: ReturnType<typeof postgres> | null = null;
 
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      const isLocal =
-        (process.env.DATABASE_URL ?? '').includes('127.0.0.1') ||
-        (process.env.DATABASE_URL ?? '').includes('localhost');
-      const pool = createPool({
-        uri: process.env.DATABASE_URL,
-        ssl: isLocal ? false : { rejectUnauthorized: false },
-      });
-      _db = drizzle(pool);
+      const url = process.env.DATABASE_URL;
+      const ssl = getPostgresJsSslOption();
+      const options: Parameters<typeof postgres>[1] = {
+        max: 10,
+        idle_timeout: 20,
+        connect_timeout: 30,
+        prepare: false,
+      };
+      if (ssl !== undefined) {
+        options.ssl = ssl;
+      }
+      _sql = postgres(url, options);
+      _db = drizzle(_sql);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
+      _sql = null;
     }
   }
   return _db;
@@ -129,8 +137,9 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       updateSet.lastSignedIn = new Date();
     }
 
-    await db.insert(users).values(values).onDuplicateKeyUpdate({
-      set: updateSet,
+    await db.insert(users).values(values).onConflictDoUpdate({
+      target: users.openId,
+      set: updateSet as Record<string, unknown>,
     });
   } catch (error) {
     console.error("[Database] Failed to upsert user:", error);
@@ -163,8 +172,8 @@ export async function updateUserRole(userId: number, role: "admin" | "manager" |
 export async function createSite(site: InsertSite) {
   const db = await getDb();
   if (!db) return null;
-  const result = await db.insert(sites).values(site);
-  const insertId = Number((result as any)[0]?.insertId || (result as any).insertId);
+  const [inserted] = await db.insert(sites).values(site).returning({ id: sites.id });
+  const insertId = inserted?.id;
   if (!insertId || isNaN(insertId)) throw new Error("Failed to get insert ID");
   return await db.select().from(sites).where(eq(sites.id, insertId)).limit(1).then(r => r[0]);
 }
@@ -199,8 +208,8 @@ export async function getAllAssetCategories() {
 export async function createAssetCategory(name: string, description?: string) {
   const db = await getDb();
   if (!db) return null;
-  const result = await db.insert(assetCategories).values({ name, description });
-  const insertId = Number((result as any)[0]?.insertId || (result as any).insertId);
+  const [inserted] = await db.insert(assetCategories).values({ name, description }).returning({ id: assetCategories.id });
+  const insertId = inserted?.id;
   if (!insertId || isNaN(insertId)) throw new Error("Failed to get insert ID");
   return await db.select().from(assetCategories).where(eq(assetCategories.id, insertId)).limit(1).then(r => r[0]);
 }
@@ -210,8 +219,8 @@ export async function createAssetCategory(name: string, description?: string) {
 export async function createAsset(asset: InsertAsset) {
   const db = await getDb();
   if (!db) return null;
-  const result = await db.insert(assets).values(asset);
-  const insertId = Number((result as any)[0]?.insertId || (result as any).insertId);
+  const [inserted] = await db.insert(assets).values(asset).returning({ id: assets.id });
+  const insertId = inserted?.id;
   if (!insertId || isNaN(insertId)) {
     throw new Error("Failed to get insert ID");
   }
@@ -273,8 +282,8 @@ export async function searchAssets(searchTerm: string) {
 export async function createWorkOrder(workOrder: InsertWorkOrder) {
   const db = await getDb();
   if (!db) return null;
-  const result = await db.insert(workOrders).values(workOrder);
-  const insertId = Number((result as any)[0]?.insertId || (result as any).insertId);
+  const [inserted] = await db.insert(workOrders).values(workOrder).returning({ id: workOrders.id });
+  const insertId = inserted?.id;
   if (!insertId || isNaN(insertId)) throw new Error("Failed to get insert ID");
   return await db.select().from(workOrders).where(eq(workOrders.id, insertId)).limit(1).then(r => r[0]);
 }
@@ -315,8 +324,8 @@ export async function updateWorkOrder(id: number, data: Partial<InsertWorkOrder>
 export async function createMaintenanceSchedule(schedule: InsertMaintenanceSchedule) {
   const db = await getDb();
   if (!db) return null;
-  const result = await db.insert(maintenanceSchedules).values(schedule);
-  const insertId = Number((result as any)[0]?.insertId || (result as any).insertId);
+  const [inserted] = await db.insert(maintenanceSchedules).values(schedule).returning({ id: maintenanceSchedules.id });
+  const insertId = inserted?.id;
   if (!insertId || isNaN(insertId)) throw new Error("Failed to get insert ID");
   return await db.select().from(maintenanceSchedules).where(eq(maintenanceSchedules.id, insertId)).limit(1).then(r => r[0]);
 }
@@ -364,8 +373,8 @@ export async function updateMaintenanceSchedule(id: number, data: Partial<Insert
 export async function createInventoryItem(item: InsertInventoryItem) {
   const db = await getDb();
   if (!db) return null;
-  const result = await db.insert(inventoryItems).values(item);
-  const insertId = Number((result as any)[0]?.insertId || (result as any).insertId);
+  const [inserted] = await db.insert(inventoryItems).values(item).returning({ id: inventoryItems.id });
+  const insertId = inserted?.id;
   if (!insertId || isNaN(insertId)) throw new Error("Failed to get insert ID");
   return await db.select().from(inventoryItems).where(eq(inventoryItems.id, insertId)).limit(1).then(r => r[0]);
 }
@@ -417,9 +426,10 @@ export async function deleteSite(id: number) {
 export async function createInventoryTransaction(transaction: typeof inventoryTransactions.$inferInsert) {
   const db = await getDb();
   if (!db) return null;
-  const result = await db.insert(inventoryTransactions).values(transaction);
-  const insertId = (result as any).insertId;
-  return await db.select().from(inventoryTransactions).where(eq(inventoryTransactions.id, Number(insertId))).limit(1).then(r => r[0]);
+  const [inserted] = await db.insert(inventoryTransactions).values(transaction).returning({ id: inventoryTransactions.id });
+  const insertId = inserted?.id;
+  if (!insertId) return null;
+  return await db.select().from(inventoryTransactions).where(eq(inventoryTransactions.id, insertId)).limit(1).then(r => r[0]);
 }
 
 export async function getInventoryTransactions(itemId: number) {
@@ -435,8 +445,8 @@ export async function getInventoryTransactions(itemId: number) {
 export async function createVendor(vendor: InsertVendor) {
   const db = await getDb();
   if (!db) return null;
-  const result = await db.insert(vendors).values(vendor);
-  const insertId = Number((result as any)[0]?.insertId || (result as any).insertId);
+  const [inserted] = await db.insert(vendors).values(vendor).returning({ id: vendors.id });
+  const insertId = inserted?.id;
   if (!insertId || isNaN(insertId)) throw new Error("Failed to get insert ID");
   return await db.select().from(vendors).where(eq(vendors.id, insertId)).limit(1).then(r => r[0]);
 }
@@ -459,9 +469,10 @@ export async function updateVendor(id: number, data: Partial<InsertVendor>) {
 export async function createFinancialTransaction(transaction: typeof financialTransactions.$inferInsert) {
   const db = await getDb();
   if (!db) return null;
-  const result = await db.insert(financialTransactions).values(transaction);
-  const insertId = (result as any).insertId;
-  return await db.select().from(financialTransactions).where(eq(financialTransactions.id, Number(insertId))).limit(1).then(r => r[0]);
+  const [inserted] = await db.insert(financialTransactions).values(transaction).returning({ id: financialTransactions.id });
+  const insertId = inserted?.id;
+  if (!insertId) return null;
+  return await db.select().from(financialTransactions).where(eq(financialTransactions.id, insertId)).limit(1).then(r => r[0]);
 }
 
 export async function getFinancialTransactions(filters?: { assetId?: number; workOrderId?: number; startDate?: Date; endDate?: Date }) {
@@ -488,9 +499,10 @@ export async function getFinancialTransactions(filters?: { assetId?: number; wor
 export async function createComplianceRecord(record: typeof complianceRecords.$inferInsert) {
   const db = await getDb();
   if (!db) return null;
-  const result = await db.insert(complianceRecords).values(record);
-  const insertId = (result as any).insertId;
-  return await db.select().from(complianceRecords).where(eq(complianceRecords.id, Number(insertId))).limit(1).then(r => r[0]);
+  const [inserted] = await db.insert(complianceRecords).values(record).returning({ id: complianceRecords.id });
+  const insertId = inserted?.id;
+  if (!insertId) return null;
+  return await db.select().from(complianceRecords).where(eq(complianceRecords.id, insertId)).limit(1).then(r => r[0]);
 }
 
 export async function getAllComplianceRecords(filters?: { assetId?: number; status?: string }) {
@@ -554,9 +566,10 @@ export async function getAuditLogs(filters?: { userId?: number; entityType?: str
 export async function createDocument(doc: typeof documents.$inferInsert) {
   const db = await getDb();
   if (!db) return null;
-  const result = await db.insert(documents).values(doc);
-  const insertId = (result as any).insertId;
-  return await db.select().from(documents).where(eq(documents.id, Number(insertId))).limit(1).then(r => r[0]);
+  const [inserted] = await db.insert(documents).values(doc).returning({ id: documents.id });
+  const insertId = inserted?.id;
+  if (!insertId) return null;
+  return await db.select().from(documents).where(eq(documents.id, insertId)).limit(1).then(r => r[0]);
 }
 
 export async function getDocuments(entityType?: string, entityId?: number) {
@@ -601,8 +614,8 @@ export async function getDashboardStats() {
 export async function createNotification(notification: typeof notifications.$inferInsert) {
   const db = await getDb();
   if (!db) return null;
-  const result = await db.insert(notifications).values(notification);
-  return Number(result[0].insertId);
+  const [inserted] = await db.insert(notifications).values(notification).returning({ id: notifications.id });
+  return inserted?.id ?? 0;
 }
 
 export async function getUserNotifications(userId: number, limit: number = 50) {
@@ -686,9 +699,8 @@ export async function createAssetPhoto(data: InsertAssetPhoto) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  const result = await db.insert(assetPhotos).values(data);
-  const insertId = Number(result[0].insertId);
-  return insertId;
+  const [inserted] = await db.insert(assetPhotos).values(data).returning({ id: assetPhotos.id });
+  return inserted?.id ?? 0;
 }
 
 export async function getAssetPhotos(assetId: number) {
@@ -717,9 +729,8 @@ export async function createScheduledReport(data: InsertScheduledReport) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  const result = await db.insert(scheduledReports).values(data);
-  const insertId = Number(result[0].insertId);
-  return insertId;
+  const [inserted] = await db.insert(scheduledReports).values(data).returning({ id: scheduledReports.id });
+  return inserted?.id ?? 0;
 }
 
 export async function getScheduledReports() {
@@ -807,8 +818,8 @@ export async function getAssetWorkOrders(assetId: number) {
 export async function createAssetTransfer(transfer: typeof assetTransfers.$inferInsert) {
   const db = await getDb();
   if (!db) return null;
-  const result = await db.insert(assetTransfers).values(transfer);
-  const insertId = Number((result as any)[0]?.insertId || (result as any).insertId);
+  const [inserted] = await db.insert(assetTransfers).values(transfer).returning({ id: assetTransfers.id });
+  const insertId = inserted?.id;
   if (!insertId || isNaN(insertId)) throw new Error("Failed to get insert ID");
   return await db.select().from(assetTransfers).where(eq(assetTransfers.id, insertId)).limit(1).then(r => r[0]);
 }
@@ -900,10 +911,10 @@ export async function saveQuickBooksConfig(config: InsertQuickBooksConfig) {
   await db.update(quickbooksConfig).set({ isActive: 0 });
   
   // Insert new config
-  const result = await db.insert(quickbooksConfig).values(config);
-  const insertId = result[0].insertId;
-  
-  return await db.select().from(quickbooksConfig).where(eq(quickbooksConfig.id, Number(insertId))).limit(1).then(r => r[0]);
+  const [inserted] = await db.insert(quickbooksConfig).values(config).returning({ id: quickbooksConfig.id });
+  const insertId = inserted?.id;
+  if (!insertId) return undefined;
+  return await db.select().from(quickbooksConfig).where(eq(quickbooksConfig.id, insertId)).limit(1).then(r => r[0]);
 }
 
 export async function updateQuickBooksTokens(id: number, accessToken: string, refreshToken: string, expiresAt: Date) {
@@ -987,8 +998,8 @@ export async function createEmailNotification(notification: InsertEmailNotificat
   const db = await getDb();
   if (!db) return null;
   
-  const result = await db.insert(emailNotifications).values(notification);
-  const insertId = Number((result as any)[0]?.insertId ?? (result as any).insertId);
+  const [inserted] = await db.insert(emailNotifications).values(notification).returning({ id: emailNotifications.id });
+  const insertId = inserted?.id;
   if (!insertId || Number.isNaN(insertId)) {
     throw new Error("Failed to get insert ID for email notification");
   }
@@ -1023,6 +1034,19 @@ export async function getUserByEmail(email: string) {
   return result.length > 0 ? result[0] : null;
 }
 
+/** Case-insensitive email lookup (for password login). */
+export async function getUserByEmailForLogin(email: string) {
+  const database = await getDb();
+  if (!database) return null;
+  const normalized = email.trim().toLowerCase();
+  const result = await database
+    .select()
+    .from(users)
+    .where(sql`LOWER(${users.email}) = ${normalized}`)
+    .limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
 
 
 // ============= WORK ORDER TEMPLATES =============
@@ -1031,8 +1055,8 @@ export async function createWorkOrderTemplate(data: InsertWorkOrderTemplate) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  const result = await db.insert(workOrderTemplates).values(data);
-  const insertId = Number((result as any)[0]?.insertId ?? (result as any).insertId);
+  const [inserted] = await db.insert(workOrderTemplates).values(data).returning({ id: workOrderTemplates.id });
+  const insertId = inserted?.id;
   if (!insertId || Number.isNaN(insertId)) {
     throw new Error("Failed to get insert ID for work order template");
   }

@@ -1,5 +1,5 @@
 /**
- * Step 0a — verify DATABASE_URL / MySQL before E2E.
+ * Step 0a — verify DATABASE_URL / Postgres before E2E.
  * Run: pnpm exec tsx scripts/db-check.ts
  */
 import "dotenv/config";

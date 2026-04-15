@@ -1,1 +1,0 @@
-ALTER TABLE `userPreferences` MODIFY COLUMN `dashboardWidgets` text;

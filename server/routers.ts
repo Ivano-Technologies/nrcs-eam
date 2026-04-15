@@ -1,7 +1,10 @@
+import bcrypt from "bcrypt";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
+import { sdk } from "./_core/sdk";
+import { toPublicUser, toPublicUsers } from "./_core/sanitizeUser";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import * as db from "./db";
@@ -24,11 +27,16 @@ const managerOrAdminProcedure = protectedProcedure.use(({ ctx, next }) => {
   return next({ ctx });
 });
 
+/** Same JWT lifetime as magic-link verification (`server/_core/magicLinkVerification.ts`). */
+const PASSWORD_SESSION_MS = 7 * 24 * 60 * 60 * 1000;
+
 export const appRouter = router({
   system: systemRouter,
   
   auth: router({
-    me: publicProcedure.query(opts => opts.ctx.user),
+    me: publicProcedure.query(opts =>
+      opts.ctx.user ? toPublicUser(opts.ctx.user) : null
+    ),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
@@ -79,6 +87,59 @@ export const appRouter = router({
           return { success: true, message: "Magic link sent to your email" };
         }
         return { success: false, message: "Failed to send magic link" };
+      }),
+    loginWithPassword: publicProcedure
+      .input(
+        z.object({
+          email: z.string().email(),
+          password: z.string().min(1),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const user = await db.getUserByEmailForLogin(input.email);
+        if (!user?.passwordHash) {
+          throw new TRPCError({
+            code: "UNAUTHORIZED",
+            message: "Invalid email or password",
+          });
+        }
+        const valid = await bcrypt.compare(input.password, user.passwordHash);
+        if (!valid) {
+          throw new TRPCError({
+            code: "UNAUTHORIZED",
+            message: "Invalid email or password",
+          });
+        }
+        const sessionToken = await sdk.createSessionToken(user.openId, {
+          name: user.name ?? "",
+          expiresInMs: PASSWORD_SESSION_MS,
+        });
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.cookie(COOKIE_NAME, sessionToken, cookieOptions);
+        await db.upsertUser({
+          openId: user.openId,
+          lastSignedIn: new Date(),
+        });
+        return { success: true as const };
+      }),
+    setPassword: adminProcedure
+      .input(
+        z.object({
+          userId: z.number().int().positive(),
+          password: z.string().min(8).max(128),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const target = await db.getUserById(input.userId);
+        if (!target) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "User not found",
+          });
+        }
+        const passwordHash = await bcrypt.hash(input.password, 12);
+        await db.updateUser(input.userId, { passwordHash });
+        return { success: true as const };
       }),
   }),
 
@@ -936,13 +997,14 @@ export const appRouter = router({
   // ============= USERS MANAGEMENT =============
   users: router({
     list: adminProcedure.query(async () => {
-      return await db.getAllUsers();
+      return toPublicUsers(await db.getAllUsers());
     }),
 
     getById: adminProcedure
       .input(z.object({ id: z.number() }))
       .query(async ({ input }) => {
-        return await db.getUserById(input.id);
+        const user = await db.getUserById(input.id);
+        return user ? toPublicUser(user) : null;
       }),
     
     create: adminProcedure

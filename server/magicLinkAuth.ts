@@ -236,16 +236,19 @@ export async function createUserDirectSignup(
   }
 
   const openId = `magic_${crypto.randomBytes(16).toString("hex")}`;
-  const result: any = await database.insert(users).values({
-    openId,
-    name,
-    email,
-    loginMethod: "magic_link",
-    role: requestedRole === "manager" ? "manager" : "user",
-  });
+  const [inserted] = await database
+    .insert(users)
+    .values({
+      openId,
+      name,
+      email,
+      loginMethod: "magic_link",
+      role: requestedRole === "manager" ? "manager" : "user",
+    })
+    .returning({ id: users.id });
 
-  const userId = Number(result.insertId);
-  if (!Number.isFinite(userId)) {
+  const userId = inserted?.id;
+  if (userId == null || !Number.isFinite(userId)) {
     return { success: false, message: "Failed to create account" };
   }
 
@@ -292,15 +295,21 @@ export async function approvePendingUser(
   }
 
   // Create user account
-  const result: any = await database.insert(users).values({
-    openId: `magic_${crypto.randomBytes(16).toString("hex")}`,
-    name: pendingUser.name,
-    email: pendingUser.email,
-    loginMethod: "magic_link",
-    role: pendingUser.requestedRole === "manager" ? "manager" : "user",
-  });
+  const [inserted] = await database
+    .insert(users)
+    .values({
+      openId: `magic_${crypto.randomBytes(16).toString("hex")}`,
+      name: pendingUser.name,
+      email: pendingUser.email,
+      loginMethod: "magic_link",
+      role: pendingUser.requestedRole === "manager" ? "manager" : "user",
+    })
+    .returning({ id: users.id });
 
-  const userId = Number(result.insertId);
+  const userId = inserted?.id;
+  if (userId == null) {
+    return { success: false, message: "Failed to create user account" };
+  }
 
   // Update pending user status
   await database

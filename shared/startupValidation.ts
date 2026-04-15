@@ -47,7 +47,7 @@ export function validateProductionSecrets(): void {
 }
 
 /**
- * Production: require TLS to MySQL with strict verification + RDS CA bundle
+ * Production: require TLS to Postgres with strict verification + RDS CA bundle
  * (same rules whether secrets come from Secrets Manager or plain env).
  */
 export function validateAwsProductionTls(): void {
