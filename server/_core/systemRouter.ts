@@ -1,11 +1,14 @@
 import { z } from "zod";
-import { authRouter } from "../routers/authRouter";
 import { notifyOwner } from "./notification";
 import { adminProcedure, publicProcedure, router } from "./trpc";
 
 export const systemRouter = router({
-  /** Introspection for deploy verification (no secrets). */
-  authProcedureNames: publicProcedure.query(() => {
+  /**
+   * Introspection for deploy verification (no secrets).
+   * Dynamic import avoids a static cycle: routers.ts → systemRouter → authRouter → … while routers is still loading.
+   */
+  authProcedureNames: publicProcedure.query(async () => {
+    const { authRouter } = await import("../routers/authRouter");
     const procedures = (authRouter as { _def?: { procedures?: Record<string, unknown> } })._def
       ?.procedures;
     return {
