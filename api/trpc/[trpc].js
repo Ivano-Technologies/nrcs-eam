@@ -1,4 +1,5 @@
-const handlerModule = require("./_handler.cjs");
+import handlerModule from "./_handler.cjs";
+
 const app = handlerModule.default || handlerModule;
 
-module.exports = app;
+export default app;
