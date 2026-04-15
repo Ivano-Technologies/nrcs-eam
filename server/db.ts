@@ -1055,7 +1055,11 @@ export async function getUserByEmailForLogin(email: string) {
   if (!database) return null;
   const normalized = email.trim().toLowerCase();
   const result = await database
-    .select()
+    .select({
+      openId: users.openId,
+      name: users.name,
+      passwordHash: users.passwordHash,
+    })
     .from(users)
     .where(sql`LOWER(${users.email}) = ${normalized}`)
     .limit(1);
