@@ -18,16 +18,18 @@ export function validateProductionSecrets(): void {
   }
 
   const db = process.env.DATABASE_URL?.trim();
-  const jwt = process.env.JWT_SECRET?.trim();
+  const supabaseUrl = process.env.SUPABASE_URL?.trim();
+  const supabaseAnon = process.env.SUPABASE_ANON_KEY?.trim();
+  const supabaseService = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
 
   if (!db) {
     throw new Error(
       "[startup] Production requires DATABASE_URL (from .env or Secrets Manager JSON)"
     );
   }
-  if (!jwt) {
+  if (!supabaseUrl || !supabaseAnon || !supabaseService) {
     throw new Error(
-      "[startup] Production requires JWT_SECRET (from .env or Secrets Manager JSON)"
+      "[startup] Production requires SUPABASE_URL, SUPABASE_ANON_KEY, and SUPABASE_SERVICE_ROLE_KEY"
     );
   }
 

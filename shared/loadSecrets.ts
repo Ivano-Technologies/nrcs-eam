@@ -5,7 +5,7 @@ import {
 
 let secretsSource: "aws" | "env" = "env";
 
-/** Where DATABASE_URL / JWT_SECRET etc. were merged from (after loadSecrets). */
+/** Where DATABASE_URL / Supabase keys etc. were merged from (after loadSecrets). */
 export function getSecretsSource(): "aws" | "env" {
   return secretsSource;
 }

@@ -30,7 +30,7 @@ function isTransientMigrationError(err: unknown): boolean {
  * migrator — no drizzle-kit CLI at runtime (drizzle-kit is a devDependency and is
  * not bundled into dist/index.js).
  *
- * Retries on transient RDS/VPC TLS and network errors so App Runner cold starts
+ * Retries on transient TLS and network errors so production cold starts
  * do not roll back the whole deployment when the first connection attempt fails.
  */
 export async function runProdMigrations(): Promise<void> {

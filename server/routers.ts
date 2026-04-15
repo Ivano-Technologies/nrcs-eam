@@ -1743,7 +1743,7 @@ export const appRouter = router({
     approve: adminProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input, ctx }) => {
-        const { approvePendingUser } = await import("./magicLinkAuth");
+        const { approvePendingUser } = await import("./pendingUsersService");
         return await approvePendingUser(input.id, ctx.user.id);
       }),
     
@@ -1753,7 +1753,7 @@ export const appRouter = router({
         reason: z.string().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
-        const { rejectPendingUser } = await import("./magicLinkAuth");
+        const { rejectPendingUser } = await import("./pendingUsersService");
         return await rejectPendingUser(input.id, ctx.user.id, input.reason);
       }),
   }),

@@ -12,7 +12,6 @@ import express from "express";
 import { createServer } from "http";
 import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import cors from "cors";
@@ -109,13 +108,14 @@ async function startServer() {
   app.use("/api", express.json({ limit: "50mb" }));
   app.use("/api", express.urlencoded({ limit: "50mb", extended: true }));
   app.use("/api", setupRouter);
-  // OAuth callback under /api/oauth/callback
-  registerOAuthRoutes(app);
-  
-  // Magic link verification endpoint
-  app.post("/api/auth/verify-magic-link", async (req, res) => {
-    const { handleMagicLinkVerification } = await import("./magicLinkVerification");
-    return handleMagicLinkVerification(req, res);
+  // Legacy Manus OAuth URL — redirect to SPA login (Supabase Auth replaces portal OAuth).
+  app.get("/api/oauth/callback", (_req, res) => {
+    const frontendOrigin = process.env.FRONTEND_ORIGIN?.trim();
+    const target =
+      frontendOrigin && frontendOrigin.length > 0
+        ? `${frontendOrigin.replace(/\/+$/, "")}/login`
+        : "/login";
+    res.redirect(302, target);
   });
   // tRPC API
   app.use(
@@ -133,7 +133,7 @@ async function startServer() {
   }
 
   const isProd = process.env.NODE_ENV === "production";
-  // Same as: Number(process.env.PORT || 3000) — App Runner sets PORT; default 3000 locally.
+  // Same as: Number(process.env.PORT || 3000) — Vercel/Node hosts set PORT; default 3000 locally.
   const basePort = Number(process.env.PORT) || 3000;
   const port = isProd ? basePort : await findAvailablePort(basePort);
 

@@ -8,13 +8,12 @@ import { Router, type Request } from "express";
 import { count } from "drizzle-orm";
 import { users } from "../../drizzle/schema";
 import { getDb } from "../db";
+import { getSupabaseServiceRole } from "../_core/supabase";
 
 const router = Router();
 
 const ADMIN_EMAIL = "ivanonigeria@gmail.com";
 const ADMIN_NAME = "Ivano Technologies";
-/** Stable openId for pre-provisioned admin (matches magic-link / OAuth expectations). */
-const ADMIN_OPEN_ID = "prod-admin-ivanonigeria-gmail";
 
 function headerSecret(req: Request): string | undefined {
   const raw = req.headers["x-setup-secret"];
@@ -70,11 +69,25 @@ router.post("/setup/create-admin", async (req, res) => {
         throw Object.assign(new Error("ALREADY_EXISTS"), { code: "ALREADY_EXISTS" });
       }
 
+      const supabase = getSupabaseServiceRole();
+      const { data, error } = await supabase.auth.admin.createUser({
+        email: ADMIN_EMAIL,
+        email_confirm: true,
+        user_metadata: { full_name: ADMIN_NAME },
+      });
+      if (error || !data.user) {
+        throw Object.assign(
+          new Error(error?.message ?? "Supabase createUser failed"),
+          { code: "SUPABASE_ERROR" }
+        );
+      }
+
       await tx.insert(users).values({
-        openId: ADMIN_OPEN_ID,
+        openId: data.user.id,
+        authUserId: data.user.id,
         email: ADMIN_EMAIL,
         name: ADMIN_NAME,
-        loginMethod: "magic_link",
+        loginMethod: "supabase",
         role: "admin",
         hasCompletedOnboarding: true,
       });
@@ -82,6 +95,12 @@ router.post("/setup/create-admin", async (req, res) => {
   } catch (e: unknown) {
     if (e && typeof e === "object" && "code" in e && (e as { code: string }).code === "ALREADY_EXISTS") {
       return res.status(400).json({ error: "Admin already exists" });
+    }
+    if (e && typeof e === "object" && "code" in e && (e as { code: string }).code === "SUPABASE_ERROR") {
+      return res.status(503).json({
+        error: "Supabase admin API failed",
+        detail: e instanceof Error ? e.message : String(e),
+      });
     }
     console.error("[setup/create-admin]", e);
     return res.status(500).json({

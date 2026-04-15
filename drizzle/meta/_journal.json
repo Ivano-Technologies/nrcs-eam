@@ -8,6 +8,13 @@
       "when": 1776227211404,
       "tag": "0000_init_postgresql",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1776227211500,
+      "tag": "0001_supabase_auth",
+      "breakpoints": true
     }
   ]
 }

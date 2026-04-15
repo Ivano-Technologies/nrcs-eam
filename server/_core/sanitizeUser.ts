@@ -1,10 +1,9 @@
 import type { User } from "../../drizzle/schema";
 
-export type PublicUser = Omit<User, "passwordHash">;
+export type PublicUser = User;
 
 export function toPublicUser(user: User): PublicUser {
-  const { passwordHash: _, ...rest } = user;
-  return rest;
+  return user;
 }
 
 export function toPublicUsers(users: User[]): PublicUser[] {

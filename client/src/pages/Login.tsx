@@ -20,6 +20,7 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [magicLinkMessage, setMagicLinkMessage] = useState<string | null>(null);
 
   const loginMutation = trpc.auth.loginWithPassword.useMutation({
     onSuccess: () => {
@@ -30,9 +31,29 @@ export default function Login() {
     },
   });
 
+  const magicLinkMutation = trpc.auth.requestMagicLink.useMutation({
+    onSuccess: (data) => {
+      setMagicLinkMessage(
+        data.success
+          ? data.message
+          : data.message || "Could not send magic link"
+      );
+      if (!data.success) {
+        setErrorMessage(data.message);
+      } else {
+        setErrorMessage(null);
+      }
+    },
+    onError: (error: { message?: string }) => {
+      setMagicLinkMessage(null);
+      setErrorMessage(error.message || "Failed to send magic link");
+    },
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
+    setMagicLinkMessage(null);
 
     if (!email.trim()) {
       setErrorMessage("Please enter your email");
@@ -44,6 +65,19 @@ export default function Login() {
     }
 
     loginMutation.mutate({ email: email.trim(), password });
+  };
+
+  const handleMagicLink = (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage(null);
+    setMagicLinkMessage(null);
+
+    if (!email.trim()) {
+      setErrorMessage("Please enter your email to receive a magic link");
+      return;
+    }
+
+    magicLinkMutation.mutate({ email: email.trim() });
   };
 
   return (
@@ -58,6 +92,11 @@ export default function Login() {
               <AlertDescription>{errorMessage}</AlertDescription>
             </Alert>
           )}
+          {magicLinkMessage && !errorMessage && (
+            <Alert className="text-left">
+              <AlertDescription>{magicLinkMessage}</AlertDescription>
+            </Alert>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="email" className="text-[15px] text-gray-800 dark:text-gray-200">
@@ -70,7 +109,7 @@ export default function Login() {
               placeholder="your@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              disabled={loginMutation.isPending}
+              disabled={loginMutation.isPending || magicLinkMutation.isPending}
               autoComplete="email"
               required
               className={authInputClass}
@@ -96,9 +135,29 @@ export default function Login() {
             type="submit"
             data-testid="login-password-submit"
             className={authPrimaryButtonClass}
-            disabled={loginMutation.isPending}
+            disabled={loginMutation.isPending || magicLinkMutation.isPending}
           >
             {loginMutation.isPending ? "Signing in..." : "Sign in"}
+          </Button>
+
+          <div className="relative py-2">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-gray-200" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-white px-2 text-gray-500 dark:bg-gray-950">Or</span>
+            </div>
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full border-[#1E3A8A] text-[#1E3A8A] hover:bg-[#1E3A8A]/5"
+            data-testid="login-magic-link-submit"
+            disabled={loginMutation.isPending || magicLinkMutation.isPending}
+            onClick={handleMagicLink}
+          >
+            {magicLinkMutation.isPending ? "Sending link…" : "Email me a magic link"}
           </Button>
 
           <p className="pt-2 text-center text-sm text-gray-600">

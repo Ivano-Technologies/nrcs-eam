@@ -13,7 +13,7 @@ export function getTrpcUrl(): string {
 
 /**
  * OAuth redirect_uri must hit the Express server. When the SPA is on another host
- * (S3/CloudFront), set VITE_API_BASE_URL so this points at App Runner.
+ * (e.g. Vercel) and the API is elsewhere, set `VITE_API_BASE_URL` to that API origin.
  */
 export function getOAuthCallbackUrl(): string {
   const base = getApiBaseUrl();

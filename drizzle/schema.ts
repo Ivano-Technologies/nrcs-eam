@@ -9,6 +9,7 @@ import {
   decimal,
   bigint,
   pgEnum,
+  uuid,
 } from "drizzle-orm/pg-core";
 
 export const userRoleEnum = pgEnum("user_role", [
@@ -117,11 +118,6 @@ export const assetTransferStatusEnum = pgEnum("asset_transfer_status", [
   "cancelled",
 ]);
 
-export const authTokenTypeEnum = pgEnum("auth_token_type", [
-  "magic_link",
-  "signup_verification",
-]);
-
 export const pendingRequestedRoleEnum = pgEnum("pending_requested_role", [
   "user",
   "manager",
@@ -150,8 +146,8 @@ export const users = pgTable("users", {
   hasCompletedOnboarding: boolean("has_completed_onboarding")
     .default(false)
     .notNull(),
-  /** Bcrypt hash; null until set by admin or migration. */
-  passwordHash: varchar("password_hash", { length: 255 }),
+  /** Supabase Auth user id (`auth.users.id`). */
+  authUserId: uuid("auth_user_id").unique(),
 });
 
 /** System-wide key/value settings (e.g. openRegistration). */
@@ -602,19 +598,6 @@ export type InsertUserPreferences = typeof userPreferences.$inferInsert;
  * Email Notification History
  */
 // Magic Link Authentication
-export const authTokens = pgTable("auth_tokens", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
-  token: varchar("token", { length: 255 }).notNull().unique(),
-  type: authTokenTypeEnum("type").notNull(),
-  expiresAt: timestamp("expires_at", { mode: "date" }).notNull(),
-  usedAt: timestamp("used_at", { mode: "date" }),
-  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
-});
-
-export type AuthToken = typeof authTokens.$inferSelect;
-export type InsertAuthToken = typeof authTokens.$inferInsert;
-
 export const pendingUsers = pgTable("pending_users", {
   id: serial("id").primaryKey(),
   email: varchar("email", { length: 320 }).notNull().unique(),

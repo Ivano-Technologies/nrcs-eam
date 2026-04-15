@@ -1,34 +1,32 @@
-import bcrypt from "bcrypt";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { COOKIE_NAME } from "@shared/const";
-import { getSessionCookieOptions } from "../_core/cookies";
-import { sdk } from "../_core/sdk";
-import { toPublicUser } from "../_core/sanitizeUser";
 import { publicProcedure, router } from "../_core/trpc";
-import * as db from "../db";
 import { adminProcedure } from "./roleProcedures";
+import { clearSessionCookies, setSessionCookies } from "../_core/supabaseSession";
+import { getSupabaseAnonServer, getSupabaseServiceRole } from "../_core/supabase";
+import { toPublicUser } from "../_core/sanitizeUser";
+import * as db from "../db";
+import {
+  createSignupRequest,
+  createUserDirectSignup,
+} from "../pendingUsersService";
 
-/** Same JWT lifetime as magic-link verification (`server/_core/magicLinkVerification.ts`). */
-const PASSWORD_SESSION_MS = 7 * 24 * 60 * 60 * 1000;
+const emailSchema = z.string().email();
 
-/**
- * Auth procedures — kept in a dedicated module so the App Runner bundle always
- * includes password login alongside signup / magic link (clear dependency tree).
- */
 export const authRouter = router({
-  me: publicProcedure.query(opts =>
+  me: publicProcedure.query((opts) =>
     opts.ctx.user ? toPublicUser(opts.ctx.user) : null
   ),
+
   logout: publicProcedure.mutation(({ ctx }) => {
-    const cookieOptions = getSessionCookieOptions(ctx.req);
-    ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+    clearSessionCookies(ctx.req, ctx.res);
     return { success: true } as const;
   }),
+
   signup: publicProcedure
     .input(
       z.object({
-        email: z.string().email(),
+        email: emailSchema,
         name: z.string().min(1),
         designation: z.string().min(1),
         department: z.string().min(1),
@@ -43,75 +41,192 @@ export const authRouter = router({
         "yahoo.com",
       ];
       const emailDomain = input.email.split("@")[1];
-      if (!allowedDomains.includes(emailDomain)) {
+      if (!emailDomain || !allowedDomains.includes(emailDomain)) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: `Email domain @${emailDomain} is not allowed. Please contact your administrator.`,
+          message: `Email domain @${emailDomain ?? "?"} is not allowed. Please contact your administrator.`,
         });
       }
       const openRegistration = await db.getOpenRegistration();
       if (openRegistration) {
-        const { createUserDirectSignup } = await import("../magicLinkAuth");
         return await createUserDirectSignup(input.email, input.name, "user", {
           designation: input.designation,
           department: input.department,
         });
       }
-      const { createSignupRequest } = await import("../magicLinkAuth");
       return await createSignupRequest(input.email, input.name, "user", {
         designation: input.designation,
         department: input.department,
       });
     }),
+
   requestMagicLink: publicProcedure
-    .input(z.object({ email: z.string().email() }))
+    .input(z.object({ email: emailSchema }))
     .mutation(async ({ input }) => {
-      const user = await db.getUserByEmail(input.email);
+      const user = await db.getUserByEmailLowercase(input.email);
       if (!user) {
         return { success: false, message: "No account found with this email" };
       }
-      const { createMagicLinkToken, sendMagicLink } = await import("../magicLinkAuth");
-      const token = await createMagicLinkToken(user.id);
-      const sent = await sendMagicLink(input.email, token);
-      if (sent) {
-        return { success: true, message: "Magic link sent to your email" };
+      if (!user.authUserId) {
+        return {
+          success: false,
+          message:
+            "This account is not linked to the new sign-in system yet. Please contact an administrator.",
+        };
       }
-      return { success: false, message: "Failed to send magic link" };
+      const frontend =
+        process.env.FRONTEND_ORIGIN?.replace(/\/$/, "") ||
+        process.env.VITE_APP_URL?.replace(/\/$/, "") ||
+        "http://localhost:3000";
+      const supabase = getSupabaseAnonServer();
+      const { error } = await supabase.auth.signInWithOtp({
+        email: input.email.trim(),
+        options: {
+          emailRedirectTo: `${frontend}/auth/verify`,
+        },
+      });
+      if (error) {
+        console.error("[requestMagicLink]", error);
+        return {
+          success: false,
+          message: error.message || "Failed to send magic link",
+        };
+      }
+      return {
+        success: true,
+        message: "Check your email for a sign-in link from Supabase.",
+      };
     }),
+
   loginWithPassword: publicProcedure
     .input(
       z.object({
-        email: z.string().email(),
+        email: emailSchema,
         password: z.string().min(1),
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const user = await db.getUserByEmailForLogin(input.email);
-      if (!user?.passwordHash) {
+      const appUser = await db.getUserByEmailLowercase(input.email);
+      if (!appUser) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
           message: "Invalid email or password",
         });
       }
-      const valid = await bcrypt.compare(input.password, user.passwordHash);
-      if (!valid) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "Invalid email or password",
-        });
-      }
-      const sessionToken = await sdk.createSessionToken(user.openId, {
-        name: user.name ?? "",
-        expiresInMs: PASSWORD_SESSION_MS,
+
+      const supabase = getSupabaseAnonServer();
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: input.email.trim(),
+        password: input.password,
       });
-      const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.cookie(COOKIE_NAME, sessionToken, cookieOptions);
+
+      if (error || !data.session) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Invalid email or password",
+        });
+      }
+
+      const supabaseEmail = data.user.email?.trim().toLowerCase() ?? "";
+      const appEmail = appUser.email?.trim().toLowerCase() ?? "";
+      if (supabaseEmail && appEmail && supabaseEmail !== appEmail) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Email does not match this account",
+        });
+      }
+
+      if (data.user.id !== appUser.authUserId && appUser.authUserId) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Session does not match this account",
+        });
+      }
+
+      if (!appUser.authUserId) {
+        await db.updateUser(appUser.id, {
+          authUserId: data.user.id,
+          loginMethod: "supabase",
+        });
+      }
+
+      setSessionCookies(ctx.req, ctx.res, data.session);
       await db.upsertUser({
-        openId: user.openId,
+        openId: appUser.openId,
         lastSignedIn: new Date(),
       });
       return { success: true as const };
     }),
+
+  verifyOtp: publicProcedure
+    .input(
+      z.object({
+        email: emailSchema,
+        token: z.string().min(1),
+        type: z.enum(["email", "magiclink", "signup", "recovery", "invite"]),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const supabase = getSupabaseAnonServer();
+      const { data, error } = await supabase.auth.verifyOtp({
+        email: input.email.trim(),
+        token: input.token.trim(),
+        type: input.type,
+      });
+      if (error || !data.session) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: error?.message ?? "Invalid or expired code",
+        });
+      }
+      setSessionCookies(ctx.req, ctx.res, data.session);
+      return { success: true as const };
+    }),
+
+  /**
+   * After Supabase redirects with tokens in the URL hash, the client sends them once
+   * so we can set httpOnly cookies.
+   */
+  setSessionFromTokens: publicProcedure
+    .input(
+      z.object({
+        access_token: z.string().min(1),
+        refresh_token: z.string().min(1),
+        expires_in: z.number().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const supabase = getSupabaseAnonServer();
+      const { data, error } = await supabase.auth.getUser(input.access_token);
+      if (error || !data.user) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Invalid access token",
+        });
+      }
+      const appUser =
+        (await db.getUserByAuthUserId(data.user.id)) ??
+        (data.user.email
+          ? await db.getUserByEmailLowercase(data.user.email)
+          : undefined);
+      if (!appUser) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "No application account for this user",
+        });
+      }
+      setSessionCookies(ctx.req, ctx.res, {
+        access_token: input.access_token,
+        refresh_token: input.refresh_token,
+        expires_in: input.expires_in,
+      });
+      await db.upsertUser({
+        openId: appUser.openId,
+        lastSignedIn: new Date(),
+      });
+      return { success: true as const };
+    }),
+
   setPassword: adminProcedure
     .input(
       z.object({
@@ -127,8 +242,23 @@ export const authRouter = router({
           message: "User not found",
         });
       }
-      const passwordHash = await bcrypt.hash(input.password, 12);
-      await db.updateUser(input.userId, { passwordHash });
+      if (!target.authUserId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "User has no Supabase account; approve or invite them first",
+        });
+      }
+      const supabase = getSupabaseServiceRole();
+      const { error } = await supabase.auth.admin.updateUserById(
+        target.authUserId,
+        { password: input.password }
+      );
+      if (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
+      }
       return { success: true as const };
     }),
 });

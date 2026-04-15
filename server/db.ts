@@ -116,6 +116,10 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     const updateSet: Record<string, unknown> = {};
 
     const textFields = ["name", "email", "loginMethod"] as const;
+    if (user.authUserId !== undefined) {
+      values.authUserId = user.authUserId;
+      updateSet.authUserId = user.authUserId;
+    }
     type TextField = (typeof textFields)[number];
 
     const assignNullable = (field: TextField) => {
@@ -1049,8 +1053,8 @@ export async function getUserByEmail(email: string) {
   return result.length > 0 ? result[0] : null;
 }
 
-/** Case-insensitive email lookup (for password login). */
-export async function getUserByEmailForLogin(email: string) {
+/** Case-insensitive email lookup (Supabase session linking). */
+export async function getUserByEmailLowercase(email: string) {
   const normalized = email.trim().toLowerCase();
   const maxAttempts = Number(process.env.AUTH_LOGIN_DB_MAX_ATTEMPTS ?? "4");
   let lastError: unknown;
@@ -1058,35 +1062,26 @@ export async function getUserByEmailForLogin(email: string) {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       const database = await getDb();
-      if (!database) return null;
+      if (!database) return undefined;
       try {
         const result = await database
-          .select({
-            openId: users.openId,
-            name: users.name,
-            passwordHash: users.passwordHash,
-          })
+          .select()
           .from(users)
           .where(sql`LOWER(${users.email}) = ${normalized}`)
           .limit(1);
-        return result.length > 0 ? result[0] : null;
+        return result.length > 0 ? result[0] : undefined;
       } catch (primaryError) {
         const fallbackText =
           primaryError instanceof Error ? primaryError.message : String(primaryError);
-        // Legacy production schema may use snake_case `open_id` instead of quoted camelCase `openId`.
         if (!/openId|column .*openId/i.test(fallbackText)) {
           throw primaryError;
         }
         const fallback = await database
-          .select({
-            openId: sql<string>`"open_id"`,
-            name: users.name,
-            passwordHash: users.passwordHash,
-          })
+          .select()
           .from(users)
           .where(sql`LOWER(${users.email}) = ${normalized}`)
           .limit(1);
-        return fallback.length > 0 ? fallback[0] : null;
+        return fallback.length > 0 ? fallback[0] : undefined;
       }
     } catch (e) {
       lastError = e;
@@ -1108,7 +1103,18 @@ export async function getUserByEmailForLogin(email: string) {
 
   throw lastError instanceof Error
     ? lastError
-    : new Error(String(lastError ?? "getUserByEmailForLogin failed"));
+    : new Error(String(lastError ?? "getUserByEmailLowercase failed"));
+}
+
+export async function getUserByAuthUserId(authUserId: string) {
+  const database = await getDb();
+  if (!database) return undefined;
+  const result = await database
+    .select()
+    .from(users)
+    .where(eq(users.authUserId, authUserId))
+    .limit(1);
+  return result.length > 0 ? result[0] : undefined;
 }
 
 

@@ -1,60 +1,81 @@
 /**
  * Playwright E2E seed — idempotent (requires existing `sites` row).
  * Prefer: `pnpm run seed-e2e:local` (loads `.env.e2e` for local Postgres).
+ *
+ * Optional: `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` + `E2E_SUPABASE_PASSWORD`
+ * to create/link a Supabase Auth user for the E2E email.
  */
 import "dotenv/config";
 import { eq } from "drizzle-orm";
-import { authTokens, users } from "../../drizzle/schema";
+import { createClient } from "@supabase/supabase-js";
+import { users } from "../../drizzle/schema";
 import { getDb } from "../../server/db";
 
 export const E2E_OPENID = "e2e-playwright-openid";
 export const E2E_EMAIL = "nrcs.eam.qa@gmail.com";
-/** 64 chars — must match verify URL token */
-export const E2E_TOKEN =
-  "e2e000000000000000000000000000000000000000000000000000000000000";
 
 export async function runSeedE2e() {
   const db = await getDb();
   if (!db) throw new Error("DB unavailable");
 
-  await db.delete(authTokens).where(eq(authTokens.token, E2E_TOKEN));
+  const existing = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.email, E2E_EMAIL))
+    .limit(1);
 
-  await db
-    .insert(users)
-    .values({
+  if (existing.length === 0) {
+    await db.insert(users).values({
       openId: E2E_OPENID,
       name: "E2E Admin",
       email: E2E_EMAIL,
-      loginMethod: "magic_link",
+      loginMethod: "supabase",
       role: "admin",
       siteId: 1,
       hasCompletedOnboarding: true,
-    })
-    .onConflictDoUpdate({
-      target: users.openId,
-      set: {
+    });
+  } else {
+    await db
+      .update(users)
+      .set({
         name: "E2E Admin",
-        email: E2E_EMAIL,
         role: "admin",
         siteId: 1,
         hasCompletedOnboarding: true,
-      },
+      })
+      .where(eq(users.id, existing[0]!.id));
+  }
+
+  const url = process.env.SUPABASE_URL?.trim();
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  if (url && serviceKey) {
+    const supabase = createClient(url, serviceKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
     });
-
-  const rows = await db
-    .select({ id: users.id })
-    .from(users)
-    .where(eq(users.openId, E2E_OPENID));
-  const userId = rows[0]?.id;
-  if (!userId) throw new Error("user row missing");
-
-  await db.insert(authTokens).values({
-    userId,
-    token: E2E_TOKEN,
-    type: "magic_link",
-    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    usedAt: null,
-  });
+    const password =
+      process.env.E2E_SUPABASE_PASSWORD ?? "E2E_Supabase_ChangeMe_9!";
+    const { data: created, error: createErr } =
+      await supabase.auth.admin.createUser({
+        email: E2E_EMAIL,
+        password,
+        email_confirm: true,
+        user_metadata: { full_name: "E2E Admin" },
+      });
+    if (createErr && !/already exists|duplicate/i.test(createErr.message)) {
+      console.warn("[seed-e2e] Supabase createUser:", createErr.message);
+    }
+    const authId = created?.user?.id;
+    if (authId) {
+      await db
+        .update(users)
+        .set({
+          authUserId: authId,
+          openId: authId,
+          loginMethod: "supabase",
+        })
+        .where(eq(users.email, E2E_EMAIL));
+    }
+  }
 }
 
 runSeedE2e()

@@ -68,8 +68,8 @@ Attach a policy like the following to the **IAM user** whose keys you store in G
 Do this in the AWS console for production databases:
 
 1. **Public access:** RDS instance → **Public access = No**.
-2. **Security group:** Inbound **3306** (or your DB port) only from the **App Runner VPC connector** security group — remove **`0.0.0.0/0`**.
-3. **Networking:** App Runner **VPC connector** in the **same VPC** as RDS; use **private subnets** with routing to RDS.
+2. **Database:** Production uses **Supabase PostgreSQL** (see `DATABASE_URL` in `.env.example`). For self-hosted Postgres, restrict inbound to your API host only.
+3. **Networking:** Prefer Supabase pooler or private networking; avoid exposing Postgres publicly.
 4. **Recommended:** Enable **deletion protection**, **automated backups**, and **storage autoscaling** on the RDS instance.
 
-See also [AWS_RDS.md](AWS_RDS.md) and [AWS_APP_RUNNER.md](AWS_APP_RUNNER.md).
+See also [AWS_RDS.md](AWS_RDS.md) (legacy) and [CUSTOM_DOMAINS_VERCEL_AWS.md](CUSTOM_DOMAINS_VERCEL_AWS.md) for Vercel + API.

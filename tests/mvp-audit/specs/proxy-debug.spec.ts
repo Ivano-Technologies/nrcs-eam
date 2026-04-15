@@ -51,7 +51,7 @@ test.describe("Proxy + Magic Link end-to-end", () => {
     expect(result?.result?.data?.json?.success).toBe(true);
   });
 
-  test("4. Confirm email received via App Runner logs", async ({ request }) => {
+  test("4. Confirm email / API logs on backend host", async ({ request }) => {
     const res = await request.get(`${BASE}/api/setup/ping`);
     console.log("[ping] status:", res.status());
     console.log("[ping] body:", await res.text());

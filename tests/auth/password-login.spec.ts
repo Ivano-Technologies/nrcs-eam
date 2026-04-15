@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 
 /**
  * Live production smoke: password login → /app dashboard.
- * Requires a valid user with password set in production DB.
+ * Requires Supabase Auth: app `users` row with matching `auth_user_id` and password set in Supabase (or via admin).
  */
 test.describe("password login (nrcseam.techivano.com)", () => {
   test("signs in and shows app shell", async ({ page }) => {

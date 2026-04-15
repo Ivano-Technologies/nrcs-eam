@@ -13,9 +13,8 @@ Operational and deployment docs live here so the **repository root** stays limit
 
 | Document | Description |
 |----------|-------------|
-| [AWS_APP_RUNNER.md](AWS_APP_RUNNER.md) | App Runner build, start, VPC connector, RDS |
-| [AWS_RDS.md](AWS_RDS.md) | MySQL on RDS, TLS, security groups |
-| [CUSTOM_DOMAINS_VERCEL_AWS.md](CUSTOM_DOMAINS_VERCEL_AWS.md) | Vercel SPA + API subdomain, `FRONTEND_ORIGIN`, OAuth vs magic links |
+| [CUSTOM_DOMAINS_VERCEL_AWS.md](CUSTOM_DOMAINS_VERCEL_AWS.md) | Vercel SPA + API host, `CORS_ORIGINS`, `FRONTEND_ORIGIN`, `VITE_API_BASE_URL` |
+| [AWS_RDS.md](AWS_RDS.md) | Legacy RDS notes (production DB is **Supabase PostgreSQL**) |
 | [GITHUB_ACTIONS_FRONTEND.md](GITHUB_ACTIONS_FRONTEND.md) | Optional CI notes for frontend deploys |
 
 ## Guides

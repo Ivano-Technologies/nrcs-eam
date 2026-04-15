@@ -4,25 +4,17 @@
   "outputDirectory": "dist/public",
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "https://vy3xagmuzx.eu-west-1.awsapprunner.com/api/:path*"
-    },
-    {
-      "source": "/health",
-      "destination": "https://vy3xagmuzx.eu-west-1.awsapprunner.com/health"
-    },
-    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
   ],
   "headers": [
     {
-      "source": "/api/(.*)",
+      "source": "/index.html",
       "headers": [
         {
           "key": "Cache-Control",
-          "value": "no-store, must-revalidate"
+          "value": "no-cache, no-store, must-revalidate"
         }
       ]
     }

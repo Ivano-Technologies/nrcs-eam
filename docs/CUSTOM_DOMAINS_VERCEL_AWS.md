@@ -1,4 +1,4 @@
-# Custom domains: hybrid Vercel + App Runner
+# Custom domains: hybrid Vercel SPA + API
 
 The apex site (e.g. **techivano.com**) can stay on **Vercel**. This product uses **subdomains**; DNS often stays in Vercel.
 
@@ -7,8 +7,8 @@ The apex site (e.g. **techivano.com**) can stay on **Vercel**. This product uses
 | Host | Service |
 |------|---------|
 | `nrcseam.techivano.com` | **Vercel** — Vite SPA (CDN + HTTPS) |
-| `api.nrcseam.techivano.com` | **App Runner** — Express + tRPC |
-| RDS | Private, unchanged |
+| `api.nrcseam.techivano.com` (or your API host) | **Node** — Express + tRPC (same repo `pnpm build` + `pnpm start`, or any host you choose) |
+| Database | **Supabase PostgreSQL** (pooler URL in `DATABASE_URL`) |
 
 Browser loads the SPA from Vercel; API calls use `VITE_API_BASE_URL` ([`client/src/lib/apiBase.ts`](../client/src/lib/apiBase.ts)). Backend CORS uses `CORS_ORIGINS` ([`server/_core/corsConfig.ts`](../server/_core/corsConfig.ts)).
 
@@ -53,25 +53,25 @@ After changing **`VITE_*`** variables in Vercel, trigger a **new deployment** so
 1. Vercel → **Domains** → add `nrcseam.techivano.com`.
 2. If DNS is already on Vercel, follow the wizard (often a **CNAME** `nrcseam` → `cname.vercel-dns.com`).
 
-## App Runner API + DNS
+## API host + DNS
 
-1. App Runner → **Custom domains** → `api.nrcseam.techivano.com`.
-2. In **Vercel DNS**, add the **CNAME** App Runner provides (e.g. `api.nrcseam` → `xxxx.awsapprunner.com`).
+1. Point **`api.*`** (or your API hostname) at wherever Node runs (A/CNAME/ALIAS per your provider).
+2. If the API is on a **different host** than the Vercel SPA, set **`VITE_API_BASE_URL`** at Vite build time to that API origin (`https://api...`).
 
-### App Runner (runtime) env
+### API (runtime) env
 
 | Variable | Example |
 |----------|---------|
 | `CORS_ORIGINS` | `https://nrcseam.techivano.com` |
-| `FRONTEND_ORIGIN` | `https://nrcseam.techivano.com` (OAuth redirect after login; magic-link email base URL) |
+| `FRONTEND_ORIGIN` | `https://nrcseam.techivano.com` (magic-link `emailRedirectTo` base URL) |
 | `SESSION_COOKIE_DOMAIN` | `.techivano.com` (optional; cookie across subdomains) |
 
-`VITE_*` is only for **Vite build** (Vercel / CI), not for the Node process on App Runner.
+`VITE_*` is only for **Vite build** (Vercel / CI), not for the Node API process.
 
 ### OAuth and magic links (do not confuse the URLs)
 
-- **OAuth redirect URI:** The IdP allowlist must include the **API** callback URL, e.g. `https://api.nrcseam.techivano.com/api/oauth/callback` (see [`client/src/lib/apiBase.ts`](../client/src/lib/apiBase.ts)). It is **not** the SPA host’s `/app` routes and **not** `https://nrcseam.techivano.com/app-auth` — the `/app-auth` path (if used) belongs to the **OAuth portal** host (`VITE_OAUTH_PORTAL_URL`), not this app’s SPA.
-- **Magic links:** Verification links use the public frontend origin, e.g. `https://nrcseam.techivano.com/auth/verify?...`. Set **`FRONTEND_ORIGIN`** on the API so email links are correct when `VITE_APP_URL` is unset on App Runner (see [`server/magicLinkAuth.ts`](../server/magicLinkAuth.ts)).
+- **OAuth redirect URI:** If you still use a legacy IdP callback, **`GET /api/oauth/callback`** on the **API** host may redirect to `/login`; see [`server/_core/index.ts`](../server/_core/index.ts).
+- **Magic links:** Supabase sends links to **`FRONTEND_ORIGIN` + `/auth/verify`** (or hash tokens). Configure Supabase redirect URLs and **`FRONTEND_ORIGIN`** on the API so links match your SPA.
 
 ## Verification
 
@@ -89,11 +89,11 @@ After changing **`VITE_*`** variables in Vercel, trigger a **new deployment** so
 - [ ] `VITE_API_BASE_URL` set for Production; redeployed after any change.
 - [ ] Deep routes work (e.g. `/app`, `/app/assets`) after hard refresh.
 
-**Backend (App Runner)**
+**Backend (Node API)**
 
 - [ ] `GET https://api.nrcseam.techivano.com/health` returns 200.
 - [ ] `CORS_ORIGINS=https://nrcseam.techivano.com` (exact origin; no wildcard).
-- [ ] `FRONTEND_ORIGIN` / `SESSION_COOKIE_DOMAIN` set if using OAuth + cookies across subdomains.
+- [ ] `FRONTEND_ORIGIN` / `SESSION_COOKIE_DOMAIN` set if using cookies across subdomains.
 
 **Integration**
 

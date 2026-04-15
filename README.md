@@ -5,7 +5,7 @@ Single-organization web application for the **Nigerian Red Cross Society** to ma
 ## Scope
 
 - **Single-tenant:** one NRCS deployment—not a multi-tenant SaaS. There is no per-customer subdomain or org-isolation layer like the broader Techivano EAM platform.
-- **Straightforward stack:** Vite + React, Express + tRPC, Drizzle ORM, MySQL (via `DATABASE_URL`). Optional QuickBooks, S3, and email integrations as configured in your environment.
+- **Stack:** Vite + React, Express + tRPC, Drizzle ORM, **PostgreSQL** (Supabase). **Supabase Auth** for sessions. Optional QuickBooks, S3, and email integrations as configured in your environment.
 
 ## Repository layout
 
@@ -15,31 +15,43 @@ Single-organization web application for the **Nigerian Red Cross Society** to ma
 | `server/` | Express + tRPC API |
 | `shared/` | Types and constants used by client and server |
 | `drizzle/` | Drizzle schema and migrations |
-| `docs/` | **Documentation index:** [docs/README.md](docs/README.md) — AWS, Vercel, architecture, ADRs, guides |
+| `docs/` | **Documentation index:** [docs/README.md](docs/README.md) — architecture, ADRs, guides |
 | `docs/planning/` | Active planning notes; move obsolete docs to `docs/archive/` |
 | `docs/ADR/` | Architecture decision records |
-| `scripts/` | Build helpers, deploy scripts, **`scripts/db/`** for DB utilities |
+| `scripts/` | Build helpers, **`scripts/db/`** for DB utilities |
 | `.github/` | GitHub Actions workflows |
 
 ## Requirements
 
-- Node.js 22+
+- Node.js 20+
 - pnpm 10.x (`package.json` → `packageManager`)
-- MySQL-compatible database reachable via `DATABASE_URL`
+- **PostgreSQL** reachable via `DATABASE_URL` (use **Supabase** in production: host contains `supabase.co`)
 
 ## Setup
 
 ```bash
 pnpm install
 cp .env.example .env
-# Edit .env — at minimum DATABASE_URL and JWT_SECRET
-pnpm db:push
+# Edit .env — at minimum DATABASE_URL (Supabase pooler URL), SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY
+pnpm exec drizzle-kit migrate
 pnpm dev
 ```
 
-**AWS RDS (MySQL):** use a standard `mysql://` URL, set **`DATABASE_SSL=true`** for TLS, then run migrations. See **[docs/AWS_RDS.md](docs/AWS_RDS.md)** for VPC, security groups, and checklist.
+## Vercel (frontend)
 
-**AWS App Runner:** production uses **`pnpm build`** then **`pnpm start`** (`node dist/index.js`). See **[docs/AWS_APP_RUNNER.md](docs/AWS_APP_RUNNER.md)** for build/start commands, VPC connector, and RDS security groups.
+Production SPA is built and deployed from this repo via **Vercel** (Git integration on `main` uses root [`vercel.json`](vercel.json): `pnpm run build:frontend`, output `dist/public`).
+
+**Required in Vercel → Settings → Environment variables (Build + Production):**
+
+| Variable | Notes |
+|----------|--------|
+| `VITE_API_BASE_URL` | **HTTPS API origin** (no trailing slash) where Express runs, e.g. `https://api.example.com`. Without this, the SPA requests same-origin `/api/trpc`, which only works if the API is served from the same host. |
+| `VITE_SUPABASE_URL` | Same value as `SUPABASE_URL` (public). |
+| `VITE_SUPABASE_ANON_KEY` | Same value as `SUPABASE_ANON_KEY` (public anon key). |
+
+**Server / API host** (wherever Node runs: VPS, Railway, Fly, Vercel serverless adapter, etc.) needs: `DATABASE_URL`, `SUPABASE_*`, `FRONTEND_ORIGIN`, `CORS_ORIGINS`, etc. See [`.env.example`](.env.example).
+
+**Database:** `DATABASE_URL` must point at **Supabase PostgreSQL** (e.g. `postgresql://...@aws-0-....pooler.supabase.com:6543/postgres` or `...@db....supabase.co:5432/...`). Do **not** use an AWS RDS `amazonaws.com` host.
 
 Open the app at the URL printed by the dev server (typically `http://localhost:3000`).
 
@@ -48,15 +60,15 @@ Open the app at the URL printed by the dev server (typically `http://localhost:3
 | Script        | Description                                      |
 |---------------|--------------------------------------------------|
 | `pnpm dev`    | Dev server (Express + Vite client)               |
-| `pnpm build`  | Production client + server bundle                |
+| `pnpm build`  | Production client + server bundle                  |
 | `pnpm start`  | Run production build                             |
 | `pnpm check`  | Typecheck                                        |
 | `pnpm test`   | Vitest                                           |
-| `pnpm db:push`| Generate + apply Drizzle migrations              |
-| `pnpm db:reset` | Truncate app tables (keeps users); MySQL       |
+| `pnpm exec drizzle-kit migrate` | Apply Drizzle SQL migrations (`drizzle/`) |
+| `pnpm db:reset` | Truncate app tables (see `scripts/db/`)        |
 | `pnpm db:seed` | Seed minimal sites and categories               |
 | `pnpm db:seed:sample` | Larger sample dataset                    |
-| `pnpm db:cleanup` | Legacy SQLite cleanup (see `scripts/db/`)   |
+| `pnpm db:cleanup` | Legacy cleanup (see `scripts/db/`)   |
 
 ## Repository
 
