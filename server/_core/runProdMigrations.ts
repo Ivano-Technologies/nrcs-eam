@@ -35,7 +35,7 @@ function isTransientMigrationError(err: unknown): boolean {
  */
 export async function runProdMigrations(): Promise<void> {
   const migrationsFolder = path.join(process.cwd(), "drizzle");
-  const maxAttempts = Number(process.env.MIGRATION_MAX_ATTEMPTS ?? "8");
+  const maxAttempts = Number(process.env.MIGRATION_MAX_ATTEMPTS ?? "25");
   let lastError: unknown;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -58,7 +58,7 @@ export async function runProdMigrations(): Promise<void> {
       if (!isTransientMigrationError(e) || attempt === maxAttempts) {
         throw e;
       }
-      const delayMs = Math.min(2000 * attempt, 20_000);
+      const delayMs = Math.min(2500 * attempt, 45_000);
       console.warn(
         `[migrations] Transient error on attempt ${attempt}/${maxAttempts}, retrying in ${delayMs}ms:`,
         e instanceof Error ? e.message : e

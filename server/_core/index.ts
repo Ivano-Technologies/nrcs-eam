@@ -55,7 +55,7 @@ function dbErrorChainText(err: unknown): string {
 }
 
 async function verifyDbConnection(): Promise<void> {
-  const maxAttempts = Number(process.env.DB_VERIFY_MAX_ATTEMPTS ?? "8");
+  const maxAttempts = Number(process.env.DB_VERIFY_MAX_ATTEMPTS ?? "30");
   let lastError: unknown;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
@@ -79,7 +79,7 @@ async function verifyDbConnection(): Promise<void> {
       if (!transient || attempt === maxAttempts) {
         throw e;
       }
-      const delayMs = Math.min(2000 * attempt, 20_000);
+      const delayMs = Math.min(2500 * attempt, 45_000);
       console.warn(
         `[startup] DB check attempt ${attempt}/${maxAttempts} failed, retry in ${delayMs}ms:`,
         text.slice(0, 500)
@@ -164,7 +164,13 @@ async function main() {
     } else {
       await runProdMigrations();
     }
-    await verifyDbConnection();
+    if (process.env.SKIP_PROD_DB_VERIFY === "1") {
+      console.warn(
+        "[startup] SKIP_PROD_DB_VERIFY=1 — skipping SELECT 1 check (RDS cold connect only; remove when stable)"
+      );
+    } else {
+      await verifyDbConnection();
+    }
   }
   logStartupSummary();
   await startServer();

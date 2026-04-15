@@ -30,7 +30,8 @@
             "DATABASE_SSL_REJECT_UNAUTHORIZED": "true",
             "DATABASE_SSL_CA_PATH": "./certs/global-bundle.pem",
             "SKIP_PROD_MIGRATIONS": "1",
-            "POSTGRES_SSLMODE": "disable"
+            "POSTGRES_SSLMODE": "disable",
+            "SKIP_PROD_DB_VERIFY": "1"
           }
         }
       }
