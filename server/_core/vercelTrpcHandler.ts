@@ -1,10 +1,9 @@
-// @ts-nocheck
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import cors from "cors";
 import express from "express";
-import { appRouter } from "../../server/routers";
-import { createContext } from "../../server/_core/context";
-import { createDynamicCorsMiddlewareOptions } from "../../server/_core/corsConfig";
+import { appRouter } from "../routers";
+import { createContext } from "./context";
+import { createDynamicCorsMiddlewareOptions } from "./corsConfig";
 
 const app = express();
 app.set("trust proxy", 1);
