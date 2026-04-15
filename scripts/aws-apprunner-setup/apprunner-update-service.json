@@ -28,7 +28,8 @@
             "CORS_ORIGINS": "https://nrcseam.techivano.com",
             "DATABASE_SSL": "true",
             "DATABASE_SSL_REJECT_UNAUTHORIZED": "true",
-            "DATABASE_SSL_CA_PATH": "./certs/global-bundle.pem"
+            "DATABASE_SSL_CA_PATH": "./certs/global-bundle.pem",
+            "SKIP_PROD_MIGRATIONS": "1"
           }
         }
       }
