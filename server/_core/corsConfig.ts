@@ -32,6 +32,9 @@ export function getAllowedOriginsList(): string[] {
 export function createCorsMiddlewareOptions(allowedOrigins: string[]): CorsOptions {
   return {
     origin: (origin, callback) => {
+      if (allowedOrigins.length === 0) {
+        return callback(null, true);
+      }
       if (!origin) {
         return callback(null, true);
       }
@@ -52,6 +55,9 @@ export function createDynamicCorsMiddlewareOptions(): CorsOptions {
   return {
     origin: (origin, callback) => {
       const allowedOrigins = getAllowedOriginsList();
+      if (allowedOrigins.length === 0) {
+        return callback(null, true);
+      }
       if (!origin) {
         return callback(null, true);
       }
