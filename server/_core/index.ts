@@ -7,7 +7,7 @@ import {
   validateProductionSecrets,
 } from "../../shared/startupValidation";
 import { runProdMigrations } from "./runProdMigrations";
-import { getDb } from "../db";
+import { getDb, resetDbConnection } from "../db";
 import express from "express";
 import { createServer } from "http";
 import net from "net";
@@ -40,14 +40,41 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function verifyDbConnection(): Promise<void> {
-  const db = await getDb();
-  if (!db) {
-    throw new Error(
-      "[startup] Database connection failed (pool not initialized)"
-    );
+  const maxAttempts = Number(process.env.DB_VERIFY_MAX_ATTEMPTS ?? "8");
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const db = await getDb();
+      if (!db) {
+        throw new Error(
+          "[startup] Database connection failed (pool not initialized)"
+        );
+      }
+      await db.execute(sql`SELECT 1`);
+      console.log("[startup] DB connectivity check passed");
+      return;
+    } catch (e) {
+      lastError = e;
+      await resetDbConnection();
+      const msg = e instanceof Error ? e.message : String(e);
+      const transient =
+        /ECONNRESET|ETIMEDOUT|EPIPE|ENOTFOUND|socket disconnected|wrong version number|TLS|SSL|timeout|refused/i.test(
+          msg
+        );
+      if (!transient || attempt === maxAttempts) {
+        throw e;
+      }
+      const delayMs = Math.min(2000 * attempt, 20_000);
+      console.warn(
+        `[startup] DB check attempt ${attempt}/${maxAttempts} failed, retry in ${delayMs}ms:`,
+        msg
+      );
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
   }
-  await db.execute(sql`SELECT 1`);
-  console.log("[startup] DB connectivity check passed");
+  throw lastError instanceof Error
+    ? lastError
+    : new Error(String(lastError ?? "DB verify failed"));
 }
 
 async function startServer() {

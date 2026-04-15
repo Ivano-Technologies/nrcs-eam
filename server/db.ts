@@ -43,6 +43,19 @@ export async function getDb() {
   return _db;
 }
 
+/** Close and clear the singleton pool (e.g. retry migrations after transient TLS/network errors). */
+export async function resetDbConnection(): Promise<void> {
+  if (_sql) {
+    try {
+      await _sql.end({ timeout: 10 });
+    } catch {
+      // ignore
+    }
+  }
+  _sql = null;
+  _db = null;
+}
+
 const OPEN_REGISTRATION_KEY = "openRegistration";
 
 /** When no row exists, registration is open (default true). */
