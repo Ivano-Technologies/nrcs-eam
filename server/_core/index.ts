@@ -39,6 +39,21 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
   throw new Error(`No available port found starting from ${startPort}`);
 }
 
+function dbErrorChainText(err: unknown): string {
+  const parts: string[] = [];
+  let e: unknown = err;
+  for (let depth = 0; depth < 12 && e != null; depth++) {
+    if (e instanceof Error) {
+      parts.push(e.message, e.stack ?? "");
+      e = (e as Error & { cause?: unknown }).cause;
+    } else {
+      parts.push(String(e));
+      break;
+    }
+  }
+  return parts.join("\n");
+}
+
 async function verifyDbConnection(): Promise<void> {
   const maxAttempts = Number(process.env.DB_VERIFY_MAX_ATTEMPTS ?? "8");
   let lastError: unknown;
@@ -56,10 +71,10 @@ async function verifyDbConnection(): Promise<void> {
     } catch (e) {
       lastError = e;
       await resetDbConnection();
-      const msg = e instanceof Error ? e.message : String(e);
+      const text = dbErrorChainText(e);
       const transient =
-        /ECONNRESET|ETIMEDOUT|EPIPE|ENOTFOUND|socket disconnected|wrong version number|TLS|SSL|timeout|refused/i.test(
-          msg
+        /ECONNRESET|ETIMEDOUT|EPIPE|ENOTFOUND|socket disconnected|wrong version number|TLS|SSL|timeout|refused|ERR_SSL|ECONNREFUSED/i.test(
+          text
         );
       if (!transient || attempt === maxAttempts) {
         throw e;
@@ -67,7 +82,7 @@ async function verifyDbConnection(): Promise<void> {
       const delayMs = Math.min(2000 * attempt, 20_000);
       console.warn(
         `[startup] DB check attempt ${attempt}/${maxAttempts} failed, retry in ${delayMs}ms:`,
-        msg
+        text.slice(0, 500)
       );
       await new Promise((r) => setTimeout(r, delayMs));
     }

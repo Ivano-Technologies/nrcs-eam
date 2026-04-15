@@ -2,10 +2,26 @@ import path from "node:path";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import { getDb, resetDbConnection } from "../db";
 
+/** Full text of an error and its `.cause` chain (Drizzle wraps TLS/network errors in `cause`). */
+function errorChainText(err: unknown): string {
+  const parts: string[] = [];
+  let e: unknown = err;
+  for (let depth = 0; depth < 12 && e != null; depth++) {
+    if (e instanceof Error) {
+      parts.push(e.message, e.stack ?? "");
+      e = (e as Error & { cause?: unknown }).cause;
+    } else {
+      parts.push(String(e));
+      break;
+    }
+  }
+  return parts.join("\n");
+}
+
 function isTransientMigrationError(err: unknown): boolean {
-  const msg = err instanceof Error ? `${err.message}\n${err.stack ?? ""}` : String(err);
-  return /ECONNRESET|ETIMEDOUT|EPIPE|ENOTFOUND|socket disconnected|wrong version number|TLS|SSL|timeout|refused/i.test(
-    msg
+  const text = errorChainText(err);
+  return /ECONNRESET|ETIMEDOUT|EPIPE|ENOTFOUND|socket disconnected|wrong version number|TLS|SSL|timeout|refused|ERR_SSL|ECONNREFUSED/i.test(
+    text
   );
 }
 
