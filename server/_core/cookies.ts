@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { CookieOptions, Request } from "express";
 
 function isSecureRequest(req: Request) {

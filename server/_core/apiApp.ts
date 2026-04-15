@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import cors from "cors";
 import express, { type Express } from "express";

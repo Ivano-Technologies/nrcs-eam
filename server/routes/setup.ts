@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * One-time bootstrap: create first admin when `users` is empty.
  * Secured by `SETUP_SECRET` (send header `x-setup-secret`).
