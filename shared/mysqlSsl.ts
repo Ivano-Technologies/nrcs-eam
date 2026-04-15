@@ -43,7 +43,12 @@ export type Mysql2SslConfig = {
  */
 export function getPostgresJsSslOption():
   | undefined
+  | false
   | { rejectUnauthorized: boolean; ca?: string | Buffer } {
+  /** Same idea as libpq `sslmode=disable` — use for VPC-private Postgres when TLS is not spoken on the socket. */
+  if (process.env.POSTGRES_SSLMODE === "disable") {
+    return false;
+  }
   const url = process.env.DATABASE_URL;
   if (!url) return undefined;
   try {

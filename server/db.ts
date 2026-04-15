@@ -29,8 +29,10 @@ export async function getDb() {
         connect_timeout: 30,
         prepare: false,
       };
-      if (ssl !== undefined) {
+      if (ssl !== undefined && ssl !== false) {
         options.ssl = ssl;
+      } else if (ssl === false) {
+        options.ssl = false;
       }
       _sql = postgres(url, options);
       _db = drizzle(_sql);
