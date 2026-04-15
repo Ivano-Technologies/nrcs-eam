@@ -2,7 +2,17 @@
   "installCommand": "pnpm install --no-frozen-lockfile",
   "buildCommand": "pnpm run build:frontend",
   "outputDirectory": "dist/public",
+  "functions": {
+    "api/[...all].ts": {
+      "memory": 1024,
+      "maxDuration": 30
+    }
+  },
   "rewrites": [
+    {
+      "source": "/health",
+      "destination": "/api/health"
+    },
     {
       "source": "/(.*)",
       "destination": "/index.html"

@@ -8,16 +8,10 @@ import {
 } from "../../shared/startupValidation";
 import { runProdMigrations } from "./runProdMigrations";
 import { getDb, resetDbConnection } from "../db";
-import express from "express";
 import { createServer } from "http";
 import net from "net";
-import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import { appRouter } from "../routers";
-import { createContext } from "./context";
-import cors from "cors";
-import { createDynamicCorsMiddlewareOptions, getAllowedOriginsList, logCorsStartup } from "./corsConfig";
+import { createApiApp } from "./apiApp";
 import { serveStatic, setupVite } from "./vite";
-import setupRouter from "../routes/setup";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -92,39 +86,8 @@ async function verifyDbConnection(): Promise<void> {
 }
 
 async function startServer() {
-  const app = express();
-  app.set("trust proxy", 1);
+  const app = createApiApp();
   const server = createServer(app);
-
-  logCorsStartup(getAllowedOriginsList());
-  // Handle OPTIONS preflight explicitly
-  app.options("*", cors(createDynamicCorsMiddlewareOptions()));
-  app.use(cors(createDynamicCorsMiddlewareOptions()));
-
-  app.get("/health", (_req, res) => {
-    res.status(200).json({ ok: true });
-  });
-  // Only parse JSON/urlencoded for API routes — global parsers can interfere with Vite dev middleware.
-  app.use("/api", express.json({ limit: "50mb" }));
-  app.use("/api", express.urlencoded({ limit: "50mb", extended: true }));
-  app.use("/api", setupRouter);
-  // Legacy Manus OAuth URL — redirect to SPA login (Supabase Auth replaces portal OAuth).
-  app.get("/api/oauth/callback", (_req, res) => {
-    const frontendOrigin = process.env.FRONTEND_ORIGIN?.trim();
-    const target =
-      frontendOrigin && frontendOrigin.length > 0
-        ? `${frontendOrigin.replace(/\/+$/, "")}/login`
-        : "/login";
-    res.redirect(302, target);
-  });
-  // tRPC API
-  app.use(
-    "/api/trpc",
-    createExpressMiddleware({
-      router: appRouter,
-      createContext,
-    })
-  );
   // development mode uses Vite, production mode uses static files
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
