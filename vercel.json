@@ -3,9 +3,13 @@
   "buildCommand": "pnpm run build:frontend",
   "outputDirectory": "dist/public",
   "functions": {
-    "api/[...all].ts": {
+    "api/trpc/[trpc].ts": {
       "memory": 1024,
       "maxDuration": 30
+    },
+    "api/health.ts": {
+      "memory": 512,
+      "maxDuration": 10
     }
   },
   "rewrites": [
