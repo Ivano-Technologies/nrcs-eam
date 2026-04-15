@@ -157,7 +157,13 @@ async function main() {
   validateProductionSecrets();
   validateAwsProductionTls();
   if (process.env.NODE_ENV === "production") {
-    await runProdMigrations();
+    if (process.env.SKIP_PROD_MIGRATIONS === "1") {
+      console.warn(
+        "[startup] SKIP_PROD_MIGRATIONS=1 — skipping drizzle migrate (run migrations from CI or a one-off task when needed)"
+      );
+    } else {
+      await runProdMigrations();
+    }
     await verifyDbConnection();
   }
   logStartupSummary();
