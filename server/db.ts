@@ -1059,16 +1059,35 @@ export async function getUserByEmailForLogin(email: string) {
     try {
       const database = await getDb();
       if (!database) return null;
-      const result = await database
-        .select({
-          openId: users.openId,
-          name: users.name,
-          passwordHash: users.passwordHash,
-        })
-        .from(users)
-        .where(sql`LOWER(${users.email}) = ${normalized}`)
-        .limit(1);
-      return result.length > 0 ? result[0] : null;
+      try {
+        const result = await database
+          .select({
+            openId: users.openId,
+            name: users.name,
+            passwordHash: users.passwordHash,
+          })
+          .from(users)
+          .where(sql`LOWER(${users.email}) = ${normalized}`)
+          .limit(1);
+        return result.length > 0 ? result[0] : null;
+      } catch (primaryError) {
+        const fallbackText =
+          primaryError instanceof Error ? primaryError.message : String(primaryError);
+        // Legacy production schema may use snake_case `open_id` instead of quoted camelCase `openId`.
+        if (!/openId|column .*openId/i.test(fallbackText)) {
+          throw primaryError;
+        }
+        const fallback = await database
+          .select({
+            openId: sql<string>`"open_id"`,
+            name: users.name,
+            passwordHash: users.passwordHash,
+          })
+          .from(users)
+          .where(sql`LOWER(${users.email}) = ${normalized}`)
+          .limit(1);
+        return fallback.length > 0 ? fallback[0] : null;
+      }
     } catch (e) {
       lastError = e;
       const text = e instanceof Error ? `${e.message}\n${e.stack ?? ""}` : String(e);
