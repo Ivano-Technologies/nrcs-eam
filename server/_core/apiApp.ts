@@ -10,6 +10,8 @@ import {
   getAllowedOriginsList,
   logCorsStartup,
 } from "./corsConfig";
+import { sql } from "drizzle-orm";
+import { getDb } from "../db";
 
 /**
  * Shared API app for:
@@ -30,6 +32,26 @@ export function createApiApp(): Express {
   });
   app.get("/api/health", (_req, res) => {
     res.status(200).json({ ok: true });
+  });
+  app.get("/api/db-check", async (_req, res) => {
+    try {
+      const db = await getDb();
+      if (!db) {
+        res.json({ ok: false, error: "Database pool not initialized" });
+        return;
+      }
+      const result = await db.execute(sql`
+        SELECT
+          current_database() as db,
+          current_schema() as schema,
+          to_regclass('public.users') as users_table_exists,
+          COUNT(*) as user_count
+        FROM users
+      `);
+      res.json({ ok: true, result });
+    } catch (e: any) {
+      res.json({ ok: false, error: e?.message, code: e?.code });
+    }
   });
 
   app.use("/api", express.json({ limit: "50mb" }));
