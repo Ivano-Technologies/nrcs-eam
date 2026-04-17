@@ -619,12 +619,12 @@ export async function getDashboardStats() {
     .where(sql`${inventoryItems.currentStock} <= ${inventoryItems.reorderPoint}`);
   
   return {
-    totalAssets: totalAssets?.count || 0,
-    operationalAssets: operationalAssets?.count || 0,
-    maintenanceAssets: maintenanceAssets?.count || 0,
-    pendingWorkOrders: pendingWorkOrders?.count || 0,
-    inProgressWorkOrders: inProgressWorkOrders?.count || 0,
-    lowStockItems: lowStockCount?.count || 0,
+    totalAssets: Number(totalAssets?.count ?? 0),
+    operationalAssets: Number(operationalAssets?.count ?? 0),
+    maintenanceAssets: Number(maintenanceAssets?.count ?? 0),
+    pendingWorkOrders: Number(pendingWorkOrders?.count ?? 0),
+    inProgressWorkOrders: Number(inProgressWorkOrders?.count ?? 0),
+    lowStockItems: Number(lowStockCount?.count ?? 0),
   };
 }
 
@@ -655,7 +655,7 @@ export async function getUnreadNotificationCount(userId: number) {
       eq(notifications.userId, userId),
       eq(notifications.isRead, false)
     ));
-  return result[0]?.count || 0;
+  return Number(result[0]?.count ?? 0);
 }
 
 export async function markNotificationAsRead(id: number) {

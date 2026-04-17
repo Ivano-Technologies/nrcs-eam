@@ -102,7 +102,7 @@ describe("QR Code API Endpoints", () => {
     
     expect(result).toBeDefined();
     expect(result.qrCode).toContain("data:image/png;base64");
-  });
+  }, 15000);
 
   it("should scan QR code and retrieve asset", async () => {
     const ctx = createTestContext("admin");

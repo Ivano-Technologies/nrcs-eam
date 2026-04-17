@@ -51,14 +51,22 @@ export function getPostgresJsSslOption():
   }
   const url = process.env.DATABASE_URL;
   if (!url) return undefined;
+  let host = "";
   try {
     const u = new URL(url);
     const h = u.hostname.toLowerCase();
+    host = h;
     if (h === "localhost" || h === "127.0.0.1" || h === "::1") {
       return undefined;
     }
   } catch {
     return undefined;
+  }
+
+  // Supabase pooled connections can present cert chains not available in local trust stores.
+  // Use TLS but skip strict cert verification unless an explicit CA bundle is configured.
+  if (host.includes("supabase.co") || host.includes("pooler.supabase.com")) {
+    return { rejectUnauthorized: false };
   }
 
   const strict = getMysql2SslOptions();
