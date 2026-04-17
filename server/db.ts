@@ -1115,16 +1115,25 @@ export async function getLoginUserByEmailLowercase(email: string): Promise<{
   const normalized = email.trim().toLowerCase();
   const database = await getDb();
   if (!database) return undefined;
-  const result = await database
-    .select({
-      id: users.id,
-      email: users.email,
-      authUserId: users.authUserId,
-    })
-    .from(users)
-    .where(sql`LOWER(${users.email}) = ${normalized}`)
-    .limit(1);
-  return result.length > 0 ? result[0] : undefined;
+  try {
+    const result = await database
+      .select({
+        id: users.id,
+        email: users.email,
+        authUserId: users.authUserId,
+      })
+      .from(users)
+      .where(sql`LOWER(${users.email}) = ${normalized}`)
+      .limit(1);
+    return result.length > 0 ? result[0] : undefined;
+  } catch (error) {
+    const e = error as { message?: string; code?: string };
+    console.error("[auth.login] getLoginUserByEmailLowercase query failed", {
+      message: e?.message,
+      code: e?.code,
+    });
+    throw error;
+  }
 }
 
 export async function touchUserLastSignedInById(userId: number) {
