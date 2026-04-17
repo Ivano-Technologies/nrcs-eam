@@ -1106,6 +1106,36 @@ export async function getUserByEmailLowercase(email: string) {
     : new Error(String(lastError ?? "getUserByEmailLowercase failed"));
 }
 
+/** Minimal user shape for auth login to avoid depending on optional legacy columns. */
+export async function getLoginUserByEmailLowercase(email: string): Promise<{
+  id: number;
+  email: string | null;
+  authUserId: string | null;
+} | undefined> {
+  const normalized = email.trim().toLowerCase();
+  const database = await getDb();
+  if (!database) return undefined;
+  const result = await database
+    .select({
+      id: users.id,
+      email: users.email,
+      authUserId: users.authUserId,
+    })
+    .from(users)
+    .where(sql`LOWER(${users.email}) = ${normalized}`)
+    .limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function touchUserLastSignedInById(userId: number) {
+  const database = await getDb();
+  if (!database) return null;
+  return await database
+    .update(users)
+    .set({ lastSignedIn: new Date() })
+    .where(eq(users.id, userId));
+}
+
 export async function getUserByAuthUserId(authUserId: string) {
   const database = await getDb();
   if (!database) return undefined;

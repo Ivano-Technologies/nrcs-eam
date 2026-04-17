@@ -120,7 +120,7 @@ export const authRouter = router({
           anonKeyPrefix: supabaseAnon.slice(0, 12),
         })
       );
-      const appUser = await db.getUserByEmailLowercase(input.email);
+      const appUser = await db.getLoginUserByEmailLowercase(input.email);
       if (!appUser) {
         console.warn(
           "[auth.loginWithPassword] No app user for email",
@@ -197,10 +197,7 @@ export const authRouter = router({
         appUserId: appUser.id,
         supabaseUserId: data.user.id,
       });
-      await db.upsertUser({
-        openId: appUser.openId,
-        lastSignedIn: new Date(),
-      });
+      await db.touchUserLastSignedInById(appUser.id);
       return { success: true as const };
     }),
 
