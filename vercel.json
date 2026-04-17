@@ -10,10 +10,6 @@
     "api/health.ts": {
       "memory": 512,
       "maxDuration": 10
-    },
-    "api/db-check.ts": {
-      "memory": 512,
-      "maxDuration": 10
     }
   },
   "rewrites": [

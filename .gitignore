@@ -136,3 +136,4 @@ tests/mvp-audit/screenshots/*
 
 # SES zone file (upload via Vercel DNS; do not commit)
 ses-dns-records.txt
+.vercel
