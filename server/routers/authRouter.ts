@@ -7,10 +7,7 @@ import { clearSessionCookies, setSessionCookies } from "../_core/supabaseSession
 import { getSupabaseAnonServer, getSupabaseServiceRole } from "../_core/supabase";
 import { toPublicUser } from "../_core/sanitizeUser";
 import * as db from "../db";
-import {
-  createSignupRequest,
-  createUserDirectSignup,
-} from "../pendingUsersService";
+import { createSignupRequest } from "../pendingUsersService";
 
 const emailSchema = z.string().email();
 
@@ -46,13 +43,6 @@ export const authRouter = router({
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: `Email domain @${emailDomain ?? "?"} is not allowed. Please contact your administrator.`,
-        });
-      }
-      const openRegistration = await db.getOpenRegistration();
-      if (openRegistration) {
-        return await createUserDirectSignup(input.email, input.name, "user", {
-          designation: input.designation,
-          department: input.department,
         });
       }
       return await createSignupRequest(input.email, input.name, "user", {

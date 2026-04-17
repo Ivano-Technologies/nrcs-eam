@@ -1,8 +1,10 @@
 // @ts-nocheck
+import { randomBytes } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { pendingUsers, users } from "../drizzle/schema";
 import * as db from "./db";
 import { getSupabaseServiceRole } from "./_core/supabase";
+import { generateEmailTemplate, sendEmail } from "./emailService";
 
 function getFrontendOrigin(): string {
   const fromEnv =
@@ -18,7 +20,8 @@ function getFrontendOrigin(): string {
 }
 
 /**
- * Handle signup request — create pending user (admin approval).
+ * Handle signup request — create pending user only (no Supabase Auth, no email).
+ * Admin must approve before an account exists.
  */
 export async function createSignupRequest(
   email: string,
@@ -29,10 +32,12 @@ export async function createSignupRequest(
   const database = await db.getDb();
   if (!database) return { success: false, message: "Database not available" };
 
+  const normalizedEmail = email.trim().toLowerCase();
+
   const existingUser = await database
     .select()
     .from(users)
-    .where(eq(users.email, email))
+    .where(eq(users.email, normalizedEmail))
     .limit(1);
 
   if (existingUser.length > 0) {
@@ -45,7 +50,7 @@ export async function createSignupRequest(
   const existingPending = await database
     .select()
     .from(pendingUsers)
-    .where(eq(pendingUsers.email, email))
+    .where(eq(pendingUsers.email, normalizedEmail))
     .limit(1);
 
   if (existingPending.length > 0) {
@@ -68,8 +73,8 @@ export async function createSignupRequest(
   const department = opts?.department?.trim() || null;
 
   await database.insert(pendingUsers).values({
-    email,
-    name,
+    email: normalizedEmail,
+    name: name.trim(),
     designation,
     department,
     requestedRole,
@@ -79,7 +84,7 @@ export async function createSignupRequest(
   return {
     success: true,
     message:
-      "Your request will be reviewed by an administrator. You'll receive an email once approved.",
+      "Access request submitted! An administrator will review your request and you will be notified once your account is approved.",
   };
 }
 
@@ -115,100 +120,8 @@ async function insertAppUserAfterSupabaseInvite(params: {
 }
 
 /**
- * Open registration: create Supabase user (invite email) + app user row.
- */
-export async function createUserDirectSignup(
-  email: string,
-  name: string,
-  requestedRole: "user" | "manager" = "user",
-  opts?: { designation?: string | null; department?: string | null }
-): Promise<{ success: boolean; message: string }> {
-  const database = await db.getDb();
-  if (!database) return { success: false, message: "Database not available" };
-
-  const existingUser = await database
-    .select()
-    .from(users)
-    .where(eq(users.email, email))
-    .limit(1);
-
-  if (existingUser.length > 0) {
-    return {
-      success: false,
-      message: "An account with this email already exists",
-    };
-  }
-
-  const existingPending = await database
-    .select()
-    .from(pendingUsers)
-    .where(eq(pendingUsers.email, email))
-    .limit(1);
-
-  if (existingPending.length > 0) {
-    const status = existingPending[0].status;
-    if (status === "pending") {
-      return {
-        success: false,
-        message: "Your signup request is pending admin approval",
-      };
-    }
-    if (status === "rejected") {
-      return {
-        success: false,
-        message:
-          "Your signup request was rejected. Please contact an administrator.",
-      };
-    }
-  }
-
-  const supabase = getSupabaseServiceRole();
-  const redirectTo = `${getFrontendOrigin()}/auth/verify`;
-  const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {
-    data: {
-      full_name: name,
-      designation: opts?.designation?.trim() ?? null,
-      department: opts?.department?.trim() ?? null,
-    },
-    redirectTo,
-  });
-
-  if (error || !data.user) {
-    console.error("[createUserDirectSignup] inviteUserByEmail", error);
-    return {
-      success: false,
-      message:
-        error?.message ?? "Failed to create account. Please contact support.",
-    };
-  }
-
-  const role: "user" | "manager" =
-    requestedRole === "manager" ? "manager" : "user";
-
-  try {
-    await insertAppUserAfterSupabaseInvite({
-      authUserId: data.user.id,
-      email,
-      name,
-      role,
-      siteId: 1,
-    });
-  } catch (e) {
-    console.error("[createUserDirectSignup] insert app user", e);
-    return {
-      success: false,
-      message: "Failed to finalize account. Please contact support.",
-    };
-  }
-
-  return {
-    success: true,
-    message: "Account created! Check your email for a sign-in link from Supabase.",
-  };
-}
-
-/**
- * Approve pending user: invite on Supabase + insert app user + update pending row.
+ * Approve pending user: create Supabase Auth user with temporary password,
+ * insert app user row, notify by email (Resend/SMTP), update pending row.
  */
 export async function approvePendingUser(
   pendingUserId: number,
@@ -236,22 +149,24 @@ export async function approvePendingUser(
     };
   }
 
+  const email = pendingUser.email.trim().toLowerCase();
   const supabase = getSupabaseServiceRole();
-  const redirectTo = `${getFrontendOrigin()}/auth/verify`;
-  const { data, error } = await supabase.auth.admin.inviteUserByEmail(
-    pendingUser.email,
-    {
-      data: { full_name: pendingUser.name },
-      redirectTo,
-    }
-  );
+  const tempPassword = randomBytes(18).toString("base64url").slice(0, 24);
+
+  const { data, error } = await supabase.auth.admin.createUser({
+    email,
+    password: tempPassword,
+    email_confirm: true,
+    user_metadata: { full_name: pendingUser.name },
+  });
 
   if (error || !data.user) {
-    console.error("[approvePendingUser] inviteUserByEmail", error);
+    console.error("[approvePendingUser] createUser", error);
     return {
       success: false,
       message:
-        error?.message ?? "Failed to invite user. Check Supabase configuration.",
+        error?.message ??
+        "Failed to create auth user. They may already exist in Authentication — remove the duplicate and try again.",
     };
   }
 
@@ -262,12 +177,17 @@ export async function approvePendingUser(
   try {
     userId = await insertAppUserAfterSupabaseInvite({
       authUserId: data.user.id,
-      email: pendingUser.email,
+      email,
       name: pendingUser.name,
       role,
     });
   } catch (e) {
     console.error("[approvePendingUser] insert app user", e);
+    try {
+      await supabase.auth.admin.deleteUser(data.user.id);
+    } catch {
+      /* best effort rollback */
+    }
     return { success: false, message: "Failed to create user account" };
   }
 
@@ -280,9 +200,30 @@ export async function approvePendingUser(
     })
     .where(eq(pendingUsers.id, pendingUserId));
 
+  const origin = getFrontendOrigin();
+  const loginUrl = `${origin}/login`;
+  const body = `
+    <p>Your access request for <strong>NRCS EAM</strong> has been approved.</p>
+    <p>You can sign in with your email and the temporary password below, then change your password after login.</p>
+    <p><strong>Sign in:</strong> <a href="${loginUrl}">${loginUrl}</a></p>
+    <p><strong>Temporary password:</strong> <code style="font-size:16px">${tempPassword}</code></p>
+  `;
+  const sent = await sendEmail({
+    to: email,
+    subject: "NRCS EAM — Your account is approved",
+    html: generateEmailTemplate(body, "Account approved"),
+  });
+  if (!sent) {
+    console.warn(
+      "[approvePendingUser] User created but welcome email was not sent (configure RESEND_API_KEY or SMTP)"
+    );
+  }
+
   return {
     success: true,
-    message: "User approved; Supabase sent a sign-in link to their email.",
+    message: sent
+      ? "User approved. They received an email with sign-in instructions."
+      : "User approved. Email could not be sent — share the temporary password with them manually or configure email.",
     userId,
   };
 }
