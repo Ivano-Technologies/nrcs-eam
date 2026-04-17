@@ -122,6 +122,10 @@ export const authRouter = router({
       );
       const appUser = await db.getUserByEmailLowercase(input.email);
       if (!appUser) {
+        console.warn(
+          "[auth.loginWithPassword] No app user for email",
+          input.email.trim().toLowerCase()
+        );
         throw new TRPCError({
           code: "UNAUTHORIZED",
           message: "Invalid email or password",
@@ -145,6 +149,7 @@ export const authRouter = router({
       }
 
       if (error || !data.session) {
+        console.warn("[auth.loginWithPassword] Supabase session missing");
         throw new TRPCError({
           code: "UNAUTHORIZED",
           message: "Invalid email or password",
@@ -154,6 +159,10 @@ export const authRouter = router({
       const supabaseEmail = data.user.email?.trim().toLowerCase() ?? "";
       const appEmail = appUser.email?.trim().toLowerCase() ?? "";
       if (supabaseEmail && appEmail && supabaseEmail !== appEmail) {
+        console.warn("[auth.loginWithPassword] Email mismatch", {
+          supabaseEmail,
+          appEmail,
+        });
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "Email does not match this account",
@@ -161,6 +170,11 @@ export const authRouter = router({
       }
 
       if (data.user.id !== appUser.authUserId && appUser.authUserId) {
+        console.warn("[auth.loginWithPassword] authUserId mismatch", {
+          supabaseUserId: data.user.id,
+          appAuthUserId: appUser.authUserId,
+          appUserId: appUser.id,
+        });
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "Session does not match this account",
@@ -168,6 +182,10 @@ export const authRouter = router({
       }
 
       if (!appUser.authUserId) {
+        console.log("[auth.loginWithPassword] Linking app user to supabase user", {
+          appUserId: appUser.id,
+          supabaseUserId: data.user.id,
+        });
         await db.updateUser(appUser.id, {
           authUserId: data.user.id,
           loginMethod: "supabase",
@@ -175,6 +193,10 @@ export const authRouter = router({
       }
 
       setSessionCookies(ctx.req, ctx.res, data.session);
+      console.log("[auth.loginWithPassword] Login success", {
+        appUserId: appUser.id,
+        supabaseUserId: data.user.id,
+      });
       await db.upsertUser({
         openId: appUser.openId,
         lastSignedIn: new Date(),
