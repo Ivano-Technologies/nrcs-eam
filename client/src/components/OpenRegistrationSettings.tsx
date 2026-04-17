@@ -27,8 +27,8 @@ export function OpenRegistrationSettings() {
       <CardHeader>
         <CardTitle>Registration</CardTitle>
         <CardDescription>
-          Allow anyone to create an account without admin approval. When disabled, new signups require
-          administrator approval before they can log in.
+          New signups always submit an access request for admin approval; no account is created until
+          approved. This toggle is retained for compatibility and does not change that behavior.
         </CardDescription>
       </CardHeader>
       <CardContent>

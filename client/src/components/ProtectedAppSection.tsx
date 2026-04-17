@@ -65,6 +65,7 @@ export default function ProtectedAppSection() {
           <Route path="/app/compliance" component={Compliance} />
           <Route path="/app/sites" component={Sites} />
           <Route path="/app/users" component={Users} />
+          <Route path="/app/users/pending" component={PendingUsers} />
           <Route path="/app/pending-users" component={PendingUsers} />
           <Route path="/app/notification-preferences" component={NotificationPreferences} />
           <Route path="/app/reports" component={Reports} />

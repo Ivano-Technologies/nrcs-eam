@@ -35,7 +35,11 @@ export default function PendingUsers() {
   });
 
   const handleApprove = (userId: number) => {
-    if (confirm("Approve this user and send them a magic link?")) {
+    if (
+      confirm(
+        "Approve this user? They will receive an email with sign-in instructions (if email is configured)."
+      )
+    ) {
       approveMutation.mutate({ id: userId });
     }
   };
@@ -78,7 +82,9 @@ export default function PendingUsers() {
                 <div className="flex items-start justify-between">
                   <div>
                     <CardTitle>{user.name}</CardTitle>
-                    <CardDescription>{user.email}</CardDescription>
+                    <CardDescription data-testid={`pending-user-email-${user.id}`}>
+                      {user.email}
+                    </CardDescription>
                   </div>
                   <Badge variant="outline" className="flex items-center gap-1">
                     <Clock className="h-3 w-3" />
@@ -105,6 +111,7 @@ export default function PendingUsers() {
                   
                   <div className="flex gap-2">
                     <Button
+                      data-testid={`pending-approve-${user.id}`}
                       onClick={() => handleApprove(user.id)}
                       disabled={approveMutation.isPending}
                       className="bg-green-600 hover:bg-green-700"

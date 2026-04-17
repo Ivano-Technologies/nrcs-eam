@@ -15,6 +15,9 @@ import { AuthPageLayout } from "@/components/auth/AuthPageLayout";
 import { GlassCard } from "@/components/auth/GlassCard";
 import { trpc } from "@/lib/trpc";
 
+const SIGNUP_SUCCESS_MESSAGE =
+  "Access request submitted! An administrator will review your request and you will be notified once your account is approved.";
+
 export default function Signup() {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
@@ -25,7 +28,7 @@ export default function Signup() {
   const signupMutation = trpc.auth.signup.useMutation({
     onSuccess: (data) => {
       if (data.success) {
-        setMessage({ type: "success", text: data.message });
+        setMessage({ type: "success", text: SIGNUP_SUCCESS_MESSAGE });
         setEmail("");
         setName("");
         setDesignation("");
@@ -66,7 +69,12 @@ export default function Signup() {
         <form onSubmit={handleSubmit} className="mt-8 w-full space-y-4 text-left">
           {message && (
             <Alert variant={message.type === "error" ? "destructive" : "default"} className="text-left">
-              <AlertDescription>{message.text}</AlertDescription>
+              <AlertDescription
+                className="whitespace-pre-line"
+                data-testid={message.type === "success" ? "signup-success-message" : "signup-error-message"}
+              >
+                {message.text}
+              </AlertDescription>
             </Alert>
           )}
 
@@ -76,6 +84,7 @@ export default function Signup() {
             </Label>
             <Input
               id="name"
+              data-testid="signup-name"
               type="text"
               placeholder="John Doe"
               value={name}
@@ -92,6 +101,7 @@ export default function Signup() {
             </Label>
             <Input
               id="email"
+              data-testid="signup-email"
               type="email"
               placeholder="john@example.com"
               value={email}
@@ -108,6 +118,7 @@ export default function Signup() {
             </Label>
             <Input
               id="designation"
+              data-testid="signup-designation"
               type="text"
               placeholder="e.g. Senior Officer"
               value={designation}
@@ -124,6 +135,7 @@ export default function Signup() {
             </Label>
             <Input
               id="department"
+              data-testid="signup-department"
               type="text"
               placeholder="e.g. Logistics"
               value={department}
@@ -134,7 +146,12 @@ export default function Signup() {
             />
           </div>
 
-          <Button type="submit" className={authPrimaryButtonClass} disabled={signupMutation.isPending}>
+          <Button
+            type="submit"
+            data-testid="signup-submit"
+            className={authPrimaryButtonClass}
+            disabled={signupMutation.isPending}
+          >
             {signupMutation.isPending ? "Submitting..." : "Request Access"}
           </Button>
 
