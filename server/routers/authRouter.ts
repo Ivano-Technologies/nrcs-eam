@@ -107,6 +107,19 @@ export const authRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
+      const supabaseUrl = process.env.SUPABASE_URL?.trim() ?? "";
+      const supabaseAnon = process.env.SUPABASE_ANON_KEY ?? "";
+      const looksLikeDbUrl = /^postgres(ql)?:\/\//i.test(supabaseUrl);
+      console.log(
+        "[auth.loginWithPassword] env",
+        JSON.stringify({
+          hasSupabaseUrl: supabaseUrl.length > 0,
+          supabaseUrlPrefix: supabaseUrl.slice(0, 30),
+          looksLikeDbUrl,
+          hasAnonKey: supabaseAnon.length > 0,
+          anonKeyPrefix: supabaseAnon.slice(0, 12),
+        })
+      );
       const appUser = await db.getUserByEmailLowercase(input.email);
       if (!appUser) {
         throw new TRPCError({
@@ -120,6 +133,16 @@ export const authRouter = router({
         email: input.email.trim(),
         password: input.password,
       });
+      if (error) {
+        console.error(
+          "[auth.loginWithPassword] Supabase signInWithPassword error",
+          {
+            message: error.message,
+            status: (error as { status?: number }).status,
+            name: (error as { name?: string }).name,
+          }
+        );
+      }
 
       if (error || !data.session) {
         throw new TRPCError({

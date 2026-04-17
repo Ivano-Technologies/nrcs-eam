@@ -15,7 +15,7 @@
     "start:prod": "node dist/index.js",
     "check": "tsc --noEmit",
     "format": "prettier --write .",
-    "test": "vitest run",
+    "test": "tsx scripts/db/seed-db.mjs && vitest run",
     "db:push": "drizzle-kit generate && drizzle-kit migrate",
     "db:migrate:e2e": "dotenv -e .env.e2e -- drizzle-kit migrate",
     "db:reset": "node scripts/db/reset-db.mjs",
