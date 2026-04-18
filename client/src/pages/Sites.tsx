@@ -184,9 +184,9 @@ export default function Sites() {
           </div>
         )}
       </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3" data-testid="sites-list">
         {sites?.map((site) => (
-          <Card key={site.id}>
+          <Card key={site.id} data-testid={`site-card-${site.id}`}>
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2">

@@ -24,10 +24,11 @@ export default defineConfig({
   projects: [
     {
       name: "live-auth",
-      testMatch: "**/auth/**/*.spec.ts",
+      testMatch: ["**/auth/**/*.spec.ts", "**/features/**/*.spec.ts"],
       use: {
         baseURL: LIVE_AUTH_BASE,
         trace: "retain-on-failure",
+        screenshot: "only-on-failure",
       },
     },
     {

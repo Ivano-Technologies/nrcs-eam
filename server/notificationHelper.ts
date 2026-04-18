@@ -32,6 +32,23 @@ export async function notifyLowStock(userId: number, itemId: number, itemName: s
   });
 }
 
+/** Notify admins/managers when an item crosses from OK to below minimum (including min threshold increases). */
+export async function notifyManagersWhenInventoryBecomesLow(
+  before: { currentStock: number; minStockLevel: number },
+  after: { id: number; name: string; currentStock: number; minStockLevel: number }
+) {
+  const wasOk = before.currentStock >= before.minStockLevel;
+  const nowLow = after.currentStock < after.minStockLevel;
+  if (!nowLow || !wasOk) return;
+
+  const users = await db.getAllUsers();
+  for (const u of users) {
+    if (u.role === "admin" || u.role === "manager") {
+      await notifyLowStock(u.id, after.id, after.name, after.currentStock);
+    }
+  }
+}
+
 export async function notifyWorkOrderAssigned(userId: number, workOrderId: number, workOrderTitle: string) {
   const prefs = await db.getUserNotificationPreferences(userId);
   if (prefs && !prefs.workOrderAssigned) return;

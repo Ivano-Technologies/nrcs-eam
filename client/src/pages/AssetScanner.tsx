@@ -137,7 +137,7 @@ ${updateForm.notes}`
         stopCameraScanning();
       }
     };
-  }, [scanMode]);;
+  }, [scanMode]);
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
@@ -163,21 +163,23 @@ ${updateForm.notes}`
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Scan Mode Toggle */}
-            <div className="flex gap-2">
+            <div className="flex gap-2 items-stretch w-full" data-testid="asset-scanner-mode-toggle">
               <Button
+                data-testid="asset-scanner-mode-manual"
                 variant={scanMode === "manual" ? "default" : "outline"}
                 onClick={() => setScanMode("manual")}
-                className="flex-1"
+                className="flex-1 min-h-11 inline-flex items-center justify-center gap-2"
               >
-                <Search className="h-4 w-4 mr-2" />
+                <Search className="h-4 w-4 shrink-0" />
                 Manual Entry
               </Button>
               <Button
+                data-testid="asset-scanner-mode-camera"
                 variant={scanMode === "camera" ? "default" : "outline"}
                 onClick={() => setScanMode("camera")}
-                className="flex-1"
+                className="flex-1 min-h-11 inline-flex items-center justify-center gap-2"
               >
-                <Camera className="h-4 w-4 mr-2" />
+                <Camera className="h-4 w-4 shrink-0" />
                 Camera Scan
               </Button>
             </div>
@@ -218,17 +220,6 @@ ${updateForm.notes}`
                   <Search className="h-5 w-5 mr-2" />
                   Find Asset
                 </Button>
-              </div>
-            )}
-
-            {/* Camera View Placeholder */}
-            {scanMode === "camera" && (
-              <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
-                <div className="text-center">
-                  <Camera className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
-                  <p className="text-muted-foreground">Camera scanning feature</p>
-                  <p className="text-sm text-muted-foreground">Coming soon</p>
-                </div>
               </div>
             )}
           </CardContent>

@@ -292,11 +292,14 @@ export default function AssetMap() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="h-[600px] w-full rounded-lg overflow-hidden border">
-            <MapView 
-              initialCenter={{ lat: 9.0820, lng: 8.6753 }} 
+          <div
+            className="h-[600px] w-full rounded-lg overflow-hidden border bg-muted/30"
+            data-testid="asset-map-panel"
+          >
+            <MapView
+              initialCenter={{ lat: 9.0820, lng: 8.6753 }}
               initialZoom={6}
-              onMapReady={handleMapReady} 
+              onMapReady={handleMapReady}
             />
           </div>
         </CardContent>

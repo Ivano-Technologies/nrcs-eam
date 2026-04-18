@@ -50,7 +50,10 @@ export default function WorkOrderDetail() {
             <p className="text-muted-foreground">{workOrder.workOrderNumber}</p>
           </div>
         </div>
-        <Button onClick={handleEdit}><Edit className="mr-2 h-4 w-4" />Edit</Button>
+        <Button data-testid="work-order-edit-btn" onClick={handleEdit}>
+          <Edit className="mr-2 h-4 w-4" />
+          Edit
+        </Button>
       </div>
       <Card>
         <CardHeader><CardTitle>Work Order Details</CardTitle></CardHeader>
@@ -65,9 +68,12 @@ export default function WorkOrderDetail() {
         <DialogContent>
           <DialogHeader><DialogTitle>Update Work Order</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            <div><Label>Status</Label>
-              <Select value={editForm.status} onValueChange={(v) => setEditForm({...editForm, status: v})}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+            <div>
+              <Label>Status</Label>
+              <Select value={editForm.status} onValueChange={(v) => setEditForm({ ...editForm, status: v })}>
+                <SelectTrigger data-testid="work-order-status-select">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="pending">Pending</SelectItem>
                   <SelectItem value="assigned">Assigned</SelectItem>
@@ -80,7 +86,18 @@ export default function WorkOrderDetail() {
             <div><Label>Completion Notes</Label><Textarea value={editForm.completionNotes} onChange={(e) => setEditForm({...editForm, completionNotes: e.target.value})} /></div>
           </div>
           <DialogFooter>
-            <Button onClick={() => updateMutation.mutate({ id: workOrderId, status: editForm.status as any, completionNotes: editForm.completionNotes })}>Update</Button>
+            <Button
+              data-testid="work-order-update-btn"
+              onClick={() =>
+                updateMutation.mutate({
+                  id: workOrderId,
+                  status: editForm.status as any,
+                  completionNotes: editForm.completionNotes,
+                })
+              }
+            >
+              Update
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
