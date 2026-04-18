@@ -5,18 +5,18 @@ function optionLabelForStoredRole(role: string): string {
   const r = role.toLowerCase();
   if (r === "admin") return "Admin";
   if (r === "manager") return "Manager";
-  if (r === "technician") return "Technician";
+  if (r === "staff") return "Staff";
   return "User";
 }
 
 /** Pick a role different from `current` so the Select fires onValueChange. */
 function pickAlternateRoleLabel(current: string): string {
   const o = current.toLowerCase();
-  if (o === "technician") return "User";
-  if (o === "user") return "Technician";
+  if (o === "staff") return "User";
+  if (o === "user") return "Staff";
   if (o === "manager") return "User";
   if (o === "admin") return "User";
-  return "Technician";
+  return "Staff";
 }
 
 /** Production may show a confirm dialog or apply the role and toast immediately. */
@@ -97,7 +97,7 @@ test.describe("user management (live)", () => {
     const currentRole =
       rawRole === "admin" ||
       rawRole === "manager" ||
-      rawRole === "technician" ||
+      rawRole === "staff" ||
       rawRole === "user"
         ? rawRole
         : "user";

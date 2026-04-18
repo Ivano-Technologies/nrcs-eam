@@ -1,16 +1,17 @@
-import { TRPCError } from "@trpc/server";
-import { protectedProcedure } from "../_core/trpc";
+import { protectedProcedure, requireRole } from "../_core/trpc";
 
 export const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== "admin") {
-    throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
-  }
+  requireRole(ctx, ["admin"]);
   return next({ ctx });
 });
 
 export const managerOrAdminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== "admin" && ctx.user.role !== "manager") {
-    throw new TRPCError({ code: "FORBIDDEN", message: "Manager or Admin access required" });
-  }
+  requireRole(ctx, ["manager", "admin"]);
+  return next({ ctx });
+});
+
+/** Staff, manager, or admin — inventory create/update/transactions (with extra checks on some mutations). */
+export const staffOrAboveProcedure = protectedProcedure.use(({ ctx, next }) => {
+  requireRole(ctx, ["staff", "manager", "admin"]);
   return next({ ctx });
 });

@@ -4,7 +4,7 @@ import type { TrpcContext } from "./_core/context";
 
 type AuthenticatedUser = NonNullable<TrpcContext["user"]>;
 
-function createTestContext(userId: number = 1, role: "admin" | "manager" | "technician" | "user" = "admin"): TrpcContext {
+function createTestContext(userId: number = 1, role: "admin" | "manager" | "staff" | "user" = "admin"): TrpcContext {
   const user: AuthenticatedUser = {
     id: userId,
     openId: `test-user-${userId}`,
@@ -119,7 +119,7 @@ describe("Notification System", () => {
     expect(workOrder?.assignedTo).toBe(2);
 
     // Check if notification was created for user 2
-    const ctx2 = createTestContext(2, "technician");
+    const ctx2 = createTestContext(2, "staff");
     const caller2 = appRouter.createCaller(ctx2);
     const notifications = await caller2.notifications.list({ limit: 10 });
     

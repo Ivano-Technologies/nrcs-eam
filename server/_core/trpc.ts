@@ -1,4 +1,4 @@
-import { NOT_ADMIN_ERR_MSG, UNAUTHED_ERR_MSG } from '@shared/const';
+import { UNAUTHED_ERR_MSG } from '@shared/const';
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import type { TrpcContext } from "./context";
@@ -27,19 +27,15 @@ const requireUser = t.middleware(async opts => {
 
 export const protectedProcedure = t.procedure.use(requireUser);
 
-export const adminProcedure = t.procedure.use(
-  t.middleware(async opts => {
-    const { ctx, next } = opts;
-
-    if (!ctx.user || ctx.user.role !== 'admin') {
-      throw new TRPCError({ code: "FORBIDDEN", message: NOT_ADMIN_ERR_MSG });
-    }
-
-    return next({
-      ctx: {
-        ...ctx,
-        user: ctx.user,
-      },
+/**
+ * Ensures the request is authenticated and the user's role is one of `roles`.
+ * @throws TRPCError UNAUTHORIZED when not allowed (matches product requirement for permission failures).
+ */
+export function requireRole(ctx: TrpcContext, roles: string[]): asserts ctx is TrpcContext & { user: NonNullable<TrpcContext["user"]> } {
+  if (!ctx.user || !roles.includes(ctx.user.role)) {
+    throw new TRPCError({
+      code: "UNAUTHORIZED",
+      message: "Insufficient permissions",
     });
-  }),
-);
+  }
+}

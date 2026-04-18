@@ -8,7 +8,12 @@ import * as notificationHelper from "./notificationHelper";
 import { generatePDFReport, generateExcelReport } from "./reportGenerator";
 import { generateEmailTemplate, sendBulkEmails } from "./emailService";
 import { authRouter } from "./routers/authRouter";
-import { adminProcedure, managerOrAdminProcedure } from "./routers/roleProcedures";
+import {
+  adminProcedure,
+  managerOrAdminProcedure,
+  staffOrAboveProcedure,
+} from "./routers/roleProcedures";
+import { requireRole } from "./_core/trpc";
 import {
   legacyStatusFromRegister,
   registerStatusZodEnum,
@@ -77,7 +82,7 @@ export const appRouter = router({
         return await db.updateSite(id, data);
       }),
 
-    bulkDelete: adminProcedure
+    bulkDelete: managerOrAdminProcedure
       .input(z.object({ ids: z.array(z.number()) }))
       .mutation(async ({ input, ctx }) => {
         let deleted = 0;
@@ -418,7 +423,7 @@ export const appRouter = router({
         return { success: true };
       }),
 
-    bulkDelete: adminProcedure
+    bulkDelete: managerOrAdminProcedure
       .input(z.object({ ids: z.array(z.number()) }))
       .mutation(async ({ input, ctx }) => {
         let deleted = 0;
@@ -691,7 +696,7 @@ export const appRouter = router({
         return await db.getInventoryTransactions(input.itemId);
       }),
     
-    create: managerOrAdminProcedure
+    create: staffOrAboveProcedure
       .input(z.object({
         itemCode: z.string().min(1),
         name: z.string().min(1),
@@ -711,7 +716,7 @@ export const appRouter = router({
         return await db.createInventoryItem(input);
       }),
     
-    update: managerOrAdminProcedure
+    update: staffOrAboveProcedure
       .input(z.object({
         id: z.number(),
         name: z.string().optional(),
@@ -770,6 +775,17 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["staff", "manager", "admin"]);
+
+        for (const line of input.lines) {
+          const before = await db.getInventoryItemById(line.itemId);
+          if (!before || before.siteId !== input.siteId) continue;
+          if (line.countedQty < before.currentStock) {
+            requireRole(ctx, ["manager", "admin"]);
+            break;
+          }
+        }
+
         const discrepancies: Array<{
           itemId: number;
           itemCode: string;
@@ -830,21 +846,30 @@ export const appRouter = router({
         notes: z.string().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["staff", "manager", "admin"]);
+
         const itemBefore = await db.getInventoryItemById(input.itemId);
         if (!itemBefore) {
           throw new TRPCError({ code: "NOT_FOUND", message: "Inventory item not found" });
         }
         const previousStock = itemBefore.currentStock;
 
-        const transaction = await db.createInventoryTransaction({
-          ...input,
-          performedBy: ctx.user.id,
-        });
-        
         let newStock = itemBefore.currentStock;
         if (input.type === "in") newStock += input.quantity;
         else if (input.type === "out") newStock -= input.quantity;
         else if (input.type === "adjustment") newStock = input.quantity;
+
+        if (input.type === "adjustment" && input.quantity < previousStock) {
+          requireRole(ctx, ["manager", "admin"]);
+        }
+        if (input.type === "out" && previousStock - input.quantity < 0) {
+          requireRole(ctx, ["manager", "admin"]);
+        }
+
+        const transaction = await db.createInventoryTransaction({
+          ...input,
+          performedBy: ctx.user.id,
+        });
         
         if (input.type !== "transfer") {
           const updated = await db.updateInventoryItem(input.itemId, { currentStock: newStock });
@@ -859,7 +884,17 @@ export const appRouter = router({
         return transaction;
       }),
 
-    bulkDelete: adminProcedure
+    deleteTransaction: managerOrAdminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const ok = await db.deleteInventoryTransaction(input.id);
+        if (!ok) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Transaction not found" });
+        }
+        return { success: true as const };
+      }),
+
+    bulkDelete: managerOrAdminProcedure
       .input(z.object({ ids: z.array(z.number()) }))
       .mutation(async ({ input, ctx }) => {
         let deleted = 0;
@@ -1081,7 +1116,7 @@ export const appRouter = router({
         openId: z.string(),
         name: z.string(),
         email: z.string().email(),
-        role: z.enum(["admin", "manager", "technician", "user"]),
+        role: z.enum(["admin", "manager", "staff", "user"]),
         siteId: z.number().optional(),
       }))
       .mutation(async ({ input }) => {
@@ -1100,7 +1135,7 @@ export const appRouter = router({
         id: z.number(),
         name: z.string().optional(),
         email: z.string().email().optional(),
-        role: z.enum(["admin", "manager", "technician", "user"]).optional(),
+        role: z.enum(["admin", "manager", "staff", "user"]).optional(),
         siteId: z.number().optional(),
       }))
       .mutation(async ({ input }) => {
@@ -1111,7 +1146,7 @@ export const appRouter = router({
     updateRole: adminProcedure
       .input(z.object({
         userId: z.number(),
-        role: z.enum(["admin", "manager", "technician", "user"]),
+        role: z.enum(["admin", "manager", "staff", "user"]),
       }))
       .mutation(async ({ input }) => {
         return await db.updateUserRole(input.userId, input.role);

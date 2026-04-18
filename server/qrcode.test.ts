@@ -5,7 +5,7 @@ import { generateAssetQRCode, parseAssetQRCode } from "./qrcode";
 
 type AuthenticatedUser = NonNullable<TrpcContext["user"]>;
 
-function createTestContext(role: "admin" | "manager" | "technician" | "user" = "admin"): TrpcContext {
+function createTestContext(role: "admin" | "manager" | "staff" | "user" = "admin"): TrpcContext {
   const user: AuthenticatedUser = {
     id: 1,
     openId: "test-user",

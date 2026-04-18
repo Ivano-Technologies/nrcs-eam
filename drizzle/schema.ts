@@ -14,10 +14,10 @@ import {
 } from "drizzle-orm/pg-core";
 
 export const userRoleEnum = pgEnum("user_role", [
-  "admin",
-  "manager",
-  "technician",
   "user",
+  "staff",
+  "manager",
+  "admin",
 ]);
 
 export const assetStatusEnum = pgEnum("asset_status", [

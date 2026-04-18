@@ -1,6 +1,6 @@
 /**
- * Admin sidebar order must match `DashboardLayout` getMenuItems("admin") sort:
- * Dashboard first (sortOrder), then alphabetical by label.
+ * Admin-visible routes (paths + stable `data-testid`s). Order matches former alphabetical sweep;
+ * navigation in dashboard.spec uses `page.goto(path)` because items are grouped in collapsible sections.
  */
 export const SIDEBAR_NAV_ADMIN: { testId: string; path: string; shotSlug: string }[] = [
   { testId: "sidebar-nav-dashboard", path: "/app", shotSlug: "dashboard" },

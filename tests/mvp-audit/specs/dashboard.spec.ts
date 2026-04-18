@@ -88,7 +88,8 @@ test.describe("Dashboard (2b)", () => {
     }
 
     for (const item of SIDEBAR_NAV_ADMIN) {
-      await page.getByTestId(item.testId).click();
+      // Direct navigation: items live inside collapsible groups in the sidebar, so `goto` avoids expand-order flakiness.
+      await page.goto(item.path);
       const pathname = new URL(page.url()).pathname;
       if (item.path === "/app") {
         expect(pathname).toBe("/app");

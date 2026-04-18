@@ -92,7 +92,7 @@ async function insertAppUserAfterSupabaseInvite(params: {
   authUserId: string;
   email: string;
   name: string;
-  role: "admin" | "manager" | "technician" | "user";
+  role: "admin" | "manager" | "staff" | "user";
   siteId?: number | null;
 }): Promise<number> {
   const database = await db.getDb();

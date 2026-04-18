@@ -40,7 +40,7 @@ export default function Home() {
       color: "text-orange-700",
       bgColor: "bg-orange-50",
       iconBg: "bg-gradient-to-br from-orange-500 to-orange-600",
-      roles: ["admin", "manager", "technician"],
+      roles: ["admin", "manager", "staff"],
     },
     {
       title: "Pending Work Orders",
@@ -50,7 +50,7 @@ export default function Home() {
       color: "text-red-700",
       bgColor: "bg-red-50",
       iconBg: "bg-gradient-to-br from-red-600 to-red-700",
-      roles: ["admin", "manager", "technician"],
+      roles: ["admin", "manager", "staff"],
     },
     {
       title: "Low Stock Items",

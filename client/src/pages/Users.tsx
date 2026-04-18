@@ -69,7 +69,7 @@ export default function Users() {
     try {
       await updateRoleMutation.mutateAsync({
         userId: roleChangeDialog.userId,
-        role: roleChangeDialog.newRole as 'admin' | 'manager' | 'technician' | 'user',
+        role: roleChangeDialog.newRole as 'admin' | 'manager' | 'staff' | 'user',
       });
       
       utils.users.list.invalidate();
@@ -147,7 +147,7 @@ export default function Users() {
     const colors = { 
       admin: "bg-red-100 text-red-800", 
       manager: "bg-blue-100 text-blue-800", 
-      technician: "bg-green-100 text-green-800", 
+      staff: "bg-green-100 text-green-800", 
       user: "bg-gray-100 text-gray-800" 
     };
     return colors[role as keyof typeof colors] || "bg-gray-100 text-gray-800";
@@ -252,7 +252,7 @@ export default function Users() {
                       <SelectContent>
                         <SelectItem value="admin">Admin</SelectItem>
                         <SelectItem value="manager">Manager</SelectItem>
-                        <SelectItem value="technician">Technician</SelectItem>
+                        <SelectItem value="staff">Staff</SelectItem>
                         <SelectItem value="user">User</SelectItem>
                       </SelectContent>
                     </Select>

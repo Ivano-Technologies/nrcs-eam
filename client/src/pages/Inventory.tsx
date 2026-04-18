@@ -22,6 +22,7 @@ import {
 import { toast } from "sonner";
 import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
+import { usePermissions } from "@/_core/hooks/usePermissions";
 
 function stockBorderClass(item: { currentStock: number; minStockLevel: number }): string {
   if (item.currentStock <= 0) return "border-2 border-red-500 shadow-red-500/10";
@@ -60,6 +61,7 @@ function InventoryItemQr({ itemCode }: { itemCode: string }) {
 }
 
 export default function Inventory() {
+  const { canAddInventory } = usePermissions();
   const [open, setOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [overviewSite, setOverviewSite] = useState<string>("all");
@@ -266,6 +268,7 @@ export default function Inventory() {
           <h1 className="text-3xl font-bold">Inventory</h1>
           <p className="text-muted-foreground mt-2">Spare parts, stock counts, and movement history</p>
         </div>
+        {canAddInventory ? (
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button data-testid="inventory-add-item">
@@ -425,6 +428,7 @@ export default function Inventory() {
             </form>
           </DialogContent>
         </Dialog>
+        ) : null}
       </div>
 
       <Tabs defaultValue="overview" className="space-y-4">

@@ -1,9 +1,33 @@
 import { test, expect } from "@playwright/test";
 import { loginAsAdmin } from "./live-helpers";
+import {
+  deleteAssetByTagViaUi,
+  ensureTestSite,
+  LIVE_E2E_SHARED_SITE_NAME,
+  runLiveBrowserCleanup,
+} from "../helpers/liveTestData";
+
+test.describe.configure({ mode: "serial" });
 
 test.describe("assets module (live)", () => {
+  /** Set in the test; removed in afterAll so production is not left with E2E assets. */
+  let createdAssetTag: string | undefined;
+
+  test.beforeAll(async () => {
+    await runLiveBrowserCleanup(async (page) => {
+      await loginAsAdmin(page);
+      await ensureTestSite(page, LIVE_E2E_SHARED_SITE_NAME);
+    });
+  });
+
+  test.afterAll(async () => {
+    if (!createdAssetTag) return;
+    await runLiveBrowserCleanup((page) => deleteAssetByTagViaUi(page, createdAssetTag!));
+  });
+
   test("list, create, view detail, edit asset", async ({ page }) => {
     const tag = `E2E-A-${Date.now()}`;
+    createdAssetTag = tag;
     const name = `E2E Asset ${Date.now()}`;
     const nameEdited = `${name} (edited)`;
 
@@ -22,7 +46,7 @@ test.describe("assets module (live)", () => {
     await page.locator("[role='option']").first().click();
 
     await page.getByTestId("asset-form-site").click();
-    await page.locator("[role='option']").first().click();
+    await page.getByRole("option", { name: LIVE_E2E_SHARED_SITE_NAME }).click();
 
     await page.getByTestId("asset-form-submit").click();
     await expect(page.getByText(/Asset created successfully/i)).toBeVisible({

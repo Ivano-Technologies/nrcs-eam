@@ -35,7 +35,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { useAuth } from "@/_core/hooks/useAuth";
+import { usePermissions } from "@/_core/hooks/usePermissions";
 import { appPath } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -157,7 +157,7 @@ const SORTABLE: Set<string> = new Set([
 
 export default function Assets() {
   const [, setLocation] = useLocation();
-  const { user } = useAuth();
+  const { canEditAssets } = usePermissions();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -524,8 +524,6 @@ export default function Assets() {
   const total = registerData?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / limit));
 
-  const canCreateAsset = user?.role === "admin" || user?.role === "manager";
-  const canDeleteAsset = user?.role === "admin";
 
   const sortIndicator = (key: SortKey) => {
     if (sortBy !== key) return <span className="text-muted-foreground opacity-40">↕</span>;
@@ -543,12 +541,7 @@ export default function Assets() {
             NRCS asset register — spreadsheet view with filters and Excel import/export
           </p>
         </div>
-        {canCreateAsset && (
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={handleDownloadTemplate} disabled={isDownloading}>
-              <Download className="mr-2 h-4 w-4" />
-              Template
-            </Button>
+        <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
               data-testid="asset-export-excel-btn"
@@ -557,6 +550,12 @@ export default function Assets() {
             >
               <Download className="mr-2 h-4 w-4" />
               Export to Excel
+            </Button>
+            {canEditAssets ? (
+              <>
+            <Button variant="outline" onClick={handleDownloadTemplate} disabled={isDownloading}>
+              <Download className="mr-2 h-4 w-4" />
+              Template
             </Button>
             <Button variant="outline" onClick={() => setIsImportDialogOpen(true)}>
               <Upload className="mr-2 h-4 w-4" />
@@ -861,8 +860,9 @@ export default function Assets() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
-          </div>
-        )}
+              </>
+            ) : null}
+        </div>
       </div>
 
       <Card>
@@ -946,20 +946,24 @@ export default function Assets() {
             >
               <thead className="sticky top-0 z-30 bg-muted/95 backdrop-blur supports-[backdrop-filter]:bg-muted/80">
                 <tr className="border-b">
+                  {/*
+                    Horizontal sticky set: col 1 (S/No), col 5 (Item Description), col 6 (Asset Code).
+                    Description width fixed at 14rem so Asset Code sticky left = 3rem + 14rem = 17rem.
+                  */}
                   <th
-                    className="sticky left-0 z-40 border-r bg-muted px-2 py-1.5 text-left font-medium whitespace-nowrap min-w-[3rem]"
+                    className="sticky left-0 z-[45] border-r bg-muted px-2 py-1.5 text-left font-medium whitespace-nowrap w-[3rem] min-w-[3rem] max-w-[3rem] shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)]"
                     data-testid="asset-col-sno"
                   >
                     S/No
                   </th>
                   <th
-                    className="sticky left-[3rem] z-40 border-r bg-muted px-2 py-1.5 text-left font-medium whitespace-nowrap min-w-[5.5rem] cursor-pointer"
+                    className="px-2 py-1.5 text-left font-medium whitespace-nowrap min-w-[5.5rem] cursor-pointer"
                     onClick={() => toggleSort("itemType")}
                   >
                     Item Type {sortIndicator("itemType")}
                   </th>
                   <th
-                    className="sticky left-[8.5rem] z-40 border-r bg-muted px-2 py-1.5 text-left font-medium whitespace-nowrap min-w-[8rem] cursor-pointer"
+                    className="px-2 py-1.5 text-left font-medium whitespace-nowrap min-w-[8rem] cursor-pointer"
                     onClick={() => toggleSort("categoryName")}
                   >
                     Item Category {sortIndicator("categoryName")}
@@ -971,13 +975,15 @@ export default function Assets() {
                     Sub-Item {sortIndicator("subCategory")}
                   </th>
                   <th
-                    className="px-2 py-1.5 text-left font-medium whitespace-nowrap min-w-[14rem] cursor-pointer"
+                    className="sticky left-[3rem] z-[44] border-r bg-muted px-2 py-1.5 text-left font-medium whitespace-nowrap w-[14rem] min-w-[14rem] max-w-[14rem] cursor-pointer shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)]"
+                    data-testid="asset-col-description"
                     onClick={() => toggleSort("name")}
                   >
                     Item Description {sortIndicator("name")}
                   </th>
                   <th
-                    className="px-2 py-1.5 text-left font-medium whitespace-nowrap min-w-[7rem] cursor-pointer"
+                    className="sticky left-[17rem] z-[43] border-r bg-muted px-2 py-1.5 text-left font-medium whitespace-nowrap min-w-[7rem] cursor-pointer shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)]"
+                    data-testid="asset-col-asset-code"
                     onClick={() => toggleSort("assetTag")}
                   >
                     Asset Code {sortIndicator("assetTag")}
@@ -1066,8 +1072,8 @@ export default function Assets() {
                   >
                     Remarks {sortIndicator("notes")}
                   </th>
-                  {canCreateAsset ? (
-                    <th className="sticky right-0 z-40 border-l bg-muted px-1 py-1.5 w-20" />
+                  {canEditAssets ? (
+                    <th className="sticky right-0 z-[45] border-l bg-muted px-1 py-1.5 w-20 shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]" />
                   ) : null}
                 </tr>
               </thead>
@@ -1075,7 +1081,7 @@ export default function Assets() {
                 {rows.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={canCreateAsset ? 21 : 20}
+                      colSpan={canEditAssets ? 21 : 20}
                       className="px-4 py-12 text-center text-muted-foreground"
                     >
                       No rows match filters
@@ -1114,20 +1120,39 @@ export default function Assets() {
                         )}
                         onClick={() => setLocation(appPath(`/assets/${row.id}`))}
                       >
-                        <td className="sticky left-0 z-20 border-r bg-background px-2 py-1 text-muted-foreground">
+                        <td
+                          className={cn(
+                            "sticky left-0 z-[35] border-r px-2 py-1 text-muted-foreground shadow-[2px_0_4px_-2px_rgba(0,0,0,0.06)] w-[3rem] min-w-[3rem] max-w-[3rem]",
+                            i % 2 === 1 ? "bg-muted/30" : "bg-background"
+                          )}
+                        >
                           {offset + i + 1}
                         </td>
-                        <td className="sticky left-[3rem] z-20 border-r bg-background px-2 py-1 whitespace-nowrap">
+                        <td className="px-2 py-1 whitespace-nowrap">
                           {row.itemType === "inventory" ? "Inventory" : "Asset"}
                         </td>
-                        <td className="sticky left-[8.5rem] z-20 border-r bg-background px-2 py-1 whitespace-nowrap">
+                        <td className="px-2 py-1 whitespace-nowrap">
                           {row.categoryName?.trim() || EM_DASH}
                         </td>
                         <td className="px-2 py-1 max-w-[10rem] truncate">{row.subCategory?.trim() || EM_DASH}</td>
-                        <td className="px-2 py-1 max-w-[18rem] truncate" title={desc}>
+                        <td
+                          className={cn(
+                            "sticky left-[3rem] z-[34] border-r px-2 py-1 w-[14rem] min-w-[14rem] max-w-[14rem] truncate shadow-[2px_0_4px_-2px_rgba(0,0,0,0.06)]",
+                            i % 2 === 1 ? "bg-muted/30" : "bg-background"
+                          )}
+                          title={desc}
+                          data-testid={`asset-cell-desc-${row.id}`}
+                        >
                           {desc || EM_DASH}
                         </td>
-                        <td className="px-2 py-1 font-mono text-xs whitespace-nowrap">{row.assetTag}</td>
+                        <td
+                          className={cn(
+                            "sticky left-[17rem] z-[33] border-r px-2 py-1 font-mono text-xs whitespace-nowrap min-w-[7rem] shadow-[2px_0_4px_-2px_rgba(0,0,0,0.06)]",
+                            i % 2 === 1 ? "bg-muted/30" : "bg-background"
+                          )}
+                        >
+                          {row.assetTag}
+                        </td>
                         <td className="px-2 py-1 whitespace-nowrap">
                           {row.serialNumber?.trim() || EM_DASH}
                         </td>
@@ -1184,9 +1209,12 @@ export default function Assets() {
                         <td className="px-2 py-1 max-w-[14rem] truncate" title={row.notes ?? ""}>
                           {row.notes?.trim() || EM_DASH}
                         </td>
-                        {canCreateAsset ? (
+                        {canEditAssets ? (
                           <td
-                            className="sticky right-0 z-20 border-l bg-background px-1 py-0.5"
+                            className={cn(
+                              "sticky right-0 z-[35] border-l px-1 py-0.5 shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.06)]",
+                              i % 2 === 1 ? "bg-muted/30" : "bg-background"
+                            )}
                             onClick={(e) => e.stopPropagation()}
                           >
                             <div className="flex gap-0.5">
@@ -1199,21 +1227,19 @@ export default function Assets() {
                               >
                                 <Edit2 className="h-3.5 w-3.5" />
                               </Button>
-                              {canDeleteAsset ? (
-                                <Button
-                                  data-testid="asset-delete-btn"
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-7 w-7 p-0 text-destructive"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    setDeleteTarget({ id: row.id, name: row.name });
-                                  }}
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
-                              ) : null}
+                              <Button
+                                data-testid="asset-delete-btn"
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 w-7 p-0 text-destructive"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setDeleteTarget({ id: row.id, name: row.name });
+                                }}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
                             </div>
                           </td>
                         ) : null}

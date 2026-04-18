@@ -9,10 +9,10 @@ import { useRef } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { useAuth } from "@/_core/hooks/useAuth";
+import { usePermissions } from "@/_core/hooks/usePermissions";
 
 export default function Sites() {
-  const { user } = useAuth();
+  const { canEditSites } = usePermissions();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingSiteId, setEditingSiteId] = useState<number | null>(null);
   const [editData, setEditData] = useState<any>({});
@@ -133,7 +133,7 @@ export default function Sites() {
     setEditData({});
   };
 
-  const canManageSites = user?.role === "admin" || user?.role === "manager";
+  const canManageSites = canEditSites;
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-96"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>;

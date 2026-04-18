@@ -1,17 +1,27 @@
 import { test, expect } from "@playwright/test";
 import { loginViaMagicLink } from "../helpers/e2eAuth";
 import { shot } from "../helpers/shot";
+import { deleteAssetByTagViaUi, runLiveBrowserCleanup } from "../../helpers/liveTestData";
 
 test.describe.configure({ mode: "serial" });
 
 test.describe("Assets CRUD (2c)", () => {
+  /** If the test fails after create, afterAll still removes the asset (same admin session as live helpers). */
+  let createdAssetTag: string | undefined;
+
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
     await loginViaMagicLink(page);
   });
 
+  test.afterAll(async () => {
+    if (!createdAssetTag) return;
+    await runLiveBrowserCleanup((page) => deleteAssetByTagViaUi(page, createdAssetTag!));
+  });
+
   test("full asset lifecycle", async ({ page }) => {
     const tag = `E2E-A-${Date.now()}`;
+    createdAssetTag = tag;
     const name = `E2E Asset ${tag}`;
     const nameEdited = `${name} (edited)`;
 
