@@ -11,14 +11,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { useAuth } from "@/_core/hooks/useAuth";
+import { usePermissions } from "@/_core/hooks/usePermissions";
 import AssetDepreciation from "@/components/AssetDepreciation";
 import { AssetMaintenanceTimeline } from "@/components/AssetMaintenanceTimeline";
 
 export default function AssetDetail() {
   const [, params] = useRoute("/app/assets/:id");
   const [, setLocation] = useLocation();
-  const { user } = useAuth();
+  const { canEditAssets } = usePermissions();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -188,7 +188,7 @@ export default function AssetDetail() {
     return colors[status as keyof typeof colors] || "bg-gray-100 text-gray-800";
   };
 
-  const canEdit = user?.role === "admin" || user?.role === "manager";
+  const canEdit = canEditAssets;
 
   if (isLoading) {
     return (

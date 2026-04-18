@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { notifyOwner } from "./notification";
-import { adminProcedure, publicProcedure, router } from "./trpc";
+import { publicProcedure, router } from "./trpc";
+import { adminProcedure } from "../routers/roleProcedures";
 
 export const systemRouter = router({
   /**

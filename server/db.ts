@@ -194,7 +194,7 @@ export async function getAllUsers() {
   return await db.select().from(users).orderBy(desc(users.createdAt));
 }
 
-export async function updateUserRole(userId: number, role: "admin" | "manager" | "technician" | "user") {
+export async function updateUserRole(userId: number, role: "admin" | "manager" | "staff" | "user") {
   const db = await getDb();
   if (!db) return null;
   await db.update(users).set({ role }).where(eq(users.id, userId));
@@ -605,6 +605,13 @@ export async function createInventoryTransaction(transaction: typeof inventoryTr
   const insertId = inserted?.id;
   if (!insertId) return null;
   return await db.select().from(inventoryTransactions).where(eq(inventoryTransactions.id, insertId)).limit(1).then(r => r[0]);
+}
+
+export async function deleteInventoryTransaction(id: number) {
+  const db = await getDb();
+  if (!db) return false;
+  const result = await db.delete(inventoryTransactions).where(eq(inventoryTransactions.id, id)).returning({ id: inventoryTransactions.id });
+  return result.length > 0;
 }
 
 export async function getInventoryTransactions(itemId: number) {

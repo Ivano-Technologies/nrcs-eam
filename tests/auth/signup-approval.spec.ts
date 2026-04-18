@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { deleteUserByEmailViaUi, runLiveBrowserCleanup } from "../helpers/liveTestData";
 
 /**
  * Live: public signup only creates pending_users; admin approves → users + Supabase Auth.
@@ -15,10 +16,19 @@ const ADMIN_PASSWORD =
   process.env.PLAYWRIGHT_ADMIN_PASSWORD ?? "ChangeMe123!";
 
 test.describe("signup approval flow (live)", () => {
+  /** Approved user email — deleted in afterAll so production is not left with E2E users. */
+  let signupTestEmail: string | undefined;
+
+  test.afterAll(async () => {
+    if (!signupTestEmail) return;
+    await runLiveBrowserCleanup((page) => deleteUserByEmailViaUi(page, signupTestEmail!));
+  });
+
   test("shows pending message, user not listed until approved, then listed after approval", async ({
     page,
   }) => {
     const unique = `e2e-signup-${Date.now()}@gmail.com`;
+    signupTestEmail = unique;
     const displayName = `E2E Signup ${Date.now()}`;
 
     await page.goto("/signup");

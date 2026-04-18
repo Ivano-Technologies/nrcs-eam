@@ -12,16 +12,13 @@ import {
   SidebarFooter,
   SidebarHeader,
   SidebarInset,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
 import { appPath } from "@/lib/routes";
-import { LayoutDashboard, LogOut, Users, UserPlus, Package, Wrench, Calendar, TrendingUp, FileText, MapPin, Building2, DollarSign, Map, Settings, Maximize2, Mail, Scan, Search, AlertTriangle, BarChart3, History } from "lucide-react";
+import { LogOut, Settings, Maximize2, Search } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -29,52 +26,8 @@ import { Button } from "./ui/button";
 import { NotificationCenter } from "./NotificationCenter";
 import Footer from "./Footer";
 import { ThemeToggle } from "./ui/ThemeToggle";
-
-const allMenuItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: appPath("/"), adminOnly: false, sortOrder: 0 },
-  { icon: Settings, label: "Dashboard Settings", path: appPath("/dashboard-settings"), adminOnly: false },
-  { icon: Package, label: "Asset Register", path: appPath("/assets"), adminOnly: false },
-  { icon: Map, label: "Asset Map", path: appPath("/asset-map"), adminOnly: false },
-  { icon: Scan, label: "Asset Scanner", path: appPath("/scanner"), adminOnly: false },
-  { icon: FileText, label: "Compliance", path: appPath("/compliance"), adminOnly: false },
-  { icon: Mail, label: "Email Notifications", path: appPath("/email-notifications"), adminOnly: true },
-  { icon: DollarSign, label: "Financial", path: appPath("/financial"), adminOnly: false },
-  { icon: TrendingUp, label: "Inventory", path: appPath("/inventory"), adminOnly: false },
-  { icon: Calendar, label: "Maintenance", path: appPath("/maintenance"), adminOnly: false },
-  { icon: DollarSign, label: "QuickBooks", path: appPath("/quickbooks"), adminOnly: true },
-  { icon: FileText, label: "Reports", path: appPath("/reports"), adminOnly: false },
-  { icon: Calendar, label: "Report Scheduling", path: appPath("/report-scheduling"), adminOnly: false },
-  { icon: MapPin, label: "Sites", path: appPath("/sites"), adminOnly: false },
-  { icon: Users, label: "Users", path: appPath("/users"), adminOnly: true },
-  { icon: UserPlus, label: "Pending Users", path: appPath("/pending-users"), adminOnly: true },
-  { icon: Building2, label: "Vendors", path: appPath("/vendors"), adminOnly: false },
-  { icon: Wrench, label: "Work Orders", path: appPath("/work-orders"), adminOnly: false },
-  { icon: FileText, label: "Work Order Templates", path: appPath("/work-order-templates"), adminOnly: false },
-  { icon: AlertTriangle, label: "Warranty Alerts", path: appPath("/warranty-alerts"), adminOnly: false },
-  { icon: BarChart3, label: "Cost Analytics", path: appPath("/cost-analytics"), adminOnly: false },
-  { icon: History, label: "Audit Trail", path: appPath("/audit-trail"), adminOnly: true },
-  { icon: History, label: "Activity Log", path: appPath("/activity-log"), adminOnly: false },
-];
-
-const getMenuItems = (userRole?: string) => {
-  const filtered = allMenuItems.filter(item => 
-    !item.adminOnly || userRole === 'admin'
-  );
-  
-  // Sort alphabetically, but keep Dashboard first
-  return filtered.sort((a, b) => {
-    if (a.sortOrder !== undefined) return -1;
-    if (b.sortOrder !== undefined) return 1;
-    return a.label.localeCompare(b.label);
-  });
-};
-
-/** Stable `data-testid` for Playwright (sidebar navigation). */
-function sidebarNavTestId(path: string): string {
-  if (path === "/app" || path === "/app/") return "sidebar-nav-dashboard";
-  const sub = path.replace(/^\/app\/?/, "").replace(/\//g, "-") || "home";
-  return `sidebar-nav-${sub}`;
-}
+import { SidebarGroupedNav } from "./SidebarGroupedNav";
+import { flattenNavItems } from "@/config/appNav";
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
 const DEFAULT_WIDTH = 360;
@@ -150,15 +103,17 @@ function DashboardLayoutContent({
   const { state } = useSidebar();
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
-  const menuItems = getMenuItems(user?.role);
-  const activeMenuItem = menuItems.find((item: any) => item.path === location);
+  const menuItems = flattenNavItems(user?.role);
+  const activeMenuItem =
+    menuItems.find((item) => item.path === location) ??
+    menuItems.find(
+      (item) =>
+        item.path !== appPath("/") &&
+        (location === item.path || location.startsWith(item.path + "/"))
+    );
   const isMobile = useIsMobile();
   const [toggleFeedback, setToggleFeedback] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-
-  const filteredMenuItems = menuItems.filter((item: any) =>
-    item.label.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   const updatePrefsMutation = trpc.userPreferences.update.useMutation();
 
@@ -276,27 +231,13 @@ function DashboardLayoutContent({
               </div>
             )}
             
-            <SidebarMenu className="px-2 py-1">
-              {filteredMenuItems.map((item: any) => {
-                const isActive = location === item.path;
-                return (
-                  <SidebarMenuItem key={item.path}>
-                    <SidebarMenuButton
-                      isActive={isActive}
-                      data-testid={sidebarNavTestId(item.path)}
-                      onClick={() => setLocation(item.path)}
-                      tooltip={sidebarWidth <= PRESET_WIDTHS.narrow ? item.label : undefined}
-                      className={`h-10 transition-all font-normal ${sidebarWidth === PRESET_WIDTHS.narrow ? 'justify-center' : ''}`}
-                    >
-                      <item.icon
-                        className={`h-[20px] w-[20px] ${isActive ? "text-primary" : ""}`}
-                      />
-                      {sidebarWidth > PRESET_WIDTHS.narrow && <span className="text-[17px]">{item.label}</span>}
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
+            <SidebarGroupedNav
+              location={location}
+              setLocation={setLocation}
+              sidebarWidth={sidebarWidth}
+              searchQuery={searchQuery}
+              userRole={user?.role}
+            />
           </SidebarContent>
 
           <SidebarFooter className="p-3 space-y-2">

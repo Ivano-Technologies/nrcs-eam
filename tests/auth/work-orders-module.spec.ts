@@ -1,9 +1,35 @@
 import { test, expect } from "@playwright/test";
 import { loginAsAdmin } from "./live-helpers";
+import {
+  cancelWorkOrderByNumberViaUi,
+  ensureTestSite,
+  LIVE_E2E_SHARED_SITE_NAME,
+  runLiveBrowserCleanup,
+} from "../helpers/liveTestData";
+
+test.describe.configure({ mode: "serial" });
 
 test.describe("work orders module (live)", () => {
+  /** Work orders have no delete API; we cancel in afterAll to avoid leaving active E2E rows. */
+  let createdWorkOrderNumber: string | undefined;
+
+  test.beforeAll(async () => {
+    await runLiveBrowserCleanup(async (page) => {
+      await loginAsAdmin(page);
+      await ensureTestSite(page, LIVE_E2E_SHARED_SITE_NAME);
+    });
+  });
+
+  test.afterAll(async () => {
+    if (!createdWorkOrderNumber) return;
+    await runLiveBrowserCleanup((page) =>
+      cancelWorkOrderByNumberViaUi(page, createdWorkOrderNumber!)
+    );
+  });
+
   test("list loads, create work order, update status on detail", async ({ page }) => {
     const woNum = `WO-E2E-${Date.now()}`;
+    createdWorkOrderNumber = woNum;
     const title = `E2E Work Order ${Date.now()}`;
 
     await loginAsAdmin(page);
@@ -39,7 +65,7 @@ test.describe("work orders module (live)", () => {
     } else {
       await createDialog.getByRole("combobox").nth(1).click();
     }
-    await page.locator("[role='option']").first().click();
+    await page.getByRole("option", { name: LIVE_E2E_SHARED_SITE_NAME }).click();
 
     const submitBtn = createDialog.getByTestId("work-order-form-submit");
     if ((await submitBtn.count()) > 0) {
