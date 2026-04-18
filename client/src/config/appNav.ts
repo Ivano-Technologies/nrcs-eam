@@ -96,12 +96,16 @@ export const SIDEBAR_GROUPS: AppNavGroup[] = [
       { label: "Report Scheduling", path: appPath("/report-scheduling"), icon: FileBarChart },
     ],
   },
+  {
+    id: "sites",
+    label: "Sites",
+    icon: MapPin,
+    items: [{ label: "Sites", path: appPath("/sites"), icon: MapPin }],
+  },
 ];
 
-/** Between Reports and Administration — all authenticated users */
-export const SIDEBAR_STANDALONE_MID: AppNavItem[] = [
-  { label: "Sites", path: appPath("/sites"), icon: MapPin },
-];
+/** Reserved for future standalone items between Reports and Administration (currently empty). */
+export const SIDEBAR_STANDALONE_MID: AppNavItem[] = [];
 
 /** Administration only — Settings is not a group (see `SIDEBAR_BOTTOM`). */
 export const SIDEBAR_GROUPS_ADMIN: AppNavGroup[] = [
@@ -141,6 +145,7 @@ const GROUP_PREFIXES: { groupId: string; pathPrefix: string }[] = [
   { groupId: "compliance", pathPrefix: appPath("/audit-trail") },
   { groupId: "reports", pathPrefix: appPath("/reports") },
   { groupId: "reports", pathPrefix: appPath("/report-scheduling") },
+  { groupId: "sites", pathPrefix: appPath("/sites") },
   { groupId: "administration", pathPrefix: appPath("/vendors") },
   { groupId: "administration", pathPrefix: appPath("/users") },
   { groupId: "administration", pathPrefix: appPath("/pending-users") },
