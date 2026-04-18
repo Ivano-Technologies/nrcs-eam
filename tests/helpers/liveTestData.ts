@@ -1,5 +1,5 @@
 /**
- * Live E2E helpers: reuse shared test sites and clean up entities created during tests
+ * Live E2E helpers: reuse existing production sites (read-only) and clean up entities created during tests
  * so production is not left with Playwright artifacts.
  */
 import { chromium, expect, type Page } from "@playwright/test";
@@ -18,7 +18,10 @@ export async function runLiveBrowserCleanup(
   }
 }
 
-/** Stable name for a shared site row used when tests need a deterministic site (reuse if present). */
+/**
+ * Preferred shared label if it still exists in the DB (tests do not create this row).
+ * @deprecated Use resolveLiveTestSiteName() — do not assert on this exact string in production.
+ */
 export const LIVE_E2E_SHARED_SITE_NAME = "E2E Playwright Shared Site";
 
 /**
@@ -34,28 +37,42 @@ export async function siteExistsByName(page: Page, siteName: string): Promise<bo
 }
 
 /**
- * If a site with `siteName` already exists, does nothing.
- * Otherwise opens Add Site and creates one with that name (minimal required fields).
+ * Read-only: resolves a site name to use in asset/WO forms.
+ * - If a card for {@link LIVE_E2E_SHARED_SITE_NAME} exists, returns that name.
+ * - Otherwise returns the display name of the **first** site card (e.g. real NRCS site).
+ * Does **not** create, update, or delete sites.
  */
-export async function ensureTestSite(page: Page, siteName: string): Promise<void> {
+export async function resolveLiveTestSiteName(page: Page): Promise<string> {
   await page.goto("/app/sites");
   await expect(page.getByRole("heading", { name: /Sites Management/i })).toBeVisible({
     timeout: 30_000,
   });
-  const existing = page.locator("[data-testid^='site-card-']").filter({ hasText: siteName });
-  if ((await existing.count()) > 0) {
-    return;
-  }
-  await page.getByRole("button", { name: /Add Site/i }).click();
-  await page.getByLabel(/Site Name/i).fill(siteName);
-  await page.getByRole("button", { name: /^Create Site$/i }).click();
-  const createdCard = page
+
+  const sharedCard = page
     .locator("[data-testid^='site-card-']")
-    .filter({ hasText: siteName });
-  await expect(createdCard.first()).toBeVisible({ timeout: 60_000 });
-  await expect(page.getByText(/Site created successfully/i))
-    .toBeVisible({ timeout: 15_000 })
-    .catch(() => {});
+    .filter({ hasText: LIVE_E2E_SHARED_SITE_NAME });
+  if ((await sharedCard.count()) > 0) {
+    return LIVE_E2E_SHARED_SITE_NAME;
+  }
+
+  const firstCard = page.locator("[data-testid^='site-card-']").first();
+  await expect(firstCard, "At least one site must exist for live E2E").toBeVisible({
+    timeout: 30_000,
+  });
+
+  const title = firstCard.locator(".text-lg").first();
+  const name = (await title.innerText()).trim();
+  if (!name) {
+    throw new Error("Could not read site name from first site card (expected .text-lg title).");
+  }
+  return name;
+}
+
+/**
+ * @deprecated Use {@link resolveLiveTestSiteName} — never creates sites.
+ */
+export async function ensureTestSite(page: Page, _siteName?: string): Promise<string> {
+  return resolveLiveTestSiteName(page);
 }
 
 /**

@@ -914,6 +914,26 @@ export const appRouter = router({
         }
         return { deleted, total: input.ids.length };
       }),
+
+    delete: managerOrAdminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const existing = await db.getInventoryItemById(input.id);
+        if (!existing) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Inventory item not found" });
+        }
+        const ok = await db.deleteInventoryItem(input.id);
+        if (!ok) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to delete inventory item" });
+        }
+        await db.createAuditLog({
+          userId: ctx.user.id,
+          action: "delete_inventory",
+          entityType: "inventory",
+          entityId: input.id,
+        });
+        return { success: true as const };
+      }),
   }),
 
   // ============= VENDORS =============

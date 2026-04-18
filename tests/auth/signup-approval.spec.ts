@@ -15,7 +15,8 @@ const ADMIN_EMAIL =
 const ADMIN_PASSWORD =
   process.env.PLAYWRIGHT_ADMIN_PASSWORD ?? "ChangeMe123!";
 
-test.describe("signup approval flow (live)", () => {
+// Skipped: requires test data creation in production DB (pending users / approved test accounts)
+test.describe.skip("signup approval flow (live)", () => {
   /** Approved user email — deleted in afterAll so production is not left with E2E users. */
   let signupTestEmail: string | undefined;
 

@@ -587,6 +587,7 @@ export async function updateInventoryItem(id: number, data: Partial<InsertInvent
 export async function deleteInventoryItem(id: number) {
   const db = await getDb();
   if (!db) return false;
+  await db.delete(inventoryTransactions).where(eq(inventoryTransactions.itemId, id));
   await db.delete(inventoryItems).where(eq(inventoryItems.id, id));
   return true;
 }

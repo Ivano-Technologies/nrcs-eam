@@ -1,6 +1,10 @@
+/**
+ * Live sites tests are read-only (no create-site flow). Destructive site creation tests were removed
+ * to avoid polluting production; nothing to skip here.
+ */
 import { test, expect } from "@playwright/test";
 import { loginAsAdmin } from "./live-helpers";
-import { ensureTestSite, LIVE_E2E_SHARED_SITE_NAME } from "../helpers/liveTestData";
+import { resolveLiveTestSiteName } from "../helpers/liveTestData";
 
 test.describe.configure({ mode: "serial" });
 
@@ -26,11 +30,14 @@ test.describe("sites module (live)", () => {
     await expect(firstSiteCard).toContainText(/.+/);
   });
 
-  test("shared E2E site: reuse by name if present, otherwise create once", async ({ page }) => {
+  test("read-only: resolve a usable site name from existing NRCS sites (no create/delete)", async ({
+    page,
+  }) => {
     await loginAsAdmin(page);
-    await ensureTestSite(page, LIVE_E2E_SHARED_SITE_NAME);
+    const name = await resolveLiveTestSiteName(page);
+    expect(name.trim().length).toBeGreaterThan(0);
     await expect(
-      page.locator("[data-testid^='site-card-']").filter({ hasText: LIVE_E2E_SHARED_SITE_NAME })
+      page.locator("[data-testid^='site-card-']").filter({ hasText: name })
     ).toBeVisible({ timeout: 30_000 });
   });
 });
