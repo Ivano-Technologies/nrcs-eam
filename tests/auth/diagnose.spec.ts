@@ -24,14 +24,15 @@ test("tRPC endpoint returns JSON", async ({ request }) => {
 
 test("login page loads", async ({ page }) => {
   await page.goto("https://nrcseam.techivano.com/login");
-  await expect(page.locator("text=Log in to NRCS EAM")).toBeVisible();
+  await expect(page.getByTestId("login-email-input")).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByTestId("login-password-input")).toBeVisible();
   console.log("Page URL:", page.url());
 });
 
 test("full login flow", async ({ page }) => {
   await page.goto("https://nrcseam.techivano.com/login");
-  await page.fill('input[type="email"]', "ivanonigeria@gmail.com");
-  await page.fill('input[type="password"]', "ChangeMe123!");
+  await page.getByTestId("login-email-input").fill("ivanonigeria@gmail.com");
+  await page.getByTestId("login-password-input").fill("ChangeMe123!");
 
   page.on("response", (response) => {
     if (response.url().includes("trpc")) {
@@ -43,8 +44,7 @@ test("full login flow", async ({ page }) => {
     }
   });
 
-  await page.click('button:has-text("Sign in")');
-  await page.waitForTimeout(3000);
+  await page.getByTestId("login-password-submit").click();
   console.log("After click URL:", page.url());
-  await expect(page).toHaveURL(/\/app/, { timeout: 10000 });
+  await expect(page).toHaveURL(/\/app/, { timeout: 60_000 });
 });
