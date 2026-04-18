@@ -1,0 +1,481 @@
+import ExcelJS from "exceljs";
+import * as db from "./db";
+import {
+  REGISTER_STATUS_LABELS,
+  legacyStatusFromRegister,
+  type RegisterStatusKey,
+} from "./assetRegister";
+import type { AssetRegisterListParams } from "./db";
+
+const NRCS_TITLE = "NIGERIA RED CROSS SOCIETY - ASSET REGISTER";
+
+const HEADER_TITLES = [
+  "S/No",
+  "Item Type",
+  "Item Category",
+  "Sub-Item Category",
+  "Item Description",
+  "Asset Code",
+  "Serial / Product No.",
+  "Actual Unit Value (NGN)",
+  "Current Depreciated Value (NGN)",
+  "Method of Acquisition",
+  "Project Ref / Name",
+  "Year Acquired",
+  "New or Used",
+  "Current Status",
+  "Assigned To",
+  "Department",
+  "Current Location",
+  "Condition",
+  "Last Physical Check",
+  "Remarks",
+] as const;
+
+function sanitizeFilenamePart(s: string): string {
+  return s.replace(/[^a-zA-Z0-9_-]+/g, "_").slice(0, 80) || "Site";
+}
+
+function writeNRCSAssetRegisterHeader(sheet: ExcelJS.Worksheet) {
+  sheet.mergeCells(1, 1, 1, HEADER_TITLES.length);
+  const titleRow = sheet.getRow(1);
+  titleRow.getCell(1).value = NRCS_TITLE;
+  titleRow.getCell(1).font = { bold: true, size: 14 };
+  titleRow.getCell(1).alignment = { horizontal: "center" };
+
+  const headerRow = sheet.getRow(2);
+  HEADER_TITLES.forEach((h, i) => {
+    const c = headerRow.getCell(i + 1);
+    c.value = h;
+    c.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF1E3A8A" },
+    };
+    c.font = { color: { argb: "FFFFFFFF" }, bold: true };
+  });
+}
+
+function setNRCSColumnWidths(sheet: ExcelJS.Worksheet) {
+  HEADER_TITLES.forEach((_, i) => {
+    sheet.getColumn(i + 1).width = i === 4 ? 36 : i === 19 ? 28 : 14;
+  });
+}
+
+export async function generateNRCSAssetRegisterTemplateBuffer(): Promise<Buffer> {
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet("Asset Register", {
+    views: [{ state: "frozen", ySplit: 2 }],
+  });
+  writeNRCSAssetRegisterHeader(sheet);
+  setNRCSColumnWidths(sheet);
+  return Buffer.from(await workbook.xlsx.writeBuffer());
+}
+
+function registerStatusKeyFromLabel(label: string): RegisterStatusKey | null {
+  const t = label.trim().toLowerCase();
+  for (const [k, v] of Object.entries(REGISTER_STATUS_LABELS)) {
+    if (v.toLowerCase() === t) return k as RegisterStatusKey;
+  }
+  const underscored = t.replace(/\s+/g, "_");
+  if ((REGISTER_STATUS_LABELS as Record<string, string>)[underscored]) {
+    return underscored as RegisterStatusKey;
+  }
+  return null;
+}
+
+export async function buildNRCSAssetRegisterWorkbook(
+  params: Omit<AssetRegisterListParams, "limit" | "offset"> & { siteLabel?: string }
+): Promise<{ buffer: Buffer; filename: string }> {
+  const { rows } = await db.getAssetRegisterExportRows(params);
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet("Asset Register", {
+    views: [{ state: "frozen", ySplit: 2 }],
+  });
+
+  writeNRCSAssetRegisterHeader(sheet);
+
+  const currencyFmt = '"NGN" #,##0.00';
+  const dateFmt = "dd/mm/yyyy";
+
+  rows.forEach((row, idx) => {
+    const r = sheet.getRow(idx + 3);
+    const year = row.acquisitionDate
+      ? new Date(row.acquisitionDate).getFullYear()
+      : "";
+    const desc =
+      row.description && row.description.trim()
+        ? `${row.name} — ${row.description}`
+        : row.name;
+    const locationCell = [row.siteName, row.location].filter(Boolean).join(" / ");
+    const rsKey = row.registerStatus as RegisterStatusKey;
+    const statusLabel = REGISTER_STATUS_LABELS[rsKey] ?? row.registerStatus;
+
+    const assigned =
+      row.assignedToName?.trim() ||
+      row.assignedUserName?.trim() ||
+      "";
+
+    r.getCell(1).value = idx + 1;
+    r.getCell(2).value = row.itemType === "inventory" ? "Inventory" : "Asset";
+    r.getCell(3).value = row.categoryName ?? "";
+    r.getCell(4).value = row.subCategory ?? "";
+    r.getCell(5).value = desc;
+    r.getCell(6).value = row.assetTag;
+    r.getCell(7).value = row.serialNumber ?? "";
+
+    const unitVal = row.acquisitionCost != null ? Number(row.acquisitionCost) : null;
+    const depVal =
+      row.currentDepreciatedValue != null
+        ? Number(row.currentDepreciatedValue)
+        : row.currentValue != null
+          ? Number(row.currentValue)
+          : null;
+
+    r.getCell(8).value = unitVal;
+    r.getCell(8).numFmt = currencyFmt;
+    r.getCell(9).value = depVal;
+    r.getCell(9).numFmt = currencyFmt;
+
+    r.getCell(10).value = row.acquisitionMethod ?? "";
+    r.getCell(11).value = row.projectRef ?? "";
+    r.getCell(12).value = year === "" ? "" : year;
+    r.getCell(13).value = row.acquisitionCondition ?? "";
+    r.getCell(14).value = statusLabel;
+    r.getCell(15).value = assigned;
+    r.getCell(16).value = row.department ?? "";
+    r.getCell(17).value = locationCell;
+    r.getCell(18).value = row.physicalCondition ?? "";
+
+    const lastCheck = row.lastCheckedAt ? new Date(row.lastCheckedAt) : null;
+    r.getCell(19).value = lastCheck ? lastCheck : "";
+    if (lastCheck) {
+      r.getCell(19).numFmt = dateFmt;
+    }
+
+    r.getCell(20).value = row.notes ?? "";
+
+    [8, 9].forEach((col) => {
+      const cell = r.getCell(col);
+      if (cell.value === "" || cell.value === null) cell.numFmt = currencyFmt;
+    });
+  });
+
+  setNRCSColumnWidths(sheet);
+
+  const site = sanitizeFilenamePart(params.siteLabel ?? "All_Sites");
+  const d = new Date();
+  const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const filename = `NRCS_Asset_Register_${site}_${dateStr}.xlsx`;
+  const buffer = Buffer.from(await workbook.xlsx.writeBuffer());
+  return { buffer, filename };
+}
+
+export type NRCSImportPreviewRow = {
+  sheetRow: number;
+  errors: string[];
+  payload: {
+    assetTag: string;
+    name: string;
+    description?: string;
+    categoryId: number;
+    siteId: number;
+    itemType: "asset" | "inventory";
+    subCategory?: string;
+    serialNumber?: string;
+    acquisitionCost?: string;
+    currentDepreciatedValue?: number;
+    currentValue?: string;
+    acquisitionMethod?: string;
+    projectRef?: string;
+    acquisitionDate?: Date;
+    acquisitionCondition?: "New" | "Used";
+    registerStatus: RegisterStatusKey;
+    assignedToName?: string;
+    department?: string;
+    location?: string;
+    physicalCondition?: "Good" | "Fair" | "Damaged" | "Beyond Repair";
+    lastCheckedAt?: Date;
+    notes?: string;
+  } | null;
+};
+
+function normHeader(v: unknown): string {
+  return String(v ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
+function findHeaderMap(
+  worksheet: ExcelJS.Worksheet
+): { headerRow: number; map: Record<string, number> } | null {
+  type Best = { headerRow: number; columnMap: Record<string, number>; score: number };
+  let best: Best | null = null;
+  const maxRow = Math.min(worksheet.actualRowCount || 30, 30);
+  for (let rowNumber = 1; rowNumber <= maxRow; rowNumber++) {
+    const row = worksheet.getRow(rowNumber);
+    const columnMap: Record<string, number> = {};
+    row.eachCell({ includeEmpty: false }, (cell, colNumber) => {
+      const key = normHeader(cell.value);
+      if (!key) return;
+      columnMap[key] = colNumber;
+    });
+    const keys = [
+      "asset code",
+      "item description",
+      "item category",
+      "current location",
+    ];
+    let score = 0;
+    for (const k of keys) {
+      if (columnMap[k]) score++;
+    }
+    if (score >= 2 && (!best || score > best.score)) {
+      best = { headerRow: rowNumber, columnMap, score };
+    }
+  }
+  if (!best) return null;
+  return { headerRow: best.headerRow, map: best.columnMap };
+}
+
+function cellAt(
+  row: ExcelJS.Row,
+  map: Record<string, number>,
+  ...aliases: string[]
+): ExcelJS.Cell | undefined {
+  for (const a of aliases) {
+    const col = map[normHeader(a)];
+    if (col) return row.getCell(col);
+  }
+  return undefined;
+}
+
+function strCell(c: ExcelJS.Cell | undefined): string {
+  if (!c) return "";
+  const v = c.value;
+  if (v === null || v === undefined) return "";
+  if (typeof v === "object" && v !== null && "text" in v && typeof (v as { text: string }).text === "string") {
+    return (v as { text: string }).text;
+  }
+  if (typeof v === "number") return String(v);
+  if (v instanceof Date) return v.toISOString();
+  return String(v).trim();
+}
+
+function parseDateFlexible(s: string): Date | undefined {
+  if (!s.trim()) return undefined;
+  const d = new Date(s);
+  if (!Number.isNaN(d.getTime())) return d;
+  const m = s.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m) {
+    const dd = Number(m[1]);
+    const mm = Number(m[2]) - 1;
+    const yyyy = Number(m[3]);
+    return new Date(Date.UTC(yyyy, mm, dd));
+  }
+  return undefined;
+}
+
+export async function previewNRCSAssetImport(fileBuffer: Buffer): Promise<{
+  headerRow: number;
+  rows: NRCSImportPreviewRow[];
+}> {
+  const workbook = new ExcelJS.Workbook();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await workbook.xlsx.load(fileBuffer as any);
+  const worksheet = workbook.worksheets[0];
+  if (!worksheet) {
+    return { headerRow: 0, rows: [] };
+  }
+  const found = findHeaderMap(worksheet);
+  if (!found) {
+    return { headerRow: 0, rows: [] };
+  }
+  const { headerRow, map } = found;
+
+  const categories = await db.getAllAssetCategories();
+  const sites = await db.getAllSites();
+
+  const byCatName = (name: string) =>
+    categories.find((c) => c.name.trim().toLowerCase() === name.trim().toLowerCase());
+  const bySiteName = (name: string) =>
+    sites.find((s) => s.name.trim().toLowerCase() === name.trim().toLowerCase());
+
+  const out: NRCSImportPreviewRow[] = [];
+
+  worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+    if (rowNumber <= headerRow) return;
+    const errors: string[] = [];
+
+    const itemTypeRaw = strCell(cellAt(row, map, "item type")).toLowerCase();
+    const itemType: "asset" | "inventory" =
+      itemTypeRaw.includes("invent") ? "inventory" : "asset";
+
+    const categoryName = strCell(cellAt(row, map, "item category"));
+    const subCategory = strCell(cellAt(row, map, "sub-item category", "sub item category"));
+    const description = strCell(cellAt(row, map, "item description"));
+    const assetTag = strCell(cellAt(row, map, "asset code"));
+    const serialNumber = strCell(cellAt(row, map, "serial / product no.", "serial"));
+    const unitVal = strCell(cellAt(row, map, "actual unit value (ngn)", "actual unit value"));
+    const depVal = strCell(
+      cellAt(row, map, "current depreciated value (ngn)", "current depreciated value")
+    );
+    const acquisitionMethod = strCell(cellAt(row, map, "method of acquisition"));
+    const projectRef = strCell(cellAt(row, map, "project ref / name", "project ref"));
+    const yearRaw = strCell(cellAt(row, map, "year acquired"));
+    const newOrUsed = strCell(cellAt(row, map, "new or used")).toLowerCase();
+    const statusLabel = strCell(cellAt(row, map, "current status"));
+    const assignedToName = strCell(cellAt(row, map, "assigned to"));
+    const department = strCell(cellAt(row, map, "department"));
+    const locationName = strCell(cellAt(row, map, "current location"));
+    const condition = strCell(cellAt(row, map, "condition"));
+    const lastCheckRaw = strCell(cellAt(row, map, "last physical check"));
+    const remarks = strCell(cellAt(row, map, "remarks"));
+
+    if (!assetTag && !description) {
+      return;
+    }
+
+    if (!assetTag) errors.push("Asset Code is required");
+    if (!description) errors.push("Item Description is required");
+
+    const cat = categoryName ? byCatName(categoryName) : undefined;
+    if (!cat) errors.push(`Unknown Item Category: "${categoryName || ""}"`);
+
+    const site = locationName ? bySiteName(locationName) : undefined;
+    if (!site) errors.push(`Unknown Current Location (site): "${locationName || ""}"`);
+
+    let registerStatus: RegisterStatusKey = "in_use";
+    if (statusLabel) {
+      const k = registerStatusKeyFromLabel(statusLabel);
+      if (k) registerStatus = k;
+      else errors.push(`Unknown Current Status: "${statusLabel}"`);
+    }
+
+    let acquisitionCondition: "New" | "Used" | undefined;
+    if (newOrUsed === "new") acquisitionCondition = "New";
+    else if (newOrUsed === "used") acquisitionCondition = "Used";
+    else if (newOrUsed) errors.push(`New or Used must be New or Used (got "${newOrUsed}")`);
+
+    let physicalCondition: "Good" | "Fair" | "Damaged" | "Beyond Repair" | undefined;
+    const c = condition.toLowerCase();
+    if (["good", "fair", "damaged", "beyond repair"].includes(c)) {
+      physicalCondition =
+        c === "beyond repair"
+          ? "Beyond Repair"
+          : ((c.charAt(0).toUpperCase() + c.slice(1)) as "Good" | "Fair" | "Damaged");
+    } else if (condition) {
+      errors.push(`Unknown Condition: "${condition}"`);
+    }
+
+    let acquisitionDate: Date | undefined;
+    if (yearRaw) {
+      const y = parseInt(yearRaw, 10);
+      if (!Number.isNaN(y) && y > 1800 && y < 2200) {
+        acquisitionDate = new Date(Date.UTC(y, 5, 15));
+      } else {
+        errors.push(`Invalid Year Acquired: "${yearRaw}"`);
+      }
+    }
+
+    const lastCheckedAt = parseDateFlexible(lastCheckRaw);
+
+    let currentDepreciatedValue: number | undefined;
+    if (depVal) {
+      const n = Number(depVal.replace(/,/g, ""));
+      if (!Number.isNaN(n)) currentDepreciatedValue = n;
+    }
+
+    const payload =
+      errors.length === 0 && cat && site && assetTag && description
+        ? {
+            assetTag: assetTag.toUpperCase(),
+            name: description.slice(0, 255),
+            description: description.length > 255 ? description : undefined,
+            categoryId: cat.id,
+            siteId: site.id,
+            itemType,
+            subCategory: subCategory || undefined,
+            serialNumber: serialNumber || undefined,
+            acquisitionCost: unitVal || undefined,
+            currentDepreciatedValue,
+            currentValue: depVal || undefined,
+            acquisitionMethod: acquisitionMethod || undefined,
+            projectRef: projectRef || undefined,
+            acquisitionDate,
+            acquisitionCondition,
+            registerStatus,
+            assignedToName: assignedToName || undefined,
+            department: department || undefined,
+            location: undefined,
+            physicalCondition,
+            lastCheckedAt,
+            notes: remarks || undefined,
+          }
+        : null;
+
+    out.push({ sheetRow: rowNumber, errors, payload });
+  });
+
+  return { headerRow, rows: out };
+}
+
+export async function confirmNRCSAssetImport(
+  rows: NonNullable<NRCSImportPreviewRow["payload"]>[]
+): Promise<{
+  imported: number;
+  skipped: number;
+  errors: Array<{ row: number; error: string }>;
+}> {
+  let imported = 0;
+  let skipped = 0;
+  const errors: Array<{ row: number; error: string }> = [];
+
+  for (let i = 0; i < rows.length; i++) {
+    const p = rows[i]!;
+    try {
+      const existing = await db.getAssetByTag(p.assetTag);
+      if (existing) {
+        skipped++;
+        errors.push({ row: i + 1, error: `Duplicate asset code ${p.assetTag}` });
+        continue;
+      }
+      const status = legacyStatusFromRegister(p.registerStatus);
+      await db.createAsset({
+        assetTag: p.assetTag,
+        name: p.name,
+        description: p.description,
+        categoryId: p.categoryId,
+        siteId: p.siteId,
+        status,
+        registerStatus: p.registerStatus,
+        itemType: p.itemType,
+        subCategory: p.subCategory,
+        serialNumber: p.serialNumber,
+        acquisitionCost: p.acquisitionCost,
+        currentValue: p.currentValue,
+        currentDepreciatedValue: p.currentDepreciatedValue,
+        acquisitionMethod: p.acquisitionMethod,
+        projectRef: p.projectRef,
+        acquisitionDate: p.acquisitionDate,
+        acquisitionCondition: p.acquisitionCondition,
+        assignedToName: p.assignedToName,
+        department: p.department,
+        location: p.location,
+        physicalCondition: p.physicalCondition,
+        lastCheckedAt: p.lastCheckedAt,
+        notes: p.notes,
+      });
+      imported++;
+    } catch (e: unknown) {
+      skipped++;
+      errors.push({
+        row: i + 1,
+        error: e instanceof Error ? e.message : "Unknown error",
+      });
+    }
+  }
+
+  return { imported, skipped, errors };
+}

@@ -1,5 +1,6 @@
 import ExcelJS from 'exceljs';
 import * as db from './db';
+import { generateNRCSAssetRegisterTemplateBuffer } from './nrcsAssetExcel';
 
 /**
  * Bulk Import/Export System for Assets and other entities
@@ -265,54 +266,11 @@ export async function exportInventory(): Promise<Buffer> {
  * Generate import template
  */
 export async function generateImportTemplate(entity: 'assets' | 'workOrders' | 'inventory'): Promise<Buffer> {
-  const workbook = new ExcelJS.Workbook();
-  
-  switch (entity) {
-    case 'assets':
-      const assetSheet = workbook.addWorksheet('Assets');
-      assetSheet.columns = [
-        { header: 'Asset Tag*', key: 'assetTag', width: 15 },
-        { header: 'Name*', key: 'name', width: 30 },
-        { header: 'Description', key: 'description', width: 40 },
-        { header: 'Category ID*', key: 'categoryId', width: 12 },
-        { header: 'Site ID*', key: 'siteId', width: 10 },
-        { header: 'Status', key: 'status', width: 15 },
-        { header: 'Manufacturer', key: 'manufacturer', width: 20 },
-        { header: 'Model', key: 'model', width: 20 },
-        { header: 'Serial Number', key: 'serialNumber', width: 20 },
-        { header: 'Acquisition Date (YYYY-MM-DD)', key: 'acquisitionDate', width: 25 },
-        { header: 'Acquisition Cost', key: 'acquisitionCost', width: 15 },
-        { header: 'Current Value', key: 'currentValue', width: 15 },
-        { header: 'Depreciation Rate (%)', key: 'depreciationRate', width: 18 },
-        { header: 'Warranty Expiry (YYYY-MM-DD)', key: 'warrantyExpiry', width: 25 },
-        { header: 'Location', key: 'location', width: 25 },
-        { header: 'Notes', key: 'notes', width: 40 },
-      ];
-      
-      // Add sample row
-      assetSheet.addRow({
-        assetTag: 'SAMPLE-001',
-        name: 'Sample Asset',
-        description: 'This is a sample description',
-        categoryId: 1,
-        siteId: 1,
-        status: 'operational',
-        manufacturer: 'Sample Manufacturer',
-        model: 'Model X',
-        serialNumber: 'SN123456',
-        acquisitionDate: '2024-01-01',
-        acquisitionCost: '10000',
-        currentValue: '8000',
-        depreciationRate: '10',
-        warrantyExpiry: '2026-01-01',
-        location: 'Warehouse A',
-        notes: 'Sample notes',
-      });
-      break;
-      
-    // Add more templates as needed
+  if (entity === "assets") {
+    return await generateNRCSAssetRegisterTemplateBuffer();
   }
-  
+  const workbook = new ExcelJS.Workbook();
+  workbook.addWorksheet(entity);
   const buffer = await workbook.xlsx.writeBuffer();
   return Buffer.from(buffer);
 }

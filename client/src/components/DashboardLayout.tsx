@@ -33,7 +33,7 @@ import { ThemeToggle } from "./ui/ThemeToggle";
 const allMenuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: appPath("/"), adminOnly: false, sortOrder: 0 },
   { icon: Settings, label: "Dashboard Settings", path: appPath("/dashboard-settings"), adminOnly: false },
-  { icon: Package, label: "Assets", path: appPath("/assets"), adminOnly: false },
+  { icon: Package, label: "Asset Register", path: appPath("/assets"), adminOnly: false },
   { icon: Map, label: "Asset Map", path: appPath("/asset-map"), adminOnly: false },
   { icon: Scan, label: "Asset Scanner", path: appPath("/scanner"), adminOnly: false },
   { icon: FileText, label: "Compliance", path: appPath("/compliance"), adminOnly: false },

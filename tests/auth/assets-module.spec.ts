@@ -9,14 +9,14 @@ test.describe("assets module (live)", () => {
 
     await loginAsAdmin(page);
     await page.goto("/app/assets");
-    await expect(page.getByRole("heading", { name: /^Assets$/ })).toBeVisible({
+    await expect(page.getByRole("heading", { name: /Asset Register/i })).toBeVisible({
       timeout: 30_000,
     });
     await expect(page.getByTestId("asset-list-table")).toBeVisible();
 
     await page.getByTestId("asset-create-btn").click();
-    await page.getByLabel(/Asset Tag \*/i).fill(tag);
-    await page.getByLabel(/Asset Name \*/i).fill(name);
+    await page.getByLabel(/Asset Code/i).fill(tag);
+    await page.getByLabel(/Item Description \*/i).fill(name);
 
     await page.getByTestId("asset-form-category").click();
     await page.locator("[role='option']").first().click();
@@ -32,11 +32,7 @@ test.describe("assets module (live)", () => {
     await page.getByTestId("asset-search-input").fill(tag);
     await expect(page.getByText(tag)).toBeVisible({ timeout: 30_000 });
 
-    await page
-      .locator('a[href*="/app/assets/"]')
-      .filter({ hasText: tag })
-      .first()
-      .click();
+    await page.locator("tr").filter({ hasText: tag }).first().click();
 
     await expect(page).toHaveURL(/\/app\/assets\/\d+/, { timeout: 30_000 });
     await expect(

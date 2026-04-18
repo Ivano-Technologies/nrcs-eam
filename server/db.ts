@@ -1,4 +1,18 @@
-import { eq, and, desc, asc, gte, lte, sql, or, like, isNotNull, isNull } from "drizzle-orm";
+import {
+  eq,
+  and,
+  desc,
+  asc,
+  gte,
+  lte,
+  sql,
+  or,
+  like,
+  isNotNull,
+  isNull,
+  ilike,
+  getTableColumns,
+} from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import {
@@ -295,6 +309,140 @@ export async function searchAssets(searchTerm: string) {
       like(assets.serialNumber, `%${searchTerm}%`)
     ))
     .orderBy(desc(assets.createdAt));
+}
+
+const ASSET_REGISTER_MAX_LIMIT = 50_000;
+
+export type AssetRegisterListParams = {
+  siteId?: number;
+  categoryId?: number;
+  registerStatus?: string;
+  itemType?: string;
+  search?: string;
+  sortBy?: string;
+  sortDir?: "asc" | "desc";
+  limit?: number;
+  offset?: number;
+};
+
+function assetRegisterWhere(params: AssetRegisterListParams) {
+  const conditions = [];
+  if (params.siteId) conditions.push(eq(assets.siteId, params.siteId));
+  if (params.categoryId) conditions.push(eq(assets.categoryId, params.categoryId));
+  if (params.registerStatus && params.registerStatus !== "all") {
+    conditions.push(eq(assets.registerStatus, params.registerStatus));
+  }
+  if (params.itemType && params.itemType !== "all") {
+    conditions.push(eq(assets.itemType, params.itemType));
+  }
+  const q = params.search?.trim();
+  if (q) {
+    const term = `%${q}%`;
+    conditions.push(
+      or(
+        ilike(assets.name, term),
+        ilike(assets.description, term),
+        ilike(assets.assetTag, term),
+        ilike(assets.serialNumber, term)
+      )!
+    );
+  }
+  return conditions.length > 0 ? and(...conditions) : undefined;
+}
+
+function assetRegisterOrderBy(sortBy: string | undefined, sortDir: "asc" | "desc" | undefined) {
+  const dir = sortDir === "asc" ? asc : desc;
+  switch (sortBy) {
+    case "itemType":
+      return [dir(assets.itemType)];
+    case "categoryName":
+      return [dir(assetCategories.name)];
+    case "subCategory":
+      return [dir(assets.subCategory)];
+    case "name":
+      return [dir(assets.name)];
+    case "assetTag":
+      return [dir(assets.assetTag)];
+    case "serialNumber":
+      return [dir(assets.serialNumber)];
+    case "acquisitionCost":
+      return [dir(assets.acquisitionCost)];
+    case "currentDepreciatedValue":
+      return [dir(sql`coalesce(${assets.currentDepreciatedValue}, ${assets.currentValue})`)];
+    case "acquisitionMethod":
+      return [dir(assets.acquisitionMethod)];
+    case "projectRef":
+      return [dir(assets.projectRef)];
+    case "yearAcquired":
+      return [dir(sql`extract(year from ${assets.acquisitionDate})`)];
+    case "acquisitionCondition":
+      return [dir(assets.acquisitionCondition)];
+    case "registerStatus":
+      return [dir(assets.registerStatus)];
+    case "assignedToName":
+      return [dir(assets.assignedToName)];
+    case "department":
+      return [dir(assets.department)];
+    case "siteName":
+      return [dir(sites.name)];
+    case "physicalCondition":
+      return [dir(assets.physicalCondition)];
+    case "lastCheckedAt":
+      return [dir(assets.lastCheckedAt)];
+    case "notes":
+      return [dir(assets.notes)];
+    default:
+      return [dir(assets.createdAt)];
+  }
+}
+
+export async function getAssetRegisterList(params: AssetRegisterListParams) {
+  const database = await getDb();
+  if (!database) return { rows: [], total: 0 };
+
+  const whereClause = assetRegisterWhere(params);
+  const countRows = await database
+    .select({ count: sql<number>`count(*)::int` })
+    .from(assets)
+    .where(whereClause);
+  const total = Number(countRows[0]?.count ?? 0);
+
+  const limit = Math.min(
+    params.limit ?? 50,
+    ASSET_REGISTER_MAX_LIMIT
+  );
+  const offset = params.offset ?? 0;
+
+  const orderBy = assetRegisterOrderBy(params.sortBy, params.sortDir ?? "desc");
+
+  const rows = await database
+    .select({
+      ...getTableColumns(assets),
+      siteName: sites.name,
+      categoryName: assetCategories.name,
+      assignedUserName: users.name,
+    })
+    .from(assets)
+    .leftJoin(sites, eq(assets.siteId, sites.id))
+    .leftJoin(assetCategories, eq(assets.categoryId, assetCategories.id))
+    .leftJoin(users, eq(assets.assignedTo, users.id))
+    .where(whereClause)
+    .orderBy(...orderBy)
+    .limit(limit)
+    .offset(offset);
+
+  return { rows, total };
+}
+
+/** Filtered list for Excel export (no pagination). */
+export async function getAssetRegisterExportRows(params: Omit<AssetRegisterListParams, "limit" | "offset">) {
+  return getAssetRegisterList({
+    ...params,
+    limit: ASSET_REGISTER_MAX_LIMIT,
+    offset: 0,
+    sortBy: params.sortBy ?? "assetTag",
+    sortDir: params.sortDir ?? "asc",
+  });
 }
 
 // ============= WORK ORDERS =============
