@@ -219,13 +219,15 @@ export default function AssetDetail() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">{asset.name}</h1>
+            <h1 className="text-3xl font-bold tracking-tight" data-testid="asset-detail-title">
+              {asset.name}
+            </h1>
             <p className="text-muted-foreground mt-1">{asset.assetTag}</p>
           </div>
           <Badge className={getStatusColor(asset.status)}>{asset.status}</Badge>
         </div>
         {canEdit && (
-          <Button onClick={handleEdit}>
+          <Button data-testid="asset-detail-edit-btn" onClick={handleEdit}>
             <Edit className="mr-2 h-4 w-4" />
             Edit Asset
           </Button>
@@ -647,7 +649,7 @@ export default function AssetDetail() {
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleUpdate} disabled={updateAssetMutation.isPending}>
+            <Button data-testid="asset-detail-save-btn" onClick={handleUpdate} disabled={updateAssetMutation.isPending}>
               {updateAssetMutation.isPending ? "Updating..." : "Update Asset"}
             </Button>
           </DialogFooter>

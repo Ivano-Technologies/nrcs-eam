@@ -465,7 +465,7 @@ export default function Assets() {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredAssets.map((asset) => (
             <div key={asset.id} className="relative">
-              <Link href={appPath(`/assets/${asset.id}`)}>
+              <Link href={appPath(`/assets/${asset.id}`)} data-testid={`asset-card-${asset.id}`}>
                 <Card className="hover:shadow-lg transition-shadow cursor-pointer">
                   <CardHeader>
                     <div className="flex items-start justify-between">

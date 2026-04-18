@@ -63,7 +63,9 @@ export default function PendingUsers() {
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">User Access Requests</h1>
+        <h1 className="text-3xl font-bold" data-testid="pending-users-heading">
+          User Access Requests
+        </h1>
         <p className="text-gray-600 mt-2">Review and approve user signup requests</p>
       </div>
 

@@ -112,7 +112,7 @@ export default function WorkOrders() {
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button data-testid="work-order-create-btn">
               <Plus className="mr-2 h-4 w-4" />
               Create Work Order
             </Button>
@@ -158,7 +158,7 @@ export default function WorkOrders() {
                 <div className="space-y-2">
                   <Label htmlFor="asset">Asset *</Label>
                   <Select value={newWorkOrder.assetId} onValueChange={(value) => setNewWorkOrder({ ...newWorkOrder, assetId: value })}>
-                    <SelectTrigger>
+                    <SelectTrigger data-testid="work-order-form-asset">
                       <SelectValue placeholder="Select asset" />
                     </SelectTrigger>
                     <SelectContent>
@@ -173,7 +173,7 @@ export default function WorkOrders() {
                 <div className="space-y-2">
                   <Label htmlFor="site">Site *</Label>
                   <Select value={newWorkOrder.siteId} onValueChange={(value) => setNewWorkOrder({ ...newWorkOrder, siteId: value })}>
-                    <SelectTrigger>
+                    <SelectTrigger data-testid="work-order-form-site">
                       <SelectValue placeholder="Select site" />
                     </SelectTrigger>
                     <SelectContent>
@@ -238,7 +238,11 @@ export default function WorkOrders() {
               <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleCreateWorkOrder} disabled={createWorkOrderMutation.isPending}>
+              <Button
+                data-testid="work-order-form-submit"
+                onClick={handleCreateWorkOrder}
+                disabled={createWorkOrderMutation.isPending}
+              >
                 {createWorkOrderMutation.isPending ? "Creating..." : "Create Work Order"}
               </Button>
             </DialogFooter>
@@ -275,9 +279,9 @@ export default function WorkOrders() {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
       ) : workOrders && workOrders.length > 0 ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3" data-testid="work-order-list">
           {workOrders.map((wo) => (
-            <Link key={wo.id} href={appPath(`/work-orders/${wo.id}`)}>
+            <Link key={wo.id} href={appPath(`/work-orders/${wo.id}`)} data-testid={`work-order-card-${wo.id}`}>
               <Card className="hover:shadow-lg transition-shadow cursor-pointer">
                 <CardHeader>
                   <div className="flex items-start justify-between">

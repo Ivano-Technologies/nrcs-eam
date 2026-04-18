@@ -234,7 +234,10 @@ function DashboardLayoutContent({
                 />
                 {sidebarWidth > PRESET_WIDTHS.narrow && (
                   <div className="flex flex-col min-w-0">
-                    <span className="font-bold text-[18px] text-sidebar-foreground truncate">
+                    <span
+                      className="font-bold text-[18px] text-sidebar-foreground truncate"
+                      data-testid="sidebar-org-name"
+                    >
                       Nigerian Red Cross Society
                     </span>
                     <span className="text-[16px] text-sidebar-foreground/70 truncate">
@@ -282,7 +285,7 @@ function DashboardLayoutContent({
                       isActive={isActive}
                       data-testid={sidebarNavTestId(item.path)}
                       onClick={() => setLocation(item.path)}
-                      tooltip={item.label}
+                      tooltip={sidebarWidth <= PRESET_WIDTHS.narrow ? item.label : undefined}
                       className={`h-10 transition-all font-normal ${sidebarWidth === PRESET_WIDTHS.narrow ? 'justify-center' : ''}`}
                     >
                       <item.icon

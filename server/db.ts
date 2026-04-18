@@ -14,6 +14,7 @@ import {
 } from "../drizzle/schema";
 import { getPostgresJsSslOption } from "../shared/mysqlSsl";
 import { ENV } from './_core/env';
+import type { InventoryTransaction } from "../drizzle/schema";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 let _sql: ReturnType<typeof postgres> | null = null;
@@ -409,16 +410,23 @@ export async function getAllInventoryItems(siteId?: number) {
   return await db.select().from(inventoryItems).orderBy(asc(inventoryItems.name));
 }
 
+/** Items where on-hand quantity is below the configured minimum (includes zero stock). */
 export async function getLowStockItems(siteId?: number) {
   const db = await getDb();
   if (!db) return [];
-  
-  const conditions = [sql`${inventoryItems.currentStock} <= ${inventoryItems.reorderPoint}`];
+
+  const conditions = [sql`${inventoryItems.currentStock} < ${inventoryItems.minStockLevel}`];
   if (siteId) conditions.push(eq(inventoryItems.siteId, siteId));
-  
+
   return await db.select().from(inventoryItems)
     .where(and(...conditions))
     .orderBy(asc(inventoryItems.currentStock));
+}
+
+export async function getInventoryItemById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  return await db.select().from(inventoryItems).where(eq(inventoryItems.id, id)).limit(1).then((r) => r[0] ?? null);
 }
 
 export async function updateInventoryItem(id: number, data: Partial<InsertInventoryItem>) {
@@ -457,6 +465,103 @@ export async function getInventoryTransactions(itemId: number) {
   return await db.select().from(inventoryTransactions)
     .where(eq(inventoryTransactions.itemId, itemId))
     .orderBy(desc(inventoryTransactions.transactionDate));
+}
+
+export type InventoryMovementRow = {
+  id: number;
+  itemId: number;
+  itemCode: string;
+  itemName: string;
+  siteId: number;
+  type: string;
+  quantity: number;
+  transactionDate: Date;
+  notes: string | null;
+  performedById: number;
+  performedByName: string | null;
+  performedByEmail: string | null;
+  balanceAfter: number;
+};
+
+/**
+ * All inventory transactions with item + performer info and running balance per item (chronological replay from 0).
+ */
+export async function getInventoryMovements(filters: {
+  siteId?: number;
+  itemId?: number;
+  startDate?: Date;
+  endDate?: Date;
+}): Promise<InventoryMovementRow[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  const items = await getAllInventoryItems(filters.siteId);
+  const itemById = Object.fromEntries(items.map((i) => [i.id, i]));
+  const users = await getAllUsers();
+  const userById = Object.fromEntries(users.map((u) => [u.id, u]));
+
+  const conds = [];
+  if (filters.itemId) conds.push(eq(inventoryTransactions.itemId, filters.itemId));
+  if (filters.startDate) conds.push(gte(inventoryTransactions.transactionDate, filters.startDate));
+  if (filters.endDate) conds.push(lte(inventoryTransactions.transactionDate, filters.endDate));
+
+  const allTx = conds.length
+    ? await db
+        .select()
+        .from(inventoryTransactions)
+        .where(and(...conds))
+        .orderBy(asc(inventoryTransactions.transactionDate), asc(inventoryTransactions.id))
+    : await db
+        .select()
+        .from(inventoryTransactions)
+        .orderBy(asc(inventoryTransactions.transactionDate), asc(inventoryTransactions.id));
+
+  const relevant = allTx.filter((t) => itemById[t.itemId]);
+  const byItem = new Map<number, InventoryTransaction[]>();
+  for (const t of relevant) {
+    const list = byItem.get(t.itemId) ?? [];
+    list.push(t);
+    byItem.set(t.itemId, list);
+  }
+
+  const balanceByTxId = new Map<number, number>();
+  for (const [, list] of Array.from(byItem.entries())) {
+    let bal = 0;
+    for (const t of list) {
+      if (t.type === "in") bal += t.quantity;
+      else if (t.type === "out") bal -= t.quantity;
+      else if (t.type === "adjustment") bal = t.quantity;
+      else if (t.type === "transfer") {
+        /* stock not updated in addTransaction for transfer */
+      }
+      balanceByTxId.set(t.id, bal);
+    }
+  }
+
+  const rows: InventoryMovementRow[] = relevant
+    .slice()
+    .sort((a, b) => b.transactionDate.getTime() - a.transactionDate.getTime() || b.id - a.id)
+    .map((t) => {
+      const item = itemById[t.itemId];
+      const u = userById[t.performedBy];
+      return {
+        id: t.id,
+        itemId: t.itemId,
+        itemCode: item?.itemCode ?? "",
+        itemName: item?.name ?? "",
+        siteId: item?.siteId ?? 0,
+        type: t.type,
+        quantity: t.quantity,
+        transactionDate: t.transactionDate,
+        notes: t.notes ?? null,
+        performedById: t.performedBy,
+        performedByName: u?.name ?? null,
+        performedByEmail: u?.email ?? null,
+        balanceAfter: balanceByTxId.get(t.id) ?? 0,
+      };
+    });
+
+  return rows;
 }
 
 // ============= VENDORS =============
@@ -616,7 +721,7 @@ export async function getDashboardStats() {
   const [pendingWorkOrders] = await db.select({ count: sql<number>`count(*)` }).from(workOrders).where(eq(workOrders.status, 'pending'));
   const [inProgressWorkOrders] = await db.select({ count: sql<number>`count(*)` }).from(workOrders).where(eq(workOrders.status, 'in_progress'));
   const [lowStockCount] = await db.select({ count: sql<number>`count(*)` }).from(inventoryItems)
-    .where(sql`${inventoryItems.currentStock} <= ${inventoryItems.reorderPoint}`);
+    .where(sql`${inventoryItems.currentStock} < ${inventoryItems.minStockLevel}`);
   
   return {
     totalAssets: Number(totalAssets?.count ?? 0),

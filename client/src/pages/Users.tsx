@@ -162,7 +162,7 @@ export default function Users() {
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {users?.map((u) => (
-          <Card key={u.id}>
+          <Card key={u.id} data-testid={`user-card-${u.id}`}>
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2 flex-1">
@@ -246,7 +246,7 @@ export default function Users() {
                       onValueChange={(newRole) => handleRoleChange(u.id, u.name || 'User', u.role, newRole)}
                       disabled={u.id === user?.id} // Prevent changing own role
                     >
-                      <SelectTrigger className="w-full">
+                      <SelectTrigger className="w-full" data-testid={`user-role-select-${u.id}`}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -287,7 +287,7 @@ export default function Users() {
             >
               Cancel
             </Button>
-            <Button onClick={confirmRoleChange} disabled={updateRoleMutation.isPending}>
+            <Button data-testid="user-role-confirm-btn" onClick={confirmRoleChange} disabled={updateRoleMutation.isPending}>
               {updateRoleMutation.isPending ? "Updating..." : "Confirm"}
             </Button>
           </DialogFooter>

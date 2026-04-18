@@ -627,7 +627,93 @@ export const appRouter = router({
       }))
       .mutation(async ({ input }) => {
         const { id, ...data } = input;
-        return await db.updateInventoryItem(id, data);
+        const before = await db.getInventoryItemById(id);
+        if (!before) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Inventory item not found" });
+        }
+        const updated = await db.updateInventoryItem(id, data);
+        if (updated) {
+          await notificationHelper.notifyManagersWhenInventoryBecomesLow(
+            { currentStock: before.currentStock, minStockLevel: before.minStockLevel },
+            updated
+          );
+        }
+        return updated;
+      }),
+
+    movements: protectedProcedure
+      .input(
+        z
+          .object({
+            siteId: z.number().optional(),
+            itemId: z.number().optional(),
+            startDate: z.coerce.date().optional(),
+            endDate: z.coerce.date().optional(),
+          })
+          .optional()
+      )
+      .query(async ({ input }) => {
+        return await db.getInventoryMovements(input ?? {});
+      }),
+
+    submitStockCount: protectedProcedure
+      .input(
+        z.object({
+          siteId: z.number(),
+          lines: z.array(
+            z.object({
+              itemId: z.number(),
+              countedQty: z.number().int().min(0),
+            })
+          ),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const discrepancies: Array<{
+          itemId: number;
+          itemCode: string;
+          itemName: string;
+          expected: number;
+          counted: number;
+          variance: number;
+        }> = [];
+
+        for (const line of input.lines) {
+          const before = await db.getInventoryItemById(line.itemId);
+          if (!before || before.siteId !== input.siteId) continue;
+
+          const expected = before.currentStock;
+          const counted = line.countedQty;
+          const variance = counted - expected;
+          if (variance === 0) continue;
+
+          await db.createInventoryTransaction({
+            itemId: line.itemId,
+            type: "adjustment",
+            quantity: counted,
+            performedBy: ctx.user.id,
+            notes: `Stock count: expected ${expected}, counted ${counted}, variance ${variance >= 0 ? "+" : ""}${variance}`,
+          });
+
+          const updated = await db.updateInventoryItem(line.itemId, { currentStock: counted });
+          if (updated) {
+            await notificationHelper.notifyManagersWhenInventoryBecomesLow(
+              { currentStock: before.currentStock, minStockLevel: before.minStockLevel },
+              updated
+            );
+          }
+
+          discrepancies.push({
+            itemId: before.id,
+            itemCode: before.itemCode,
+            itemName: before.name,
+            expected,
+            counted,
+            variance,
+          });
+        }
+
+        return { discrepancies, adjustedLines: discrepancies.length };
       }),
     
     addTransaction: protectedProcedure
@@ -643,20 +729,30 @@ export const appRouter = router({
         notes: z.string().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
+        const itemBefore = await db.getInventoryItemById(input.itemId);
+        if (!itemBefore) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Inventory item not found" });
+        }
+        const previousStock = itemBefore.currentStock;
+
         const transaction = await db.createInventoryTransaction({
           ...input,
           performedBy: ctx.user.id,
         });
         
-        // Update inventory stock
-        const item = await db.getAllInventoryItems().then(items => items.find(i => i.id === input.itemId));
-        if (item) {
-          let newStock = item.currentStock;
-          if (input.type === "in") newStock += input.quantity;
-          else if (input.type === "out") newStock -= input.quantity;
-          else if (input.type === "adjustment") newStock = input.quantity;
-          
-          await db.updateInventoryItem(input.itemId, { currentStock: newStock });
+        let newStock = itemBefore.currentStock;
+        if (input.type === "in") newStock += input.quantity;
+        else if (input.type === "out") newStock -= input.quantity;
+        else if (input.type === "adjustment") newStock = input.quantity;
+        
+        if (input.type !== "transfer") {
+          const updated = await db.updateInventoryItem(input.itemId, { currentStock: newStock });
+          if (updated) {
+            await notificationHelper.notifyManagersWhenInventoryBecomesLow(
+              { currentStock: previousStock, minStockLevel: itemBefore.minStockLevel },
+              updated
+            );
+          }
         }
         
         return transaction;

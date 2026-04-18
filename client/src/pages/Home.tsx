@@ -82,8 +82,18 @@ export default function Home() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {metrics.map((metric) => {
           const Icon = metric.icon;
+          const metricTestId =
+            metric.title === "Total Assets"
+              ? "dashboard-metric-total-assets"
+              : metric.title === "Pending Work Orders"
+                ? "dashboard-metric-pending-work-orders"
+                : undefined;
           return (
-            <Card key={metric.title} className="border-l-4 border-l-primary/20 hover:shadow-lg transition-all duration-200 bg-gradient-to-br from-white to-gray-50">
+            <Card
+              key={metric.title}
+              data-testid={metricTestId}
+              className="border-l-4 border-l-primary/20 hover:shadow-lg transition-all duration-200 bg-gradient-to-br from-white to-gray-50"
+            >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-foreground">
                   {metric.title}
@@ -93,7 +103,9 @@ export default function Home() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{metric.value}</div>
+                <div className="text-2xl font-bold" data-testid={metricTestId ? `${metricTestId}-value` : undefined}>
+                  {metric.value}
+                </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   {metric.description}
                 </p>
@@ -144,12 +156,12 @@ export default function Home() {
         </Card>
 
         {/* Low Stock Alerts */}
-        <Card className="border-t-4 border-t-orange-500 shadow-md hover:shadow-lg transition-shadow">
+        <Card className="border-t-4 border-t-orange-500 shadow-md hover:shadow-lg transition-shadow" data-testid="dashboard-low-stock-widget">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-lg font-bold">Low Stock Alerts</CardTitle>
-                <CardDescription>Items below reorder point</CardDescription>
+                <CardDescription>Items below minimum stock level</CardDescription>
               </div>
               <div className="p-2 rounded-lg bg-orange-100">
                 <AlertTriangle className="h-5 w-5 text-orange-600" />

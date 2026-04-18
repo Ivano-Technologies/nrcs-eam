@@ -86,36 +86,39 @@ declare global {
   }
 }
 
-const API_KEY = import.meta.env.VITE_FRONTEND_FORGE_API_KEY;
+const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY?.trim();
+const FORGE_API_KEY = import.meta.env.VITE_FRONTEND_FORGE_API_KEY?.trim();
 const FORGE_BASE_URL =
   import.meta.env.VITE_FRONTEND_FORGE_API_URL ||
   "https://forge.butterfly-effect.dev";
 const MAPS_PROXY_URL = `${FORGE_BASE_URL}/v1/maps/proxy`;
 
 function loadMapScript() {
-  if (!API_KEY?.trim()) {
-    return Promise.resolve();
-  }
-  // Playwright (and other WebDriver clients) set navigator.webdriver. Skip loading the Forge
-  // maps proxy during E2E — a bad or staging key often returns HTTP 500, which surfaces as a
-  // generic browser console error and fails strict test guards even though the app does not need a live map.
   const webdriver =
     typeof navigator !== "undefined" &&
     (navigator as Navigator & { webdriver?: boolean }).webdriver === true;
   if (webdriver) {
     return Promise.resolve();
   }
-  return new Promise(resolve => {
+  const useDirectGoogle = Boolean(GOOGLE_MAPS_KEY);
+  const useForge = Boolean(FORGE_API_KEY) && !useDirectGoogle;
+  if (!useDirectGoogle && !useForge) {
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => {
     const script = document.createElement("script");
-    script.src = `${MAPS_PROXY_URL}/maps/api/js?key=${API_KEY}&v=weekly&libraries=marker,places,geocoding,geometry`;
+    script.src = useDirectGoogle
+      ? `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_KEY}&v=weekly&libraries=marker,places,geocoding,geometry`
+      : `${MAPS_PROXY_URL}/maps/api/js?key=${FORGE_API_KEY}&v=weekly&libraries=marker,places,geocoding,geometry`;
     script.async = true;
     script.crossOrigin = "anonymous";
     script.onload = () => {
       resolve(null);
-      script.remove(); // Clean up immediately
+      script.remove();
     };
     script.onerror = () => {
       console.error("Failed to load Google Maps script");
+      resolve(null);
     };
     document.head.appendChild(script);
   });
@@ -139,7 +142,8 @@ export function MapView({
 
   const init = usePersistFn(async () => {
     await loadMapScript();
-    if (!API_KEY?.trim() || !window.google?.maps) {
+    const hasKey = Boolean(GOOGLE_MAPS_KEY || FORGE_API_KEY);
+    if (!hasKey || !window.google?.maps) {
       return;
     }
     if (!mapContainer.current) {
@@ -165,6 +169,10 @@ export function MapView({
   }, [init]);
 
   return (
-    <div ref={mapContainer} className={cn("w-full h-[500px]", className)} />
+    <div
+      ref={mapContainer}
+      data-testid="asset-map-container"
+      className={cn("w-full min-h-[500px] h-[500px] bg-muted/40", className)}
+    />
   );
 }
