@@ -205,7 +205,7 @@ export default function AssetDetail() {
         <p className="text-xl text-muted-foreground">Asset not found</p>
         <Button onClick={() => setLocation("/app/assets")} className="mt-4">
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Assets
+          Back to Asset Register
         </Button>
       </div>
     );

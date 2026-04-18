@@ -9,6 +9,11 @@ import { generatePDFReport, generateExcelReport } from "./reportGenerator";
 import { generateEmailTemplate, sendBulkEmails } from "./emailService";
 import { authRouter } from "./routers/authRouter";
 import { adminProcedure, managerOrAdminProcedure } from "./routers/roleProcedures";
+import {
+  legacyStatusFromRegister,
+  registerStatusZodEnum,
+} from "./assetRegister";
+import { nanoid } from "nanoid";
 
 export const appRouter = router({
   system: systemRouter,
@@ -139,21 +144,54 @@ export const appRouter = router({
       .query(async ({ input }) => {
         return await db.searchAssets(input.searchTerm);
       }),
+
+    registerList: protectedProcedure
+      .input(
+        z
+          .object({
+            siteId: z.number().optional(),
+            categoryId: z.number().optional(),
+            registerStatus: z.string().optional(),
+            itemType: z.string().optional(),
+            search: z.string().optional(),
+            sortBy: z.string().optional(),
+            sortDir: z.enum(["asc", "desc"]).optional(),
+            limit: z.number().min(1).max(50_000).optional(),
+            offset: z.number().min(0).optional(),
+          })
+          .optional()
+      )
+      .query(async ({ input }) => {
+        return await db.getAssetRegisterList(input ?? {});
+      }),
     
     create: managerOrAdminProcedure
       .input(z.object({
-        assetTag: z.string().min(1),
+        assetTag: z.string().optional(),
         name: z.string().min(1),
         description: z.string().optional(),
         categoryId: z.number(),
         siteId: z.number(),
-        status: z.enum(["operational", "maintenance", "repair", "retired", "disposed"]).default("operational"),
+        status: z.enum(["operational", "maintenance", "repair", "retired", "disposed"]).optional(),
+        registerStatus: registerStatusZodEnum.optional(),
+        itemType: z.enum(["asset", "inventory"]).optional(),
+        subCategory: z.string().optional(),
+        acquisitionMethod: z.string().optional(),
+        projectRef: z.string().optional(),
+        acquisitionCondition: z.enum(["New", "Used"]).optional(),
+        department: z.string().optional(),
+        lastCheckedAt: z.date().optional(),
+        checkedBy: z.string().optional(),
+        physicalCondition: z.enum(["Good", "Fair", "Damaged", "Beyond Repair"]).optional(),
+        assignedToName: z.string().optional(),
         manufacturer: z.string().optional(),
         model: z.string().optional(),
         serialNumber: z.string().optional(),
         acquisitionDate: z.date().optional(),
+        yearAcquired: z.number().min(1900).max(2100).optional(),
         acquisitionCost: z.string().optional(),
         currentValue: z.string().optional(),
+        currentDepreciatedValue: z.number().optional(),
         depreciationRate: z.string().optional(),
         warrantyExpiry: z.date().optional(),
         location: z.string().optional(),
@@ -164,7 +202,47 @@ export const appRouter = router({
         longitude: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
-        return await db.createAsset(input);
+        const registerStatus = input.registerStatus ?? "in_use";
+        const status = input.status ?? legacyStatusFromRegister(registerStatus);
+        let acquisitionDate = input.acquisitionDate;
+        if (input.yearAcquired && !acquisitionDate) {
+          acquisitionDate = new Date(Date.UTC(input.yearAcquired, 5, 15));
+        }
+        const assetTag = (input.assetTag?.trim() || `NRCS-${nanoid(10)}`).toUpperCase();
+        return await db.createAsset({
+          assetTag,
+          name: input.name,
+          description: input.description,
+          categoryId: input.categoryId,
+          siteId: input.siteId,
+          status,
+          registerStatus,
+          itemType: input.itemType ?? "asset",
+          subCategory: input.subCategory,
+          acquisitionMethod: input.acquisitionMethod,
+          projectRef: input.projectRef,
+          acquisitionCondition: input.acquisitionCondition,
+          department: input.department,
+          lastCheckedAt: input.lastCheckedAt,
+          checkedBy: input.checkedBy,
+          physicalCondition: input.physicalCondition,
+          assignedToName: input.assignedToName,
+          manufacturer: input.manufacturer,
+          model: input.model,
+          serialNumber: input.serialNumber,
+          acquisitionDate,
+          acquisitionCost: input.acquisitionCost,
+          currentValue: input.currentValue,
+          currentDepreciatedValue: input.currentDepreciatedValue,
+          depreciationRate: input.depreciationRate,
+          warrantyExpiry: input.warrantyExpiry,
+          location: input.location,
+          assignedTo: input.assignedTo,
+          imageUrl: input.imageUrl,
+          notes: input.notes,
+          latitude: input.latitude,
+          longitude: input.longitude,
+        });
       }),
     
     generateQRCode: protectedProcedure
@@ -262,12 +340,25 @@ export const appRouter = router({
         categoryId: z.number().optional(),
         siteId: z.number().optional(),
         status: z.enum(["operational", "maintenance", "repair", "retired", "disposed"]).optional(),
+        registerStatus: registerStatusZodEnum.optional(),
+        itemType: z.enum(["asset", "inventory"]).optional(),
+        subCategory: z.string().optional(),
+        acquisitionMethod: z.string().optional(),
+        projectRef: z.string().optional(),
+        acquisitionCondition: z.enum(["New", "Used"]).optional(),
+        department: z.string().optional(),
+        lastCheckedAt: z.date().optional(),
+        checkedBy: z.string().optional(),
+        physicalCondition: z.enum(["Good", "Fair", "Damaged", "Beyond Repair"]).optional(),
+        assignedToName: z.string().optional(),
         manufacturer: z.string().optional(),
         model: z.string().optional(),
         serialNumber: z.string().optional(),
         acquisitionDate: z.date().optional(),
+        yearAcquired: z.number().min(1900).max(2100).optional(),
         acquisitionCost: z.string().optional(),
         currentValue: z.string().optional(),
+        currentDepreciatedValue: z.number().optional(),
         depreciationRate: z.string().optional(),
         warrantyExpiry: z.date().optional(),
         location: z.string().optional(),
@@ -278,7 +369,17 @@ export const appRouter = router({
         longitude: z.string().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
-        const { id, ...data } = input;
+        const { id, yearAcquired, registerStatus, status, ...rest } = input;
+        const data: Record<string, unknown> = { ...rest };
+        if (registerStatus !== undefined) {
+          data.registerStatus = registerStatus;
+          data.status = status ?? legacyStatusFromRegister(registerStatus);
+        } else if (status !== undefined) {
+          data.status = status;
+        }
+        if (yearAcquired !== undefined) {
+          data.acquisitionDate = new Date(Date.UTC(yearAcquired, 5, 15));
+        }
         await db.logAuditEntry({
           userId: ctx.user.id,
           action: 'update',
@@ -286,7 +387,7 @@ export const appRouter = router({
           entityId: id,
           changes: JSON.stringify(data),
         });
-        return await db.updateAsset(id, data);
+        return await db.updateAsset(id, data as Parameters<typeof db.updateAsset>[1]);
       }),
 
     getExpiringWarranties: protectedProcedure
@@ -1432,6 +1533,81 @@ export const appRouter = router({
         const { importAssets } = await import('./bulkImportExport');
         const buffer = Buffer.from(input.fileData, 'base64');
         return await importAssets(buffer, ctx.user.id);
+      }),
+
+    exportAssetRegister: protectedProcedure
+      .input(
+        z
+          .object({
+            siteId: z.number().optional(),
+            categoryId: z.number().optional(),
+            registerStatus: z.string().optional(),
+            itemType: z.string().optional(),
+            search: z.string().optional(),
+            siteLabel: z.string().optional(),
+          })
+          .optional()
+      )
+      .query(async ({ input }) => {
+        const { buildNRCSAssetRegisterWorkbook } = await import("./nrcsAssetExcel");
+        const { buffer, filename } = await buildNRCSAssetRegisterWorkbook({
+          siteId: input?.siteId,
+          categoryId: input?.categoryId,
+          registerStatus: input?.registerStatus,
+          itemType: input?.itemType,
+          search: input?.search,
+          siteLabel: input?.siteLabel,
+        });
+        return {
+          data: buffer.toString("base64"),
+          filename,
+          mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        };
+      }),
+
+    previewAssetRegisterImport: managerOrAdminProcedure
+      .input(z.object({ fileData: z.string() }))
+      .mutation(async ({ input }) => {
+        const { previewNRCSAssetImport } = await import("./nrcsAssetExcel");
+        return await previewNRCSAssetImport(Buffer.from(input.fileData, "base64"));
+      }),
+
+    confirmAssetRegisterImport: managerOrAdminProcedure
+      .input(
+        z.object({
+          rows: z.array(
+            z.object({
+              assetTag: z.string(),
+              name: z.string(),
+              description: z.string().optional(),
+              categoryId: z.number(),
+              siteId: z.number(),
+              itemType: z.enum(["asset", "inventory"]),
+              subCategory: z.string().optional(),
+              serialNumber: z.string().optional(),
+              acquisitionCost: z.string().optional(),
+              currentDepreciatedValue: z.number().optional(),
+              currentValue: z.string().optional(),
+              acquisitionMethod: z.string().optional(),
+              projectRef: z.string().optional(),
+              acquisitionDate: z.date().optional(),
+              acquisitionCondition: z.enum(["New", "Used"]).optional(),
+              registerStatus: registerStatusZodEnum,
+              assignedToName: z.string().optional(),
+              department: z.string().optional(),
+              location: z.string().optional(),
+              physicalCondition: z
+                .enum(["Good", "Fair", "Damaged", "Beyond Repair"])
+                .optional(),
+              lastCheckedAt: z.date().optional(),
+              notes: z.string().optional(),
+            })
+          ),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { confirmNRCSAssetImport } = await import("./nrcsAssetExcel");
+        return await confirmNRCSAssetImport(input.rows);
       }),
 
     exportSites: protectedProcedure

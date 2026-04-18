@@ -102,7 +102,7 @@ export default function Welcome() {
             <div>
               <h3 className="font-semibold text-lg mb-2">Register Your Assets</h3>
               <p className="text-muted-foreground">
-                Go to <strong>Assets</strong> and add your equipment, vehicles, or inventory items.
+                Go to <strong>Asset Register</strong> and add your equipment, vehicles, or inventory items.
                 You can bulk upload assets using Excel templates or add them individually.
               </p>
             </div>

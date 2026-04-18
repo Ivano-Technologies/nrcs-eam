@@ -10,6 +10,7 @@ import {
   bigint,
   pgEnum,
   uuid,
+  doublePrecision,
 } from "drizzle-orm/pg-core";
 
 export const userRoleEnum = pgEnum("user_role", [
@@ -223,6 +224,26 @@ export const assets = pgTable("assets", {
   usefulLifeYears: integer("usefulLifeYears"),
   residualValue: decimal("residualValue", { precision: 12, scale: 2 }),
   depreciationStartDate: timestamp("depreciationStartDate", { mode: "date" }),
+
+  /** Asset Register (NRCS) — item vs inventory */
+  itemType: varchar("itemType", { length: 20 }).default("asset").notNull(),
+  subCategory: varchar("subCategory", { length: 255 }),
+  acquisitionMethod: varchar("acquisitionMethod", { length: 100 }),
+  projectRef: varchar("projectRef", { length: 255 }),
+  /** New / Used at acquisition */
+  acquisitionCondition: varchar("acquisitionCondition", { length: 50 }),
+  department: varchar("department", { length: 255 }),
+  lastCheckedAt: timestamp("lastCheckedAt", { mode: "date" }),
+  checkedBy: varchar("checkedBy", { length: 255 }),
+  /** Good / Fair / Damaged / Beyond Repair */
+  physicalCondition: varchar("physicalCondition", { length: 50 }),
+  /**
+   * Register display status (In Use, In Store, …). Kept separate from legacy `status` enum.
+   */
+  registerStatus: varchar("registerStatus", { length: 50 }).default("in_use").notNull(),
+  /** Display name when not linked to users.id */
+  assignedToName: varchar("assignedToName", { length: 255 }),
+  currentDepreciatedValue: doublePrecision("currentDepreciatedValue"),
 
   createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
   updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),

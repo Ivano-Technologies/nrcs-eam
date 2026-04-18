@@ -16,7 +16,7 @@ test.describe("Assets CRUD (2c)", () => {
     const nameEdited = `${name} (edited)`;
 
     await page.goto("/app/assets");
-    await expect(page.getByRole("heading", { name: "Assets" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Asset Register" })).toBeVisible();
 
     await page.getByTestId("asset-create-btn").click();
     await page.locator("#assetTag").fill(tag);
