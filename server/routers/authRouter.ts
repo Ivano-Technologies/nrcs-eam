@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { publicProcedure, router } from "../_core/trpc";
+import { publicProcedure, protectedProcedure, router } from "../_core/trpc";
 import { adminProcedure } from "./roleProcedures";
 import { clearSessionCookies, setSessionCookies } from "../_core/supabaseSession";
 import { getSupabaseAnonServer, getSupabaseServiceRole } from "../_core/supabase";
@@ -257,6 +257,48 @@ export const authRouter = router({
         openId: appUser.openId,
         lastSignedIn: new Date(),
       });
+      return { success: true as const };
+    }),
+
+  changePassword: protectedProcedure
+    .input(
+      z.object({
+        currentPassword: z.string().min(1),
+        newPassword: z.string().min(8).max(128),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const u = ctx.user;
+      if (!u.email?.trim()) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Account has no email" });
+      }
+      if (!u.authUserId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Password change is not available for this account type",
+        });
+      }
+      const supabase = getSupabaseAnonServer();
+      const { error: signErr } = await supabase.auth.signInWithPassword({
+        email: u.email.trim(),
+        password: input.currentPassword,
+      });
+      if (signErr) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Current password is incorrect",
+        });
+      }
+      const admin = getSupabaseServiceRole();
+      const { error } = await admin.auth.admin.updateUserById(u.authUserId, {
+        password: input.newPassword,
+      });
+      if (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
+      }
       return { success: true as const };
     }),
 

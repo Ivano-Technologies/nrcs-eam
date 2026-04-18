@@ -1,14 +1,33 @@
-import { useState } from "react";
-import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { FileText, Download, FileSpreadsheet, Loader2 } from "lucide-react";
+import { appPath } from "@/lib/routes";
+import { trpc } from "@/lib/trpc";
+import { cn } from "@/lib/utils";
+import {
+  Calendar,
+  Download,
+  FileSpreadsheet,
+  FileText,
+  Loader2,
+} from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
+import { Link } from "wouter";
+
+type ReportTypeKey =
+  | "assetInventory"
+  | "maintenanceSchedule"
+  | "workOrders"
+  | "financial"
+  | "compliance";
 
 export default function Reports() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [reportType, setReportType] = useState<string>("assetInventory");
   const [format, setFormat] = useState<"pdf" | "excel">("pdf");
   const [siteId, setSiteId] = useState<string>("");
@@ -19,6 +38,7 @@ export default function Reports() {
 
   const { data: sites } = trpc.sites.list.useQuery();
   const { data: categories } = trpc.assetCategories.list.useQuery();
+  const { data: insights } = trpc.dashboard.weeklyInsights.useQuery();
 
   const assetInventoryMutation = trpc.reports.assetInventory.useMutation();
   const maintenanceScheduleMutation = trpc.reports.maintenanceSchedule.useMutation();
@@ -51,57 +71,58 @@ export default function Reports() {
     URL.revokeObjectURL(url);
   };
 
-  const handleGenerateReport = async () => {
+  const runReport = async (type: ReportTypeKey, fmt: "pdf" | "excel") => {
     try {
-      let result;
+      let result: { data: string; filename: string; mimeType: string } | undefined;
 
-      switch (reportType) {
+      switch (type) {
         case "assetInventory":
           result = await assetInventoryMutation.mutateAsync({
-            format,
-            siteId: siteId && siteId !== 'all' ? parseInt(siteId) : undefined,
-            categoryId: categoryId && categoryId !== 'all' ? parseInt(categoryId) : undefined,
-            status: status && status !== 'all' ? (status as any) : undefined,
+            format: fmt,
+            siteId: siteId && siteId !== "all" ? parseInt(siteId, 10) : undefined,
+            categoryId: categoryId && categoryId !== "all" ? parseInt(categoryId, 10) : undefined,
+            status: status && status !== "all" ? (status as "operational" | "maintenance" | "retired" | "disposed") : undefined,
             startDate,
             endDate,
           });
           break;
-
         case "maintenanceSchedule":
           result = await maintenanceScheduleMutation.mutateAsync({
-            format,
-            siteId: siteId && siteId !== 'all' ? parseInt(siteId) : undefined,
+            format: fmt,
+            siteId: siteId && siteId !== "all" ? parseInt(siteId, 10) : undefined,
             startDate,
             endDate,
           });
           break;
-
         case "workOrders":
           result = await workOrdersMutation.mutateAsync({
-            format,
-            siteId: siteId && siteId !== 'all' ? parseInt(siteId) : undefined,
-            status: status && status !== 'all' ? (status as any) : undefined,
+            format: fmt,
+            siteId: siteId && siteId !== "all" ? parseInt(siteId, 10) : undefined,
+            status:
+              status && status !== "all"
+                ? (status as "pending" | "in_progress" | "completed" | "cancelled")
+                : undefined,
             startDate,
             endDate,
           });
           break;
-
         case "financial":
           result = await financialMutation.mutateAsync({
-            format,
+            format: fmt,
             startDate,
             endDate,
           });
           break;
-
         case "compliance":
           result = await complianceMutation.mutateAsync({
-            format,
-            siteId: siteId && siteId !== 'all' ? parseInt(siteId) : undefined,
-            status: status && status !== 'all' ? (status as any) : undefined,
+            format: fmt,
+            siteId: siteId && siteId !== "all" ? parseInt(siteId, 10) : undefined,
+            status:
+              status && status !== "all"
+                ? (status as "compliant" | "non_compliant" | "pending")
+                : undefined,
           });
           break;
-
         default:
           throw new Error("Invalid report type");
       }
@@ -116,13 +137,28 @@ export default function Reports() {
     }
   };
 
-  const reportTypes = [
+  const handleGenerateReport = async () => {
+    await runReport(reportType as ReportTypeKey, format);
+  };
+
+  const reportTypes: { value: ReportTypeKey; label: string; icon: typeof FileText }[] = [
     { value: "assetInventory", label: "Asset Inventory", icon: FileText },
     { value: "maintenanceSchedule", label: "Maintenance Schedule", icon: FileText },
     { value: "workOrders", label: "Work Orders", icon: FileText },
     { value: "financial", label: "Financial Summary", icon: FileSpreadsheet },
     { value: "compliance", label: "Compliance Audit", icon: FileText },
   ];
+
+  const borderFor = (t: ReportTypeKey) => {
+    const map: Record<ReportTypeKey, string> = {
+      assetInventory: "border-l-blue-500",
+      maintenanceSchedule: "border-l-orange-500",
+      workOrders: "border-l-red-500",
+      financial: "border-l-green-500",
+      compliance: "border-l-purple-500",
+    };
+    return map[t];
+  };
 
   return (
     <div className="space-y-6">
@@ -131,8 +167,62 @@ export default function Reports() {
         <p className="text-muted-foreground">Generate and export comprehensive reports</p>
       </div>
 
+      {insights && (
+        <Card className="border-primary/30 bg-muted/30">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Weekly insights</CardTitle>
+            <CardDescription>Quick counts — click to open the related area</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+              <Link
+                href={appPath("/maintenance")}
+                className="rounded-lg border bg-background p-3 transition-colors hover:bg-accent/50"
+              >
+                <p className="text-xs text-muted-foreground">Maintenance due (30 days)</p>
+                <p className="text-2xl font-semibold tabular-nums">{insights.maintenanceDueNext30Days}</p>
+              </Link>
+              <Link
+                href={appPath("/warranty-alerts")}
+                className="rounded-lg border bg-background p-3 transition-colors hover:bg-accent/50"
+              >
+                <p className="text-xs text-muted-foreground">Warranties expiring (30 days)</p>
+                <p className="text-2xl font-semibold tabular-nums">{insights.warrantiesExpiringNext30Days}</p>
+              </Link>
+              <Link
+                href={appPath("/inventory")}
+                className="rounded-lg border bg-background p-3 transition-colors hover:bg-accent/50"
+              >
+                <p className="text-xs text-muted-foreground">Low stock items</p>
+                <p className="text-2xl font-semibold tabular-nums">{insights.lowStockItems}</p>
+              </Link>
+              <Link
+                href={appPath("/work-orders")}
+                className="rounded-lg border bg-background p-3 transition-colors hover:bg-accent/50"
+              >
+                <p className="text-xs text-muted-foreground">Overdue work orders</p>
+                <p className="text-2xl font-semibold tabular-nums">{insights.overdueWorkOrders}</p>
+              </Link>
+              {isAdmin ? (
+                <Link
+                  href={appPath("/pending-users")}
+                  className="rounded-lg border bg-background p-3 transition-colors hover:bg-accent/50"
+                >
+                  <p className="text-xs text-muted-foreground">Pending user requests</p>
+                  <p className="text-2xl font-semibold tabular-nums">{insights.pendingUserRequests}</p>
+                </Link>
+              ) : (
+                <div className="rounded-lg border border-dashed bg-muted/20 p-3 opacity-60">
+                  <p className="text-xs text-muted-foreground">Pending user requests</p>
+                  <p className="text-sm text-muted-foreground">Admin only</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid gap-6 md:grid-cols-2">
-        {/* Report Configuration */}
         <Card className="border-l-4 border-l-primary">
           <CardHeader>
             <CardTitle>Report Configuration</CardTitle>
@@ -209,7 +299,7 @@ export default function Reports() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Categories</SelectItem>
-                    {categories?.map((cat: any) => (
+                    {categories?.map((cat: { id: number; name: string }) => (
                       <SelectItem key={cat.id} value={cat.id.toString()}>
                         {cat.name}
                       </SelectItem>
@@ -256,15 +346,12 @@ export default function Reports() {
               </div>
             )}
 
-            {(reportType === "maintenanceSchedule" ||
-              reportType === "workOrders" ||
-              reportType === "financial") && (
+            {(reportType === "maintenanceSchedule" || reportType === "workOrders" || reportType === "financial") && (
               <>
                 <div className="space-y-2">
                   <Label>Start Date (Optional)</Label>
                   <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
                 </div>
-
                 <div className="space-y-2">
                   <Label>End Date (Optional)</Label>
                   <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
@@ -272,12 +359,7 @@ export default function Reports() {
               </>
             )}
 
-            <Button
-              data-testid={`pdf-generate-${reportType}`}
-              onClick={handleGenerateReport}
-              disabled={isGenerating}
-              className="w-full"
-            >
+            <Button data-testid={`pdf-generate-${reportType}`} onClick={handleGenerateReport} disabled={isGenerating} className="w-full">
               {isGenerating ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -293,57 +375,52 @@ export default function Reports() {
           </CardContent>
         </Card>
 
-        {/* Report Types */}
         <div className="space-y-4">
-          <Card className="border-l-4 border-l-blue-500">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Asset Inventory
-              </CardTitle>
-              <CardDescription>Complete list of all assets with details and status</CardDescription>
-            </CardHeader>
-          </Card>
-
-          <Card className="border-l-4 border-l-orange-500">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Maintenance Schedule
-              </CardTitle>
-              <CardDescription>Upcoming and overdue maintenance tasks</CardDescription>
-            </CardHeader>
-          </Card>
-
-          <Card className="border-l-4 border-l-red-500">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Work Orders
-              </CardTitle>
-              <CardDescription>All work orders with status and completion details</CardDescription>
-            </CardHeader>
-          </Card>
-
-          <Card className="border-l-4 border-l-green-500">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileSpreadsheet className="h-5 w-5" />
-                Financial Summary
-              </CardTitle>
-              <CardDescription>Asset costs, maintenance expenses, and budget tracking</CardDescription>
-            </CardHeader>
-          </Card>
-
-          <Card className="border-l-4 border-l-purple-500">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Compliance Audit
-              </CardTitle>
-              <CardDescription>Compliance status and inspection records</CardDescription>
-            </CardHeader>
-          </Card>
+          {reportTypes.map((rt) => (
+            <Card key={rt.value} className={cn("border-l-4", borderFor(rt.value))}>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <rt.icon className="h-5 w-5" />
+                  {rt.label}
+                </CardTitle>
+                <CardDescription>
+                  {rt.value === "assetInventory" && "Complete list of all assets with details and status"}
+                  {rt.value === "maintenanceSchedule" && "Upcoming and overdue maintenance tasks"}
+                  {rt.value === "workOrders" && "All work orders with status and completion details"}
+                  {rt.value === "financial" && "Asset costs, maintenance expenses, and budget tracking"}
+                  {rt.value === "compliance" && "Compliance status and inspection records"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={isGenerating}
+                  onClick={() => runReport(rt.value, "pdf")}
+                >
+                  <FileText className="mr-1 h-3.5 w-3.5" />
+                  Download PDF
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={isGenerating}
+                  onClick={() => runReport(rt.value, "excel")}
+                >
+                  <FileSpreadsheet className="mr-1 h-3.5 w-3.5" />
+                  Export Excel
+                </Button>
+                <Button type="button" size="sm" variant="secondary" asChild>
+                  <Link href={appPath("/report-scheduling")}>
+                    <Calendar className="mr-1 h-3.5 w-3.5" />
+                    Schedule
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </div>
     </div>

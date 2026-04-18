@@ -175,9 +175,13 @@ export default function ReportScheduling() {
         <div className="text-center py-8">Loading schedules...</div>
       ) : schedules.length === 0 ? (
         <Card>
-          <CardContent className="py-8 text-center">
-            <Calendar className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+          <CardContent className="py-8 text-center space-y-4">
+            <Calendar className="mx-auto h-12 w-12 text-muted-foreground" />
             <p className="text-muted-foreground">No scheduled reports yet. Create your first schedule to get started.</p>
+            <Button type="button" onClick={() => setIsCreateDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              New Schedule
+            </Button>
           </CardContent>
         </Card>
       ) : (

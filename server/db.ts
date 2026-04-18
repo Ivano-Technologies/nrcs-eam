@@ -5,6 +5,7 @@ import {
   asc,
   gte,
   lte,
+  lt,
   sql,
   or,
   like,
@@ -12,6 +13,7 @@ import {
   isNull,
   ilike,
   getTableColumns,
+  notInArray,
 } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
@@ -24,7 +26,8 @@ import {
   notifications, notificationPreferences, assetPhotos, InsertAssetPhoto,
   scheduledReports, InsertScheduledReport, assetTransfers, quickbooksConfig, InsertQuickBooksConfig,
   userPreferences, InsertUserPreferences, emailNotifications, InsertEmailNotification,
-  workOrderTemplates, InsertWorkOrderTemplate
+  workOrderTemplates, InsertWorkOrderTemplate,
+  pendingUsers,
 } from "../drizzle/schema";
 import { getPostgresJsSslOption } from "../shared/mysqlSsl";
 import { ENV } from './_core/env';
@@ -887,6 +890,171 @@ export async function getDashboardStats() {
     inProgressWorkOrders: Number(inProgressWorkOrders?.count ?? 0),
     lowStockItems: Number(lowStockCount?.count ?? 0),
   };
+}
+
+/** Counts for Reports “Weekly insights” widget (30-day windows where applicable). */
+export async function getWeeklyInsights() {
+  const database = await getDb();
+  if (!database) {
+    return {
+      maintenanceDueNext30Days: 0,
+      warrantiesExpiringNext30Days: 0,
+      lowStockItems: 0,
+      overdueWorkOrders: 0,
+      pendingUserRequests: 0,
+    };
+  }
+  const now = new Date();
+  const in30 = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+  const [maintDue] = await database
+    .select({ count: sql<number>`count(*)` })
+    .from(maintenanceSchedules)
+    .where(
+      and(
+        eq(maintenanceSchedules.isActive, true),
+        gte(maintenanceSchedules.nextDue, now),
+        lte(maintenanceSchedules.nextDue, in30)
+      )
+    );
+
+  const [warrantyExp] = await database
+    .select({ count: sql<number>`count(*)` })
+    .from(assets)
+    .where(
+      and(isNotNull(assets.warrantyExpiry), lte(assets.warrantyExpiry, in30), gte(assets.warrantyExpiry, now))
+    );
+
+  const [lowStock] = await database
+    .select({ count: sql<number>`count(*)` })
+    .from(inventoryItems)
+    .where(sql`${inventoryItems.currentStock} < ${inventoryItems.minStockLevel}`);
+
+  const [overdueWo] = await database
+    .select({ count: sql<number>`count(*)` })
+    .from(workOrders)
+    .where(
+      and(
+        notInArray(workOrders.status, ["completed", "cancelled"]),
+        isNotNull(workOrders.scheduledEnd),
+        lt(workOrders.scheduledEnd, now)
+      )
+    );
+
+  const [pendingReq] = await database
+    .select({ count: sql<number>`count(*)` })
+    .from(pendingUsers)
+    .where(eq(pendingUsers.status, "pending"));
+
+  return {
+    maintenanceDueNext30Days: Number(maintDue?.count ?? 0),
+    warrantiesExpiringNext30Days: Number(warrantyExp?.count ?? 0),
+    lowStockItems: Number(lowStock?.count ?? 0),
+    overdueWorkOrders: Number(overdueWo?.count ?? 0),
+    pendingUserRequests: Number(pendingReq?.count ?? 0),
+  };
+}
+
+export async function getAppSettingValue(key: string): Promise<string | null> {
+  const database = await getDb();
+  if (!database) return null;
+  const rows = await database.select().from(appSettings).where(eq(appSettings.key, key)).limit(1);
+  return rows[0]?.value ?? null;
+}
+
+export async function getAppSettingBool(key: string, defaultValue: boolean): Promise<boolean> {
+  const raw = await getAppSettingValue(key);
+  if (raw === null) return defaultValue;
+  const v = raw.trim().toLowerCase();
+  return v === "true" || v === "1";
+}
+
+export async function setAppSettingValue(key: string, value: string): Promise<void> {
+  const database = await getDb();
+  if (!database) throw new Error("Database not available");
+  const existing = await database.select().from(appSettings).where(eq(appSettings.key, key)).limit(1);
+  if (existing.length > 0) {
+    await database.update(appSettings).set({ value, updatedAt: new Date() }).where(eq(appSettings.key, key));
+  } else {
+    await database.insert(appSettings).values({ key, value });
+  }
+}
+
+const SEARCH_LIMIT = 8;
+
+export async function searchAssetsGlobal(pattern: string) {
+  const database = await getDb();
+  if (!database) return [];
+  const q = `%${pattern}%`;
+  return database
+    .select({
+      id: assets.id,
+      name: assets.name,
+      assetTag: assets.assetTag,
+      status: assets.status,
+    })
+    .from(assets)
+    .where(or(ilike(assets.name, q), ilike(assets.assetTag, q)))
+    .limit(SEARCH_LIMIT);
+}
+
+export async function searchWorkOrdersGlobal(pattern: string) {
+  const database = await getDb();
+  if (!database) return [];
+  const q = `%${pattern}%`;
+  return database
+    .select({
+      id: workOrders.id,
+      workOrderNumber: workOrders.workOrderNumber,
+      title: workOrders.title,
+      status: workOrders.status,
+    })
+    .from(workOrders)
+    .where(or(ilike(workOrders.workOrderNumber, q), ilike(workOrders.title, q)))
+    .limit(SEARCH_LIMIT);
+}
+
+export async function searchInventoryGlobal(pattern: string) {
+  const database = await getDb();
+  if (!database) return [];
+  const q = `%${pattern}%`;
+  return database
+    .select({
+      id: inventoryItems.id,
+      name: inventoryItems.name,
+      itemCode: inventoryItems.itemCode,
+      currentStock: inventoryItems.currentStock,
+    })
+    .from(inventoryItems)
+    .where(or(ilike(inventoryItems.name, q), ilike(inventoryItems.itemCode, q)))
+    .limit(SEARCH_LIMIT);
+}
+
+export async function searchSitesGlobal(pattern: string) {
+  const database = await getDb();
+  if (!database) return [];
+  const q = `%${pattern}%`;
+  return database
+    .select({ id: sites.id, name: sites.name })
+    .from(sites)
+    .where(ilike(sites.name, q))
+    .limit(SEARCH_LIMIT);
+}
+
+export async function searchUsersGlobal(pattern: string) {
+  const database = await getDb();
+  if (!database) return [];
+  const q = `%${pattern}%`;
+  return database
+    .select({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+      role: users.role,
+    })
+    .from(users)
+    .where(or(ilike(users.email, q), ilike(users.name, q)))
+    .limit(SEARCH_LIMIT);
 }
 
 // ============= NOTIFICATIONS =============
