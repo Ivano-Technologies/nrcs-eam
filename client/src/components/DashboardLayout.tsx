@@ -22,11 +22,13 @@ import { LogOut, Settings, Maximize2, Search } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 import { NotificationCenter } from "./NotificationCenter";
 import Footer from "./Footer";
 import { ThemeToggle } from "./ui/ThemeToggle";
 import { SidebarGroupedNav } from "./SidebarGroupedNav";
+import { GlobalSearch } from "./GlobalSearch";
 import { flattenNavItems } from "@/config/appNav";
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -179,39 +181,65 @@ function DashboardLayoutContent({
         <Sidebar
           className="border-r-0"
         >
-          <SidebarHeader className="h-20 justify-center border-b border-sidebar-border">
-            <div className="flex items-center gap-3 px-3 transition-all w-full">
-              <div className="flex items-center gap-3 min-w-0 flex-1">
-                <img 
-                  src="/nrcs-logo.png" 
-                  alt="Nigerian Red Cross Society" 
-                  className="h-12 w-12 shrink-0"
-                />
-                {sidebarWidth > PRESET_WIDTHS.narrow && (
-                  <div className="flex flex-col min-w-0">
-                    <span
-                      className="font-bold text-[10.8px] text-sidebar-foreground truncate"
-                      data-testid="sidebar-org-name"
-                    >
-                      Nigerian Red Cross Society
-                    </span>
-                    <span className="text-[9.6px] text-sidebar-foreground/70 truncate">
-                      Enterprise Asset Management
-                    </span>
-                  </div>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
+          <SidebarHeader
+            className={cn(
+              "border-b border-sidebar-border",
+              sidebarWidth <= PRESET_WIDTHS.narrow ? "min-h-[4.5rem] py-2 justify-center" : "h-20 justify-center"
+            )}
+          >
+            {sidebarWidth <= PRESET_WIDTHS.narrow ? (
+              <div className="flex flex-col items-center gap-2 px-1 w-full">
+                <div className="flex justify-center w-full">
+                  <img
+                    src="/nrcs-logo.png"
+                    alt=""
+                    className="h-10 w-10 shrink-0 object-contain mx-auto"
+                    data-testid="sidebar-logo-collapsed"
+                  />
+                </div>
                 <button
+                  type="button"
                   onClick={toggleSidebarWidth}
-                  className={`h-8 w-8 flex items-center justify-center hover:bg-sidebar-accent rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring shrink-0 border border-sidebar-border hover:border-primary/50 ${toggleFeedback ? 'bg-primary/20 scale-110 border-primary' : ''}`}
+                  className={`h-8 w-8 flex items-center justify-center hover:bg-sidebar-accent rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring shrink-0 border border-sidebar-border hover:border-primary/50 ${toggleFeedback ? "bg-primary/20 scale-110 border-primary" : ""}`}
                   aria-label="Toggle sidebar width (Ctrl+B)"
                   title="Toggle sidebar width (Ctrl+B)"
                 >
                   <Maximize2 className="h-3.5 w-3.5 text-sidebar-foreground" />
                 </button>
               </div>
-            </div>
+            ) : (
+              <div className="flex items-center gap-3 px-3 transition-all w-full">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <img
+                    src="/nrcs-logo.png"
+                    alt="Nigerian Red Cross Society"
+                    className="h-12 w-12 shrink-0"
+                  />
+                  <div className="flex flex-col min-w-0">
+                    <span
+                      className="font-bold text-[13px] text-sidebar-foreground truncate"
+                      data-testid="sidebar-org-name"
+                    >
+                      Nigerian Red Cross Society
+                    </span>
+                    <span className="text-[12px] text-sidebar-foreground/70 truncate">
+                      Enterprise Asset Management
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={toggleSidebarWidth}
+                    className={`h-8 w-8 flex items-center justify-center hover:bg-sidebar-accent rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring shrink-0 border border-sidebar-border hover:border-primary/50 ${toggleFeedback ? "bg-primary/20 scale-110 border-primary" : ""}`}
+                    aria-label="Toggle sidebar width (Ctrl+B)"
+                    title="Toggle sidebar width (Ctrl+B)"
+                  >
+                    <Maximize2 className="h-3.5 w-3.5 text-sidebar-foreground" />
+                  </button>
+                </div>
+              </div>
+            )}
           </SidebarHeader>
 
           <SidebarContent className="gap-0">
@@ -306,16 +334,21 @@ function DashboardLayoutContent({
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 shrink-0">
+              <GlobalSearch />
               <ThemeToggle />
               <NotificationCenter />
             </div>
           </div>
         )}
         {!isMobile && (
-          <div className="flex border-b h-14 items-center justify-end gap-2 bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40 dark:bg-[#232323]/95">
-            <ThemeToggle />
-            <NotificationCenter />
+          <div className="flex border-b h-14 items-center justify-between gap-3 bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40 dark:bg-[#232323]/95">
+            <div className="flex-1 min-w-0" />
+            <GlobalSearch />
+            <div className="flex items-center gap-2 shrink-0">
+              <ThemeToggle />
+              <NotificationCenter />
+            </div>
           </div>
         )}
         <main data-testid="app-page-main" className="flex-1 p-4">
