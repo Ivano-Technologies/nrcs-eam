@@ -10,7 +10,7 @@ const ROUTES: { path: string; slug: string; heading: string | RegExp }[] = [
   { path: "/app/work-orders", slug: "work-orders", heading: /Work Orders/ },
   { path: "/app/work-order-templates", slug: "work-order-templates", heading: /Work Order Templates/ },
   { path: "/app/maintenance", slug: "maintenance", heading: /Preventive Maintenance/ },
-  { path: "/app/inventory", slug: "inventory", heading: /Inventory Management/ },
+  { path: "/app/inventory", slug: "inventory", heading: /Inventory/ },
   { path: "/app/vendors", slug: "vendors", heading: /Vendor Management/ },
   { path: "/app/financial", slug: "financial", heading: /Financial Tracking/ },
   { path: "/app/compliance", slug: "compliance", heading: /Compliance Tracking/ },
