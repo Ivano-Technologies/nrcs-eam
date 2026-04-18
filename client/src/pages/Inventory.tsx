@@ -18,11 +18,22 @@ import {
   History,
   FileBarChart,
   Download,
+  Trash2,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { usePermissions } from "@/_core/hooks/usePermissions";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 function stockBorderClass(item: { currentStock: number; minStockLevel: number }): string {
   if (item.currentStock <= 0) return "border-2 border-red-500 shadow-red-500/10";
@@ -61,8 +72,9 @@ function InventoryItemQr({ itemCode }: { itemCode: string }) {
 }
 
 export default function Inventory() {
-  const { canAddInventory } = usePermissions();
+  const { canAddInventory, canDeleteInventory } = usePermissions();
   const [open, setOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [overviewSite, setOverviewSite] = useState<string>("all");
   const [stockCountSite, setStockCountSite] = useState<string>("");
@@ -112,6 +124,26 @@ export default function Inventory() {
   }, [movementSite, movementStart, movementEnd]);
 
   const { data: movements, isLoading: movementsLoading } = trpc.inventory.movements.useQuery(movementQuery);
+
+  const deleteMutation = trpc.inventory.delete.useMutation();
+
+  const handleConfirmDelete = () => {
+    if (!deleteTarget) return;
+    const { id, name } = deleteTarget;
+    deleteMutation.mutate(
+      { id },
+      {
+        onSuccess: () => {
+          toast.success(`${name} has been deleted`);
+          void utils.inventory.list.invalidate();
+          void utils.inventory.lowStock.invalidate();
+          void utils.inventory.movements.invalidate();
+          setDeleteTarget(null);
+        },
+        onError: () => toast.error("Failed to delete item"),
+      }
+    );
+  };
 
   const createMutation = trpc.inventory.create.useMutation({
     onSuccess: () => {
@@ -530,7 +562,13 @@ export default function Inventory() {
           {viewMode === "grid" ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3" data-testid="inventory-grid">
               {items?.map((item) => (
-                <Card key={item.id} className={cn("overflow-hidden transition-shadow hover:shadow-md", stockBorderClass(item))}>
+                <Card
+                  key={item.id}
+                  className={cn(
+                    "relative overflow-hidden transition-shadow hover:shadow-md pb-12",
+                    stockBorderClass(item)
+                  )}
+                >
                   <CardHeader>
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-2 min-w-0">
@@ -567,6 +605,21 @@ export default function Inventory() {
                       )}
                     </div>
                   </CardContent>
+                  {canDeleteInventory ? (
+                    <div className="absolute bottom-3 right-3">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        data-testid={`inventory-item-delete-${item.id}`}
+                        aria-label={`Delete ${item.name}`}
+                        onClick={() => setDeleteTarget({ id: item.id, name: item.name })}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : null}
                 </Card>
               ))}
             </div>
@@ -574,22 +627,53 @@ export default function Inventory() {
             <Card data-testid="inventory-list">
               <CardContent className="p-0">
                 <div className="divide-y">
+                  {canDeleteInventory ? (
+                    <div className="hidden sm:grid sm:grid-cols-[1fr_auto_auto_auto] gap-4 px-4 py-2 text-xs font-medium text-muted-foreground border-b bg-muted/40">
+                      <span>Item</span>
+                      <span className="text-right">Stock</span>
+                      <span className="text-center">QR</span>
+                      <span className="text-right w-[88px]">Actions</span>
+                    </div>
+                  ) : null}
                   {items?.map((item) => (
                     <div
                       key={item.id}
-                      className={cn("flex flex-wrap items-center gap-4 px-4 py-3", stockBorderClass(item))}
+                      className={cn(
+                        "flex flex-wrap items-center gap-4 px-4 py-3",
+                        canDeleteInventory
+                          ? "sm:grid sm:grid-cols-[1fr_auto_auto_auto]"
+                          : "sm:flex sm:flex-wrap sm:items-center",
+                        stockBorderClass(item)
+                      )}
                     >
-                      <div className="flex-1 min-w-[200px]">
+                      <div className="flex-1 min-w-[200px] sm:min-w-0">
                         <p className="font-medium">{item.name}</p>
                         <p className="text-xs text-muted-foreground">{item.itemCode}</p>
                       </div>
-                      <div className="text-sm">
+                      <div className="text-sm sm:text-right">
                         Stock:{" "}
                         <span className="font-medium">
                           {item.currentStock} {item.unitOfMeasure}
                         </span>
                       </div>
-                      <InventoryItemQr itemCode={item.itemCode} />
+                      <div className={cn("flex justify-center", canDeleteInventory ? "" : "sm:ml-auto")}>
+                        <InventoryItemQr itemCode={item.itemCode} />
+                      </div>
+                      {canDeleteInventory ? (
+                        <div className="flex justify-end w-full sm:w-[88px]">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            data-testid={`inventory-item-delete-${item.id}`}
+                            aria-label={`Delete ${item.name}`}
+                            onClick={() => setDeleteTarget({ id: item.id, name: item.name })}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : null}
                     </div>
                   ))}
                 </div>
@@ -786,6 +870,34 @@ export default function Inventory() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <AlertDialog open={deleteTarget !== null} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Inventory Item</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget
+                ? `Are you sure you want to delete ${deleteTarget.name}? This action cannot be undone.`
+                : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>Cancel</AlertDialogCancel>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={deleteMutation.isPending}
+              onClick={handleConfirmDelete}
+            >
+              {deleteMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              ) : (
+                "Delete"
+              )}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
