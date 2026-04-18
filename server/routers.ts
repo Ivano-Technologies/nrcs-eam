@@ -36,6 +36,36 @@ export const appRouter = router({
         await db.setOpenRegistration(input.openRegistration);
         return { ok: true as const };
       }),
+
+    getEmailNotificationSettings: adminProcedure.query(async () => ({
+      newUserRequests: await db.getAppSettingBool("emailNotifyNewUserRequests", true),
+      lowStockAlerts: await db.getAppSettingBool("emailNotifyLowStock", true),
+      overdueMaintenance: await db.getAppSettingBool("emailNotifyOverdueMaintenance", true),
+    })),
+
+    setEmailNotificationSettings: adminProcedure
+      .input(
+        z.object({
+          newUserRequests: z.boolean().optional(),
+          lowStockAlerts: z.boolean().optional(),
+          overdueMaintenance: z.boolean().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        if (input.newUserRequests !== undefined) {
+          await db.setAppSettingValue("emailNotifyNewUserRequests", input.newUserRequests ? "true" : "false");
+        }
+        if (input.lowStockAlerts !== undefined) {
+          await db.setAppSettingValue("emailNotifyLowStock", input.lowStockAlerts ? "true" : "false");
+        }
+        if (input.overdueMaintenance !== undefined) {
+          await db.setAppSettingValue(
+            "emailNotifyOverdueMaintenance",
+            input.overdueMaintenance ? "true" : "false"
+          );
+        }
+        return { ok: true as const };
+      }),
   }),
 
   // ============= SITES MANAGEMENT =============
@@ -1116,6 +1146,25 @@ export const appRouter = router({
     stats: protectedProcedure.query(async () => {
       return await db.getDashboardStats();
     }),
+    weeklyInsights: protectedProcedure.query(async () => {
+      return await db.getWeeklyInsights();
+    }),
+  }),
+
+  search: router({
+    global: protectedProcedure
+      .input(z.object({ query: z.string().min(2).max(100) }))
+      .query(async ({ input, ctx }) => {
+        const raw = input.query.trim();
+        const [assets, workOrders, inventory, sites] = await Promise.all([
+          db.searchAssetsGlobal(raw),
+          db.searchWorkOrdersGlobal(raw),
+          db.searchInventoryGlobal(raw),
+          db.searchSitesGlobal(raw),
+        ]);
+        const users = ctx.user.role === "admin" ? await db.searchUsersGlobal(raw) : [];
+        return { assets, workOrders, inventory, sites, users };
+      }),
   }),
 
   // ============= USERS MANAGEMENT =============
@@ -1569,6 +1618,30 @@ export const appRouter = router({
           mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         };
       }),
+
+    exportAllDataZip: adminProcedure.query(async () => {
+      const JSZip = (await import("jszip")).default;
+      const { exportAssets, exportWorkOrders, exportInventory, exportSites } = await import(
+        "./bulkImportExport"
+      );
+      const zip = new JSZip();
+      const [a, w, i, s] = await Promise.all([
+        exportAssets(),
+        exportWorkOrders(),
+        exportInventory(),
+        exportSites(),
+      ]);
+      zip.file("assets.xlsx", a);
+      zip.file("work_orders.xlsx", w);
+      zip.file("inventory.xlsx", i);
+      zip.file("sites.xlsx", s);
+      const out = await zip.generateAsync({ type: "nodebuffer" });
+      return {
+        data: out.toString("base64"),
+        filename: `nrcs_export_${Date.now()}.zip`,
+        mimeType: "application/zip",
+      };
+    }),
 
     getImportTemplate: protectedProcedure
       .input(z.object({ entity: z.enum(['assets', 'workOrders', 'inventory']) }))
