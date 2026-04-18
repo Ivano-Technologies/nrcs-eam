@@ -154,7 +154,7 @@ export function SidebarGroupedNav({
         type="button"
         title={isNarrow ? g.label : undefined}
         className={cn(
-          "flex w-full items-center gap-2 rounded-md border border-transparent px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors",
+          "flex w-full items-center gap-2 rounded-md border border-transparent px-2 py-1.5 text-left text-[17px] font-normal uppercase tracking-wide text-muted-foreground transition-colors",
           "bg-sidebar-accent/40 hover:bg-sidebar-accent/70",
           isNarrow && "justify-center px-0"
         )}
