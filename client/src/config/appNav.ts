@@ -103,6 +103,7 @@ export const SIDEBAR_STANDALONE_MID: AppNavItem[] = [
   { label: "Sites", path: appPath("/sites"), icon: MapPin },
 ];
 
+/** Administration only — Settings is not a group (see `SIDEBAR_BOTTOM`). */
 export const SIDEBAR_GROUPS_ADMIN: AppNavGroup[] = [
   {
     id: "administration",
@@ -116,15 +117,11 @@ export const SIDEBAR_GROUPS_ADMIN: AppNavGroup[] = [
       { label: "Notifications", path: appPath("/email-notifications"), icon: Mail },
     ],
   },
-  {
-    id: "settings",
-    label: "Settings",
-    icon: Settings,
-    items: [{ label: "Settings", path: appPath("/dashboard-settings"), icon: Settings }],
-  },
 ];
 
+/** Standalone bottom items, exact order: Settings, then Activity Log (not in collapsible groups). */
 export const SIDEBAR_BOTTOM: AppNavItem[] = [
+  { label: "Settings", path: appPath("/dashboard-settings"), icon: Settings },
   { label: "Activity Log", path: appPath("/activity-log"), icon: History },
 ];
 
@@ -148,8 +145,6 @@ const GROUP_PREFIXES: { groupId: string; pathPrefix: string }[] = [
   { groupId: "administration", pathPrefix: appPath("/users") },
   { groupId: "administration", pathPrefix: appPath("/pending-users") },
   { groupId: "administration", pathPrefix: appPath("/email-notifications") },
-  { groupId: "settings", pathPrefix: appPath("/dashboard-settings") },
-  { groupId: "settings", pathPrefix: appPath("/notification-preferences") },
 ];
 
 /** Longest-prefix match so `/app/assets/123` maps to `assets`. */
