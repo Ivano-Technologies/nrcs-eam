@@ -190,12 +190,12 @@ function DashboardLayoutContent({
                 {sidebarWidth > PRESET_WIDTHS.narrow && (
                   <div className="flex flex-col min-w-0">
                     <span
-                      className="font-bold text-[18px] text-sidebar-foreground truncate"
+                      className="font-bold text-[10.8px] text-sidebar-foreground truncate"
                       data-testid="sidebar-org-name"
                     >
                       Nigerian Red Cross Society
                     </span>
-                    <span className="text-[16px] text-sidebar-foreground/70 truncate">
+                    <span className="text-[9.6px] text-sidebar-foreground/70 truncate">
                       Enterprise Asset Management
                     </span>
                   </div>
