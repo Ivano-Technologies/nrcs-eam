@@ -49,7 +49,13 @@ export async function ensureTestSite(page: Page, siteName: string): Promise<void
   await page.getByRole("button", { name: /Add Site/i }).click();
   await page.getByLabel(/Site Name/i).fill(siteName);
   await page.getByRole("button", { name: /^Create Site$/i }).click();
-  await expect(page.getByText(/Site created successfully/i)).toBeVisible({ timeout: 60_000 });
+  const createdCard = page
+    .locator("[data-testid^='site-card-']")
+    .filter({ hasText: siteName });
+  await expect(createdCard.first()).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByText(/Site created successfully/i))
+    .toBeVisible({ timeout: 15_000 })
+    .catch(() => {});
 }
 
 /**
