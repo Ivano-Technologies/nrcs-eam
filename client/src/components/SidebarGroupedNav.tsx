@@ -154,18 +154,18 @@ export function SidebarGroupedNav({
         type="button"
         title={isNarrow ? g.label : undefined}
         className={cn(
-          "flex w-full items-center gap-2 rounded-md border border-transparent px-2 py-1.5 text-left text-[17px] font-normal uppercase tracking-wide text-muted-foreground transition-colors",
+          "flex w-full items-center gap-2 rounded-md border border-transparent px-2 py-1.5 text-left text-[17px] font-normal text-white transition-colors",
           "bg-sidebar-accent/40 hover:bg-sidebar-accent/70",
           isNarrow && "justify-center px-0"
         )}
         aria-expanded={open}
       >
-        <g.icon className="h-4 w-4 shrink-0 text-sidebar-foreground/80" />
+        <g.icon className="h-4 w-4 shrink-0 text-white" />
         {!isNarrow && <span className="flex-1 truncate">{g.label}</span>}
         {!isNarrow && (
           <ChevronRight
             className={cn(
-              "h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 ease-out",
+              "h-4 w-4 shrink-0 text-white transition-transform duration-200 ease-out",
               open && "rotate-90"
             )}
           />

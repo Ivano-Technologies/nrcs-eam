@@ -217,12 +217,12 @@ function DashboardLayoutContent({
                   />
                   <div className="flex flex-col min-w-0">
                     <span
-                      className="font-bold text-[13px] text-sidebar-foreground truncate"
+                      className="font-bold text-[15px] text-sidebar-foreground truncate"
                       data-testid="sidebar-org-name"
                     >
                       Nigerian Red Cross Society
                     </span>
-                    <span className="text-[12px] text-sidebar-foreground/70 truncate">
+                    <span className="text-[14px] text-sidebar-foreground/70 truncate">
                       Enterprise Asset Management
                     </span>
                   </div>
