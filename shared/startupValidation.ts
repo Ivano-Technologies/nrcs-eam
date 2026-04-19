@@ -97,4 +97,8 @@ export function logStartupSummary(): void {
     `[startup] Secrets source: ${secrets === "aws" ? "AWS Secrets Manager" : ".env / process env"}`
   );
   console.log(`[startup] TLS: ${tlsLine}`);
+  console.log(
+    "[startup] Email provider:",
+    process.env.RESEND_API_KEY ? "Resend" : "none"
+  );
 }
