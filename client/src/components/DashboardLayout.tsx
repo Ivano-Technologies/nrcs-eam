@@ -283,10 +283,10 @@ function DashboardLayoutContent({
                   </Avatar>
                   {sidebarWidth > PRESET_WIDTHS.narrow && (
                     <div className="flex-1 min-w-0">
-                      <p className="text-[18px] font-medium truncate leading-none">
+                      <p className="text-[13.5px] font-medium truncate leading-none">
                         {user?.name || "-"}
                       </p>
-                      <p className="text-[16px] text-muted-foreground truncate mt-1.5">
+                      <p className="text-[12px] text-muted-foreground truncate mt-1.5">
                         {user?.email || "-"}
                       </p>
                     </div>
