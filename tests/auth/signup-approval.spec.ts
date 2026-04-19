@@ -13,7 +13,7 @@ test.describe.configure({ timeout: 180_000 });
 const ADMIN_EMAIL =
   process.env.PLAYWRIGHT_ADMIN_EMAIL ?? "ivanonigeria@gmail.com";
 const ADMIN_PASSWORD =
-  process.env.PLAYWRIGHT_ADMIN_PASSWORD ?? "ChangeMe123!";
+  process.env.PLAYWRIGHT_ADMIN_PASSWORD ?? "@Localhost001";
 
 // Skipped: requires test data creation in production DB (pending users / approved test accounts)
 test.describe.skip("signup approval flow (live)", () => {
