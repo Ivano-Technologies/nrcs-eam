@@ -3,7 +3,7 @@
  * Usage: SET_PASSWORD_EMAIL=x@y.com SET_PASSWORD_PASSWORD='...' pnpm exec tsx scripts/setPassword.ts
  * Requires: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
  *
- * Defaults to ivanonigeria@gmail.com / ChangeMe123! if env vars not set.
+ * Defaults to ivanonigeria@gmail.com / @Localhost001 if env vars not set.
  * Also backfills auth_user_id on the app users row if missing.
  */
 import * as dotenv from "dotenv";
@@ -17,7 +17,7 @@ import { users } from "../drizzle/schema";
 
 async function main() {
   const email = (process.env.SET_PASSWORD_EMAIL ?? "ivanonigeria@gmail.com").trim();
-  const password = process.env.SET_PASSWORD_PASSWORD ?? "ChangeMe123!";
+  const password = process.env.SET_PASSWORD_PASSWORD ?? "@Localhost001";
 
   const supabaseUrl = process.env.SUPABASE_URL?.trim();
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();

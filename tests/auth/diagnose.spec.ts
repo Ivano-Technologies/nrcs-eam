@@ -13,7 +13,7 @@ test("tRPC endpoint returns JSON", async ({ request }) => {
     "https://nrcseam.techivano.com/api/trpc/auth.loginWithPassword",
     {
       headers: { "Content-Type": "application/json" },
-      data: { json: { email: "ivanonigeria@gmail.com", password: "ChangeMe123!" } },
+      data: { json: { email: "ivanonigeria@gmail.com", password: "@Localhost001" } },
     }
   );
   const body = await response.text();
@@ -32,7 +32,7 @@ test("login page loads", async ({ page }) => {
 test("full login flow", async ({ page }) => {
   await page.goto("https://nrcseam.techivano.com/login");
   await page.getByTestId("login-email-input").fill("ivanonigeria@gmail.com");
-  await page.getByTestId("login-password-input").fill("ChangeMe123!");
+  await page.getByTestId("login-password-input").fill("@Localhost001");
 
   page.on("response", (response) => {
     if (response.url().includes("trpc")) {

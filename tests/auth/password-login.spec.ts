@@ -11,7 +11,7 @@ test.describe("password login (nrcseam.techivano.com)", () => {
     await expect(page.getByText("No procedure found")).toHaveCount(0);
 
     await page.getByTestId("login-email-input").fill("ivanonigeria@gmail.com");
-    await page.getByTestId("login-password-input").fill("ChangeMe123!");
+    await page.getByTestId("login-password-input").fill("@Localhost001");
     await page.getByTestId("login-password-submit").click();
 
     await expect(page).toHaveURL(/\/app/, { timeout: 60_000 });

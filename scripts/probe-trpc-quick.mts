@@ -22,6 +22,6 @@ const me = await client.auth.me.query();
 console.log("me", me);
 const r = await client.auth.loginWithPassword.mutate({
   email: "ivanonigeria@gmail.com",
-  password: "ChangeMe123!",
+  password: "@Localhost001",
 });
 console.log("login", JSON.stringify(r));
