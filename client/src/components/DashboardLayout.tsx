@@ -29,6 +29,7 @@ import Footer from "./Footer";
 import { ThemeToggle } from "./ui/ThemeToggle";
 import { SidebarGroupedNav } from "./SidebarGroupedNav";
 import { GlobalSearch } from "./GlobalSearch";
+import { InstallPWABanner } from "./InstallPWABanner";
 import { flattenNavItems } from "@/config/appNav";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { Link } from "wouter";
@@ -340,6 +341,7 @@ function DashboardLayoutContent({
       </div>
 
       <SidebarInset className="min-h-svh bg-background dark:bg-[#232323]">
+        <InstallPWABanner />
         {isMobile && (
           <div className="flex border-b h-14 items-center justify-between bg-background/95 dark:bg-[#232323]/95 px-2 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
             <div className="flex items-center gap-2">
