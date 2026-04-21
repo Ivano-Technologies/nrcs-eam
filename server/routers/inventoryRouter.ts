@@ -69,6 +69,16 @@ function deriveStockStatus(row: {
   return "normal";
 }
 
+function toMonthKey(value: Date | string | null | undefined): string {
+  const d = value ? new Date(value) : new Date();
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+function safeNumber(value: unknown): number {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
 const inventoryMovementTypeEnum = z.enum([
   "receipt",
   "issue",
@@ -1559,6 +1569,488 @@ export const inventoryV2Router = router({
           })
           .returning();
         return { success: true as const, documentNumber: doc.documentNumber };
+      }),
+  }),
+
+  reports: router({
+    stockStatus: protectedProcedure
+      .input(
+        z
+          .object({
+            warehouseId: z.number().optional(),
+            category: categoryEnum.optional(),
+          })
+          .optional()
+      )
+      .query(async ({ input, ctx }) => {
+        requireRole(ctx, ["manager", "admin"]);
+        const db = await getDb();
+        if (!db) return [];
+        const rows = await db
+          .select({
+            warehouseId: inventoryStock.warehouseId,
+            warehouseName: sites.name,
+            category: inventoryCatalogue.category,
+            quantityOnHand: inventoryStock.quantityOnHand,
+            minLevel: inventoryStock.minLevel,
+            maxLevel: inventoryStock.maxLevel,
+            safetyStockLevel: inventoryStock.safetyStockLevel,
+          })
+          .from(inventoryStock)
+          .innerJoin(inventoryCatalogue, eq(inventoryStock.catalogueId, inventoryCatalogue.id))
+          .innerJoin(sites, eq(inventoryStock.warehouseId, sites.id))
+          .where(
+            and(
+              input?.warehouseId ? eq(inventoryStock.warehouseId, input.warehouseId) : undefined,
+              input?.category ? eq(inventoryCatalogue.category, input.category) : undefined
+            )
+          );
+
+        const grouped = new Map<string, any>();
+        for (const row of rows) {
+          const key = `${row.warehouseId}:${row.category}`;
+          const current =
+            grouped.get(key) ??
+            {
+              warehouseId: row.warehouseId,
+              warehouseName: row.warehouseName,
+              category: row.category,
+              belowMinimumCount: 0,
+              aboveMaximumCount: 0,
+              atSafetyLevelCount: 0,
+              outOfStockCount: 0,
+              totalInventoryValue: 0,
+            };
+          const qty = safeNumber(row.quantityOnHand);
+          const min = safeNumber(row.minLevel);
+          const max = row.maxLevel == null ? null : safeNumber(row.maxLevel);
+          const safety = row.safetyStockLevel == null ? null : safeNumber(row.safetyStockLevel);
+          const unitCost = 1;
+          if (qty <= 0) current.outOfStockCount += 1;
+          if (qty < min) current.belowMinimumCount += 1;
+          if (max != null && qty > max) current.aboveMaximumCount += 1;
+          if (safety != null && qty === safety) current.atSafetyLevelCount += 1;
+          current.totalInventoryValue += qty * unitCost;
+          grouped.set(key, current);
+        }
+        return Array.from(grouped.values());
+      }),
+
+    stockMovement: protectedProcedure
+      .input(
+        z.object({
+          startDate: z.coerce.date(),
+          endDate: z.coerce.date(),
+        })
+      )
+      .query(async ({ input, ctx }) => {
+        requireRole(ctx, ["manager", "admin"]);
+        const db = await getDb();
+        if (!db) return null;
+        const rows = await db
+          .select({
+            movementType: inventoryMovements.movementType,
+            quantityChange: inventoryMovements.quantityChange,
+            createdAt: inventoryMovements.createdAt,
+            fromWarehouseId: inventoryMovements.fromWarehouseId,
+            toWarehouseId: inventoryMovements.toWarehouseId,
+            category: inventoryCatalogue.category,
+            itemCode: inventoryCatalogue.itemCode,
+          })
+          .from(inventoryMovements)
+          .innerJoin(inventoryCatalogue, eq(inventoryMovements.catalogueId, inventoryCatalogue.id))
+          .where(and(gte(inventoryMovements.createdAt, input.startDate), lte(inventoryMovements.createdAt, input.endDate)));
+
+        let receiptsVolume = 0;
+        let issuesVolume = 0;
+        const byCategory = new Map<string, number>();
+        const byWarehouse = new Map<string, number>();
+        const byType = new Map<string, number>();
+        const itemMovements = new Map<string, number>();
+        for (const row of rows) {
+          const qty = Math.abs(safeNumber(row.quantityChange));
+          if (["receipt", "transfer_in"].includes(String(row.movementType))) receiptsVolume += qty;
+          if (["issue", "transfer_out", "distribution", "loss"].includes(String(row.movementType))) issuesVolume += qty;
+          byCategory.set(String(row.category), (byCategory.get(String(row.category)) ?? 0) + qty);
+          const wh = String(row.fromWarehouseId ?? row.toWarehouseId ?? "unknown");
+          byWarehouse.set(wh, (byWarehouse.get(wh) ?? 0) + qty);
+          byType.set(String(row.movementType), (byType.get(String(row.movementType)) ?? 0) + qty);
+          itemMovements.set(row.itemCode, (itemMovements.get(row.itemCode) ?? 0) + qty);
+        }
+        const turnoverRows = Array.from(itemMovements.entries()).map(([itemCode, volume]) => ({
+          itemCode,
+          turnoverRatio: volume / Math.max(1, (rows.length || 1)),
+          volume,
+        }));
+        turnoverRows.sort((a, b) => b.volume - a.volume);
+        return {
+          totalReceipts: { volume: receiptsVolume, value: receiptsVolume },
+          totalIssues: { volume: issuesVolume, value: issuesVolume },
+          byCategory: Array.from(byCategory.entries()).map(([category, volume]) => ({ category, volume })),
+          byWarehouse: Array.from(byWarehouse.entries()).map(([warehouseId, volume]) => ({ warehouseId, volume })),
+          byMovementType: Array.from(byType.entries()).map(([movementType, volume]) => ({ movementType, volume })),
+          turnoverRatio: turnoverRows,
+          fastMovingItems: turnoverRows.slice(0, 10),
+          slowMovingItems: turnoverRows.slice(-10).reverse(),
+        };
+      }),
+
+    expiryForecast: protectedProcedure.query(async ({ ctx }) => {
+      requireRole(ctx, ["manager", "admin"]);
+      const db = await getDb();
+      if (!db) return null;
+      const days = [30, 60, 90, 180];
+      const today = new Date();
+      const upcomingByWindow: Record<string, number> = {};
+      for (const d of days) {
+        const until = new Date(today.getTime() + d * 86400000).toISOString().slice(0, 10);
+        const rows = await db
+          .select({ qty: inventoryBatches.quantity })
+          .from(inventoryBatches)
+          .where(
+            and(
+              eq(inventoryBatches.status, "active"),
+              gte(inventoryBatches.expiryDate, today.toISOString().slice(0, 10)),
+              lte(inventoryBatches.expiryDate, until)
+            )
+          );
+        upcomingByWindow[`${d}d`] = rows.reduce((acc, r) => acc + safeNumber(r.qty), 0);
+      }
+      const pastYear = new Date(today.getTime() - 365 * 86400000);
+      const losses = await db
+        .select({
+          month: inventoryMovements.createdAt,
+          qty: inventoryMovements.quantityChange,
+        })
+        .from(inventoryMovements)
+        .where(and(eq(inventoryMovements.reason, "expired"), gte(inventoryMovements.createdAt, pastYear)));
+      const historicalLosses = losses.reduce<Record<string, number>>((acc, row) => {
+        const key = toMonthKey(row.month);
+        acc[key] = (acc[key] ?? 0) + Math.abs(safeNumber(row.qty));
+        return acc;
+      }, {});
+      const riskRows = await db
+        .select({
+          itemCode: inventoryCatalogue.itemCode,
+          itemName: inventoryCatalogue.name,
+          qty: inventoryBatches.quantity,
+          expiryDate: inventoryBatches.expiryDate,
+        })
+        .from(inventoryBatches)
+        .innerJoin(inventoryStock, eq(inventoryBatches.stockId, inventoryStock.id))
+        .innerJoin(inventoryCatalogue, eq(inventoryStock.catalogueId, inventoryCatalogue.id))
+        .where(eq(inventoryBatches.status, "active"))
+        .orderBy(asc(inventoryBatches.expiryDate));
+      return {
+        upcomingByWindow,
+        historicalLosses,
+        highestRiskItems: riskRows.slice(0, 20),
+      };
+    }),
+
+    distributionSummary: protectedProcedure
+      .input(
+        z
+          .object({
+            startDate: z.coerce.date().optional(),
+            endDate: z.coerce.date().optional(),
+          })
+          .optional()
+      )
+      .query(async ({ input, ctx }) => {
+        requireRole(ctx, ["manager", "admin"]);
+        const db = await getDb();
+        if (!db) return null;
+        const rows = await db
+          .select()
+          .from(distributions)
+          .where(
+            and(
+              input?.startDate ? gte(distributions.createdAt, input.startDate) : undefined,
+              input?.endDate ? lte(distributions.createdAt, input.endDate) : undefined
+            )
+          );
+        const totalBeneficiaries = rows.reduce((a, r) => a + safeNumber(r.beneficiaryCount), 0);
+        const demographics = {
+          male: rows.reduce((a, r) => a + safeNumber(r.maleCount), 0),
+          female: rows.reduce((a, r) => a + safeNumber(r.femaleCount), 0),
+          children: rows.reduce((a, r) => a + safeNumber(r.childrenCount), 0),
+          elderly: rows.reduce((a, r) => a + safeNumber(r.elderlyCount), 0),
+          pwd: rows.reduce((a, r) => a + safeNumber(r.pwdCount), 0),
+        };
+        const byLocation = new Map<string, number>();
+        const byIncident = new Map<string, number>();
+        for (const row of rows) {
+          byLocation.set(row.location ?? "Unknown", (byLocation.get(row.location ?? "Unknown") ?? 0) + safeNumber(row.beneficiaryCount));
+          byIncident.set(
+            row.incidentReference ?? "Unspecified",
+            (byIncident.get(row.incidentReference ?? "Unspecified") ?? 0) + safeNumber(row.beneficiaryCount)
+          );
+        }
+        const requisitionRows = await db.select().from(requisitions).where(eq(requisitions.status, "fulfilled"));
+        const responseTimeDays = requisitionRows
+          .filter((r) => r.fulfilledAt && r.createdAt)
+          .map((r) => (new Date(r.fulfilledAt as any).getTime() - new Date(r.createdAt as any).getTime()) / 86400000);
+        return {
+          totalBeneficiaries,
+          demographics,
+          distributionsByLocation: Array.from(byLocation.entries()).map(([location, beneficiaries]) => ({ location, beneficiaries })),
+          distributionsByIncident: Array.from(byIncident.entries()).map(([incident, beneficiaries]) => ({ incident, beneficiaries })),
+          responseTimeDaysAvg:
+            responseTimeDays.length > 0
+              ? responseTimeDays.reduce((a, b) => a + b, 0) / responseTimeDays.length
+              : 0,
+        };
+      }),
+
+    vedAnalysis: protectedProcedure.query(async ({ ctx }) => {
+      requireRole(ctx, ["manager", "admin"]);
+      const db = await getDb();
+      if (!db) return [];
+      const rows = await db
+        .select({
+          ved: inventoryCatalogue.vedClassification,
+          qty: inventoryStock.quantityOnHand,
+          minLevel: inventoryStock.minLevel,
+          safety: inventoryStock.safetyStockLevel,
+        })
+        .from(inventoryStock)
+        .innerJoin(inventoryCatalogue, eq(inventoryStock.catalogueId, inventoryCatalogue.id));
+      const grouped = new Map<string, { ved: string; count: number; value: number; serviceLevel: number }>();
+      for (const row of rows) {
+        const key = row.ved ?? "unknown";
+        const prev = grouped.get(key) ?? { ved: key, count: 0, value: 0, serviceLevel: 0 };
+        prev.count += 1;
+        prev.value += safeNumber(row.qty);
+        const threshold = row.safety == null ? safeNumber(row.minLevel) : safeNumber(row.safety);
+        if (safeNumber(row.qty) >= threshold) prev.serviceLevel += 1;
+        grouped.set(key, prev);
+      }
+      return Array.from(grouped.values()).map((g) => ({
+        ...g,
+        serviceLevel: g.count > 0 ? (g.serviceLevel / g.count) * 100 : 0,
+        recommendation:
+          g.ved === "vital"
+            ? "Keep higher safety stock"
+            : g.ved === "essential"
+              ? "Monitor reorder cadence"
+              : "Consider lean stock policy",
+      }));
+    }),
+
+    abcAnalysis: protectedProcedure.query(async ({ ctx }) => {
+      requireRole(ctx, ["manager", "admin"]);
+      const db = await getDb();
+      if (!db) return [];
+      const rows = await db
+        .select({
+          itemCode: inventoryCatalogue.itemCode,
+          itemName: inventoryCatalogue.name,
+          qty: inventoryMovements.quantityChange,
+        })
+        .from(inventoryMovements)
+        .innerJoin(inventoryCatalogue, eq(inventoryMovements.catalogueId, inventoryCatalogue.id))
+        .where(inArray(inventoryMovements.movementType, ["issue", "distribution"] as any));
+      const byItem = new Map<string, { itemCode: string; itemName: string; consumptionValue: number }>();
+      for (const row of rows) {
+        const prev = byItem.get(row.itemCode) ?? { itemCode: row.itemCode, itemName: row.itemName, consumptionValue: 0 };
+        prev.consumptionValue += Math.abs(safeNumber(row.qty));
+        byItem.set(row.itemCode, prev);
+      }
+      const sorted = Array.from(byItem.values()).sort((a, b) => b.consumptionValue - a.consumptionValue);
+      const total = sorted.reduce((a, b) => a + b.consumptionValue, 0) || 1;
+      let cum = 0;
+      return sorted.map((row) => {
+        cum += row.consumptionValue;
+        const pct = (cum / total) * 100;
+        const abcClass = pct <= 80 ? "A" : pct <= 95 ? "B" : "C";
+        return { ...row, cumulativePercent: pct, abcClass };
+      });
+    }),
+
+    fnsAnalysis: protectedProcedure.query(async ({ ctx }) => {
+      requireRole(ctx, ["manager", "admin"]);
+      const db = await getDb();
+      if (!db) return [];
+      const sixMonthsAgo = new Date(Date.now() - 180 * 86400000);
+      const rows = await db
+        .select({
+          catalogueId: inventoryMovements.catalogueId,
+          itemCode: inventoryCatalogue.itemCode,
+          itemName: inventoryCatalogue.name,
+          createdAt: inventoryMovements.createdAt,
+        })
+        .from(inventoryMovements)
+        .innerJoin(inventoryCatalogue, eq(inventoryMovements.catalogueId, inventoryCatalogue.id))
+        .where(inArray(inventoryMovements.movementType, ["issue", "distribution"] as any));
+      const frequencyMap = new Map<number, { itemCode: string; itemName: string; count: number; lastMovementAt: Date | null }>();
+      for (const row of rows) {
+        const prev = frequencyMap.get(row.catalogueId) ?? { itemCode: row.itemCode, itemName: row.itemName, count: 0, lastMovementAt: null };
+        prev.count += 1;
+        const d = row.createdAt ? new Date(row.createdAt as any) : null;
+        if (!prev.lastMovementAt || (d && d > prev.lastMovementAt)) prev.lastMovementAt = d;
+        frequencyMap.set(row.catalogueId, prev);
+      }
+      return Array.from(frequencyMap.values()).map((row) => {
+        const fnsClass = row.count >= 20 ? "fast" : row.count >= 8 ? "normal" : "slow";
+        const deadStock = !row.lastMovementAt || row.lastMovementAt < sixMonthsAgo;
+        return { ...row, fnsClass, deadStock };
+      });
+    }),
+
+    warehouseUtilization: protectedProcedure.query(async ({ ctx }) => {
+      requireRole(ctx, ["manager", "admin"]);
+      const db = await getDb();
+      if (!db) return [];
+      const warehouses = await db.select().from(sites).where(eq(sites.facilityType, "warehouse"));
+      const out = [];
+      for (const wh of warehouses) {
+        const stocks = await db.select().from(inventoryStock).where(eq(inventoryStock.warehouseId, wh.id));
+        const stockIds = stocks.map((s) => s.id);
+        const movements = stockIds.length
+          ? await db.select().from(inventoryMovements).where(inArray(inventoryMovements.stockId, stockIds))
+          : [];
+        const totalValue = stocks.reduce((a, s) => a + safeNumber(s.quantityOnHand), 0);
+        const counts = stockIds.length
+          ? await db
+              .select()
+              .from(inventoryCountLines)
+              .where(inArray(inventoryCountLines.stockId, stockIds))
+          : [];
+        const accuracy =
+          counts.length > 0
+            ? (counts.filter((c) => safeNumber(c.varianceQuantity) === 0).length / counts.length) * 100
+            : 100;
+        out.push({
+          warehouseId: wh.id,
+          warehouseName: wh.name,
+          itemCount: stocks.length,
+          totalValue,
+          movementCount: movements.length,
+          stockAccuracy: accuracy,
+        });
+      }
+      return out;
+    }),
+
+    forecastDemand: protectedProcedure.query(async ({ ctx }) => {
+      requireRole(ctx, ["manager", "admin"]);
+      const db = await getDb();
+      if (!db) return [];
+      const rows = await db
+        .select({
+          warehouseId: inventoryMovements.fromWarehouseId,
+          catalogueId: inventoryMovements.catalogueId,
+          itemCode: inventoryCatalogue.itemCode,
+          itemName: inventoryCatalogue.name,
+          qty: inventoryMovements.quantityChange,
+          createdAt: inventoryMovements.createdAt,
+        })
+        .from(inventoryMovements)
+        .innerJoin(inventoryCatalogue, eq(inventoryMovements.catalogueId, inventoryCatalogue.id))
+        .where(inArray(inventoryMovements.movementType, ["issue", "distribution"] as any));
+      const monthMap = new Map<string, number>();
+      for (const row of rows) {
+        const key = `${row.catalogueId}:${row.warehouseId ?? 0}:${toMonthKey(row.createdAt as any)}`;
+        monthMap.set(key, (monthMap.get(key) ?? 0) + Math.abs(safeNumber(row.qty)));
+      }
+      const grouped = new Map<string, { catalogueId: number; warehouseId: number; itemCode: string; itemName: string; monthly: number[] }>();
+      for (const row of rows) {
+        const gk = `${row.catalogueId}:${row.warehouseId ?? 0}`;
+        const current =
+          grouped.get(gk) ?? {
+            catalogueId: row.catalogueId,
+            warehouseId: row.warehouseId ?? 0,
+            itemCode: row.itemCode,
+            itemName: row.itemName,
+            monthly: [],
+          };
+        grouped.set(gk, current);
+      }
+      for (const [gk, g] of Array.from(grouped.entries())) {
+        const months = Array.from(monthMap.entries())
+          .filter(([k]) => k.startsWith(`${g.catalogueId}:${g.warehouseId}:`))
+          .map(([, v]) => v)
+          .sort((a, b) => a - b);
+        g.monthly = months;
+        grouped.set(gk, g);
+      }
+      return Array.from(grouped.values()).map((g) => {
+        const avg = g.monthly.length ? g.monthly.reduce((a, b) => a + b, 0) / g.monthly.length : 0;
+        const rolling3 = g.monthly.slice(-3);
+        const rollingAvg = rolling3.length ? rolling3.reduce((a, b) => a + b, 0) / rolling3.length : avg;
+        const seasonalAdjustment = g.monthly.length >= 12 ? 1.05 : 1;
+        const forecast = rollingAvg * seasonalAdjustment;
+        return {
+          ...g,
+          monthlyAverageConsumption: avg,
+          rolling3MonthAverage: rollingAvg,
+          seasonalAdjustment,
+          recommendedReorderQty: Math.ceil(forecast * 1.5),
+          recommendedReorderTimingDays: Math.max(7, Math.round(30 - Math.min(20, forecast))),
+        };
+      });
+    }),
+  }),
+
+  adminData: router({
+    exportFullInventoryZip: protectedProcedure.mutation(async ({ ctx }) => {
+      requireRole(ctx, ["admin"]);
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+      const JSZip = (await import("jszip")).default;
+      const zip = new JSZip();
+      const [catalogue, stocks, moves, dists, kits, reqs] = await Promise.all([
+        db.select().from(inventoryCatalogue),
+        db.select().from(inventoryStock),
+        db
+          .select()
+          .from(inventoryMovements)
+          .where(gte(inventoryMovements.createdAt, new Date(Date.now() - 365 * 86400000))),
+        db.select().from(distributions),
+        db.select().from(inventoryKits),
+        db.select().from(requisitions),
+      ]);
+      const toCsv = (rows: Record<string, unknown>[]) => {
+        if (!rows.length) return "";
+        const keys = Object.keys(rows[0]);
+        return [keys.join(","), ...rows.map((r) => keys.map((k) => JSON.stringify(r[k] ?? "")).join(","))].join("\n");
+      };
+      zip.file("catalogue.xlsx", toCsv(catalogue as any[]));
+      zip.file("stock_levels.xlsx", toCsv(stocks as any[]));
+      zip.file("movements_12_months.xlsx", toCsv(moves as any[]));
+      zip.file("distributions.xlsx", toCsv(dists as any[]));
+      zip.file("kits.xlsx", toCsv(kits as any[]));
+      zip.file("requisitions.xlsx", toCsv(reqs as any[]));
+      const out = await zip.generateAsync({ type: "nodebuffer" });
+      return {
+        data: out.toString("base64"),
+        filename: `inventory-full-export-${Date.now()}.zip`,
+        mimeType: "application/zip",
+      };
+    }),
+
+    importCatalogueDryRun: protectedProcedure
+      .input(z.object({ csvData: z.string().min(1) }))
+      .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["admin"]);
+        const lines = input.csvData.split(/\r?\n/).map((x) => x.trim()).filter(Boolean);
+        if (lines.length < 2) return { validRows: 0, errors: ["No rows found"] };
+        const headers = parseCsvLine(lines[0]).map((x) => x.toLowerCase());
+        const required = ["itemcode", "name", "category", "unitofmeasure"];
+        const missing = required.filter((r) => !headers.includes(r));
+        if (missing.length) return { validRows: 0, errors: [`Missing columns: ${missing.join(", ")}`] };
+        const errors: string[] = [];
+        let validRows = 0;
+        for (let i = 1; i < lines.length; i++) {
+          const cols = parseCsvLine(lines[i]);
+          if (!cols[headers.indexOf("itemcode")] || !cols[headers.indexOf("name")]) {
+            errors.push(`Row ${i + 1}: itemCode/name required`);
+            continue;
+          }
+          validRows += 1;
+        }
+        return { validRows, errors };
       }),
   }),
 

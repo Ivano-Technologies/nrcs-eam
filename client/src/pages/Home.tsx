@@ -18,6 +18,7 @@ export default function Home() {
   const { data: reqs } = trpc.inventoryV2.requisitions.list.useQuery();
   const { data: dists } = trpc.inventoryV2.distributions.list.useQuery();
   const { data: distReport } = trpc.inventoryV2.distributions.report.useQuery();
+  const { data: smartInsights } = trpc.dashboard.smartInsights.useQuery();
 
   if (isLoading) {
     return (
@@ -292,6 +293,50 @@ export default function Home() {
           )}
         </CardContent>
       </Card>
+
+      {smartInsights && (
+        <Card data-testid="smart-insights-widget" className="border-t-4 border-t-emerald-600 shadow-md">
+          <CardHeader>
+            <CardTitle className="text-lg font-bold">Inventory Intelligence</CardTitle>
+            <CardDescription>Operational health, attention points, and recommendations</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-3">
+            <div className="rounded-md border bg-emerald-50 p-3">
+              <p className="text-sm font-semibold text-emerald-800">Good</p>
+              <p className="text-xs text-emerald-700">
+                Stock availability: {smartInsights.good.stockAvailabilityPct.toFixed(1)}%
+              </p>
+              <p className="text-xs text-emerald-700">
+                Successful distributions: {smartInsights.good.successfulDistributions}
+              </p>
+            </div>
+            <div className="rounded-md border bg-amber-50 p-3">
+              <p className="text-sm font-semibold text-amber-800">Attention Needed</p>
+              <p className="text-xs text-amber-700">
+                Below safety stock: {smartInsights.attentionNeeded.belowSafetyStock}
+              </p>
+              <p className="text-xs text-amber-700">
+                Expiring within 30 days: {smartInsights.attentionNeeded.expiringWithin30Days}
+              </p>
+              <p className="text-xs text-amber-700">
+                Emergency requisitions pending: {smartInsights.attentionNeeded.emergencyRequisitionsPending}
+              </p>
+            </div>
+            <div className="rounded-md border bg-blue-50 p-3">
+              <p className="text-sm font-semibold text-blue-800">Recommendations</p>
+              <p className="text-xs text-blue-700">
+                Safety stock adjustments: {smartInsights.recommendations.safetyStockAdjustments.length}
+              </p>
+              <p className="text-xs text-blue-700">
+                Overstock transfer candidates: {smartInsights.recommendations.overstockTransfers.length}
+              </p>
+              <p className="text-xs text-blue-700">
+                Dead stock for review: {smartInsights.recommendations.deadStockReview.length}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Analytics Widgets */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

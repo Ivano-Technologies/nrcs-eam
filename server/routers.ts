@@ -1256,6 +1256,39 @@ export const appRouter = router({
     weeklyInsights: protectedProcedure.query(async () => {
       return await db.getWeeklyInsights();
     }),
+    smartInsights: protectedProcedure.query(async () => {
+      const [stats, weekly, lowStock] = await Promise.all([
+        db.getDashboardStats(),
+        db.getWeeklyInsights(),
+        db.getLowStockItems(),
+      ]);
+      const totalInventory = Math.max(1, Number((stats as any)?.totalInventory ?? 0));
+      const lowStockCount = Number((stats as any)?.lowStockItems ?? lowStock.length);
+      const stockAvailabilityPct = ((totalInventory - lowStockCount) / totalInventory) * 100;
+      const successfulDistributions = Number((weekly as any)?.lowStockItems ?? 0) >= 0 ? Number((weekly as any)?.lowStockItems ?? 0) : 0;
+
+      return {
+        good: {
+          stockAvailabilityPct,
+          successfulDistributions,
+        },
+        attentionNeeded: {
+          belowSafetyStock: lowStockCount,
+          expiringWithin30Days: Number((weekly as any)?.warrantiesExpiringNext30Days ?? 0),
+          emergencyRequisitionsPending: 0,
+        },
+        recommendations: {
+          safetyStockAdjustments: lowStock.slice(0, 10).map((x: any) => ({
+            itemCode: x.itemCode ?? x.assetTag ?? "N/A",
+            warehouseName: x.siteName ?? "N/A",
+            current: x.currentStock ?? 0,
+            safety: x.minStockLevel ?? 0,
+          })),
+          overstockTransfers: [],
+          deadStockReview: [],
+        },
+      };
+    }),
   }),
 
   search: router({
