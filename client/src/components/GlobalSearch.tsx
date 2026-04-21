@@ -225,7 +225,7 @@ export function GlobalSearch({ className }: { className?: string }) {
               {data.inventory.length > 0 && (
                 <CommandGroup heading="Inventory">
                   {data.inventory.map((it) => {
-                    const href = appPath("/inventory");
+                    const href = appPath("/inventory/stock-overview");
                     const entry: RecentEntry = {
                       id: `inv-${it.id}`,
                       label: `${it.name} (${it.itemCode})`,

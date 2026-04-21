@@ -34,7 +34,7 @@ function priorityVariant(priority?: string) {
   return "secondary";
 }
 
-export default function Requisitions() {
+export default function Requisitions({ embedInShell = false }: { embedInShell?: boolean } = {}) {
   const { isAdmin } = usePermissions();
   const [viewMode, setViewMode] = useState<ViewMode>(() => (localStorage.getItem("viewMode_inventory_requisitions") as ViewMode) || "table");
   const [open, setOpen] = useState(false);
@@ -82,8 +82,12 @@ export default function Requisitions() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-3xl font-bold">Requisitions</h1>
-      <InventorySecondaryNav />
+      {!embedInShell ? (
+        <>
+          <h1 className="text-3xl font-bold">Requisitions</h1>
+          <InventorySecondaryNav />
+        </>
+      ) : null}
       <Card>
         <CardContent className="flex flex-wrap items-center gap-2 pt-4">
           <Select value={status} onValueChange={setStatus}>

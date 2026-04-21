@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearch } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -80,8 +81,21 @@ function maxRef(row: StockOverviewRow): number {
   return Math.max(1, row.quantityOnHand);
 }
 
-export default function Inventory() {
+type InventoryMainTab = "overview" | "catalogue" | "settings";
+
+export default function Inventory({ embedInShell = false }: { embedInShell?: boolean } = {}) {
+  const urlSearch = useSearch();
   const { isAdmin, isManagerOrAdmin, isStaffOrAbove } = usePermissions();
+  const [mainTab, setMainTab] = useState<InventoryMainTab>("overview");
+
+  useEffect(() => {
+    const t = new URLSearchParams(urlSearch).get("tab");
+    if (t === "catalogue" || t === "settings" || t === "overview") {
+      setMainTab(t as InventoryMainTab);
+    } else {
+      setMainTab("overview");
+    }
+  }, [urlSearch]);
   const [overviewViewMode, setOverviewViewMode] = useState<"table" | "card">(() => {
     if (typeof window === "undefined") return "table";
     return window.localStorage.getItem("viewMode_inventory") === "card" ? "card" : "table";
@@ -197,15 +211,23 @@ export default function Inventory() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-3xl font-bold">Inventory</h1>
-        <p className="mt-1 text-muted-foreground">
-          Humanitarian stock management for relief materials across warehouses.
-        </p>
-      </div>
-      <InventorySecondaryNav />
+      {!embedInShell ? (
+        <>
+          <div>
+            <h1 className="text-3xl font-bold">Inventory</h1>
+            <p className="mt-1 text-muted-foreground">
+              Humanitarian stock management for relief materials across warehouses.
+            </p>
+          </div>
+          <InventorySecondaryNav />
+        </>
+      ) : null}
 
-      <Tabs defaultValue="overview" className="space-y-4">
+      <Tabs
+        value={mainTab}
+        onValueChange={(v) => setMainTab(v as InventoryMainTab)}
+        className="space-y-4"
+      >
         <TabsList>
           <TabsTrigger value="overview" data-testid="inventory-tab-overview">
             Stock Overview

@@ -98,7 +98,7 @@ export default function FacilityDetail() {
         <CardHeader><CardTitle>Statistics</CardTitle></CardHeader>
         <CardContent className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <StatLink label="Asset count" value={assets?.length ?? 0} href={`${appPath("/assets")}?siteId=${facility.id}`} />
-          <StatLink label="Inventory count" value={inventory?.length ?? 0} href={`${appPath("/inventory")}?siteId=${facility.id}`} />
+          <StatLink label="Inventory count" value={inventory?.length ?? 0} href={`${appPath("/inventory/stock-overview")}?siteId=${facility.id}`} />
           <StatLink label="Active work orders" value={(workOrders ?? []).filter((w) => w.status !== "completed" && w.status !== "cancelled").length} href={`${appPath("/work-orders")}?siteId=${facility.id}`} />
           <StatLink label="Staff assigned" value={(allFacilities ?? []).find((f) => f.id === facility.id)?.staffCount ?? 0} href={appPath("/users")} />
         </CardContent>
