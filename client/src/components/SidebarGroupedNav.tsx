@@ -21,6 +21,12 @@ import {
   type AppNavGroup,
   type AppNavItem,
 } from "@/config/appNav";
+import {
+  DEFAULT_GROUP_CHEVRON,
+  GROUP_HEADER_CHEVRONS,
+  subTrailIconForIndex,
+} from "@/config/sidebarChevrons";
+import { chevronClickTransformClasses } from "@/lib/chevronMotion";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "../../../server/routers";
 
@@ -42,7 +48,7 @@ function navBadgeValue(
   }
   return undefined;
 }
-import { ChevronRight } from "lucide-react";
+
 import { useEffect, useMemo, useState } from "react";
 
 const STORAGE_KEY = "sidebar-nav-groups-open-v1";
@@ -147,12 +153,13 @@ export function SidebarGroupedNav({
   const topItems = useMemo(() => filterItems(SIDEBAR_TOP, searchQuery), [searchQuery]);
   const bottomItems = useMemo(() => filterItems(SIDEBAR_BOTTOM, searchQuery), [searchQuery]);
 
-  const renderItemButton = (item: AppNavItem) => {
+  const renderItemButton = (item: AppNavItem, subsectionIndex?: number) => {
     const base = item.path.replace(/\/$/, "") || "/";
     const loc = location.replace(/\/$/, "") || "/";
     const isActive =
       loc === base || (base !== "/app" && loc.startsWith(base + "/"));
     const badge = item.navCountBadge ? navBadgeValue(sidebarCounts ?? undefined, item.navCountBadge) : undefined;
+    const TrailIcon = subsectionIndex != null ? subTrailIconForIndex(subsectionIndex) : null;
     return (
       <SidebarMenuItem key={item.path}>
         <SidebarMenuButton
@@ -171,6 +178,9 @@ export function SidebarGroupedNav({
               ) : null}
             </span>
           )}
+          {!isNarrow && TrailIcon ? (
+            <TrailIcon className="!h-3.5 !w-3.5 shrink-0 text-sidebar-foreground/40" aria-hidden />
+          ) : null}
         </SidebarMenuButton>
       </SidebarMenuItem>
     );
@@ -180,13 +190,16 @@ export function SidebarGroupedNav({
     const open = isGroupExpanded(g.id);
     if (q && g.items.length === 0) return null;
 
+    const chevronDef = GROUP_HEADER_CHEVRONS[g.id] ?? DEFAULT_GROUP_CHEVRON;
+    const HeaderChevron = chevronDef.Icon;
+
     const headerBtn = (
       <button
         type="button"
         title={isNarrow ? g.label : undefined}
         className={cn(
-          "flex w-full items-center gap-2 rounded-md border border-transparent px-2 py-1.5 text-left text-[15px] font-normal text-white transition-colors",
-          "bg-sidebar-accent/40 hover:bg-sidebar-accent/70",
+          "flex w-full items-center gap-2 rounded-md border border-transparent px-2 py-1.5 text-left text-[15px] font-normal text-white transition-[background-color,color,transform] duration-200",
+          "bg-sidebar-accent/40 hover:bg-sidebar-accent/70 active:scale-[0.99] motion-reduce:active:scale-100",
           isNarrow && "justify-center px-0"
         )}
         aria-expanded={open}
@@ -194,10 +207,11 @@ export function SidebarGroupedNav({
         <g.icon className="h-4 w-4 shrink-0 text-white" />
         {!isNarrow && <span className="flex-1 truncate">{g.label}</span>}
         {!isNarrow && (
-          <ChevronRight
+          <HeaderChevron
             className={cn(
-              "h-4 w-4 shrink-0 text-white transition-transform duration-200 ease-out",
-              open && "rotate-90"
+              "h-4 w-4 shrink-0 text-white",
+              chevronClickTransformClasses,
+              open ? chevronDef.expanded : chevronDef.collapsed
             )}
           />
         )}
@@ -227,9 +241,9 @@ export function SidebarGroupedNav({
             <CollapsibleTrigger asChild>{headerBtn}</CollapsibleTrigger>
           )}
         </SidebarMenuItem>
-        <CollapsibleContent className="overflow-hidden transition-[height] duration-200 ease-in-out data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0">
+        <CollapsibleContent className="overflow-hidden transition-[height] duration-300 ease-in-out data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0">
           <SidebarMenu className="ml-1 border-l border-sidebar-border pl-1">
-            {g.items.map((item) => renderItemButton(item))}
+            {g.items.map((item, idx) => renderItemButton(item, idx))}
           </SidebarMenu>
         </CollapsibleContent>
       </Collapsible>

@@ -10,7 +10,7 @@ import type { DashboardPeriod, UserRole } from "@/components/dashboard/types";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { formatNaira } from "@/lib/format";
-import { Clock, FileText, MapPin, Package, Users } from "lucide-react";
+import { AlertTriangle, Clock, FileText, MapPin, Package } from "lucide-react";
 import { useMemo, useState } from "react";
 
 export default function Home() {
@@ -48,15 +48,15 @@ export default function Home() {
 
   const allKpis = [
     {
-      key: "beneficiaries" as const,
-      label: "Beneficiaries Reached (YTD)",
-      value: new Intl.NumberFormat().format(metrics?.beneficiariesReached.value ?? 0),
-      sub: undefined,
-      icon: Users,
+      key: "lowStock" as const,
+      label: "Low Stock Items",
+      value: metrics?.lowStockItems.value ?? 0,
+      sub: "Below reorder point",
+      icon: AlertTriangle,
       tone: "red" as const,
-      delta: metrics?.beneficiariesReached.delta,
-      deltaDirection: normalizeDirection(metrics?.beneficiariesReached.direction),
-      goodWhen: (metrics?.beneficiariesReached.goodWhen ?? "up") as "up" | "down",
+      delta: metrics?.lowStockItems.delta,
+      deltaDirection: normalizeDirection(metrics?.lowStockItems.direction),
+      goodWhen: (metrics?.lowStockItems.goodWhen ?? "down") as "up" | "down",
     },
     {
       key: "facilities" as const,
@@ -103,7 +103,7 @@ export default function Home() {
       goodWhen: (metrics?.avgResponseHours.goodWhen ?? "down") as "up" | "down",
     },
   ];
-  const kpis = effectiveRole === "Field" ? allKpis.filter((k) => ["beneficiaries", "facilities", "response"].includes(k.key)) : allKpis;
+  const kpis = effectiveRole === "Field" ? allKpis.filter((k) => ["lowStock", "facilities", "response"].includes(k.key)) : allKpis;
 
   return (
     <div className="space-y-6">

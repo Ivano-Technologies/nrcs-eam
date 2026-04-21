@@ -77,7 +77,7 @@ export function KpiCard({
         </header>
 
         <div
-          className="mt-3 min-w-0 break-words text-3xl font-bold tracking-tight text-foreground"
+          className="mt-3 min-w-0 text-xl font-bold tabular-nums tracking-tight leading-snug text-foreground sm:text-2xl whitespace-nowrap"
           data-testid={valueTestId}
         >
           {value}
