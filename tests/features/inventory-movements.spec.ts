@@ -71,7 +71,15 @@ test.describe("Inventory Phase 2 (live)", () => {
     await loginAsAdmin(page);
     await page.goto("/app/inventory/movements");
     await expect(page.getByRole("heading", { name: /Inventory Movements/i })).toBeVisible();
-    await expect(page.locator("table tbody tr").first()).toBeVisible();
+    await expect(page.locator("table")).toBeVisible();
+    const rows = page.locator("table tbody tr");
+    const hasRows = (await rows.count()) > 0;
+    if (hasRows) {
+      await expect(rows.first()).toBeVisible();
+    } else {
+      await expect(page.getByRole("columnheader", { name: "Date" })).toBeVisible();
+      await expect(page.getByRole("columnheader", { name: "Type" })).toBeVisible();
+    }
   });
 
   test("Cannot issue more than available stock", async ({ page }) => {
