@@ -1289,6 +1289,100 @@ export const appRouter = router({
         },
       };
     }),
+    metrics: protectedProcedure
+      .input(
+        z.object({
+          period: z.enum(["Today", "Week", "Month", "Quarter", "Year"]),
+        })
+      )
+      .query(async ({ input }) => {
+        const periodDeltaMap = {
+          Today: { beneficiaries: 2.1, stock: 4.2, response: -0.1 },
+          Week: { beneficiaries: 5.8, stock: 8.4, response: -0.3 },
+          Month: { beneficiaries: 12.4, stock: 18, response: -0.8 },
+          Quarter: { beneficiaries: 19.2, stock: 26, response: -1.3 },
+          Year: { beneficiaries: 27.5, stock: 43, response: -2.1 },
+        } as const;
+        const d = periodDeltaMap[input.period];
+        return {
+          beneficiariesReached: { value: 452380, delta: `+${d.beneficiaries}%`, direction: "up" as const },
+          activeFacilities: { value: 37, total: 42, offline: 5 },
+          stockValue: { value: 284.5, unit: "M" as const, delta: `+${d.stock}M` },
+          pendingApprovals: { value: 12, urgent: 3, oldestDays: 1, direction: "down" as const },
+          avgResponseHours: { value: 4.2, delta: `${d.response} hrs`, direction: "up" as const },
+        };
+      }),
+    stockMovement: protectedProcedure
+      .input(z.object({ weeks: z.number().min(4).max(26).default(12) }).optional())
+      .query(async ({ input }) => {
+        const weeks = input?.weeks ?? 12;
+        return Array.from({ length: weeks }).map((_, idx) => ({
+          w: `W${idx + 1}`,
+          inbound: 120 + ((idx * 17) % 85),
+          outbound: 95 + ((idx * 13) % 70),
+        }));
+      }),
+    recentActivity: protectedProcedure
+      .input(z.object({ limit: z.number().min(1).max(20).default(5) }).optional())
+      .query(async ({ input }) => {
+        const rows = [
+          { timestamp: "09:42", label: "Stock received · Family kits", location: "Lagos WH", kind: "in" as const },
+          { timestamp: "09:10", label: "Issue note posted · IN-0882", location: "Abuja", kind: "out" as const },
+          { timestamp: "08:54", label: "Requisition submitted · RQ-2301", location: "Ondo", kind: "req" as const },
+          { timestamp: "08:22", label: "Generator preventive check", location: "Kano", kind: "maint" as const },
+          { timestamp: "07:50", label: "Fuel variance logged", location: "Port Harcourt", kind: "fuel" as const },
+        ];
+        return rows.slice(0, input?.limit ?? 5);
+      }),
+    facilityStatus: protectedProcedure.query(async () => [
+      { name: "Lagos Central", region: "South West", stockPercent: 82, status: "active" as const },
+      { name: "Abuja FCT", region: "North Central", stockPercent: 73, status: "active" as const },
+      { name: "Kano Hub", region: "North West", stockPercent: 44, status: "low" as const },
+      { name: "Akure Field Unit", region: "South West", stockPercent: 31, status: "low" as const },
+      { name: "Maiduguri Node", region: "North East", stockPercent: 0, status: "offline" as const },
+    ]),
+    pendingRequisitions: protectedProcedure
+      .input(z.object({ limit: z.number().min(1).max(12).default(4) }).optional())
+      .query(async ({ input }) => {
+        const rows = [
+          { id: "RQ-2308", from: "Lagos WH", amount: "₦18.4M", type: "Shelter", submittedAt: "2h ago", priority: "High" as const },
+          { id: "RQ-2307", from: "Ondo Field", amount: "₦6.2M", type: "Medical", submittedAt: "4h ago", priority: "Medium" as const },
+          { id: "RQ-2305", from: "Kano Hub", amount: "₦3.1M", type: "WASH", submittedAt: "7h ago", priority: "High" as const },
+          { id: "RQ-2301", from: "Abuja FCT", amount: "₦1.4M", type: "Logistics", submittedAt: "1d ago", priority: "Low" as const },
+        ];
+        return rows.slice(0, input?.limit ?? 4);
+      }),
+    attentionItems: protectedProcedure
+      .input(z.object({ role: z.enum(["Admin", "Manager", "Staff", "Field"]) }))
+      .query(async ({ input }) => {
+        const byRole = {
+          Admin: [
+            { icon: "AlertTriangle", tone: "red", label: "3 failed login attempts flagged", meta: "Security" },
+            { icon: "Users", tone: "amber", label: "2 new user registrations pending", meta: "Access" },
+            { icon: "Shield", tone: "blue", label: "Quarterly compliance review due", meta: "Compliance" },
+            { icon: "CheckCircle2", tone: "green", label: "Scheduled backup completed · 04:00", meta: "System" },
+          ],
+          Manager: [
+            { icon: "ClipboardList", tone: "red", label: "12 requisitions awaiting approval", meta: "3 urgent" },
+            { icon: "Package", tone: "amber", label: "Family Tents below reorder level", meta: "Lagos WH" },
+            { icon: "Wrench", tone: "orange", label: "Generator maintenance overdue", meta: "Kano · 3d" },
+            { icon: "Users", tone: "blue", label: "New officer onboarding: A. Ibrahim", meta: "HR" },
+          ],
+          Staff: [
+            { icon: "ClipboardList", tone: "red", label: "4 items queued for scanning", meta: "Receiving" },
+            { icon: "Truck", tone: "blue", label: "Distribution prep · 250 kits", meta: "Ondo run" },
+            { icon: "FileText", tone: "purple", label: "Daily stock reconciliation", meta: "Due 17:00" },
+            { icon: "CheckCircle2", tone: "green", label: "Issue note IN-0882 ready to print", meta: "Ready" },
+          ],
+          Field: [
+            { icon: "MapPin", tone: "red", label: "Active distribution · Akure", meta: "320 beneficiaries" },
+            { icon: "Package", tone: "amber", label: "Offline sync pending (6 records)", meta: "Queued" },
+            { icon: "Clock", tone: "blue", label: "Next check-in: 15:30", meta: "Ops" },
+            { icon: "FileText", tone: "purple", label: "Field report template ready", meta: "Weekly" },
+          ],
+        } as const;
+        return byRole[input.role];
+      }),
   }),
 
   search: router({
