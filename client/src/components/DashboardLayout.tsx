@@ -225,7 +225,7 @@ function DashboardLayoutContent({
                     <Link href={appPath("/")}>
                       <div className="flex justify-center w-full rounded-md transition-opacity hover:opacity-80 cursor-pointer">
                         <img
-                          src="/nrcs-logo.png"
+                          src="/nrcs-logo-source.png"
                           alt="Nigerian Red Cross Society"
                           className="h-10 w-10 shrink-0 object-contain mx-auto"
                           data-testid="sidebar-logo-collapsed"
@@ -253,7 +253,7 @@ function DashboardLayoutContent({
                       <Link href={appPath("/")}>
                         <div className="flex items-center gap-3 min-w-0 rounded-md px-1 py-1 transition-opacity hover:opacity-80 cursor-pointer">
                           <img
-                            src="/nrcs-logo.png"
+                            src="/nrcs-logo-source.png"
                             alt="Nigerian Red Cross Society"
                             className="h-12 w-12 shrink-0"
                           />

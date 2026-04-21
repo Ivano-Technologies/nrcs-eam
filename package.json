@@ -31,6 +31,7 @@
     "db:seed-reference": "tsx scripts/db/seed-reference-data.ts",
     "db:seed-facilities": "tsx scripts/db/seed-facilities.ts",
     "db:backfill-facility-types": "tsx scripts/db/backfill-facility-types.ts",
+    "pwa:icons": "node scripts/pwa/generate-pwa-icons.mjs",
     "test:pdfkit": "tsx scripts/pdfkit-smoke.ts",
     "test:resend": "tsx scripts/test-resend.ts",
     "dev:e2e": "dotenv -e .env.e2e -- cross-env NODE_ENV=development tsx server/_core/index.ts",
