@@ -40,6 +40,12 @@ export default function Home() {
       </div>
     );
   }
+  const stockDeltaNaira = metrics?.stockValue.deltaNaira;
+  const stockDeltaFormatted =
+    stockDeltaNaira != null && stockDeltaNaira !== 0
+      ? `${stockDeltaNaira > 0 ? "+" : "−"}${formatNaira(Math.abs(stockDeltaNaira), { compact: true })}`
+      : undefined;
+
   const allKpis = [
     {
       key: "beneficiaries" as const,
@@ -50,6 +56,7 @@ export default function Home() {
       tone: "red" as const,
       delta: metrics?.beneficiariesReached.delta,
       deltaDirection: normalizeDirection(metrics?.beneficiariesReached.direction),
+      goodWhen: (metrics?.beneficiariesReached.goodWhen ?? "up") as "up" | "down",
     },
     {
       key: "facilities" as const,
@@ -60,6 +67,7 @@ export default function Home() {
       tone: "blue" as const,
       delta: undefined,
       deltaDirection: "flat" as const,
+      goodWhen: (metrics?.activeFacilities.goodWhen ?? "up") as "up" | "down",
     },
     {
       key: "stock" as const,
@@ -68,8 +76,9 @@ export default function Home() {
       sub: undefined,
       icon: Package,
       tone: "purple" as const,
-      delta: metrics?.stockValue.delta ? formatNaira(metrics.stockValue.delta, { compact: true }) : undefined,
-      deltaDirection: "up" as const,
+      delta: stockDeltaFormatted,
+      deltaDirection: normalizeDirection(metrics?.stockValue.direction),
+      goodWhen: (metrics?.stockValue.goodWhen ?? "up") as "up" | "down",
     },
     {
       key: "approvals" as const,
@@ -78,8 +87,9 @@ export default function Home() {
       sub: `${metrics?.pendingApprovals.urgent ?? 0} urgent · oldest ${metrics?.pendingApprovals.oldestDays ?? 0}d`,
       icon: FileText,
       tone: "orange" as const,
-      delta: "Improving",
+      delta: metrics?.pendingApprovals.delta,
       deltaDirection: normalizeDirection(metrics?.pendingApprovals.direction),
+      goodWhen: (metrics?.pendingApprovals.goodWhen ?? "down") as "up" | "down",
     },
     {
       key: "response" as const,
@@ -90,6 +100,7 @@ export default function Home() {
       tone: "green" as const,
       delta: metrics?.avgResponseHours.delta,
       deltaDirection: normalizeDirection(metrics?.avgResponseHours.direction),
+      goodWhen: (metrics?.avgResponseHours.goodWhen ?? "down") as "up" | "down",
     },
   ];
   const kpis = effectiveRole === "Field" ? allKpis.filter((k) => ["beneficiaries", "facilities", "response"].includes(k.key)) : allKpis;
@@ -119,6 +130,7 @@ export default function Home() {
             tone={kpi.tone}
             delta={kpi.delta}
             deltaDirection={kpi.deltaDirection}
+            goodWhen={kpi.goodWhen}
           />
         ))}
       </div>

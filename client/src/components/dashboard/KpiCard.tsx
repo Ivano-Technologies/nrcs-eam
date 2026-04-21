@@ -14,6 +14,7 @@ const toneClassMap: Record<KpiTone, string> = {
 };
 
 type DeltaDirection = "up" | "down" | "flat";
+type GoodWhen = "up" | "down";
 
 type Props = {
   label: string;
@@ -23,16 +24,20 @@ type Props = {
   tone: KpiTone;
   delta?: string;
   deltaDirection?: DeltaDirection;
+  /** Whether an increase ("up") or decrease ("down") in the metric is desirable. */
+  goodWhen?: GoodWhen;
 };
 
 function DeltaPill({
   delta,
   deltaDirection,
+  goodWhen,
 }: {
   delta: string;
   deltaDirection: Exclude<DeltaDirection, "flat">;
+  goodWhen: GoodWhen;
 }) {
-  const isGood = deltaDirection === "up";
+  const isGood = deltaDirection === goodWhen;
   return (
     <span
       className={cn(
@@ -54,6 +59,7 @@ export function KpiCard({
   tone,
   delta,
   deltaDirection = "flat",
+  goodWhen = "up",
 }: Props) {
   const showPill = Boolean(delta) && deltaDirection !== "flat";
 
@@ -77,7 +83,7 @@ export function KpiCard({
               {"\u00a0"}
             </span>
           )}
-          {showPill ? <DeltaPill delta={delta!} deltaDirection={deltaDirection} /> : null}
+          {showPill ? <DeltaPill delta={delta!} deltaDirection={deltaDirection} goodWhen={goodWhen} /> : null}
         </footer>
       </CardContent>
     </Card>
