@@ -20,6 +20,9 @@ import InventoryReceipts from "@/pages/inventory/Receipts";
 import InventoryTransfers from "@/pages/inventory/Transfers";
 import InventoryExpiry from "@/pages/inventory/Expiry";
 import InventoryStockCounts from "@/pages/inventory/StockCounts";
+import InventoryRequisitions from "@/pages/inventory/Requisitions";
+import InventoryDistributions from "@/pages/inventory/Distributions";
+import InventoryKits from "@/pages/inventory/Kits";
 import Maintenance from "@/pages/Maintenance";
 import MobileWorkOrderDetail from "@/pages/MobileWorkOrderDetail";
 import MobileWorkOrders from "@/pages/MobileWorkOrders";
@@ -72,6 +75,9 @@ export default function ProtectedAppSection() {
           <Route path="/app/inventory/movements" component={InventoryMovements} />
           <Route path="/app/inventory/counts" component={InventoryStockCounts} />
           <Route path="/app/inventory/expiry" component={InventoryExpiry} />
+          <Route path="/app/inventory/requisitions" component={InventoryRequisitions} />
+          <Route path="/app/inventory/distributions" component={InventoryDistributions} />
+          <Route path="/app/inventory/kits" component={InventoryKits} />
           <Route path="/app/inventory" component={Inventory} />
           <Route path="/app/vendors" component={Vendors} />
           <Route path="/app/financial" component={Financial} />
