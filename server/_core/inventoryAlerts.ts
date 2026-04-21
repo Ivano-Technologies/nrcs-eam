@@ -100,3 +100,60 @@ export async function runDailyChecks() {
   }
   return { checked: batches.length, expiredMarked };
 }
+
+export async function runWeeklyChecks() {
+  const db = await getDb();
+  if (!db) return { lowStockItems: 0, criticalStockItems: 0, reorderCandidates: 0 };
+  const stocks = await db.select().from(inventoryStock);
+  let lowStockItems = 0;
+  let criticalStockItems = 0;
+  for (const s of stocks) {
+    if ((s.safetyStockLevel ?? 0) > 0 && Number(s.quantityOnHand) < Number(s.safetyStockLevel ?? 0)) {
+      criticalStockItems += 1;
+    } else if (Number(s.quantityOnHand) < Number(s.minLevel ?? 0)) {
+      lowStockItems += 1;
+    }
+  }
+  const reorderCandidates = lowStockItems + criticalStockItems;
+  const users = await getAllUsers();
+  for (const u of users) {
+    if (!["manager", "admin"].includes(u.role)) continue;
+    await createNotification({
+      userId: u.id,
+      type: "system_alert",
+      title: "Weekly Inventory Insights",
+      message: `Low stock: ${lowStockItems}, critical: ${criticalStockItems}, reorder candidates: ${reorderCandidates}.`,
+      relatedEntityType: "inventory",
+      relatedEntityId: null,
+    });
+  }
+  return { lowStockItems, criticalStockItems, reorderCandidates };
+}
+
+export async function runMonthlyChecks() {
+  const db = await getDb();
+  if (!db) return { vedRefreshCount: 0, forecastedItems: 0, warehouseScorecards: 0 };
+  const vedRows = await db
+    .select({ id: inventoryCatalogue.id })
+    .from(inventoryCatalogue)
+    .where(gte(inventoryCatalogue.updatedAt, new Date(Date.now() - 365 * 86400000)));
+  const movementRows = await db
+    .select({ catalogueId: inventoryMovements.catalogueId })
+    .from(inventoryMovements)
+    .where(gte(inventoryMovements.createdAt, new Date(Date.now() - 90 * 86400000)));
+  const forecastedItems = new Set(movementRows.map((m) => m.catalogueId)).size;
+  const warehouses = await db.select().from(sites).where(eq(sites.facilityType, "warehouse"));
+  const users = await getAllUsers();
+  for (const u of users) {
+    if (!["manager", "admin"].includes(u.role)) continue;
+    await createNotification({
+      userId: u.id,
+      type: "system_alert",
+      title: "Monthly Inventory Scorecard",
+      message: `VED refresh rows: ${vedRows.length}, forecasted items: ${forecastedItems}, warehouses: ${warehouses.length}.`,
+      relatedEntityType: "inventory",
+      relatedEntityId: null,
+    });
+  }
+  return { vedRefreshCount: vedRows.length, forecastedItems, warehouseScorecards: warehouses.length };
+}
