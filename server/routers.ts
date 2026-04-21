@@ -1312,12 +1312,41 @@ export const appRouter = router({
           Year: { beneficiaries: 27.5, stock: 43, response: -2.1 },
         } as const;
         const d = periodDeltaMap[input.period];
+        const stockDeltaNaira = 18_000_000 + Math.round((d.stock - 18) * 1_000_000);
+        const stockDirection =
+          stockDeltaNaira > 0 ? ("up" as const) : stockDeltaNaira < 0 ? ("down" as const) : ("flat" as const);
+        const pendingDeltaByPeriod = { Today: -1, Week: -2, Month: -3, Quarter: -4, Year: -5 } as const;
+        const pendingDelta = pendingDeltaByPeriod[input.period];
+        const responseDir =
+          d.response < 0 ? ("down" as const) : d.response > 0 ? ("up" as const) : ("flat" as const);
         return {
-          beneficiariesReached: { value: 452380, delta: `+${d.beneficiaries}%`, direction: "up" as const },
-          activeFacilities: { value: 37, total: 42, offline: 5 },
-          stockValue: { value: 284_500_000, delta: 18_000_000 + (d.stock - 18) * 1_000_000 },
-          pendingApprovals: { value: 12, urgent: 3, oldestDays: 1, direction: "down" as const },
-          avgResponseHours: { value: 4.2, delta: `${d.response} hrs`, direction: "up" as const },
+          beneficiariesReached: {
+            value: 452380,
+            delta: `+${d.beneficiaries}%`,
+            direction: "up" as const,
+            goodWhen: "up" as const,
+          },
+          activeFacilities: { value: 37, total: 42, offline: 5, goodWhen: "up" as const },
+          stockValue: {
+            value: 284_500_000,
+            deltaNaira: stockDeltaNaira,
+            direction: stockDirection,
+            goodWhen: "up" as const,
+          },
+          pendingApprovals: {
+            value: 12,
+            urgent: 3,
+            oldestDays: 1,
+            delta: String(pendingDelta),
+            direction: "down" as const,
+            goodWhen: "down" as const,
+          },
+          avgResponseHours: {
+            value: 4.2,
+            delta: `${d.response > 0 ? "+" : ""}${d.response} hrs`,
+            direction: responseDir,
+            goodWhen: "down" as const,
+          },
         };
       }),
     stockMovement: protectedProcedure
