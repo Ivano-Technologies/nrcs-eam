@@ -286,14 +286,17 @@ export async function exportSites(): Promise<Buffer> {
   const worksheet = workbook.addWorksheet("Facilities");
 
   worksheet.columns = [
+    { header: "Code", key: "code", width: 18 },
     { header: "Facility name", key: "name", width: 30 },
     { header: "Address", key: "address", width: 40 },
     { header: "City", key: "city", width: 20 },
     { header: "State", key: "state", width: 20 },
+    { header: "Postal code", key: "postalCode", width: 16 },
     { header: "Country", key: "country", width: 20 },
     { header: "Contact person", key: "contactPerson", width: 25 },
     { header: "Contact phone", key: "contactPhone", width: 20 },
     { header: "Contact email", key: "contactEmail", width: 30 },
+    { header: "Status", key: "status", width: 12 },
     { header: "Latitude", key: "latitude", width: 15 },
     { header: "Longitude", key: "longitude", width: 15 },
     { header: "Facility type", key: "facilityType", width: 18 },
@@ -302,14 +305,17 @@ export async function exportSites(): Promise<Buffer> {
 
   sites.forEach((site) => {
     worksheet.addRow({
+      code: site.code,
       name: site.name,
       address: site.address,
       city: site.city,
       state: site.state,
+      postalCode: site.postalCode,
       country: site.country,
       contactPerson: site.contactPerson,
       contactPhone: site.contactPhone,
       contactEmail: site.contactEmail,
+      status: site.isActive ? "Active" : "Inactive",
       latitude: site.latitude,
       longitude: site.longitude,
       facilityType: site.facilityType,
@@ -365,8 +371,8 @@ export async function importSites(fileBuffer: any): Promise<ImportResult> {
   
   for (const { row, rowNumber } of rows) {
     try {
-      const typeCell = row.getCell(11).value?.toString()?.trim().toLowerCase();
-      const parentCell = row.getCell(12).value;
+      const typeCell = row.getCell(14).value?.toString()?.trim().toLowerCase();
+      const parentCell = row.getCell(15).value;
       let parentFacilityId: number | null = null;
       if (parentCell !== null && parentCell !== undefined && String(parentCell).trim() !== "") {
         const n = Number.parseInt(String(parentCell), 10);
@@ -377,16 +383,19 @@ export async function importSites(fileBuffer: any): Promise<ImportResult> {
         typeCell && isFacilityType(typeCell) ? typeCell : "branch";
 
       const siteData = {
-        name: row.getCell(1).value?.toString() || "",
-        address: row.getCell(2).value?.toString(),
-        city: row.getCell(3).value?.toString(),
-        state: row.getCell(4).value?.toString(),
-        country: row.getCell(5).value?.toString() || "Nigeria",
-        contactPerson: row.getCell(6).value?.toString(),
-        contactPhone: row.getCell(7).value?.toString(),
-        contactEmail: row.getCell(8).value?.toString(),
-        latitude: row.getCell(9).value ? row.getCell(9).value.toString() : undefined,
-        longitude: row.getCell(10).value ? row.getCell(10).value.toString() : undefined,
+        code: row.getCell(1).value?.toString()?.trim() || undefined,
+        name: row.getCell(2).value?.toString() || "",
+        address: row.getCell(3).value?.toString(),
+        city: row.getCell(4).value?.toString(),
+        state: row.getCell(5).value?.toString(),
+        postalCode: row.getCell(6).value?.toString(),
+        country: row.getCell(7).value?.toString() || "Nigeria",
+        contactPerson: row.getCell(8).value?.toString(),
+        contactPhone: row.getCell(9).value?.toString(),
+        contactEmail: row.getCell(10).value?.toString(),
+        isActive: (row.getCell(11).value?.toString() || "").toLowerCase() !== "inactive",
+        latitude: row.getCell(12).value ? row.getCell(12).value.toString() : undefined,
+        longitude: row.getCell(13).value ? row.getCell(13).value.toString() : undefined,
         facilityType,
         parentFacilityId,
       };
@@ -434,14 +443,17 @@ export async function generateSiteTemplate(): Promise<Buffer> {
   const worksheet = workbook.addWorksheet("Facilities");
 
   worksheet.columns = [
+    { header: "Code", key: "code", width: 18 },
     { header: "Facility name*", key: "name", width: 30 },
     { header: "Address", key: "address", width: 40 },
     { header: "City", key: "city", width: 20 },
     { header: "State", key: "state", width: 20 },
+    { header: "Postal code", key: "postalCode", width: 16 },
     { header: "Country", key: "country", width: 20 },
     { header: "Contact person", key: "contactPerson", width: 25 },
     { header: "Contact phone", key: "contactPhone", width: 20 },
     { header: "Contact email", key: "contactEmail", width: 30 },
+    { header: "Status (Active/Inactive)", key: "status", width: 20 },
     { header: "Latitude", key: "latitude", width: 15 },
     { header: "Longitude", key: "longitude", width: 15 },
     { header: "Facility type (branch|division|clinic|warehouse)", key: "facilityType", width: 36 },
@@ -450,7 +462,9 @@ export async function generateSiteTemplate(): Promise<Buffer> {
   
   // Add sample rows
   worksheet.addRow({
+    code: "FCT-BRN-001",
     name: "NRCS Abuja Headquarters",
+    postalCode: "900001",
     address: "National Headquarters, Red Cross Road",
     city: "Abuja",
     state: "FCT",
@@ -458,6 +472,7 @@ export async function generateSiteTemplate(): Promise<Buffer> {
     contactPerson: "John Doe",
     contactPhone: "+234-xxx-xxx-xxxx",
     contactEmail: "abuja@redcross.org.ng",
+    status: "Active",
     latitude: "9.0579",
     longitude: "7.4951",
     facilityType: "branch",
@@ -465,7 +480,9 @@ export async function generateSiteTemplate(): Promise<Buffer> {
   });
 
   worksheet.addRow({
+    code: "LAG-BRN-001",
     name: "NRCS Lagos State Branch",
+    postalCode: "100001",
     address: "123 Marina Street",
     city: "Lagos",
     state: "Lagos",
@@ -473,6 +490,7 @@ export async function generateSiteTemplate(): Promise<Buffer> {
     contactPerson: "Jane Smith",
     contactPhone: "+234-xxx-xxx-xxxx",
     contactEmail: "lagos@redcross.org.ng",
+    status: "Active",
     latitude: "6.5244",
     longitude: "3.3792",
     facilityType: "branch",

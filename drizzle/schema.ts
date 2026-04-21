@@ -170,6 +170,7 @@ export type InsertAppSetting = typeof appSettings.$inferInsert;
  */
 export const sites = pgTable("sites", {
   id: serial("id").primaryKey(),
+  code: varchar("code", { length: 64 }).unique(),
   name: varchar("name", { length: 255 }).notNull(),
   facilityType: facilityTypeEnum("facilityType").default("branch").notNull(),
   parentFacilityId: integer("parentFacilityId").references((): AnyPgColumn => sites.id, {
@@ -182,6 +183,7 @@ export const sites = pgTable("sites", {
   contactPerson: varchar("contactPerson", { length: 255 }),
   contactPhone: varchar("contactPhone", { length: 50 }),
   contactEmail: varchar("contactEmail", { length: 320 }),
+  postalCode: varchar("postalCode", { length: 32 }),
   isActive: boolean("isActive").default(true).notNull(),
   latitude: decimal("latitude", { precision: 10, scale: 8 }),
   longitude: decimal("longitude", { precision: 11, scale: 8 }),

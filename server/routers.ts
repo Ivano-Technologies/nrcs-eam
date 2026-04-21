@@ -33,25 +33,28 @@ async function resolveFacilityParentForSave(params: {
   const rawParent =
     params.parentFacilityId === undefined ? undefined : params.parentFacilityId;
 
-  if (t === "branch" || t === "division") {
-    if (rawParent != null && rawParent !== undefined) {
+  if (t === "branch") {
+    if (rawParent != null) {
       throw new TRPCError({
         code: "BAD_REQUEST",
-        message:
-          t === "branch"
-            ? "A branch cannot have a parent facility."
-            : "A division cannot have a parent facility.",
+        message: "A branch cannot have a parent facility.",
       });
     }
     return null;
   }
 
   const parentId = rawParent ?? null;
-  if (parentId == null) {
+  if (t !== "division" && parentId == null) {
     throw new TRPCError({
       code: "BAD_REQUEST",
       message: "Clinics and warehouses must belong to a parent branch.",
     });
+  }
+  if (t === "division" && parentId == null) {
+    return null;
+  }
+  if (parentId == null) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Parent facility is required." });
   }
 
   const parent = await db.getSiteById(parentId);
@@ -138,25 +141,29 @@ export const appRouter = router({
     create: managerOrAdminProcedure
       .input(
         z.object({
+          code: z.string().trim().min(1).max(64).optional(),
           name: z.string().min(1),
           facilityType: facilityTypeZod.optional().default("branch"),
           parentFacilityId: z.number().nullable().optional(),
           address: z.string().optional(),
           city: z.string().optional(),
           state: z.string().optional(),
+          postalCode: z.string().max(32).optional(),
           country: z.string().default("Nigeria"),
           contactPerson: z.string().optional(),
           contactPhone: z.string().optional(),
           contactEmail: z.string().email().optional(),
+          isActive: z.boolean().optional(),
         })
       )
       .mutation(async ({ input }) => {
-        const { facilityType, parentFacilityId, ...rest } = input;
+        const { facilityType, parentFacilityId, code, ...rest } = input;
         const parentResolved = await resolveFacilityParentForSave({
           facilityType,
           parentFacilityId,
         });
         return await db.createSite({
+          ...(code ? { code } : {}),
           ...rest,
           facilityType,
           parentFacilityId: parentResolved,
@@ -167,12 +174,14 @@ export const appRouter = router({
       .input(
         z.object({
           id: z.number(),
+          code: z.string().trim().min(1).max(64).optional(),
           name: z.string().min(1).optional(),
           facilityType: facilityTypeZod.optional(),
           parentFacilityId: z.number().nullable().optional(),
           address: z.string().optional(),
           city: z.string().optional(),
           state: z.string().optional(),
+          postalCode: z.string().max(32).optional(),
           contactPerson: z.string().optional(),
           contactPhone: z.string().optional(),
           contactEmail: z.string().email().optional(),
@@ -187,7 +196,7 @@ export const appRouter = router({
         }
         const nextType = facilityType ?? existing.facilityType;
         let nextParentRaw: number | null | undefined;
-        if (nextType === "branch" || nextType === "division") {
+        if (nextType === "branch") {
           nextParentRaw = null;
         } else if (parentFacilityId !== undefined) {
           nextParentRaw = parentFacilityId;

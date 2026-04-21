@@ -10,6 +10,7 @@ import Compliance from "@/pages/Compliance";
 import CostAnalytics from "@/pages/CostAnalytics";
 import DashboardSettings from "@/pages/DashboardSettings";
 import EmailNotifications from "@/pages/EmailNotifications";
+import FacilityDetail from "@/pages/FacilityDetail";
 import Financial from "@/pages/Financial";
 import Home from "@/pages/Home";
 import Inventory from "@/pages/Inventory";
@@ -63,6 +64,7 @@ export default function ProtectedAppSection() {
           <Route path="/app/vendors" component={Vendors} />
           <Route path="/app/financial" component={Financial} />
           <Route path="/app/compliance" component={Compliance} />
+          <Route path="/app/sites/:id" component={FacilityDetail} />
           <Route path="/app/sites" component={Facilities} />
           <Route path="/app/users" component={Users} />
           <Route path="/app/users/pending" component={PendingUsers} />
