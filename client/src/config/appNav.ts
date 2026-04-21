@@ -55,7 +55,13 @@ export const SIDEBAR_GROUPS: AppNavGroup[] = [
     id: "facilities",
     label: "Facilities",
     icon: MapPin,
-    items: [{ label: "Facilities", path: appPath("/facilities"), icon: MapPin }],
+    items: [
+      { label: "All Facilities", path: appPath("/facilities/all"), icon: MapPin },
+      { label: "National HQ", path: appPath("/facilities/national-hq"), icon: MapPin },
+      { label: "Branches", path: appPath("/facilities/branches"), icon: MapPin },
+      { label: "Clinics", path: appPath("/facilities/clinics"), icon: MapPin },
+      { label: "Warehouses", path: appPath("/facilities/warehouses"), icon: MapPin },
+    ],
   },
   {
     id: "inventory",
@@ -131,6 +137,12 @@ export const SIDEBAR_BOTTOM: AppNavItem[] = [
 
 const GROUP_PREFIXES: { groupId: string; pathPrefix: string }[] = [
   { groupId: "assets", pathPrefix: appPath("/assets") },
+  { groupId: "facilities", pathPrefix: appPath("/facilities/all") },
+  { groupId: "facilities", pathPrefix: appPath("/facilities/national-hq") },
+  { groupId: "facilities", pathPrefix: appPath("/facilities/branches") },
+  { groupId: "facilities", pathPrefix: appPath("/facilities/clinics") },
+  { groupId: "facilities", pathPrefix: appPath("/facilities/warehouses") },
+  { groupId: "facilities", pathPrefix: appPath("/facilities/new") },
   { groupId: "facilities", pathPrefix: appPath("/facilities") },
   { groupId: "inventory", pathPrefix: appPath("/inventory") },
   { groupId: "maintenance", pathPrefix: appPath("/maintenance") },
