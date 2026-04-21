@@ -550,8 +550,9 @@ export default function Assets() {
             NRCS asset register — spreadsheet view with filters and Excel import/export
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
             <Button
+              className="h-9"
               variant="outline"
               data-testid="asset-export-excel-btn"
               onClick={handleExportExcel}
@@ -562,11 +563,11 @@ export default function Assets() {
             </Button>
             {canEditAssets ? (
               <>
-            <Button variant="outline" onClick={handleDownloadTemplate} disabled={isDownloading}>
+            <Button className="h-9" variant="outline" onClick={handleDownloadTemplate} disabled={isDownloading}>
               <Download className="mr-2 h-4 w-4" />
               Template
             </Button>
-            <Button variant="outline" onClick={() => setIsImportDialogOpen(true)}>
+            <Button className="h-9" variant="outline" onClick={() => setIsImportDialogOpen(true)}>
               <Upload className="mr-2 h-4 w-4" />
               Import
             </Button>
@@ -578,7 +579,7 @@ export default function Assets() {
               }}
             >
               <DialogTrigger asChild>
-                <Button data-testid="asset-create-btn">
+                <Button className="h-9" data-testid="asset-create-btn">
                   <Plus className="mr-2 h-4 w-4" />
                   Add Asset
                 </Button>
@@ -874,12 +875,12 @@ export default function Assets() {
         </div>
       </div>
 
-      <Card>
+      <Card className="overflow-hidden">
         <CardHeader>
           <CardTitle>Filters</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          <div className="flex flex-wrap items-center gap-2">
             <div className="relative md:col-span-2">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
@@ -887,11 +888,11 @@ export default function Assets() {
                 placeholder="Search description, code, serial..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9"
+                className="h-9 min-w-[260px] pl-9"
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger data-testid="asset-filter-status">
+              <SelectTrigger className="h-9 w-[170px]" data-testid="asset-filter-status">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -903,7 +904,7 @@ export default function Assets() {
               </SelectContent>
             </Select>
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger>
+              <SelectTrigger className="h-9 w-[170px]">
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
               <SelectContent>
@@ -916,7 +917,7 @@ export default function Assets() {
               </SelectContent>
             </Select>
             <Select value={siteFilter} onValueChange={setSiteFilter}>
-              <SelectTrigger data-testid="asset-filter-site">
+              <SelectTrigger className="h-9 w-[170px]" data-testid="asset-filter-site">
                 <SelectValue placeholder="Facility" />
               </SelectTrigger>
               <SelectContent>
@@ -929,7 +930,7 @@ export default function Assets() {
               </SelectContent>
             </Select>
             <Select value={itemTypeFilter} onValueChange={setItemTypeFilter}>
-              <SelectTrigger>
+              <SelectTrigger className="h-9 w-[170px]">
                 <SelectValue placeholder="Item type" />
               </SelectTrigger>
               <SelectContent>
@@ -942,7 +943,7 @@ export default function Assets() {
         </CardContent>
       </Card>
 
-      <div data-testid="asset-list-table" className="rounded-md border bg-card overflow-hidden">
+      <div data-testid="asset-list-table" className="rounded-md border bg-card overflow-hidden px-2 md:px-3">
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
@@ -953,17 +954,27 @@ export default function Assets() {
               className="w-max min-w-full border-collapse text-sm"
               data-testid="asset-register-data-table"
             >
-              <thead className="sticky top-0 z-30 bg-muted/95 backdrop-blur supports-[backdrop-filter]:bg-muted/80">
+              <thead className="sticky top-0 z-40 bg-background">
                 <tr className="border-b">
-                  {/*
-                    Horizontal sticky set: col 1 (S/No), col 5 (Item Description), col 6 (Asset Code).
-                    Description width fixed at 14rem so Asset Code sticky left = 3rem + 14rem = 17rem.
-                  */}
                   <th
-                    className="sticky left-0 z-[45] border-r bg-muted px-2 py-1.5 text-left font-medium whitespace-nowrap w-[3rem] min-w-[3rem] max-w-[3rem] shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)]"
+                    className="sticky left-0 z-[45] border-r bg-background px-2 py-1.5 text-left font-medium whitespace-nowrap w-[3rem] min-w-[3rem] max-w-[3rem]"
                     data-testid="asset-col-sno"
                   >
                     S/No
+                  </th>
+                  <th
+                    className="sticky left-[3rem] z-[45] border-r bg-background px-2 py-1.5 text-left font-medium whitespace-nowrap min-w-[7rem] cursor-pointer"
+                    data-testid="asset-col-asset-code"
+                    onClick={() => toggleSort("assetTag")}
+                  >
+                    Asset Code {sortIndicator("assetTag")}
+                  </th>
+                  <th
+                    className="sticky left-[10rem] z-[45] border-r bg-background px-2 py-1.5 text-left font-medium whitespace-nowrap w-[14rem] min-w-[14rem] max-w-[14rem] cursor-pointer shadow-[4px_0_8px_-4px_rgba(0,0,0,0.25)]"
+                    data-testid="asset-col-description"
+                    onClick={() => toggleSort("name")}
+                  >
+                    Item Description {sortIndicator("name")}
                   </th>
                   <th
                     className="px-2 py-1.5 text-left font-medium whitespace-nowrap min-w-[5.5rem] cursor-pointer"
@@ -982,20 +993,6 @@ export default function Assets() {
                     onClick={() => toggleSort("subCategory")}
                   >
                     Sub-Item {sortIndicator("subCategory")}
-                  </th>
-                  <th
-                    className="sticky left-[3rem] z-[44] border-r bg-muted px-2 py-1.5 text-left font-medium whitespace-nowrap w-[14rem] min-w-[14rem] max-w-[14rem] cursor-pointer shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)]"
-                    data-testid="asset-col-description"
-                    onClick={() => toggleSort("name")}
-                  >
-                    Item Description {sortIndicator("name")}
-                  </th>
-                  <th
-                    className="sticky left-[17rem] z-[43] border-r bg-muted px-2 py-1.5 text-left font-medium whitespace-nowrap min-w-[7rem] cursor-pointer shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)]"
-                    data-testid="asset-col-asset-code"
-                    onClick={() => toggleSort("assetTag")}
-                  >
-                    Asset Code {sortIndicator("assetTag")}
                   </th>
                   <th
                     className="px-2 py-1.5 text-left font-medium whitespace-nowrap min-w-[7rem] cursor-pointer"
@@ -1124,18 +1121,25 @@ export default function Assets() {
                         key={row.id}
                         data-testid={`asset-row-${row.id}`}
                         className={cn(
-                          "border-b cursor-pointer hover:bg-muted/50",
+                          "relative z-10 border-b cursor-pointer hover:bg-muted/50",
                           i % 2 === 1 ? "bg-muted/30" : "bg-background"
                         )}
                         onClick={() => setLocation(appPath(`/assets/${row.id}`))}
                       >
-                        <td
-                          className={cn(
-                            "sticky left-0 z-[35] border-r px-2 py-1 text-muted-foreground shadow-[2px_0_4px_-2px_rgba(0,0,0,0.06)] w-[3rem] min-w-[3rem] max-w-[3rem]",
-                            i % 2 === 1 ? "bg-muted/30" : "bg-background"
-                          )}
-                        >
+                        <td className="sticky left-0 z-[35] border-r bg-background px-2 py-1 text-muted-foreground w-[3rem] min-w-[3rem] max-w-[3rem]">
                           {offset + i + 1}
+                        </td>
+                        <td
+                          className="sticky left-[3rem] z-[35] border-r bg-background px-2 py-1 font-mono text-xs whitespace-nowrap min-w-[7rem]"
+                        >
+                          {row.assetTag}
+                        </td>
+                        <td
+                          className="sticky left-[10rem] z-[35] border-r bg-background px-2 py-1 w-[14rem] min-w-[14rem] max-w-[14rem] truncate shadow-[4px_0_8px_-4px_rgba(0,0,0,0.25)]"
+                          title={desc}
+                          data-testid={`asset-cell-desc-${row.id}`}
+                        >
+                          {desc || EM_DASH}
                         </td>
                         <td className="px-2 py-1 whitespace-nowrap">
                           {row.itemType === "inventory" ? "Inventory" : "Asset"}
@@ -1144,24 +1148,6 @@ export default function Assets() {
                           {row.categoryName?.trim() || EM_DASH}
                         </td>
                         <td className="px-2 py-1 max-w-[10rem] truncate">{row.subCategory?.trim() || EM_DASH}</td>
-                        <td
-                          className={cn(
-                            "sticky left-[3rem] z-[34] border-r px-2 py-1 w-[14rem] min-w-[14rem] max-w-[14rem] truncate shadow-[2px_0_4px_-2px_rgba(0,0,0,0.06)]",
-                            i % 2 === 1 ? "bg-muted/30" : "bg-background"
-                          )}
-                          title={desc}
-                          data-testid={`asset-cell-desc-${row.id}`}
-                        >
-                          {desc || EM_DASH}
-                        </td>
-                        <td
-                          className={cn(
-                            "sticky left-[17rem] z-[33] border-r px-2 py-1 font-mono text-xs whitespace-nowrap min-w-[7rem] shadow-[2px_0_4px_-2px_rgba(0,0,0,0.06)]",
-                            i % 2 === 1 ? "bg-muted/30" : "bg-background"
-                          )}
-                        >
-                          {row.assetTag}
-                        </td>
                         <td className="px-2 py-1 whitespace-nowrap">
                           {row.serialNumber?.trim() || EM_DASH}
                         </td>
@@ -1220,10 +1206,7 @@ export default function Assets() {
                         </td>
                         {canEditAssets ? (
                           <td
-                            className={cn(
-                              "sticky right-0 z-[35] border-l px-1 py-0.5 shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.06)]",
-                              i % 2 === 1 ? "bg-muted/30" : "bg-background"
-                            )}
+                            className="sticky right-0 z-[35] border-l bg-background px-1 py-0.5 shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.06)]"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <div className="flex gap-0.5">
