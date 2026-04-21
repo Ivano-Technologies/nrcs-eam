@@ -30,7 +30,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -39,6 +38,8 @@ import { usePermissions } from "@/_core/hooks/usePermissions";
 import { appPath } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { ViewToggle, type ViewMode } from "@/components/ViewToggle";
+import { CardQrCode } from "@/components/CardQrCode";
 
 const REGISTER_STATUS_FILTER = [
   { value: "all", label: "All statuses" },
@@ -167,6 +168,10 @@ export default function Assets() {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState<string>("50");
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    if (typeof window === "undefined") return "table";
+    return window.localStorage.getItem("viewMode_assets") === "card" ? "card" : "table";
+  });
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -235,6 +240,12 @@ export default function Assets() {
   useEffect(() => {
     setPage(0);
   }, [searchTerm, statusFilter, categoryFilter, siteFilter, itemTypeFilter, pageSize]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("viewMode_assets", viewMode);
+    }
+  }, [viewMode]);
 
   const handleDownloadTemplate = async () => {
     try {
@@ -551,26 +562,7 @@ export default function Assets() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-            <Button
-              className="h-9"
-              variant="outline"
-              data-testid="asset-export-excel-btn"
-              onClick={handleExportExcel}
-              disabled={isExporting}
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Export to Excel
-            </Button>
             {canEditAssets ? (
-              <>
-            <Button className="h-9" variant="outline" onClick={handleDownloadTemplate} disabled={isDownloading}>
-              <Download className="mr-2 h-4 w-4" />
-              Template
-            </Button>
-            <Button className="h-9" variant="outline" onClick={() => setIsImportDialogOpen(true)}>
-              <Upload className="mr-2 h-4 w-4" />
-              Import
-            </Button>
             <Dialog
               open={isCreateDialogOpen}
               onOpenChange={(open) => {
@@ -578,12 +570,6 @@ export default function Assets() {
                 if (!open) setCreateFormError("");
               }}
             >
-              <DialogTrigger asChild>
-                <Button className="h-9" data-testid="asset-create-btn">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Asset
-                </Button>
-              </DialogTrigger>
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Add New Asset</DialogTitle>
@@ -870,7 +856,6 @@ export default function Assets() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
-              </>
             ) : null}
         </div>
       </div>
@@ -939,10 +924,74 @@ export default function Assets() {
                 <SelectItem value="inventory">Inventory</SelectItem>
               </SelectContent>
             </Select>
+            <div className="ml-auto flex flex-wrap items-center gap-2">
+              <ViewToggle value={viewMode} onChange={setViewMode} />
+              <Button
+                className="h-9"
+                variant="outline"
+                data-testid="asset-export-excel-btn"
+                onClick={handleExportExcel}
+                disabled={isExporting}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Export to Excel
+              </Button>
+              {canEditAssets ? (
+                <>
+                  <Button className="h-9" variant="outline" onClick={handleDownloadTemplate} disabled={isDownloading}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Template
+                  </Button>
+                  <Button className="h-9" variant="outline" onClick={() => setIsImportDialogOpen(true)}>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Import
+                  </Button>
+                  <Button className="h-9" onClick={() => setIsCreateDialogOpen(true)} data-testid="asset-create-btn">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Asset
+                  </Button>
+                </>
+              ) : null}
+            </div>
           </div>
         </CardContent>
       </Card>
 
+      {viewMode === "card" ? (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3" data-testid="asset-list-cards">
+          {rows.map((row) => (
+            <Card
+              key={row.id}
+              className="cursor-pointer"
+              onClick={() => setLocation(appPath(`/assets/${row.id}`))}
+            >
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">{row.name}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <div className="font-mono text-xs text-muted-foreground">{row.assetTag}</div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline">{row.itemType === "inventory" ? "Inventory" : "Asset"}</Badge>
+                  <Badge variant="secondary">{row.categoryName?.trim() || EM_DASH}</Badge>
+                  <Badge variant="outline" className={cn("text-xs font-normal", STATUS_BADGE[row.registerStatus as string] ?? "")}>
+                    {REGISTER_LABELS[row.registerStatus as string] ?? row.registerStatus}
+                  </Badge>
+                </div>
+                <p className="text-muted-foreground">{row.siteName || EM_DASH}</p>
+                <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
+                  <CardQrCode
+                    idValue={String(row.id)}
+                    title={row.name}
+                    subtitle={row.assetTag || `Asset #${row.id}`}
+                    encodedValue={`https://nrcseam.techivano.com/app/assets/${row.id}`}
+                    labelSize="50x50"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
       <div data-testid="asset-list-table" className="rounded-md border bg-card overflow-hidden px-2 md:px-3">
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
@@ -1281,6 +1330,7 @@ export default function Assets() {
           </div>
         </div>
       </div>
+      )}
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">

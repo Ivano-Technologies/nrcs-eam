@@ -15,6 +15,12 @@ import { usePermissions } from "@/_core/hooks/usePermissions";
 import AssetDepreciation from "@/components/AssetDepreciation";
 import { AssetMaintenanceTimeline } from "@/components/AssetMaintenanceTimeline";
 
+const naira = new Intl.NumberFormat("en-NG", {
+  style: "currency",
+  currency: "NGN",
+  maximumFractionDigits: 2,
+});
+
 export default function AssetDetail() {
   const [, params] = useRoute("/app/assets/:id");
   const [, setLocation] = useLocation();
@@ -315,7 +321,7 @@ export default function AssetDetail() {
                 <p className="text-sm font-medium text-muted-foreground">Acquisition Cost</p>
                 <div className="flex items-center gap-2">
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
-                  <p className="text-base">₦{parseFloat(asset.acquisitionCost).toLocaleString()}</p>
+                  <p className="text-base">{naira.format(parseFloat(asset.acquisitionCost))}</p>
                 </div>
               </div>
             )}
@@ -324,7 +330,7 @@ export default function AssetDetail() {
                 <p className="text-sm font-medium text-muted-foreground">Current Value</p>
                 <div className="flex items-center gap-2">
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
-                  <p className="text-base">₦{parseFloat(asset.currentValue).toLocaleString()}</p>
+                  <p className="text-base">{naira.format(parseFloat(asset.currentValue))}</p>
                 </div>
               </div>
             )}

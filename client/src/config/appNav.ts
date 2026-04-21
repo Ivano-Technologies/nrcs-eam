@@ -9,7 +9,6 @@ import {
   FileText,
   Boxes,
   Warehouse,
-  DollarSign,
   Shield,
   ShieldCheck,
   FileBarChart,
@@ -19,6 +18,7 @@ import {
   Settings,
   Mail,
 } from "lucide-react";
+import { NairaIcon } from "@/components/icons/NairaIcon";
 
 export type AppNavItem = {
   label: string;
@@ -77,11 +77,11 @@ export const SIDEBAR_GROUPS: AppNavGroup[] = [
   {
     id: "finance",
     label: "Finance",
-    icon: DollarSign,
+    icon: NairaIcon,
     items: [
-      { label: "Cost Analytics", path: appPath("/cost-analytics"), icon: DollarSign },
-      { label: "Financial Transactions", path: appPath("/financial"), icon: DollarSign },
-      { label: "QuickBooks", path: appPath("/quickbooks"), icon: DollarSign },
+      { label: "Cost Analytics", path: appPath("/cost-analytics"), icon: NairaIcon },
+      { label: "Financial Transactions", path: appPath("/financial"), icon: NairaIcon },
+      { label: "QuickBooks", path: appPath("/quickbooks"), icon: NairaIcon },
     ],
   },
   {
