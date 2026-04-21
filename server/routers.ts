@@ -244,6 +244,10 @@ export const appRouter = router({
       }),
   }),
 
+  nav: router({
+    sidebarCounts: protectedProcedure.query(async () => await db.getNavSidebarCounts()),
+  }),
+
   // ============= ASSET CATEGORIES =============
   assetCategories: router({
     list: protectedProcedure.query(async () => {
