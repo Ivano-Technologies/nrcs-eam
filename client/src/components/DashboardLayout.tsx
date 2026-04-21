@@ -19,7 +19,7 @@ import {
 import { useIsMobile } from "@/hooks/useMobile";
 import { appPath } from "@/lib/routes";
 import { LogOut, Settings, Maximize2, Search } from "lucide-react";
-import { CSSProperties, useEffect, useRef, useState } from "react";
+import { CSSProperties, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
@@ -33,6 +33,9 @@ import { InstallPWABanner } from "./InstallPWABanner";
 import { flattenNavItems } from "@/config/appNav";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { Link } from "wouter";
+import { RoleSwitcher } from "./dashboard/RoleSwitcher";
+import { DashboardRolePreviewProvider } from "./dashboard/rolePreviewContext";
+import type { UserRole } from "./dashboard/types";
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
 const DEFAULT_WIDTH = 360;
@@ -119,6 +122,25 @@ function DashboardLayoutContent({
   const isMobile = useIsMobile();
   const [toggleFeedback, setToggleFeedback] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const actualRole = useMemo<UserRole>(() => {
+    const role = user?.role ?? "staff";
+    if (role === "admin") return "Admin";
+    if (role === "manager") return "Manager";
+    if (role === "staff") return "Staff";
+    return "Field";
+  }, [user?.role]);
+  const [effectiveRole, setEffectiveRole] = useState<UserRole>(actualRole);
+
+  useEffect(() => {
+    if (actualRole !== "Admin") {
+      setEffectiveRole(actualRole);
+      return;
+    }
+    if (effectiveRole === "Admin" || effectiveRole === "Manager" || effectiveRole === "Staff" || effectiveRole === "Field") {
+      return;
+    }
+    setEffectiveRole(actualRole);
+  }, [actualRole, effectiveRole]);
 
   const updatePrefsMutation = trpc.userPreferences.update.useMutation();
 
@@ -179,7 +201,7 @@ function DashboardLayoutContent({
   }, [isResizing, setSidebarWidth]);
 
   return (
-    <>
+    <DashboardRolePreviewProvider actualRole={actualRole} effectiveRole={effectiveRole} setEffectiveRole={setEffectiveRole}>
       <div className="relative" ref={sidebarRef}>
         <Sidebar
           className="border-r-0"
@@ -366,6 +388,7 @@ function DashboardLayoutContent({
             <div className="flex-1 min-w-0" />
             <GlobalSearch />
             <div className="flex items-center gap-2 shrink-0">
+              <RoleSwitcher actualRole={actualRole} value={effectiveRole} onChange={setEffectiveRole} />
               <ThemeToggle />
               <NotificationCenter />
             </div>
@@ -376,6 +399,6 @@ function DashboardLayoutContent({
         </main>
         <Footer />
       </SidebarInset>
-    </>
+    </DashboardRolePreviewProvider>
   );
 }
