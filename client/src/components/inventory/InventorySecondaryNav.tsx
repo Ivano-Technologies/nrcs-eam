@@ -1,10 +1,10 @@
-import { Link, useLocation } from "wouter";
+import { Link, useLocation, useSearch } from "wouter";
 import { appPath } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
 const LINKS = [
-  { label: "Overview", path: appPath("/inventory") },
-  { label: "Catalogue", path: appPath("/inventory") },
+  { label: "Overview", path: appPath("/inventory/stock-overview") },
+  { label: "Catalogue", path: appPath("/inventory/stock-overview?tab=catalogue") },
   { label: "Receipts", path: appPath("/inventory/receipts") },
   { label: "Issues", path: appPath("/inventory/issues") },
   { label: "Transfers", path: appPath("/inventory/transfers") },
@@ -18,15 +18,26 @@ const LINKS = [
 
 export function InventorySecondaryNav() {
   const [location] = useLocation();
+  const search = useSearch();
+  const tab = new URLSearchParams(search).get("tab");
+  const pathOnly = location.replace(/\/$/, "") || "/";
+  const stockBase = appPath("/inventory/stock-overview").replace(/\/$/, "") || "/";
+
   return (
     <div className="flex flex-wrap gap-2">
       {LINKS.map((link) => {
-        const active =
-          link.path === appPath("/inventory")
-            ? location === appPath("/inventory")
-            : location.startsWith(link.path);
+        const basePath = (link.path.split("?")[0] || "/").replace(/\/$/, "") || "/";
+        let active = pathOnly === basePath || pathOnly.startsWith(`${basePath}/`);
+        if (basePath === stockBase) {
+          if (link.label === "Overview") {
+            active = pathOnly === stockBase && tab !== "catalogue" && tab !== "settings";
+          }
+          if (link.label === "Catalogue") {
+            active = pathOnly === stockBase && tab === "catalogue";
+          }
+        }
         return (
-          <Link key={link.path} href={link.path}>
+          <Link key={link.label} href={link.path}>
             <a
               className={cn(
                 "rounded-md border px-3 py-1.5 text-[13px] transition-colors",

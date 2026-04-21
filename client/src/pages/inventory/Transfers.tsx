@@ -10,7 +10,7 @@ import { InventorySecondaryNav } from "@/components/inventory/InventorySecondary
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { toast } from "sonner";
 
-export default function Transfers() {
+export default function Transfers({ embedInShell = false }: { embedInShell?: boolean } = {}) {
   const { isAdmin, isManagerOrAdmin, isStaffOrAbove } = usePermissions();
   const [status, setStatus] = useState("all");
   const [open, setOpen] = useState(false);
@@ -47,8 +47,12 @@ export default function Transfers() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-3xl font-bold">Transfers</h1>
-      <InventorySecondaryNav />
+      {!embedInShell ? (
+        <>
+          <h1 className="text-3xl font-bold">Transfers</h1>
+          <InventorySecondaryNav />
+        </>
+      ) : null}
       <Card>
         <CardContent className="flex items-center gap-2 pt-4">
           <Select value={status} onValueChange={setStatus}>
