@@ -9,6 +9,7 @@ import { useDashboardRolePreview } from "@/components/dashboard/rolePreviewConte
 import type { DashboardPeriod, UserRole } from "@/components/dashboard/types";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
+import { formatNaira } from "@/lib/format";
 import { Clock, FileText, MapPin, Package, Users } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -63,11 +64,11 @@ export default function Home() {
     {
       key: "stock" as const,
       label: "Stock Value",
-      value: `₦${metrics?.stockValue.value ?? 0}${metrics?.stockValue.unit ?? "M"}`,
+      value: formatNaira(metrics?.stockValue.value ?? 0, { compact: true }),
       sub: undefined,
       icon: Package,
       tone: "purple" as const,
-      delta: metrics?.stockValue.delta ? `₦${metrics.stockValue.delta}` : undefined,
+      delta: metrics?.stockValue.delta ? formatNaira(metrics.stockValue.delta, { compact: true }) : undefined,
       deltaDirection: "up" as const,
     },
     {
