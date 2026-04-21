@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState, type ComponentProps } from "react";
 import { useLocation } from "wouter";
+import type { FacilitiesSegment } from "@/lib/facilityRoutes";
+import { parseFacilityTypeFromSearch, segmentToListFilter } from "@/lib/facilityRoutes";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -40,7 +42,7 @@ import {
 } from "@shared/facilities";
 import { cn } from "@/lib/utils";
 import { MapView } from "@/components/Map";
-import { Download, Edit2, MapPin, Plus, Save, Trash2, Upload, X } from "lucide-react";
+import { Download, Edit2, MapPin, Save, Trash2, Upload, X } from "lucide-react";
 import { ViewToggle } from "@/components/ViewToggle";
 import { CardQrCode } from "@/components/CardQrCode";
 
@@ -86,14 +88,21 @@ const emptyForm = (): FacilityForm => ({
   isActive: true,
 });
 
-export default function Facilities() {
+export type FacilitiesPageProps = {
+  segment: FacilitiesSegment;
+  /** Open create dialog on mount (e.g. `/facilities/new`) and apply `?type=`. */
+  autoOpenCreate?: boolean;
+};
+
+export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps) {
   const [, setLocation] = useLocation();
   const { canEditFacilities } = usePermissions();
+  const lockedFacilityType = segmentToListFilter(segment);
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     if (typeof window === "undefined") return "table";
     return window.localStorage.getItem("viewMode_facilities") === "card" ? "card" : "table";
   });
-  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all"); // only used when segment === "all"
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [stateFilter, setStateFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
@@ -108,7 +117,13 @@ export default function Facilities() {
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [markers, setMarkers] = useState<google.maps.Marker[]>([]);
 
-  const { data: facilities, isLoading, refetch } = trpc.sites.list.useQuery();
+  const listInput =
+    lockedFacilityType != null ? { facilityType: lockedFacilityType } : undefined;
+  const { data: facilities, isLoading, refetch } = trpc.sites.list.useQuery(listInput);
+  const { data: branchSites = [] } = trpc.sites.list.useQuery(
+    { facilityType: "branch" },
+    { staleTime: 120_000 }
+  );
   const createMutation = trpc.sites.create.useMutation({
     onSuccess: async () => {
       toast.success("Facility created successfully");
@@ -150,15 +165,26 @@ export default function Facilities() {
     return Array.from(values).sort((a, b) => a.localeCompare(b));
   }, [facilities]);
 
-  const parentOptions = useMemo(
-    () => (facilities ?? []).filter((f) => f.facilityType === "branch"),
-    [facilities]
-  );
+  const parentOptions = branchSites;
+
+  const effectiveTypeFilter = lockedFacilityType ?? (typeFilter === "all" ? "all" : typeFilter);
+
+  useEffect(() => {
+    if (!autoOpenCreate) return;
+    const parsed = parseFacilityTypeFromSearch(
+      typeof window !== "undefined" ? window.location.search : ""
+    );
+    setCreateForm({
+      ...emptyForm(),
+      ...(parsed ? { facilityType: parsed } : {}),
+    });
+    setIsCreateOpen(true);
+  }, [autoOpenCreate]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return (facilities ?? []).filter((f) => {
-      if (typeFilter !== "all" && f.facilityType !== typeFilter) return false;
+      if (effectiveTypeFilter !== "all" && f.facilityType !== effectiveTypeFilter) return false;
       if (statusFilter === "active" && !f.isActive) return false;
       if (statusFilter === "inactive" && f.isActive) return false;
       if (stateFilter !== "all" && (f.state ?? "") !== stateFilter) return false;
@@ -166,7 +192,7 @@ export default function Facilities() {
       const hay = `${f.code ?? ""} ${f.name} ${f.address ?? ""}`.toLowerCase();
       return hay.includes(q);
     });
-  }, [facilities, search, stateFilter, statusFilter, typeFilter]);
+  }, [facilities, search, stateFilter, statusFilter, effectiveTypeFilter]);
 
   const sorted = useMemo(() => {
     const rows = [...filtered];
@@ -279,11 +305,7 @@ export default function Facilities() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-3xl font-bold">Facilities Management</h1>
-          <p className="mt-1 text-muted-foreground">Manage NRCS facilities</p>
-        </div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex gap-2">
           <ViewToggle value={viewMode === "card" ? "card" : "table"} onChange={setViewMode} />
           <Button
@@ -305,15 +327,21 @@ export default function Facilities() {
             onChange={(e) => setSearch(e.target.value)}
             className="h-9 min-w-[240px] md:min-w-[280px]"
           />
-          <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="h-9 w-[170px]"><SelectValue placeholder="Type" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All types</SelectItem>
-              {FACILITY_TYPE_VALUES.map((t) => (
-                <SelectItem key={t} value={t}>{FACILITY_TYPE_LABELS[t]}s</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {lockedFacilityType == null ? (
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="h-9 w-[170px]">
+                <SelectValue placeholder="Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All types</SelectItem>
+                {FACILITY_TYPE_VALUES.map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {FACILITY_TYPE_LABELS[t]}s
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : null}
           <Select value={stateFilter} onValueChange={setStateFilter}>
             <SelectTrigger className="h-9 w-[170px]"><SelectValue placeholder="State" /></SelectTrigger>
             <SelectContent>
@@ -359,11 +387,6 @@ export default function Facilities() {
                 onChange={(e) => handleImport(e.target.files?.[0])}
               />
             </label>
-            {canEditFacilities && (
-              <Button className="h-9" onClick={() => setIsCreateOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />Add Facility
-              </Button>
-            )}
           </div>
         </div>
       </div>

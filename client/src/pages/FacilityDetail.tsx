@@ -141,7 +141,7 @@ export default function FacilityDetail() {
       </Card>
 
       <Button asChild variant="outline">
-        <Link href={appPath("/facilities")}>Back to Facilities</Link>
+        <Link href={appPath("/facilities/all")}>Back to Facilities</Link>
       </Button>
     </div>
   );
