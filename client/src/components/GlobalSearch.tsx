@@ -252,7 +252,7 @@ export function GlobalSearch({ className }: { className?: string }) {
               {data.sites.length > 0 && (
                 <CommandGroup heading="Facilities">
                   {data.sites.map((s) => {
-                    const href = appPath("/sites");
+                    const href = appPath("/facilities");
                     const entry: RecentEntry = {
                       id: `site-${s.id}`,
                       label: s.name,

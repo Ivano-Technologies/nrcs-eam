@@ -24,48 +24,79 @@ export async function runLiveBrowserCleanup(
  */
 export const LIVE_E2E_SHARED_SITE_NAME = "E2E Playwright Shared Site";
 
+async function gotoFacilitiesPage(page: Page): Promise<void> {
+  await page.goto("/app/facilities");
+  const facilitiesHeading = page.getByRole("heading", { name: /Facilities Management/i });
+  if ((await facilitiesHeading.count()) > 0) {
+    await expect(facilitiesHeading).toBeVisible({ timeout: 30_000 });
+    return;
+  }
+  await page.goto("/app/sites");
+  await expect(
+    page
+      .getByRole("heading", { name: /Facilities Management/i })
+      .or(page.getByRole("heading", { name: /Sites Management/i }))
+  ).toBeVisible({ timeout: 30_000 });
+}
+
 /**
- * Returns true if a site card with this display name is visible on /app/sites.
+ * Returns true if a facility row with this display name is visible on /app/facilities.
  */
 export async function siteExistsByName(page: Page, siteName: string): Promise<boolean> {
-  await page.goto("/app/sites");
-  await expect(page.getByRole("heading", { name: /Facilities Management/i })).toBeVisible({
-    timeout: 30_000,
-  });
+  await gotoFacilitiesPage(page);
+  const row = page.locator("[data-testid^='facility-row-']").filter({ hasText: siteName });
+  if ((await row.count()) > 0) return true;
   const card = page.locator("[data-testid^='site-card-']").filter({ hasText: siteName });
-  return (await card.count()) > 0;
+  if ((await card.count()) > 0) return true;
+  const genericRow = page.locator("tbody tr").filter({ hasText: siteName });
+  return (await genericRow.count()) > 0;
 }
 
 /**
  * Read-only: resolves a site name to use in asset/WO forms.
- * - If a card for {@link LIVE_E2E_SHARED_SITE_NAME} exists, returns that name.
- * - Otherwise returns the display name of the **first** site card (e.g. real NRCS site).
+ * - If a row for {@link LIVE_E2E_SHARED_SITE_NAME} exists, returns that name.
+ * - Otherwise returns the display name of the first facility row.
  * Does **not** create, update, or delete sites.
  */
 export async function resolveLiveTestSiteName(page: Page): Promise<string> {
-  await page.goto("/app/sites");
-  await expect(page.getByRole("heading", { name: /Facilities Management/i })).toBeVisible({
-    timeout: 30_000,
-  });
+  await gotoFacilitiesPage(page);
 
   const sharedCard = page
-    .locator("[data-testid^='site-card-']")
+    .locator("[data-testid^='facility-row-']")
     .filter({ hasText: LIVE_E2E_SHARED_SITE_NAME });
   if ((await sharedCard.count()) > 0) {
     return LIVE_E2E_SHARED_SITE_NAME;
   }
 
+  const firstRow = page.locator("[data-testid^='facility-row-']").first();
+  if ((await firstRow.count()) > 0) {
+    await expect(firstRow, "At least one site must exist for live E2E").toBeVisible({
+      timeout: 30_000,
+    });
+    const title = firstRow.locator('[data-testid^="facility-name-"]').first();
+    const name = (await title.innerText()).trim();
+    if (!name) throw new Error("Could not read facility name from first row.");
+    return name;
+  }
+
   const firstCard = page.locator("[data-testid^='site-card-']").first();
-  await expect(firstCard, "At least one site must exist for live E2E").toBeVisible({
+  if ((await firstCard.count()) > 0) {
+    await expect(firstCard, "At least one site must exist for live E2E").toBeVisible({
+      timeout: 30_000,
+    });
+    const title = firstCard.locator(".text-lg").first();
+    const name = (await title.innerText()).trim();
+    if (name) return name;
+  }
+
+  const genericFirstRow = page.locator("tbody tr").first();
+  await expect(genericFirstRow, "At least one facility row must exist for live E2E").toBeVisible({
     timeout: 30_000,
   });
-
-  const title = firstCard.locator(".text-lg").first();
-  const name = (await title.innerText()).trim();
-  if (!name) {
-    throw new Error("Could not read site name from first site card (expected .text-lg title).");
-  }
-  return name;
+  const rowNameCell = genericFirstRow.locator("td").nth(2);
+  const rowName = (await rowNameCell.innerText()).trim();
+  if (!rowName) throw new Error("Could not read site/facility name from first table row.");
+  return rowName;
 }
 
 /**

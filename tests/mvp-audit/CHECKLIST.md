@@ -46,7 +46,7 @@ Legend: `[x]` covered by automated MVP audit (Playwright) · Stack: Vite + React
 | [x] | `/app/vendors` |
 | [x] | `/app/financial` |
 | [x] | `/app/compliance` |
-| [x] | `/app/sites` |
+| [x] | `/app/facilities` |
 | [x] | `/app/users` |
 | [x] | `/app/pending-users` |
 | [x] | `/app/notification-preferences` |

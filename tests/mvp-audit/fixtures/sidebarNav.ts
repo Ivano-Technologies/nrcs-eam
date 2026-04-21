@@ -20,7 +20,7 @@ export const SIDEBAR_NAV_ADMIN: { testId: string; path: string; shotSlug: string
   { testId: "sidebar-nav-quickbooks", path: "/app/quickbooks", shotSlug: "quickbooks" },
   { testId: "sidebar-nav-report-scheduling", path: "/app/report-scheduling", shotSlug: "report-scheduling" },
   { testId: "sidebar-nav-reports", path: "/app/reports", shotSlug: "reports" },
-  { testId: "sidebar-nav-sites", path: "/app/sites", shotSlug: "sites" },
+  { testId: "sidebar-nav-facilities", path: "/app/facilities", shotSlug: "facilities" },
   { testId: "sidebar-nav-users", path: "/app/users", shotSlug: "users" },
   { testId: "sidebar-nav-vendors", path: "/app/vendors", shotSlug: "vendors" },
   { testId: "sidebar-nav-warranty-alerts", path: "/app/warranty-alerts", shotSlug: "warranty-alerts" },

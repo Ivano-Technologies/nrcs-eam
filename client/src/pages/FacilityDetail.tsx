@@ -9,7 +9,7 @@ import { Link } from "wouter";
 import { FACILITY_TYPE_LABELS } from "@shared/facilities";
 
 export default function FacilityDetail() {
-  const [match, params] = useRoute("/app/sites/:id");
+  const [match, params] = useRoute("/app/facilities/:id");
   const id = match ? Number(params.id) : NaN;
   const enabled = Number.isFinite(id);
   const { data: facility } = trpc.sites.getById.useQuery({ id }, { enabled });
@@ -141,7 +141,7 @@ export default function FacilityDetail() {
       </Card>
 
       <Button asChild variant="outline">
-        <Link href={appPath("/sites")}>Back to Facilities</Link>
+        <Link href={appPath("/facilities")}>Back to Facilities</Link>
       </Button>
     </div>
   );
