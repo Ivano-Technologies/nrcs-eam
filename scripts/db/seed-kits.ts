@@ -90,6 +90,7 @@ async function ensureCatalogueItem(itemCode: string, name: string) {
       itemCode,
       name,
       category: "relief_item",
+      itemCategory: "other",
       unitOfMeasure: "unit",
       vedClassification: "essential",
       standardSuppliers: [],

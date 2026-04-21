@@ -24,6 +24,7 @@ import {
   INVENTORY_VED_VALUES,
   type InventoryCatalogueSeedItem,
 } from "../../shared/inventoryCatalogueSeed";
+import { itemCategoryZod, type ItemCategory } from "../../shared/itemCategory";
 import { generateGrnPdf } from "../_core/pdfTemplates/grnPdf";
 import { generateWaybillPdf } from "../_core/pdfTemplates/waybillPdf";
 import { generateRequisitionPdf } from "../_core/pdfTemplates/requisitionPdf";
@@ -231,6 +232,7 @@ async function importCatalogueRows(rows: InventoryCatalogueSeedItem[]) {
         name: item.name,
         description: item.description ?? null,
         category: item.category,
+        itemCategory: "other" as ItemCategory,
         unitOfMeasure: item.unitOfMeasure,
         vedClassification: item.vedClassification,
         hasExpiry: item.hasExpiry ?? false,
@@ -318,6 +320,7 @@ export const inventoryV2Router = router({
           name: z.string().trim().min(1).max(255),
           description: z.string().optional(),
           category: categoryEnum,
+          itemCategory: itemCategoryZod,
           subcategory: z.string().optional(),
           unitOfMeasure: z.string().trim().min(1).max(50),
           vedClassification: vedEnum.optional(),
@@ -349,6 +352,7 @@ export const inventoryV2Router = router({
           name: z.string().trim().min(1).max(255).optional(),
           description: z.string().optional(),
           category: categoryEnum.optional(),
+          itemCategory: itemCategoryZod.optional(),
           subcategory: z.string().optional(),
           unitOfMeasure: z.string().trim().min(1).max(50).optional(),
           vedClassification: vedEnum.optional(),
@@ -429,10 +433,11 @@ export const inventoryV2Router = router({
   stock: router({
     overview: protectedProcedure
       .input(
-        z
+          z
           .object({
             warehouseId: z.number().optional(),
             category: categoryEnum.optional(),
+            itemCategory: itemCategoryZod.optional(),
             status: stockStatusEnum.optional(),
             ved: vedEnum.optional(),
             search: z.string().optional(),
@@ -463,6 +468,7 @@ export const inventoryV2Router = router({
 
         const catalogueFilters = [];
         if (input?.category) catalogueFilters.push(eq(inventoryCatalogue.category, input.category));
+        if (input?.itemCategory) catalogueFilters.push(eq(inventoryCatalogue.itemCategory, input.itemCategory));
         if (input?.ved) catalogueFilters.push(eq(inventoryCatalogue.vedClassification, input.ved));
         if (input?.search?.trim()) {
           const q = `%${input.search.trim()}%`;
@@ -498,6 +504,7 @@ export const inventoryV2Router = router({
               itemCode: item.itemCode,
               itemName: item.name,
               category: item.category,
+              itemCategory: item.itemCategory,
               vedClassification: item.vedClassification,
               unitOfMeasure: item.unitOfMeasure,
               photoUrl: item.photoUrl,
@@ -536,6 +543,7 @@ export const inventoryV2Router = router({
             itemCode: inventoryCatalogue.itemCode,
             itemName: inventoryCatalogue.name,
             category: inventoryCatalogue.category,
+            itemCategory: inventoryCatalogue.itemCategory,
             vedClassification: inventoryCatalogue.vedClassification,
             unitOfMeasure: inventoryCatalogue.unitOfMeasure,
             quantityOnHand: inventoryStock.quantityOnHand,

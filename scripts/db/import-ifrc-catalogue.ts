@@ -18,6 +18,7 @@ async function run() {
         name: item.name,
         description: item.description ?? null,
         category: item.category,
+        itemCategory: "other",
         unitOfMeasure: item.unitOfMeasure,
         vedClassification: item.vedClassification,
         hasExpiry: item.hasExpiry ?? false,
