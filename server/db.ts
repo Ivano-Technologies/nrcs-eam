@@ -230,10 +230,14 @@ export type SiteListRow = Site & {
 };
 
 /** Facilities list with hierarchy label and aggregate counts (for UI / `sites.list`). */
-export async function getSitesList(): Promise<SiteListRow[]> {
+export async function getSitesList(opts?: { facilityType?: FacilityType }): Promise<SiteListRow[]> {
   const database = await getDb();
   if (!database) return [];
-  const allSites = await database.select().from(sites).orderBy(asc(sites.name));
+  const allSitesRaw = await database.select().from(sites).orderBy(asc(sites.name));
+  const allSites =
+    opts?.facilityType != null
+      ? allSitesRaw.filter((s) => s.facilityType === opts.facilityType)
+      : allSitesRaw;
   const [assetGroups, invGroups, staffGroups] = await Promise.all([
     database
       .select({ siteId: assets.siteId, c: sql<number>`cast(count(*) as int)` })
@@ -254,7 +258,7 @@ export async function getSitesList(): Promise<SiteListRow[]> {
   const staffMap = new Map(
     staffGroups.filter((r): r is { siteId: number; c: number } => r.siteId != null).map((r) => [r.siteId, r.c])
   );
-  const idToName = new Map(allSites.map((s) => [s.id, s.name]));
+  const idToName = new Map(allSitesRaw.map((s) => [s.id, s.name]));
 
   return allSites.map((s) => ({
     ...s,

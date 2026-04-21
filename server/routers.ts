@@ -129,9 +129,13 @@ export const appRouter = router({
 
   // ============= SITES MANAGEMENT =============
   sites: router({
-    list: protectedProcedure.query(async () => {
-      return await db.getSitesList();
-    }),
+    list: protectedProcedure
+      .input(z.object({ facilityType: facilityTypeZod.optional() }).optional())
+      .query(async ({ input }) => {
+        return await db.getSitesList(
+          input?.facilityType != null ? { facilityType: input.facilityType } : undefined
+        );
+      }),
 
     getById: protectedProcedure
       .input(z.object({ id: z.number() }))
@@ -1307,7 +1311,7 @@ export const appRouter = router({
         return {
           beneficiariesReached: { value: 452380, delta: `+${d.beneficiaries}%`, direction: "up" as const },
           activeFacilities: { value: 37, total: 42, offline: 5 },
-          stockValue: { value: 284.5, unit: "M" as const, delta: `+${d.stock}M` },
+          stockValue: { value: 284_500_000, delta: 18_000_000 + (d.stock - 18) * 1_000_000 },
           pendingApprovals: { value: 12, urgent: 3, oldestDays: 1, direction: "down" as const },
           avgResponseHours: { value: 4.2, delta: `${d.response} hrs`, direction: "up" as const },
         };
@@ -1345,10 +1349,10 @@ export const appRouter = router({
       .input(z.object({ limit: z.number().min(1).max(12).default(4) }).optional())
       .query(async ({ input }) => {
         const rows = [
-          { id: "RQ-2308", from: "Lagos WH", amount: "₦18.4M", type: "Shelter", submittedAt: "2h ago", priority: "High" as const },
-          { id: "RQ-2307", from: "Ondo Field", amount: "₦6.2M", type: "Medical", submittedAt: "4h ago", priority: "Medium" as const },
-          { id: "RQ-2305", from: "Kano Hub", amount: "₦3.1M", type: "WASH", submittedAt: "7h ago", priority: "High" as const },
-          { id: "RQ-2301", from: "Abuja FCT", amount: "₦1.4M", type: "Logistics", submittedAt: "1d ago", priority: "Low" as const },
+          { id: "RQ-2308", from: "Lagos WH", amount: 18_400_000, type: "Shelter", submittedAt: "2h ago", priority: "High" as const },
+          { id: "RQ-2307", from: "Ondo Field", amount: 6_200_000, type: "Medical", submittedAt: "4h ago", priority: "Medium" as const },
+          { id: "RQ-2305", from: "Kano Hub", amount: 3_100_000, type: "WASH", submittedAt: "7h ago", priority: "High" as const },
+          { id: "RQ-2301", from: "Abuja FCT", amount: 1_400_000, type: "Logistics", submittedAt: "1d ago", priority: "Low" as const },
         ];
         return rows.slice(0, input?.limit ?? 4);
       }),

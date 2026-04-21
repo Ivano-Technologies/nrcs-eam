@@ -32,7 +32,8 @@ import PendingUsers from "@/pages/PendingUsers";
 import QuickBooksSettings from "@/pages/QuickBooksSettings";
 import ReportScheduling from "@/pages/ReportScheduling";
 import Reports from "@/pages/Reports";
-import Facilities from "@/pages/Facilities";
+import FacilitiesNew from "@/pages/FacilitiesNew";
+import { FacilitiesTabRoute } from "@/pages/facilities/FacilitiesTabRoutes";
 import Users from "@/pages/Users";
 import Vendors from "@/pages/Vendors";
 import WarrantyAlerts from "@/pages/WarrantyAlerts";
@@ -86,10 +87,28 @@ export default function ProtectedAppSection() {
             {(params) => <Redirect to={`/app/facilities/${params.id}`} />}
           </Route>
           <Route path="/app/sites">
-            <Redirect to="/app/facilities" />
+            <Redirect to="/app/facilities/all" />
+          </Route>
+          <Route path="/app/facilities/new" component={FacilitiesNew} />
+          <Route path="/app/facilities/all">
+            <FacilitiesTabRoute segment="all" />
+          </Route>
+          <Route path="/app/facilities/national-hq">
+            <FacilitiesTabRoute segment="national-hq" />
+          </Route>
+          <Route path="/app/facilities/branches">
+            <FacilitiesTabRoute segment="branches" />
+          </Route>
+          <Route path="/app/facilities/clinics">
+            <FacilitiesTabRoute segment="clinics" />
+          </Route>
+          <Route path="/app/facilities/warehouses">
+            <FacilitiesTabRoute segment="warehouses" />
           </Route>
           <Route path="/app/facilities/:id" component={FacilityDetail} />
-          <Route path="/app/facilities" component={Facilities} />
+          <Route path="/app/facilities">
+            <Redirect to="/app/facilities/all" />
+          </Route>
           <Route path="/app/users" component={Users} />
           <Route path="/app/users/pending" component={PendingUsers} />
           <Route path="/app/pending-users" component={PendingUsers} />
