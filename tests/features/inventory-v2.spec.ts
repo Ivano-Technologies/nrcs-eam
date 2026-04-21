@@ -8,8 +8,8 @@ test.describe("Inventory V2 (live)", () => {
 
     await expect(page.getByTestId("inventory-tab-overview")).toBeVisible({ timeout: 60_000 });
     await expect(page.getByPlaceholder("Search item code/name")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Grid" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Table" })).toBeVisible();
+    await expect(page.getByTestId("view-toggle-card")).toBeVisible();
+    await expect(page.getByTestId("view-toggle-table")).toBeVisible();
 
     await page.getByTestId("inventory-tab-catalogue").click();
     await expect(page.getByRole("button", { name: /Import from IFRC Catalogue/i })).toBeVisible();
@@ -30,7 +30,7 @@ test.describe("Inventory V2 (live)", () => {
     }
 
     await page.getByTestId("inventory-tab-overview").click();
-    await page.getByRole("button", { name: "Table" }).click();
+    await page.getByTestId("view-toggle-table").click();
 
     const table = page.locator("table").first();
     await expect(table).toBeVisible();
