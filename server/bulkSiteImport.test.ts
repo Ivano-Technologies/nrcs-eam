@@ -53,11 +53,11 @@ describe("Bulk facility import", () => {
     expect(worksheet).toBeDefined();
 
     const headerRow = worksheet?.getRow(1);
-    expect(headerRow?.getCell(1).value).toBe("Facility name*");
-    expect(headerRow?.getCell(2).value).toBe("Address");
-    expect(headerRow?.getCell(3).value).toBe("City");
-    expect(headerRow?.getCell(4).value).toBe("State");
-    expect(headerRow?.getCell(8).value).toBe("Contact email");
+    expect(headerRow?.getCell(1).value).toBe("Code");
+    expect(headerRow?.getCell(2).value).toBe("Facility name*");
+    expect(headerRow?.getCell(3).value).toBe("Address");
+    expect(headerRow?.getCell(4).value).toBe("City");
+    expect(headerRow?.getCell(10).value).toBe("Contact email");
   });
 
   it("should import facilities from Excel file", async () => {
@@ -68,14 +68,17 @@ describe("Bulk facility import", () => {
     const worksheet = workbook.addWorksheet("Facilities");
 
     worksheet.columns = [
+      { header: "Code", key: "code", width: 18 },
       { header: "Facility name*", key: "name", width: 30 },
       { header: "Address", key: "address", width: 40 },
       { header: "City", key: "city", width: 20 },
       { header: "State", key: "state", width: 20 },
+      { header: "Postal code", key: "postalCode", width: 16 },
       { header: "Country", key: "country", width: 20 },
       { header: "Contact person", key: "contactPerson", width: 25 },
       { header: "Contact phone", key: "contactPhone", width: 20 },
       { header: "Contact email", key: "contactEmail", width: 30 },
+      { header: "Status (Active/Inactive)", key: "status", width: 20 },
       { header: "Latitude", key: "latitude", width: 15 },
       { header: "Longitude", key: "longitude", width: 15 },
       { header: "Facility type (branch|division|clinic|warehouse)", key: "facilityType", width: 36 },
@@ -83,7 +86,9 @@ describe("Bulk facility import", () => {
     ];
 
     worksheet.addRow({
+      code: "TST-BRN-001",
       name: "Test Site Alpha",
+      postalCode: "100001",
       address: "123 Test Street",
       city: "Test City",
       state: "Test State",
@@ -91,6 +96,7 @@ describe("Bulk facility import", () => {
       contactPerson: "Test Contact",
       contactPhone: "+234-123-456-7890",
       contactEmail: "test@example.com",
+      status: "Active",
       latitude: "9.0579",
       longitude: "7.4951",
       facilityType: "branch",
@@ -98,7 +104,9 @@ describe("Bulk facility import", () => {
     });
 
     worksheet.addRow({
+      code: "TST-BRN-002",
       name: "Test Site Beta",
+      postalCode: "100002",
       address: "456 Demo Avenue",
       city: "Demo City",
       state: "Demo State",
@@ -106,6 +114,7 @@ describe("Bulk facility import", () => {
       contactPerson: "Demo Contact",
       contactPhone: "+234-987-654-3210",
       contactEmail: "demo@example.com",
+      status: "Active",
       latitude: "6.5244",
       longitude: "3.3792",
       facilityType: "branch",
@@ -133,14 +142,17 @@ describe("Bulk facility import", () => {
     const worksheet = workbook.addWorksheet("Facilities");
 
     worksheet.columns = [
+      { header: "Code", key: "code", width: 18 },
       { header: "Facility name*", key: "name", width: 30 },
       { header: "Address", key: "address", width: 40 },
       { header: "City", key: "city", width: 20 },
       { header: "State", key: "state", width: 20 },
+      { header: "Postal code", key: "postalCode", width: 16 },
       { header: "Country", key: "country", width: 20 },
       { header: "Contact person", key: "contactPerson", width: 25 },
       { header: "Contact phone", key: "contactPhone", width: 20 },
       { header: "Contact email", key: "contactEmail", width: 30 },
+      { header: "Status (Active/Inactive)", key: "status", width: 20 },
       { header: "Latitude", key: "latitude", width: 15 },
       { header: "Longitude", key: "longitude", width: 15 },
       { header: "Facility type (branch|division|clinic|warehouse)", key: "facilityType", width: 36 },
@@ -188,6 +200,6 @@ describe("Bulk facility import", () => {
     expect(worksheet).toBeDefined();
 
     const headerRow = worksheet?.getRow(1);
-    expect(headerRow?.getCell(1).value).toBe("Facility name");
+    expect(headerRow?.getCell(1).value).toBe("Code");
   });
 });
