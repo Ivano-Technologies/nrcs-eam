@@ -550,7 +550,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                         setSafetyInput(row.safetyStockLevel == null ? "" : String(row.safetyStockLevel));
                       }}
                     >
-                      <td className="sticky left-0 z-[35] border-r bg-background px-2 py-2 font-mono">
+                      <td className="sticky left-0 z-[35] border-r bg-background px-2 py-2">
                         {row.itemCode}
                       </td>
                       <td className="sticky left-[120px] z-[35] w-[240px] min-w-[240px] max-w-[240px] truncate border-r bg-background px-2 py-2">
@@ -697,7 +697,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                     <div className="flex h-20 items-center justify-center rounded-md bg-muted">
                       <Package className="h-8 w-8 text-muted-foreground" />
                     </div>
-                    <div className="font-mono text-xs text-primary">{row.itemCode}</div>
+                    <div className="text-xs text-muted-foreground">{row.itemCode}</div>
                     <p className="truncate font-medium" title={row.name}>{row.name}</p>
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge variant="secondary">{row.category}</Badge>
@@ -743,7 +743,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                     className="cursor-pointer border-b hover:bg-muted/40"
                     onClick={() => setSelectedCatalogue(row)}
                   >
-                    <td className="px-2 py-2 font-mono">{row.itemCode}</td>
+                    <td className="px-2 py-2">{row.itemCode}</td>
                     <td className="px-2 py-2">{row.name}</td>
                     <td className="px-2 py-2">{row.category}</td>
                     <td className="px-2 py-2">{row.subcategory ?? "—"}</td>

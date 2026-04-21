@@ -36,6 +36,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { appPath } from "@/lib/routes";
+import { formatNaira } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ViewToggle, type ViewMode } from "@/components/ViewToggle";
@@ -93,12 +94,7 @@ const EM_DASH = "—";
 
 function formatMoney(n: number | null | undefined): string {
   if (n === null || n === undefined || Number.isNaN(n)) return EM_DASH;
-  return new Intl.NumberFormat("en-NG", {
-    style: "currency",
-    currency: "NGN",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(n);
+  return formatNaira(n);
 }
 
 function formatDate(d: Date | string | null | undefined): string {
@@ -969,7 +965,7 @@ export default function Assets() {
                 <CardTitle className="text-base">{row.name}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
-                <div className="font-mono text-xs text-muted-foreground">{row.assetTag}</div>
+                <p className="text-muted-foreground">{row.assetTag?.trim() || EM_DASH}</p>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline">{row.itemType === "inventory" ? "Inventory" : "Asset"}</Badge>
                   <Badge variant="secondary">{row.categoryName?.trim() || EM_DASH}</Badge>
@@ -1178,10 +1174,8 @@ export default function Assets() {
                         <td className="sticky left-0 z-[35] border-r bg-background px-2 py-1 text-muted-foreground w-[3rem] min-w-[3rem] max-w-[3rem]">
                           {offset + i + 1}
                         </td>
-                        <td
-                          className="sticky left-[3rem] z-[35] border-r bg-background px-2 py-1 font-mono text-xs whitespace-nowrap min-w-[7rem]"
-                        >
-                          {row.assetTag}
+                        <td className="sticky left-[3rem] z-[35] min-w-[7rem] whitespace-nowrap border-r bg-background px-2 py-1">
+                          {row.assetTag?.trim() || EM_DASH}
                         </td>
                         <td
                           className="sticky left-[10rem] z-[35] border-r bg-background px-2 py-1 w-[14rem] min-w-[14rem] max-w-[14rem] truncate shadow-[4px_0_8px_-4px_rgba(0,0,0,0.25)]"
