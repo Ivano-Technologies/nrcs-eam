@@ -13,6 +13,15 @@ export function InstallPWAButton() {
   const [isInstallable, setIsInstallable] = useState(false);
 
   useEffect(() => {
+    if (import.meta.env.DEV || window.location.hostname === "nrcseam.techivano.com") {
+      console.log("[PWA Debug]", {
+        standalone: window.matchMedia("(display-mode: standalone)").matches,
+        serviceWorkerSupported: "serviceWorker" in navigator,
+        serviceWorkerController: navigator.serviceWorker?.controller,
+        isSecureContext: window.isSecureContext,
+      });
+    }
+
     if (window.matchMedia("(display-mode: standalone)").matches) {
       setIsInstalled(true);
       return;
