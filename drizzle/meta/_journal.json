@@ -64,6 +64,13 @@
       "when": 1776227212300,
       "tag": "0008_inventory_phase3",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1776227212400,
+      "tag": "0009_inventory_phase4",
+      "breakpoints": true
     }
   ]
 }

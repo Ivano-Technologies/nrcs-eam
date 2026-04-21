@@ -500,6 +500,92 @@ export const inventoryCountLines = pgTable("inventory_count_lines", {
   countedAt: timestamp("counted_at", { mode: "date" }),
 });
 
+export const requisitions = pgTable("requisitions", {
+  id: serial("id").primaryKey(),
+  reqNumber: varchar("req_number", { length: 100 }).notNull().unique(),
+  title: varchar("title", { length: 255 }).notNull(),
+  status: varchar("status", { length: 50 }).default("draft"),
+  priority: varchar("priority", { length: 50 }).default("routine"),
+  requestedBy: integer("requested_by")
+    .notNull()
+    .references(() => users.id),
+  requestingFacility: integer("requesting_facility")
+    .notNull()
+    .references(() => sites.id),
+  justification: text("justification").notNull(),
+  incidentReference: varchar("incident_reference", { length: 255 }),
+  affectedPopulation: integer("affected_population"),
+  items: json("items"),
+  suggestedWarehouseId: integer("suggested_warehouse_id").references(() => sites.id),
+  approvedBranchBy: integer("approved_branch_by").references(() => users.id),
+  approvedBranchAt: timestamp("approved_branch_at", { mode: "date" }),
+  approvedHqBy: integer("approved_hq_by").references(() => users.id),
+  approvedHqAt: timestamp("approved_hq_at", { mode: "date" }),
+  rejectedBy: integer("rejected_by").references(() => users.id),
+  rejectionReason: text("rejection_reason"),
+  fulfilledAt: timestamp("fulfilled_at", { mode: "date" }),
+  linkedWaybills: json("linked_waybills"),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow(),
+});
+
+export const distributions = pgTable("distributions", {
+  id: serial("id").primaryKey(),
+  distributionNumber: varchar("distribution_number", { length: 100 }).notNull().unique(),
+  waybillId: integer("waybill_id").references(() => inventoryDocuments.id),
+  incidentReference: varchar("incident_reference", { length: 255 }),
+  distributionDate: date("distribution_date").notNull(),
+  location: varchar("location", { length: 500 }).notNull(),
+  latitude: doublePrecision("latitude"),
+  longitude: doublePrecision("longitude"),
+  locationType: varchar("location_type", { length: 100 }),
+  beneficiaryCount: integer("beneficiary_count"),
+  householdCount: integer("household_count"),
+  maleCount: integer("male_count"),
+  femaleCount: integer("female_count"),
+  childrenCount: integer("children_count"),
+  elderlyCount: integer("elderly_count"),
+  pwdCount: integer("pwd_count"),
+  itemsDistributed: json("items_distributed"),
+  conductedBy: integer("conducted_by").references(() => users.id),
+  teamMembers: json("team_members"),
+  observers: text("observers"),
+  photos: json("photos"),
+  beneficiaryList: json("beneficiary_list"),
+  notes: text("notes"),
+  challenges: text("challenges"),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow(),
+});
+
+export const inventoryKits = pgTable("inventory_kits", {
+  id: serial("id").primaryKey(),
+  kitCode: varchar("kit_code", { length: 50 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  kitType: varchar("kit_type", { length: 100 }),
+  catalogueId: integer("catalogue_id").references(() => inventoryCatalogue.id),
+  components: json("components").notNull(),
+  isActive: boolean("is_active").default(true),
+  notes: text("notes"),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow(),
+});
+
+export const kitAssemblies = pgTable("kit_assemblies", {
+  id: serial("id").primaryKey(),
+  kitId: integer("kit_id")
+    .notNull()
+    .references(() => inventoryKits.id),
+  warehouseId: integer("warehouse_id")
+    .notNull()
+    .references(() => sites.id),
+  direction: varchar("direction", { length: 20 }).notNull(),
+  quantity: integer("quantity").notNull(),
+  performedBy: integer("performed_by").references(() => users.id),
+  performedAt: timestamp("performed_at", { mode: "date" }).defaultNow(),
+  notes: text("notes"),
+});
+
 /**
  * Vendors
  */
@@ -622,6 +708,14 @@ export type InventoryCount = typeof inventoryCounts.$inferSelect;
 export type InsertInventoryCount = typeof inventoryCounts.$inferInsert;
 export type InventoryCountLine = typeof inventoryCountLines.$inferSelect;
 export type InsertInventoryCountLine = typeof inventoryCountLines.$inferInsert;
+export type Requisition = typeof requisitions.$inferSelect;
+export type InsertRequisition = typeof requisitions.$inferInsert;
+export type Distribution = typeof distributions.$inferSelect;
+export type InsertDistribution = typeof distributions.$inferInsert;
+export type InventoryKit = typeof inventoryKits.$inferSelect;
+export type InsertInventoryKit = typeof inventoryKits.$inferInsert;
+export type KitAssembly = typeof kitAssemblies.$inferSelect;
+export type InsertKitAssembly = typeof kitAssemblies.$inferInsert;
 export type Vendor = typeof vendors.$inferSelect;
 export type InsertVendor = typeof vendors.$inferInsert;
 export type FinancialTransaction = typeof financialTransactions.$inferSelect;

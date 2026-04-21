@@ -15,6 +15,9 @@ export default function Home() {
   const { data: criticalStock } = trpc.inventoryV2.stock.overview.useQuery({ status: "critical" });
   const { data: lowStockV2 } = trpc.inventoryV2.stock.overview.useQuery({ status: "low" });
   const { data: recentCounts } = trpc.inventoryV2.counts.list.useQuery();
+  const { data: reqs } = trpc.inventoryV2.requisitions.list.useQuery();
+  const { data: dists } = trpc.inventoryV2.distributions.list.useQuery();
+  const { data: distReport } = trpc.inventoryV2.distributions.report.useQuery();
 
   if (isLoading) {
     return (
@@ -85,6 +88,46 @@ export default function Home() {
       bgColor: "bg-amber-50",
       iconBg: "bg-gradient-to-br from-amber-500 to-orange-600",
       roles: ["admin", "manager"],
+    },
+    {
+      title: "Active Requisitions",
+      value: (reqs ?? []).filter((x) => ["submitted", "branch_approved", "hq_approved"].includes(String(x.status))).length,
+      icon: AlertTriangle,
+      description: "Pending approval",
+      color: "text-blue-700",
+      bgColor: "bg-blue-50",
+      iconBg: "bg-gradient-to-br from-blue-500 to-blue-700",
+      roles: ["admin", "manager", "staff"],
+    },
+    {
+      title: "Emergency Requisitions",
+      value: (reqs ?? []).filter((x) => x.priority === "emergency" && x.status !== "fulfilled").length,
+      icon: AlertTriangle,
+      description: "High urgency",
+      color: "text-red-700",
+      bgColor: "bg-red-50",
+      iconBg: "bg-gradient-to-br from-red-500 to-red-700 animate-pulse",
+      roles: ["admin", "manager", "staff"],
+    },
+    {
+      title: "Recent Distributions",
+      value: (dists ?? []).length,
+      icon: TrendingUp,
+      description: "Last 30 days",
+      color: "text-green-700",
+      bgColor: "bg-green-50",
+      iconBg: "bg-gradient-to-br from-green-500 to-green-700",
+      roles: ["admin", "manager", "staff"],
+    },
+    {
+      title: "Beneficiaries Reached",
+      value: distReport?.beneficiaries ?? 0,
+      icon: TrendingUp,
+      description: "With positive trend",
+      color: "text-indigo-700",
+      bgColor: "bg-indigo-50",
+      iconBg: "bg-gradient-to-br from-indigo-500 to-indigo-700",
+      roles: ["admin", "manager", "staff"],
     },
   ];
 

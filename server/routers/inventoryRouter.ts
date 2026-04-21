@@ -2,6 +2,10 @@ import { TRPCError } from "@trpc/server";
 import { and, asc, desc, eq, gte, ilike, inArray, lte, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import {
+  distributions,
+  inventoryKits,
+  kitAssemblies,
+  requisitions,
   inventoryCountLines,
   inventoryCounts,
   inventoryBatches,
@@ -149,6 +153,35 @@ async function nextCountNumber() {
     return Number.isFinite(tail) ? Math.max(acc, tail) : acc;
   }, 0);
   return `COUNT-${year}-${String(max + 1).padStart(4, "0")}`;
+}
+
+async function nextRequisitionNumber() {
+  const db = await getDb();
+  if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+  const year = new Date().getFullYear();
+  const like = `REQ-${year}-%`;
+  const rows = await db.select({ reqNumber: requisitions.reqNumber }).from(requisitions).where(ilike(requisitions.reqNumber, like));
+  const max = rows.reduce((acc, r) => {
+    const tail = Number(r.reqNumber.split("-").at(-1));
+    return Number.isFinite(tail) ? Math.max(acc, tail) : acc;
+  }, 0);
+  return `REQ-${year}-${String(max + 1).padStart(4, "0")}`;
+}
+
+async function nextDistributionNumber() {
+  const db = await getDb();
+  if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+  const year = new Date().getFullYear();
+  const like = `DIST-${year}-%`;
+  const rows = await db
+    .select({ distributionNumber: distributions.distributionNumber })
+    .from(distributions)
+    .where(ilike(distributions.distributionNumber, like));
+  const max = rows.reduce((acc, r) => {
+    const tail = Number(r.distributionNumber.split("-").at(-1));
+    return Number.isFinite(tail) ? Math.max(acc, tail) : acc;
+  }, 0);
+  return `DIST-${year}-${String(max + 1).padStart(4, "0")}`;
 }
 
 async function importCatalogueRows(rows: InventoryCatalogueSeedItem[]) {
@@ -1126,6 +1159,406 @@ export const inventoryV2Router = router({
           .where(and(eq(inventoryDocuments.id, input.documentId), eq(inventoryDocuments.documentType, "transfer_note")))
           .limit(1);
         return doc ?? null;
+      }),
+  }),
+
+  requisitions: router({
+    create: protectedProcedure
+      .input(
+        z.object({
+          title: z.string().min(1),
+          priority: z.enum(["emergency", "urgent", "routine"]).default("routine"),
+          requestingFacility: z.number(),
+          justification: z.string().min(1),
+          incidentReference: z.string().optional(),
+          affectedPopulation: z.number().optional(),
+          items: z.array(z.object({ catalogueId: z.number(), quantity: z.number().positive(), urgency: z.string().optional(), notes: z.string().optional() })).min(1),
+          suggestedWarehouseId: z.number().optional(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        const reqNumber = await nextRequisitionNumber();
+        const [created] = await db
+          .insert(requisitions)
+          .values({
+            reqNumber,
+            title: input.title,
+            priority: input.priority,
+            requestedBy: ctx.user.id,
+            requestingFacility: input.requestingFacility,
+            justification: input.justification,
+            incidentReference: input.incidentReference ?? null,
+            affectedPopulation: input.affectedPopulation ?? null,
+            items: input.items,
+            suggestedWarehouseId: input.suggestedWarehouseId ?? null,
+          })
+          .returning();
+        return created;
+      }),
+
+    submit: protectedProcedure.input(z.object({ requisitionId: z.number() })).mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+      const [req] = await db.select().from(requisitions).where(eq(requisitions.id, input.requisitionId)).limit(1);
+      if (!req) throw new TRPCError({ code: "NOT_FOUND", message: "Requisition not found." });
+      if (req.requestedBy !== ctx.user.id && ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      await db.update(requisitions).set({ status: "submitted", updatedAt: new Date() }).where(eq(requisitions.id, req.id));
+      return { success: true as const };
+    }),
+
+    approveBranch: protectedProcedure.input(z.object({ requisitionId: z.number() })).mutation(async ({ input, ctx }) => {
+      requireRole(ctx, ["manager", "admin"]);
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+      await db
+        .update(requisitions)
+        .set({ status: "branch_approved", approvedBranchBy: ctx.user.id, approvedBranchAt: new Date(), updatedAt: new Date() })
+        .where(eq(requisitions.id, input.requisitionId));
+      return { success: true as const };
+    }),
+
+    approveHq: protectedProcedure.input(z.object({ requisitionId: z.number() })).mutation(async ({ input, ctx }) => {
+      requireRole(ctx, ["admin"]);
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+      await db
+        .update(requisitions)
+        .set({ status: "hq_approved", approvedHqBy: ctx.user.id, approvedHqAt: new Date(), updatedAt: new Date() })
+        .where(eq(requisitions.id, input.requisitionId));
+      return { success: true as const };
+    }),
+
+    reject: protectedProcedure
+      .input(z.object({ requisitionId: z.number(), reason: z.string().min(1) }))
+      .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["manager", "admin"]);
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        await db
+          .update(requisitions)
+          .set({ status: "rejected", rejectedBy: ctx.user.id, rejectionReason: input.reason, updatedAt: new Date() })
+          .where(eq(requisitions.id, input.requisitionId));
+        return { success: true as const };
+      }),
+
+    fulfill: protectedProcedure
+      .input(z.object({ requisitionId: z.number(), fromWarehouseId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["staff", "manager", "admin"]);
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        const [req] = await db.select().from(requisitions).where(eq(requisitions.id, input.requisitionId)).limit(1);
+        if (!req) throw new TRPCError({ code: "NOT_FOUND", message: "Requisition not found." });
+        if (req.status !== "hq_approved") throw new TRPCError({ code: "BAD_REQUEST", message: "Requisition must be HQ approved." });
+        const items = Array.isArray(req.items) ? (req.items as Array<{ catalogueId: number; quantity: number; notes?: string }>) : [];
+        const documentNumber = await nextDocumentNumber("WB");
+        const [doc] = await db
+          .insert(inventoryDocuments)
+          .values({
+            documentType: "waybill",
+            documentNumber,
+            status: "dispatched",
+            fromWarehouseId: input.fromWarehouseId,
+            items: items.map((x) => ({ catalogueId: x.catalogueId, quantity: x.quantity, notes: x.notes })),
+            notes: `Fulfillment for ${req.reqNumber}`,
+            createdBy: ctx.user.id,
+            approvedBy: ctx.user.id,
+            completedAt: new Date(),
+          })
+          .returning();
+        await db
+          .update(requisitions)
+          .set({ status: "fulfilled", fulfilledAt: new Date(), linkedWaybills: [doc.documentNumber], updatedAt: new Date() })
+          .where(eq(requisitions.id, req.id));
+        return { success: true as const, waybillNumber: doc.documentNumber };
+      }),
+
+    cancel: protectedProcedure.input(z.object({ requisitionId: z.number() })).mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+      const [req] = await db.select().from(requisitions).where(eq(requisitions.id, input.requisitionId)).limit(1);
+      if (!req) throw new TRPCError({ code: "NOT_FOUND", message: "Requisition not found." });
+      if (req.requestedBy !== ctx.user.id && ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      if (["branch_approved", "hq_approved", "fulfilled"].includes(req.status ?? "")) throw new TRPCError({ code: "BAD_REQUEST" });
+      await db.update(requisitions).set({ status: "cancelled", updatedAt: new Date() }).where(eq(requisitions.id, req.id));
+      return { success: true as const };
+    }),
+
+    list: protectedProcedure
+      .input(z.object({ status: z.string().optional(), priority: z.string().optional(), facilityId: z.number().optional(), search: z.string().optional() }).optional())
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return [];
+        const filters = [];
+        if (input?.status) filters.push(eq(requisitions.status, input.status));
+        if (input?.priority) filters.push(eq(requisitions.priority, input.priority));
+        if (input?.facilityId) filters.push(eq(requisitions.requestingFacility, input.facilityId));
+        if (input?.search?.trim()) filters.push(ilike(requisitions.title, `%${input.search.trim()}%`));
+        return db.select().from(requisitions).where(filters.length ? and(...filters) : undefined).orderBy(desc(requisitions.createdAt));
+      }),
+
+    get: protectedProcedure.input(z.object({ requisitionId: z.number() })).query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return null;
+      const [req] = await db.select().from(requisitions).where(eq(requisitions.id, input.requisitionId)).limit(1);
+      return req ?? null;
+    }),
+
+    suggestWarehouse: protectedProcedure.input(z.object({ requisitionId: z.number() })).query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return null;
+      const [req] = await db.select().from(requisitions).where(eq(requisitions.id, input.requisitionId)).limit(1);
+      if (!req) return null;
+      const items = Array.isArray(req.items) ? (req.items as Array<{ catalogueId: number; quantity: number }>) : [];
+      const warehouses = await db.select().from(sites).where(eq(sites.facilityType, "warehouse"));
+      for (const wh of warehouses) {
+        let ok = true;
+        for (const item of items) {
+          const [stock] = await db
+            .select()
+            .from(inventoryStock)
+            .where(and(eq(inventoryStock.catalogueId, item.catalogueId), eq(inventoryStock.warehouseId, wh.id)))
+            .limit(1);
+          if (!stock || Number(stock.quantityOnHand) < Number(item.quantity)) {
+            ok = false;
+            break;
+          }
+        }
+        if (ok) return wh;
+      }
+      return null;
+    }),
+  }),
+
+  distributions: router({
+    create: protectedProcedure
+      .input(
+        z.object({
+          waybillId: z.number().optional(),
+          incidentReference: z.string().optional(),
+          distributionDate: z.string(),
+          location: z.string().min(1),
+          latitude: z.number().optional(),
+          longitude: z.number().optional(),
+          locationType: z.string().optional(),
+          beneficiaryCount: z.number().optional(),
+          householdCount: z.number().optional(),
+          maleCount: z.number().optional(),
+          femaleCount: z.number().optional(),
+          childrenCount: z.number().optional(),
+          elderlyCount: z.number().optional(),
+          pwdCount: z.number().optional(),
+          itemsDistributed: z.array(z.object({ catalogueId: z.number(), quantityPerHousehold: z.number().optional(), totalQuantity: z.number().optional() })).optional(),
+          teamMembers: z.array(z.number()).optional(),
+          observers: z.string().optional(),
+          photos: z.array(z.string()).optional(),
+          notes: z.string().optional(),
+          challenges: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["staff", "manager", "admin"]);
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        const distributionNumber = await nextDistributionNumber();
+        const [created] = await db.insert(distributions).values({ ...input, distributionNumber, conductedBy: ctx.user.id }).returning();
+        return created;
+      }),
+
+    update: protectedProcedure
+      .input(z.object({ id: z.number(), notes: z.string().optional(), challenges: z.string().optional(), beneficiaryList: z.any().optional(), photos: z.array(z.string()).optional() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        const { id, ...updates } = input;
+        const [updated] = await db.update(distributions).set(updates).where(eq(distributions.id, id)).returning();
+        return updated ?? null;
+      }),
+
+    list: protectedProcedure
+      .input(z.object({ incidentReference: z.string().optional(), location: z.string().optional(), conductedBy: z.number().optional() }).optional())
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return [];
+        return db
+          .select()
+          .from(distributions)
+          .where(
+            and(
+              input?.incidentReference ? ilike(distributions.incidentReference, `%${input.incidentReference}%`) : undefined,
+              input?.location ? ilike(distributions.location, `%${input.location}%`) : undefined,
+              input?.conductedBy ? eq(distributions.conductedBy, input.conductedBy) : undefined
+            )
+          )
+          .orderBy(desc(distributions.createdAt));
+      }),
+
+    get: protectedProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return null;
+      const [row] = await db.select().from(distributions).where(eq(distributions.id, input.id)).limit(1);
+      return row ?? null;
+    }),
+
+    report: protectedProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return { totalDistributions: 0, beneficiaries: 0, households: 0 };
+      const rows = await db.select().from(distributions);
+      return {
+        totalDistributions: rows.length,
+        beneficiaries: rows.reduce((a, r) => a + Number(r.beneficiaryCount ?? 0), 0),
+        households: rows.reduce((a, r) => a + Number(r.householdCount ?? 0), 0),
+      };
+    }),
+
+    importBeneficiaries: protectedProcedure
+      .input(z.object({ distributionId: z.number(), csvData: z.string() }))
+      .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["manager", "admin"]);
+        const lines = input.csvData.split(/\r?\n/).map((x) => x.trim()).filter(Boolean);
+        const headers = parseCsvLine(lines[0]).map((x) => x.toLowerCase());
+        const out = [];
+        for (let i = 1; i < lines.length; i++) {
+          const cols = parseCsvLine(lines[i]);
+          const row: Record<string, string> = {};
+          headers.forEach((h, idx) => {
+            row[h] = cols[idx] ?? "";
+          });
+          out.push(row);
+        }
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        await db.update(distributions).set({ beneficiaryList: out }).where(eq(distributions.id, input.distributionId));
+        return { imported: out.length };
+      }),
+  }),
+
+  kits: router({
+    list: protectedProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return [];
+      return db.select().from(inventoryKits).orderBy(asc(inventoryKits.name));
+    }),
+    get: protectedProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return null;
+      const [row] = await db.select().from(inventoryKits).where(eq(inventoryKits.id, input.id)).limit(1);
+      return row ?? null;
+    }),
+    create: protectedProcedure
+      .input(z.object({ kitCode: z.string().min(1), name: z.string().min(1), description: z.string().optional(), kitType: z.string().optional(), catalogueId: z.number().optional(), components: z.array(z.object({ catalogueId: z.number(), quantity: z.number().positive(), unit: z.string().optional(), isOptional: z.boolean().optional(), notes: z.string().optional() })), notes: z.string().optional() }))
+      .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["manager", "admin"]);
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        const [created] = await db.insert(inventoryKits).values(input).returning();
+        return created;
+      }),
+    update: protectedProcedure
+      .input(z.object({ id: z.number(), name: z.string().optional(), description: z.string().optional(), kitType: z.string().optional(), catalogueId: z.number().optional(), components: z.array(z.object({ catalogueId: z.number(), quantity: z.number() })).optional(), isActive: z.boolean().optional(), notes: z.string().optional() }))
+      .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["manager", "admin"]);
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        const { id, ...updates } = input;
+        const [updated] = await db.update(inventoryKits).set({ ...updates, updatedAt: new Date() }).where(eq(inventoryKits.id, id)).returning();
+        return updated ?? null;
+      }),
+    assemble: protectedProcedure
+      .input(z.object({ kitId: z.number(), warehouseId: z.number(), quantity: z.number().int().positive(), notes: z.string().optional() }))
+      .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["staff", "manager", "admin"]);
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        const [kit] = await db.select().from(inventoryKits).where(eq(inventoryKits.id, input.kitId)).limit(1);
+        if (!kit) throw new TRPCError({ code: "NOT_FOUND", message: "Kit not found." });
+        const components = Array.isArray(kit.components) ? (kit.components as Array<{ catalogueId: number; quantity: number }>) : [];
+        for (const comp of components) {
+          const stock = await getOrCreateStock(comp.catalogueId, input.warehouseId);
+          const required = Number(comp.quantity) * Number(input.quantity);
+          if (Number(stock.quantityOnHand) < required) throw new TRPCError({ code: "BAD_REQUEST", message: "Insufficient components." });
+        }
+        for (const comp of components) {
+          const stock = await getOrCreateStock(comp.catalogueId, input.warehouseId);
+          const used = Number(comp.quantity) * Number(input.quantity);
+          const next = Number(stock.quantityOnHand) - used;
+          await db.update(inventoryStock).set({ quantityOnHand: next, updatedAt: new Date() }).where(eq(inventoryStock.id, stock.id));
+          await db.insert(inventoryMovements).values({
+            movementType: "adjustment",
+            catalogueId: comp.catalogueId,
+            stockId: stock.id,
+            fromWarehouseId: input.warehouseId,
+            quantityChange: -used,
+            balanceAfter: next,
+            reason: "kit_assembly",
+            performedBy: ctx.user.id,
+          });
+        }
+        if (kit.catalogueId) {
+          const kitStock = await getOrCreateStock(kit.catalogueId, input.warehouseId);
+          const nextKit = Number(kitStock.quantityOnHand) + Number(input.quantity);
+          await db.update(inventoryStock).set({ quantityOnHand: nextKit, updatedAt: new Date() }).where(eq(inventoryStock.id, kitStock.id));
+        }
+        await db.insert(kitAssemblies).values({ kitId: kit.id, warehouseId: input.warehouseId, direction: "assemble", quantity: input.quantity, performedBy: ctx.user.id, notes: input.notes ?? null });
+        return { success: true as const };
+      }),
+    disassemble: protectedProcedure
+      .input(z.object({ kitId: z.number(), warehouseId: z.number(), quantity: z.number().int().positive(), notes: z.string().optional() }))
+      .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["staff", "manager", "admin"]);
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        const [kit] = await db.select().from(inventoryKits).where(eq(inventoryKits.id, input.kitId)).limit(1);
+        if (!kit || !kit.catalogueId) throw new TRPCError({ code: "NOT_FOUND", message: "Kit not found." });
+        const kitStock = await getOrCreateStock(kit.catalogueId, input.warehouseId);
+        if (Number(kitStock.quantityOnHand) < input.quantity) throw new TRPCError({ code: "BAD_REQUEST", message: "Insufficient kit stock." });
+        await db.update(inventoryStock).set({ quantityOnHand: Number(kitStock.quantityOnHand) - input.quantity, updatedAt: new Date() }).where(eq(inventoryStock.id, kitStock.id));
+        const components = Array.isArray(kit.components) ? (kit.components as Array<{ catalogueId: number; quantity: number }>) : [];
+        for (const comp of components) {
+          const stock = await getOrCreateStock(comp.catalogueId, input.warehouseId);
+          const add = Number(comp.quantity) * Number(input.quantity);
+          const next = Number(stock.quantityOnHand) + add;
+          await db.update(inventoryStock).set({ quantityOnHand: next, updatedAt: new Date() }).where(eq(inventoryStock.id, stock.id));
+          await db.insert(inventoryMovements).values({
+            movementType: "adjustment",
+            catalogueId: comp.catalogueId,
+            stockId: stock.id,
+            toWarehouseId: input.warehouseId,
+            quantityChange: add,
+            balanceAfter: next,
+            reason: "kit_disassembly",
+            performedBy: ctx.user.id,
+          });
+        }
+        await db.insert(kitAssemblies).values({ kitId: kit.id, warehouseId: input.warehouseId, direction: "disassemble", quantity: input.quantity, performedBy: ctx.user.id, notes: input.notes ?? null });
+        return { success: true as const };
+      }),
+    issueAsKit: protectedProcedure
+      .input(z.object({ kitId: z.number(), fromWarehouseId: z.number(), quantity: z.number().int().positive(), destination: z.string().optional() }))
+      .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["staff", "manager", "admin"]);
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        const [kit] = await db.select().from(inventoryKits).where(eq(inventoryKits.id, input.kitId)).limit(1);
+        if (!kit || !kit.catalogueId) throw new TRPCError({ code: "NOT_FOUND", message: "Kit not found." });
+        const waybill = await nextDocumentNumber("WB");
+        const [doc] = await db
+          .insert(inventoryDocuments)
+          .values({
+            documentType: "waybill",
+            documentNumber: waybill,
+            status: "dispatched",
+            fromWarehouseId: input.fromWarehouseId,
+            items: [{ catalogueId: kit.catalogueId, quantity: input.quantity, notes: input.destination }],
+            notes: `Issued as kit ${kit.kitCode}`,
+            createdBy: ctx.user.id,
+            approvedBy: ctx.user.id,
+            completedAt: new Date(),
+          })
+          .returning();
+        return { success: true as const, documentNumber: doc.documentNumber };
       }),
   }),
 
