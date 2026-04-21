@@ -86,7 +86,6 @@ describe("Notification System", () => {
     const ctx = createTestContext(1, "admin");
     const caller = appRouter.createCaller(ctx);
 
-    // Create a site first
     const site = await caller.sites.create({
       name: "Test Site for Notifications",
       address: "123 Test St",

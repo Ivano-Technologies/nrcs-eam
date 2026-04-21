@@ -11,7 +11,9 @@ import {
   pgEnum,
   uuid,
   doublePrecision,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
+import { FACILITY_TYPE_VALUES } from "../shared/facilities";
 
 export const userRoleEnum = pgEnum("user_role", [
   "user",
@@ -130,6 +132,8 @@ export const pendingUserStatusEnum = pgEnum("pending_user_status", [
   "rejected",
 ]);
 
+export const facilityTypeEnum = pgEnum("facility_type", [...FACILITY_TYPE_VALUES]);
+
 /**
  * Core user table backing auth flow with extended roles for EAM system
  */
@@ -162,11 +166,15 @@ export type AppSetting = typeof appSettings.$inferSelect;
 export type InsertAppSetting = typeof appSettings.$inferInsert;
 
 /**
- * Sites/Locations for multi-site management
+ * Sites (facilities) — table name `sites` kept for stable migrations / FKs.
  */
 export const sites = pgTable("sites", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
+  facilityType: facilityTypeEnum("facilityType").default("branch").notNull(),
+  parentFacilityId: integer("parentFacilityId").references((): AnyPgColumn => sites.id, {
+    onDelete: "set null",
+  }),
   address: text("address"),
   city: varchar("city", { length: 100 }),
   state: varchar("state", { length: 100 }),

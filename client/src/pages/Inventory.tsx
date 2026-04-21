@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useEffect, useMemo, useState } from "react";
+import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import {
@@ -72,6 +73,7 @@ function InventoryItemQr({ itemCode }: { itemCode: string }) {
 }
 
 export default function Inventory() {
+  const [location] = useLocation();
   const { canAddInventory, canDeleteInventory } = usePermissions();
   const [open, setOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
@@ -100,6 +102,14 @@ export default function Inventory() {
 
   const utils = trpc.useUtils();
   const { data: sites } = trpc.sites.list.useQuery();
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sid = new URLSearchParams(window.location.search).get("siteId");
+    if (sid && !Number.isNaN(Number(sid))) {
+      setOverviewSite(sid);
+    }
+  }, [location]);
 
   const overviewSiteNum = overviewSite === "all" ? undefined : parseInt(overviewSite, 10);
   const { data: items, isLoading } = trpc.inventory.list.useQuery(
@@ -358,7 +368,7 @@ export default function Inventory() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="siteId">Site *</Label>
+                  <Label htmlFor="siteId">Facility *</Label>
                   <Select value={formData.siteId} onValueChange={(value) => setFormData({ ...formData, siteId: value })}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select site" />
@@ -485,13 +495,13 @@ export default function Inventory() {
         <TabsContent value="overview" className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <Label className="text-sm whitespace-nowrap">Site</Label>
+              <Label className="text-sm whitespace-nowrap">Facility</Label>
               <Select value={overviewSite} onValueChange={setOverviewSite}>
                 <SelectTrigger className="w-[200px]" data-testid="inventory-overview-site">
-                  <SelectValue placeholder="All sites" />
+                  <SelectValue placeholder="All facilities" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All sites</SelectItem>
+                  <SelectItem value="all">All facilities</SelectItem>
                   {sites?.map((s) => (
                     <SelectItem key={s.id} value={s.id.toString()}>
                       {s.name}
@@ -694,7 +704,7 @@ export default function Inventory() {
             <CardContent className="space-y-4">
               <div className="flex flex-wrap items-end gap-3">
                 <div className="space-y-2">
-                  <Label>Site</Label>
+                  <Label>Facility</Label>
                   <Select value={stockCountSite} onValueChange={setStockCountSite}>
                     <SelectTrigger className="w-[240px]" data-testid="inventory-stock-count-site">
                       <SelectValue placeholder="Choose site" />
@@ -774,13 +784,13 @@ export default function Inventory() {
         <TabsContent value="movements" className="space-y-4">
           <div className="flex flex-wrap gap-3 items-end">
             <div className="space-y-2">
-              <Label>Site</Label>
+              <Label>Facility</Label>
               <Select value={movementSite} onValueChange={setMovementSite}>
                 <SelectTrigger className="w-[200px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All sites</SelectItem>
+                  <SelectItem value="all">All facilities</SelectItem>
                   {sites?.map((s) => (
                     <SelectItem key={s.id} value={s.id.toString()}>
                       {s.name}

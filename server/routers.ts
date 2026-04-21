@@ -19,6 +19,61 @@ import {
   registerStatusZodEnum,
 } from "./assetRegister";
 import { nanoid } from "nanoid";
+import { FACILITY_TYPE_VALUES, type FacilityType } from "../shared/facilities";
+
+const facilityTypeZod = z.enum(FACILITY_TYPE_VALUES);
+
+async function resolveFacilityParentForSave(params: {
+  facilityType: FacilityType;
+  parentFacilityId: number | null | undefined;
+  /** Set when updating an existing facility (for cycle checks). */
+  siteId?: number;
+}): Promise<number | null> {
+  const t = params.facilityType;
+  const rawParent =
+    params.parentFacilityId === undefined ? undefined : params.parentFacilityId;
+
+  if (t === "branch" || t === "division") {
+    if (rawParent != null && rawParent !== undefined) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message:
+          t === "branch"
+            ? "A branch cannot have a parent facility."
+            : "A division cannot have a parent facility.",
+      });
+    }
+    return null;
+  }
+
+  const parentId = rawParent ?? null;
+  if (parentId == null) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Clinics and warehouses must belong to a parent branch.",
+    });
+  }
+
+  const parent = await db.getSiteById(parentId);
+  if (!parent) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Parent facility not found." });
+  }
+  if (parent.facilityType !== "branch") {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Parent must be a branch facility.",
+    });
+  }
+
+  if (params.siteId != null && (await db.wouldCreateFacilityParentCycle(params.siteId, parentId))) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Invalid parent: would create a circular hierarchy.",
+    });
+  }
+
+  return parentId;
+}
 
 export const appRouter = router({
   system: systemRouter,
@@ -71,45 +126,86 @@ export const appRouter = router({
   // ============= SITES MANAGEMENT =============
   sites: router({
     list: protectedProcedure.query(async () => {
-      return await db.getAllSites();
+      return await db.getSitesList();
     }),
-    
+
     getById: protectedProcedure
       .input(z.object({ id: z.number() }))
       .query(async ({ input }) => {
-        return await db.getSiteById(input.id);
+        return await db.getSiteByIdEnriched(input.id);
       }),
-    
+
     create: managerOrAdminProcedure
-      .input(z.object({
-        name: z.string().min(1),
-        address: z.string().optional(),
-        city: z.string().optional(),
-        state: z.string().optional(),
-        country: z.string().default("Nigeria"),
-        contactPerson: z.string().optional(),
-        contactPhone: z.string().optional(),
-        contactEmail: z.string().email().optional(),
-      }))
+      .input(
+        z.object({
+          name: z.string().min(1),
+          facilityType: facilityTypeZod.optional().default("branch"),
+          parentFacilityId: z.number().nullable().optional(),
+          address: z.string().optional(),
+          city: z.string().optional(),
+          state: z.string().optional(),
+          country: z.string().default("Nigeria"),
+          contactPerson: z.string().optional(),
+          contactPhone: z.string().optional(),
+          contactEmail: z.string().email().optional(),
+        })
+      )
       .mutation(async ({ input }) => {
-        return await db.createSite(input);
+        const { facilityType, parentFacilityId, ...rest } = input;
+        const parentResolved = await resolveFacilityParentForSave({
+          facilityType,
+          parentFacilityId,
+        });
+        return await db.createSite({
+          ...rest,
+          facilityType,
+          parentFacilityId: parentResolved,
+        });
       }),
-    
+
     update: managerOrAdminProcedure
-      .input(z.object({
-        id: z.number(),
-        name: z.string().min(1).optional(),
-        address: z.string().optional(),
-        city: z.string().optional(),
-        state: z.string().optional(),
-        contactPerson: z.string().optional(),
-        contactPhone: z.string().optional(),
-        contactEmail: z.string().email().optional(),
-        isActive: z.boolean().optional(),
-      }))
+      .input(
+        z.object({
+          id: z.number(),
+          name: z.string().min(1).optional(),
+          facilityType: facilityTypeZod.optional(),
+          parentFacilityId: z.number().nullable().optional(),
+          address: z.string().optional(),
+          city: z.string().optional(),
+          state: z.string().optional(),
+          contactPerson: z.string().optional(),
+          contactPhone: z.string().optional(),
+          contactEmail: z.string().email().optional(),
+          isActive: z.boolean().optional(),
+        })
+      )
       .mutation(async ({ input }) => {
-        const { id, ...data } = input;
-        return await db.updateSite(id, data);
+        const { id, facilityType, parentFacilityId, ...data } = input;
+        const existing = await db.getSiteById(id);
+        if (!existing) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Facility not found." });
+        }
+        const nextType = facilityType ?? existing.facilityType;
+        let nextParentRaw: number | null | undefined;
+        if (nextType === "branch" || nextType === "division") {
+          nextParentRaw = null;
+        } else if (parentFacilityId !== undefined) {
+          nextParentRaw = parentFacilityId;
+        } else {
+          nextParentRaw = existing.parentFacilityId;
+        }
+
+        const nextParent = await resolveFacilityParentForSave({
+          facilityType: nextType,
+          parentFacilityId: nextParentRaw,
+          siteId: id,
+        });
+
+        return await db.updateSite(id, {
+          ...data,
+          ...(facilityType !== undefined ? { facilityType } : {}),
+          parentFacilityId: nextParent,
+        });
       }),
 
     bulkDelete: managerOrAdminProcedure
@@ -127,7 +223,7 @@ export const appRouter = router({
             });
             deleted++;
           } catch (error) {
-            console.error(`Failed to delete site ${id}:`, error);
+            console.error(`Failed to delete facility ${id}:`, error);
           }
         }
         return { deleted, total: input.ids.length };
@@ -1303,14 +1399,14 @@ export const appRouter = router({
           { header: 'Asset Tag', key: 'assetTag', width: 15 },
           { header: 'Name', key: 'name', width: 25 },
           { header: 'Category', key: 'categoryName', width: 15 },
-          { header: 'Site', key: 'siteName', width: 20 },
+          { header: "Facility", key: "siteName", width: 20 },
           { header: 'Status', key: 'status', width: 12 },
           { header: 'Condition', key: 'condition', width: 12 },
           { header: 'Purchase Date', key: 'purchaseDate', width: 15 },
         ];
 
         const title = 'Asset Inventory Report';
-        const subtitle = `Generated for ${input.siteId ? 'Site ' + input.siteId : 'All Sites'}`;
+        const subtitle = `Generated for ${input.siteId ? "Facility " + input.siteId : "All facilities"}`;
 
         if (input.format === 'pdf') {
           const buffer = await generatePDFReport(title, assets, columns, { subtitle });
@@ -1634,7 +1730,7 @@ export const appRouter = router({
       zip.file("assets.xlsx", a);
       zip.file("work_orders.xlsx", w);
       zip.file("inventory.xlsx", i);
-      zip.file("sites.xlsx", s);
+      zip.file("facilities.xlsx", s);
       const out = await zip.generateAsync({ type: "nodebuffer" });
       return {
         data: out.toString("base64"),
@@ -1744,7 +1840,7 @@ export const appRouter = router({
         const buffer = await exportSites();
         return {
           data: buffer.toString('base64'),
-          filename: `sites_export_${Date.now()}.xlsx`,
+          filename: `facilities_export_${Date.now()}.xlsx`,
           mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         };
       }),
@@ -1763,7 +1859,7 @@ export const appRouter = router({
         const buffer = await generateSiteTemplate();
         return {
           data: buffer.toString('base64'),
-          filename: 'NRCS_Sites_Import_Template.xlsx',
+          filename: "NRCS_Facilities_Import_Template.xlsx",
           mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         };
       }),

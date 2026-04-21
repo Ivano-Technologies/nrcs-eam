@@ -35,7 +35,7 @@ export default function Welcome() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">
-                  Track all assets across multiple sites with barcodes, GPS, and depreciation
+                  Track all assets across multiple facilities with barcodes, GPS, and depreciation
                 </p>
               </CardContent>
             </Card>
@@ -89,8 +89,8 @@ export default function Welcome() {
             <div>
               <h3 className="font-semibold text-lg mb-2">Add Your First Site</h3>
               <p className="text-muted-foreground">
-                Navigate to <strong>Sites</strong> and click "Add Site" to register your first location.
-                You can add multiple sites like offices, warehouses, or field locations.
+                Navigate to <strong>Facilities</strong> and click "Add facility" to register your first location.
+                You can add multiple facilities such as branches, clinics, or warehouses.
               </p>
             </div>
           </div>

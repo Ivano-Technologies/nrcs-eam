@@ -6,7 +6,7 @@ import { loginViaMagicLink } from "../helpers/e2eAuth";
 import { shot } from "../helpers/shot";
 
 const ROUTES: { path: string; slug: string; heading: string | RegExp }[] = [
-  { path: "/app/sites", slug: "sites", heading: /Sites Management/ },
+  { path: "/app/sites", slug: "sites", heading: /Facilities Management/ },
   { path: "/app/work-orders", slug: "work-orders", heading: /Work Orders/ },
   { path: "/app/work-order-templates", slug: "work-order-templates", heading: /Work Order Templates/ },
   { path: "/app/maintenance", slug: "maintenance", heading: /Preventive Maintenance/ },

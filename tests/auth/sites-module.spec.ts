@@ -12,7 +12,7 @@ test.describe("sites module (live)", () => {
   test("sites list loads with at least one site", async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto("/app/sites");
-    await expect(page.getByRole("heading", { name: /Sites Management/i })).toBeVisible({
+    await expect(page.getByRole("heading", { name: /Facilities Management/i })).toBeVisible({
       timeout: 30_000,
     });
 

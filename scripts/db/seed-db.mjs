@@ -30,6 +30,8 @@ async function seed() {
       contactPerson: "Admin",
       contactPhone: "+234-XXX-XXXX",
       isActive: true,
+      facilityType: "branch",
+      parentFacilityId: null,
     },
     {
       name: "NRCS Lagos Branch",
@@ -38,6 +40,8 @@ async function seed() {
       state: "Lagos",
       country: "Nigeria",
       isActive: true,
+      facilityType: "branch",
+      parentFacilityId: null,
     },
     {
       name: "NRCS Kano Branch",
@@ -46,6 +50,8 @@ async function seed() {
       state: "Kano",
       country: "Nigeria",
       isActive: true,
+      facilityType: "branch",
+      parentFacilityId: null,
     },
   ];
 

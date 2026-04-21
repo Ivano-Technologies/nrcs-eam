@@ -75,7 +75,7 @@ export default function ActivityLog() {
                 <SelectItem value="all">All Types</SelectItem>
                 <SelectItem value="asset">Assets</SelectItem>
                 <SelectItem value="work_order">Work Orders</SelectItem>
-                <SelectItem value="site">Sites</SelectItem>
+                <SelectItem value="site">Facilities</SelectItem>
                 <SelectItem value="user">Users</SelectItem>
                 <SelectItem value="vendor">Vendors</SelectItem>
                 <SelectItem value="financial">Financial</SelectItem>

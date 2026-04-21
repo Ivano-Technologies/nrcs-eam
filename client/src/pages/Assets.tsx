@@ -156,7 +156,7 @@ const SORTABLE: Set<string> = new Set([
 ]);
 
 export default function Assets() {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const { canEditAssets } = usePermissions();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -167,6 +167,15 @@ export default function Assets() {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState<string>("50");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const qs = new URLSearchParams(window.location.search);
+    const sid = qs.get("siteId");
+    if (sid && !Number.isNaN(Number(sid))) {
+      setSiteFilter(sid);
+    }
+  }, [location]);
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingAsset, setEditingAsset] = useState<any>(null);
@@ -407,7 +416,7 @@ export default function Assets() {
   const handleCreateAsset = () => {
     setCreateFormError("");
     if (!newAsset.name || !newAsset.categoryId || !newAsset.siteId) {
-      const msg = "Please fill in required fields (description, category, site)";
+      const msg = "Please fill in required fields (description, category, facility)";
       setCreateFormError(msg);
       toast.error(msg);
       return;
@@ -770,13 +779,13 @@ export default function Assets() {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label>Site / Location *</Label>
+                      <Label>Facility / location *</Label>
                       <Select
                         value={newAsset.siteId}
                         onValueChange={(value) => setNewAsset({ ...newAsset, siteId: value })}
                       >
                         <SelectTrigger data-testid="asset-form-site">
-                          <SelectValue placeholder="Select site" />
+                          <SelectValue placeholder="Select facility" />
                         </SelectTrigger>
                         <SelectContent>
                           {sites?.map((site) => (
@@ -908,10 +917,10 @@ export default function Assets() {
             </Select>
             <Select value={siteFilter} onValueChange={setSiteFilter}>
               <SelectTrigger data-testid="asset-filter-site">
-                <SelectValue placeholder="Site" />
+                <SelectValue placeholder="Facility" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All sites</SelectItem>
+                <SelectItem value="all">All facilities</SelectItem>
                 {sites?.map((site) => (
                   <SelectItem key={site.id} value={site.id.toString()}>
                     {site.name}
