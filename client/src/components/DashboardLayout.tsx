@@ -101,7 +101,13 @@ function DashboardLayoutContent({
 }: DashboardLayoutContentProps) {
   const { user, logout } = useAuth();
   const [location, setLocation] = useLocation();
-  
+  const sidebarCountsQuery = trpc.nav.sidebarCounts.useQuery(undefined, { staleTime: 30_000 });
+  const utils = trpc.useUtils();
+
+  useEffect(() => {
+    void utils.nav.sidebarCounts.invalidate();
+  }, [location, utils]);
+
   // Auto-redirect first-time users to welcome page
   useEffect(() => {
     if (user && !user.hasCompletedOnboarding && location !== appPath("/welcome")) {
@@ -306,6 +312,7 @@ function DashboardLayoutContent({
               sidebarWidth={sidebarWidth}
               searchQuery={searchQuery}
               userRole={user?.role}
+              sidebarCounts={sidebarCountsQuery.data ?? undefined}
             />
           </SidebarContent>
 
