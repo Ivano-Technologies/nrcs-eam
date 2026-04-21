@@ -28,6 +28,8 @@ import {
   userPreferences, InsertUserPreferences, emailNotifications, InsertEmailNotification,
   workOrderTemplates, InsertWorkOrderTemplate,
   pendingUsers,
+  inventoryCatalogue,
+  requisitions,
 } from "../drizzle/schema";
 import type { FacilityType } from "../shared/facilities";
 import { getPostgresJsSslOption } from "../shared/mysqlSsl";
@@ -268,6 +270,69 @@ export async function getSitesList(opts?: { facilityType?: FacilityType }): Prom
     inventoryCount: invMap.get(s.id) ?? 0,
     staffCount: staffMap.get(s.id) ?? 0,
   }));
+}
+
+export type SidebarNavCounts = {
+  facilities: {
+    all: number;
+    nationalHq: number;
+    branches: number;
+    clinics: number;
+    warehouses: number;
+  };
+  inventory: {
+    stockOverview: number | null;
+    incoming: number | null;
+    outgoing: number | null;
+    requisitions: number | null;
+    transfers: number | null;
+    stockTakes: number | null;
+    adjustments: number | null;
+  };
+};
+
+export async function getNavSidebarCounts(): Promise<SidebarNavCounts | null> {
+  const database = await getDb();
+  if (!database) return null;
+
+  const typeRows = await database
+    .select({
+      facilityType: sites.facilityType,
+      c: sql<number>`cast(count(*) as int)`,
+    })
+    .from(sites)
+    .groupBy(sites.facilityType);
+
+  const byType = new Map(typeRows.map((r) => [r.facilityType, r.c]));
+  const all = typeRows.reduce((sum, r) => sum + r.c, 0);
+  const branches = byType.get("branch") ?? 0;
+  const clinics = byType.get("clinic") ?? 0;
+  const warehouses = byType.get("warehouse") ?? 0;
+  const nationalHq = byType.get("division") ?? 0;
+
+  const [whRow] = await database
+    .select({ c: sql<number>`cast(count(*) as int)` })
+    .from(sites)
+    .where(eq(sites.facilityType, "warehouse"));
+  const [catRow] = await database.select({ c: sql<number>`cast(count(*) as int)` }).from(inventoryCatalogue);
+  const whCount = whRow?.c ?? 0;
+  const catCount = catRow?.c ?? 0;
+  const stockOverview = whCount * catCount;
+
+  const [reqRow] = await database.select({ c: sql<number>`cast(count(*) as int)` }).from(requisitions);
+
+  return {
+    facilities: { all, nationalHq, branches, clinics, warehouses },
+    inventory: {
+      stockOverview,
+      incoming: null,
+      outgoing: null,
+      requisitions: reqRow?.c ?? null,
+      transfers: null,
+      stockTakes: null,
+      adjustments: null,
+    },
+  };
 }
 
 export async function getFacilitiesByType(facilityType: FacilityType) {

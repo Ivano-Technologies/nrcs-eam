@@ -24,6 +24,8 @@ export type AppNavItem = {
   label: string;
   path: string;
   icon: LucideIcon;
+  /** Dot path into `nav.sidebarCounts`, e.g. `facilities.branches` or `inventory.stockOverview`. */
+  navCountBadge?: string;
 };
 
 export type AppNavGroup = {
@@ -56,18 +58,86 @@ export const SIDEBAR_GROUPS: AppNavGroup[] = [
     label: "Facilities",
     icon: MapPin,
     items: [
-      { label: "All Facilities", path: appPath("/facilities/all"), icon: MapPin },
-      { label: "National HQ", path: appPath("/facilities/national-hq"), icon: MapPin },
-      { label: "Branches", path: appPath("/facilities/branches"), icon: MapPin },
-      { label: "Clinics", path: appPath("/facilities/clinics"), icon: MapPin },
-      { label: "Warehouses", path: appPath("/facilities/warehouses"), icon: MapPin },
+      {
+        label: "All Facilities",
+        path: appPath("/facilities/all"),
+        icon: MapPin,
+        navCountBadge: "facilities.all",
+      },
+      {
+        label: "National HQ",
+        path: appPath("/facilities/national-hq"),
+        icon: MapPin,
+        navCountBadge: "facilities.nationalHq",
+      },
+      {
+        label: "Branches",
+        path: appPath("/facilities/branches"),
+        icon: MapPin,
+        navCountBadge: "facilities.branches",
+      },
+      {
+        label: "Clinics",
+        path: appPath("/facilities/clinics"),
+        icon: MapPin,
+        navCountBadge: "facilities.clinics",
+      },
+      {
+        label: "Warehouses",
+        path: appPath("/facilities/warehouses"),
+        icon: MapPin,
+        navCountBadge: "facilities.warehouses",
+      },
     ],
   },
   {
     id: "inventory",
     label: "Inventory",
     icon: Warehouse,
-    items: [{ label: "Inventory", path: appPath("/inventory"), icon: Warehouse }],
+    items: [
+      {
+        label: "Stock Overview",
+        path: appPath("/inventory/stock-overview"),
+        icon: Warehouse,
+        navCountBadge: "inventory.stockOverview",
+      },
+      {
+        label: "Incoming",
+        path: appPath("/inventory/incoming"),
+        icon: Warehouse,
+        navCountBadge: "inventory.incoming",
+      },
+      {
+        label: "Outgoing",
+        path: appPath("/inventory/outgoing"),
+        icon: Warehouse,
+        navCountBadge: "inventory.outgoing",
+      },
+      {
+        label: "Requisitions",
+        path: appPath("/inventory/requisitions"),
+        icon: Warehouse,
+        navCountBadge: "inventory.requisitions",
+      },
+      {
+        label: "Transfers",
+        path: appPath("/inventory/transfers"),
+        icon: Warehouse,
+        navCountBadge: "inventory.transfers",
+      },
+      {
+        label: "Stock Takes",
+        path: appPath("/inventory/stock-takes"),
+        icon: Warehouse,
+        navCountBadge: "inventory.stockTakes",
+      },
+      {
+        label: "Adjustments",
+        path: appPath("/inventory/adjustments"),
+        icon: Warehouse,
+        navCountBadge: "inventory.adjustments",
+      },
+    ],
   },
   {
     id: "maintenance",
@@ -144,6 +214,20 @@ const GROUP_PREFIXES: { groupId: string; pathPrefix: string }[] = [
   { groupId: "facilities", pathPrefix: appPath("/facilities/warehouses") },
   { groupId: "facilities", pathPrefix: appPath("/facilities/new") },
   { groupId: "facilities", pathPrefix: appPath("/facilities") },
+  { groupId: "inventory", pathPrefix: appPath("/inventory/stock-overview") },
+  { groupId: "inventory", pathPrefix: appPath("/inventory/incoming") },
+  { groupId: "inventory", pathPrefix: appPath("/inventory/outgoing") },
+  { groupId: "inventory", pathPrefix: appPath("/inventory/requisitions") },
+  { groupId: "inventory", pathPrefix: appPath("/inventory/transfers") },
+  { groupId: "inventory", pathPrefix: appPath("/inventory/stock-takes") },
+  { groupId: "inventory", pathPrefix: appPath("/inventory/adjustments") },
+  { groupId: "inventory", pathPrefix: appPath("/inventory/receipts") },
+  { groupId: "inventory", pathPrefix: appPath("/inventory/issues") },
+  { groupId: "inventory", pathPrefix: appPath("/inventory/movements") },
+  { groupId: "inventory", pathPrefix: appPath("/inventory/counts") },
+  { groupId: "inventory", pathPrefix: appPath("/inventory/expiry") },
+  { groupId: "inventory", pathPrefix: appPath("/inventory/distributions") },
+  { groupId: "inventory", pathPrefix: appPath("/inventory/kits") },
   { groupId: "inventory", pathPrefix: appPath("/inventory") },
   { groupId: "maintenance", pathPrefix: appPath("/maintenance") },
   { groupId: "maintenance", pathPrefix: appPath("/work-orders") },

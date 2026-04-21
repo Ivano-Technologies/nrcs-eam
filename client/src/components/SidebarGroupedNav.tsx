@@ -21,6 +21,27 @@ import {
   type AppNavGroup,
   type AppNavItem,
 } from "@/config/appNav";
+import type { inferRouterOutputs } from "@trpc/server";
+import type { AppRouter } from "../../../server/routers";
+
+export type SidebarNavCountsPayload = NonNullable<
+  inferRouterOutputs<AppRouter>["nav"]["sidebarCounts"]
+>;
+
+function navBadgeValue(
+  counts: SidebarNavCountsPayload | null | undefined,
+  path: string | undefined
+): number | null | undefined {
+  if (counts == null || !path) return undefined;
+  const [group, key] = path.split(".");
+  if (group === "facilities") {
+    return counts.facilities[key as keyof typeof counts.facilities];
+  }
+  if (group === "inventory") {
+    return counts.inventory[key as keyof typeof counts.inventory] as number | null | undefined;
+  }
+  return undefined;
+}
 import { ChevronRight } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -40,6 +61,7 @@ type SidebarGroupedNavProps = {
   sidebarWidth: number;
   searchQuery: string;
   userRole?: string;
+  sidebarCounts?: SidebarNavCountsPayload | null;
 };
 
 function filterItems(items: AppNavItem[], q: string): AppNavItem[] {
@@ -60,6 +82,7 @@ export function SidebarGroupedNav({
   sidebarWidth,
   searchQuery,
   userRole,
+  sidebarCounts,
 }: SidebarGroupedNavProps) {
   const isNarrow = sidebarWidth <= NARROW_PX;
   const isAdmin = userRole === "admin";
@@ -129,6 +152,7 @@ export function SidebarGroupedNav({
     const loc = location.replace(/\/$/, "") || "/";
     const isActive =
       loc === base || (base !== "/app" && loc.startsWith(base + "/"));
+    const badge = item.navCountBadge ? navBadgeValue(sidebarCounts ?? undefined, item.navCountBadge) : undefined;
     return (
       <SidebarMenuItem key={item.path}>
         <SidebarMenuButton
@@ -139,7 +163,14 @@ export function SidebarGroupedNav({
           className={cn("h-10 transition-all font-normal", isNarrow ? "justify-center" : "")}
         >
           <item.icon className={cn("h-[20px] w-[20px]", isActive ? "text-primary" : "")} />
-          {!isNarrow && <span className="text-[15px]">{item.label}</span>}
+          {!isNarrow && (
+            <span className="flex min-w-0 flex-1 items-baseline gap-0.5">
+              <span className="truncate text-[15px]">{item.label}</span>
+              {badge != null ? (
+                <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums">· {badge}</span>
+              ) : null}
+            </span>
+          )}
         </SidebarMenuButton>
       </SidebarMenuItem>
     );
