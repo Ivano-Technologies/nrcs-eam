@@ -277,28 +277,30 @@ export async function generateImportTemplate(entity: 'assets' | 'workOrders' | '
 
 
 /**
- * Export sites to Excel
+ * Export facilities (`sites` table) to Excel
  */
 export async function exportSites(): Promise<Buffer> {
   const sites = await db.getAllSites();
-  
+
   const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet('Sites');
-  
+  const worksheet = workbook.addWorksheet("Facilities");
+
   worksheet.columns = [
-    { header: 'Site Name', key: 'name', width: 30 },
-    { header: 'Address', key: 'address', width: 40 },
-    { header: 'City', key: 'city', width: 20 },
-    { header: 'State', key: 'state', width: 20 },
-    { header: 'Country', key: 'country', width: 20 },
-    { header: 'Contact Person', key: 'contactPerson', width: 25 },
-    { header: 'Contact Phone', key: 'contactPhone', width: 20 },
-    { header: 'Contact Email', key: 'contactEmail', width: 30 },
-    { header: 'Latitude', key: 'latitude', width: 15 },
-    { header: 'Longitude', key: 'longitude', width: 15 },
+    { header: "Facility name", key: "name", width: 30 },
+    { header: "Address", key: "address", width: 40 },
+    { header: "City", key: "city", width: 20 },
+    { header: "State", key: "state", width: 20 },
+    { header: "Country", key: "country", width: 20 },
+    { header: "Contact person", key: "contactPerson", width: 25 },
+    { header: "Contact phone", key: "contactPhone", width: 20 },
+    { header: "Contact email", key: "contactEmail", width: 30 },
+    { header: "Latitude", key: "latitude", width: 15 },
+    { header: "Longitude", key: "longitude", width: 15 },
+    { header: "Facility type", key: "facilityType", width: 18 },
+    { header: "Parent facility ID", key: "parentFacilityId", width: 18 },
   ];
-  
-  sites.forEach(site => {
+
+  sites.forEach((site) => {
     worksheet.addRow({
       name: site.name,
       address: site.address,
@@ -310,6 +312,8 @@ export async function exportSites(): Promise<Buffer> {
       contactEmail: site.contactEmail,
       latitude: site.latitude,
       longitude: site.longitude,
+      facilityType: site.facilityType,
+      parentFacilityId: site.parentFacilityId,
     });
   });
   
@@ -326,13 +330,20 @@ export async function exportSites(): Promise<Buffer> {
 }
 
 /**
- * Import sites from Excel
+ * Import facilities from Excel (`sites` table)
  */
 export async function importSites(fileBuffer: any): Promise<ImportResult> {
+  const { FACILITY_TYPE_VALUES } = await import("../shared/facilities");
+  const isFacilityType = (v: string): v is (typeof FACILITY_TYPE_VALUES)[number] =>
+    (FACILITY_TYPE_VALUES as readonly string[]).includes(v);
+
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.load(fileBuffer);
-  
-  const worksheet = workbook.getWorksheet('Sites') || workbook.worksheets[0];
+
+  const worksheet =
+    workbook.getWorksheet("Facilities") ||
+    workbook.getWorksheet("Sites") ||
+    workbook.worksheets[0];
   if (!worksheet) {
     return {
       success: false,
@@ -354,24 +365,46 @@ export async function importSites(fileBuffer: any): Promise<ImportResult> {
   
   for (const { row, rowNumber } of rows) {
     try {
+      const typeCell = row.getCell(11).value?.toString()?.trim().toLowerCase();
+      const parentCell = row.getCell(12).value;
+      let parentFacilityId: number | null = null;
+      if (parentCell !== null && parentCell !== undefined && String(parentCell).trim() !== "") {
+        const n = Number.parseInt(String(parentCell), 10);
+        if (Number.isFinite(n)) parentFacilityId = n;
+      }
+
+      const facilityType =
+        typeCell && isFacilityType(typeCell) ? typeCell : "branch";
+
       const siteData = {
-        name: row.getCell(1).value?.toString() || '',
+        name: row.getCell(1).value?.toString() || "",
         address: row.getCell(2).value?.toString(),
         city: row.getCell(3).value?.toString(),
         state: row.getCell(4).value?.toString(),
-        country: row.getCell(5).value?.toString() || 'Nigeria',
+        country: row.getCell(5).value?.toString() || "Nigeria",
         contactPerson: row.getCell(6).value?.toString(),
         contactPhone: row.getCell(7).value?.toString(),
         contactEmail: row.getCell(8).value?.toString(),
         latitude: row.getCell(9).value ? row.getCell(9).value.toString() : undefined,
         longitude: row.getCell(10).value ? row.getCell(10).value.toString() : undefined,
+        facilityType,
+        parentFacilityId,
       };
-      
-      // Validate required fields
+
       if (!siteData.name) {
-        throw new Error('Site Name is required');
+        throw new Error("Facility name is required");
       }
-      
+
+      if (siteData.facilityType === "clinic" || siteData.facilityType === "warehouse") {
+        if (siteData.parentFacilityId == null) {
+          throw new Error("Parent facility ID is required for clinic and warehouse rows");
+        }
+        const p = await db.getSiteById(siteData.parentFacilityId);
+        if (!p || p.facilityType !== "branch") {
+          throw new Error("Parent must be an existing branch facility");
+        }
+      }
+
       await db.createSite(siteData);
       imported++;
       
@@ -394,50 +427,56 @@ export async function importSites(fileBuffer: any): Promise<ImportResult> {
 }
 
 /**
- * Generate site import template
+ * Generate facility import template
  */
 export async function generateSiteTemplate(): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet('Sites');
-  
+  const worksheet = workbook.addWorksheet("Facilities");
+
   worksheet.columns = [
-    { header: 'Site Name*', key: 'name', width: 30 },
-    { header: 'Address', key: 'address', width: 40 },
-    { header: 'City', key: 'city', width: 20 },
-    { header: 'State', key: 'state', width: 20 },
-    { header: 'Country', key: 'country', width: 20 },
-    { header: 'Contact Person', key: 'contactPerson', width: 25 },
-    { header: 'Contact Phone', key: 'contactPhone', width: 20 },
-    { header: 'Contact Email', key: 'contactEmail', width: 30 },
-    { header: 'Latitude', key: 'latitude', width: 15 },
-    { header: 'Longitude', key: 'longitude', width: 15 },
+    { header: "Facility name*", key: "name", width: 30 },
+    { header: "Address", key: "address", width: 40 },
+    { header: "City", key: "city", width: 20 },
+    { header: "State", key: "state", width: 20 },
+    { header: "Country", key: "country", width: 20 },
+    { header: "Contact person", key: "contactPerson", width: 25 },
+    { header: "Contact phone", key: "contactPhone", width: 20 },
+    { header: "Contact email", key: "contactEmail", width: 30 },
+    { header: "Latitude", key: "latitude", width: 15 },
+    { header: "Longitude", key: "longitude", width: 15 },
+    { header: "Facility type (branch|division|clinic|warehouse)", key: "facilityType", width: 36 },
+    { header: "Parent facility ID (required for clinic/warehouse)", key: "parentFacilityId", width: 36 },
   ];
   
   // Add sample rows
   worksheet.addRow({
-    name: 'NRCS Abuja Headquarters',
-    address: 'National Headquarters, Red Cross Road',
-    city: 'Abuja',
-    state: 'FCT',
-    country: 'Nigeria',
-    contactPerson: 'John Doe',
-    contactPhone: '+234-xxx-xxx-xxxx',
-    contactEmail: 'abuja@redcross.org.ng',
-    latitude: '9.0579',
-    longitude: '7.4951',
+    name: "NRCS Abuja Headquarters",
+    address: "National Headquarters, Red Cross Road",
+    city: "Abuja",
+    state: "FCT",
+    country: "Nigeria",
+    contactPerson: "John Doe",
+    contactPhone: "+234-xxx-xxx-xxxx",
+    contactEmail: "abuja@redcross.org.ng",
+    latitude: "9.0579",
+    longitude: "7.4951",
+    facilityType: "branch",
+    parentFacilityId: "",
   });
-  
+
   worksheet.addRow({
-    name: 'NRCS Lagos State Branch',
-    address: '123 Marina Street',
-    city: 'Lagos',
-    state: 'Lagos',
-    country: 'Nigeria',
-    contactPerson: 'Jane Smith',
-    contactPhone: '+234-xxx-xxx-xxxx',
-    contactEmail: 'lagos@redcross.org.ng',
-    latitude: '6.5244',
-    longitude: '3.3792',
+    name: "NRCS Lagos State Branch",
+    address: "123 Marina Street",
+    city: "Lagos",
+    state: "Lagos",
+    country: "Nigeria",
+    contactPerson: "Jane Smith",
+    contactPhone: "+234-xxx-xxx-xxxx",
+    contactEmail: "lagos@redcross.org.ng",
+    latitude: "6.5244",
+    longitude: "3.3792",
+    facilityType: "branch",
+    parentFacilityId: "",
   });
   
   // Style header
@@ -451,12 +490,15 @@ export async function generateSiteTemplate(): Promise<Buffer> {
   
   // Add instructions
   worksheet.addRow([]);
-  worksheet.addRow(['Instructions:']);
-  worksheet.addRow(['1. Fill in the site information in the rows above']);
-  worksheet.addRow(['2. Fields marked with * are required']);
-  worksheet.addRow(['3. Delete the sample rows before uploading']);
-  worksheet.addRow(['4. Latitude and Longitude are optional but recommended for map features']);
-  worksheet.addRow(['5. Save the file and upload it through the Sites page']);
+  worksheet.addRow(["Instructions:"]);
+  worksheet.addRow(["1. Fill in the facility information in the rows above"]);
+  worksheet.addRow(["2. Fields marked with * are required"]);
+  worksheet.addRow(["3. Delete the sample rows before uploading"]);
+  worksheet.addRow(["4. Latitude and longitude are optional but recommended for map features"]);
+  worksheet.addRow([
+    "5. Facility type defaults to branch; clinics and warehouses must reference a parent branch ID in column 12",
+  ]);
+  worksheet.addRow(["6. Save the file and upload it through the Facilities page"]);
   
   const buffer = await workbook.xlsx.writeBuffer();
   return Buffer.from(buffer);

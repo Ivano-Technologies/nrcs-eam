@@ -135,7 +135,7 @@ export function GlobalSearch({ className }: { className?: string }) {
           }
         }}
         title="Search"
-        description="Search assets, work orders, inventory, sites, and users"
+        description="Search assets, work orders, inventory, facilities, and users"
         className="max-w-xl"
       >
         <CommandInput
@@ -250,7 +250,7 @@ export function GlobalSearch({ className }: { className?: string }) {
                 </CommandGroup>
               )}
               {data.sites.length > 0 && (
-                <CommandGroup heading="Sites">
+                <CommandGroup heading="Facilities">
                   {data.sites.map((s) => {
                     const href = appPath("/sites");
                     const entry: RecentEntry = {

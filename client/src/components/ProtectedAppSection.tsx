@@ -22,7 +22,7 @@ import PendingUsers from "@/pages/PendingUsers";
 import QuickBooksSettings from "@/pages/QuickBooksSettings";
 import ReportScheduling from "@/pages/ReportScheduling";
 import Reports from "@/pages/Reports";
-import Sites from "@/pages/Sites";
+import Facilities from "@/pages/Facilities";
 import Users from "@/pages/Users";
 import Vendors from "@/pages/Vendors";
 import WarrantyAlerts from "@/pages/WarrantyAlerts";
@@ -63,7 +63,7 @@ export default function ProtectedAppSection() {
           <Route path="/app/vendors" component={Vendors} />
           <Route path="/app/financial" component={Financial} />
           <Route path="/app/compliance" component={Compliance} />
-          <Route path="/app/sites" component={Sites} />
+          <Route path="/app/sites" component={Facilities} />
           <Route path="/app/users" component={Users} />
           <Route path="/app/users/pending" component={PendingUsers} />
           <Route path="/app/pending-users" component={PendingUsers} />

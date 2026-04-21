@@ -29,6 +29,7 @@
     "db:clean-test-data": "tsx scripts/db/clean-test-data.ts",
     "db:full-reset": "tsx scripts/db/full-reset.ts",
     "db:seed-reference": "tsx scripts/db/seed-reference-data.ts",
+    "db:seed-facilities": "tsx scripts/db/seed-facilities.ts",
     "test:pdfkit": "tsx scripts/pdfkit-smoke.ts",
     "test:resend": "tsx scripts/test-resend.ts",
     "dev:e2e": "dotenv -e .env.e2e -- cross-env NODE_ENV=development tsx server/_core/index.ts",

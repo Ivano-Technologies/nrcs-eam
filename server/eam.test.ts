@@ -47,19 +47,18 @@ describe("Dashboard Stats", () => {
   });
 });
 
-describe("Sites Management", () => {
-  it("should list all sites", async () => {
+describe("Facilities management", () => {
+  it("should list all facilities", async () => {
     const ctx = createTestContext("admin");
     const caller = appRouter.createCaller(ctx);
 
     const sites = await caller.sites.list();
 
     expect(Array.isArray(sites)).toBe(true);
-    // After seeding, we should have at least 3 sites
     expect(sites.length).toBeGreaterThanOrEqual(3);
   });
 
-  it("should create a new site", async () => {
+  it("should create a new facility", async () => {
     const ctx = createTestContext("admin");
     const caller = appRouter.createCaller(ctx);
 
@@ -103,12 +102,11 @@ describe("Assets Management", () => {
     const ctx = createTestContext("admin");
     const caller = appRouter.createCaller(ctx);
 
-    // Get first site and category for testing
     const sites = await caller.sites.list();
     const categories = await caller.assetCategories.list();
 
     if (sites.length === 0 || categories.length === 0) {
-      throw new Error("No sites or categories available for testing");
+      throw new Error("No facilities or categories available for testing");
     }
 
     const newAsset = await caller.assets.create({

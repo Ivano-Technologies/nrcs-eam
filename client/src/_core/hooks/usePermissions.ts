@@ -9,7 +9,7 @@ export function usePermissions() {
 
   return {
     canEditAssets: ["manager", "admin"].includes(role),
-    canEditSites: ["manager", "admin"].includes(role),
+    canEditFacilities: ["manager", "admin"].includes(role),
     canAddInventory: ["staff", "manager", "admin"].includes(role),
     canDeleteInventory: ["manager", "admin"].includes(role),
     canManageUsers: role === "admin",

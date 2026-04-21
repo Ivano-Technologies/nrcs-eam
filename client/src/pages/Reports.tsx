@@ -273,13 +273,13 @@ export default function Reports() {
               reportType === "workOrders" ||
               reportType === "compliance") && (
               <div className="space-y-2">
-                <Label>Site (Optional)</Label>
+                <Label>Facility (optional)</Label>
                 <Select value={siteId} onValueChange={setSiteId}>
                   <SelectTrigger>
-                    <SelectValue placeholder="All sites" />
+                    <SelectValue placeholder="All facilities" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Sites</SelectItem>
+                    <SelectItem value="all">All facilities</SelectItem>
                     {sites?.map((site) => (
                       <SelectItem key={site.id} value={site.id.toString()}>
                         {site.name}

@@ -29,7 +29,7 @@ export const LIVE_E2E_SHARED_SITE_NAME = "E2E Playwright Shared Site";
  */
 export async function siteExistsByName(page: Page, siteName: string): Promise<boolean> {
   await page.goto("/app/sites");
-  await expect(page.getByRole("heading", { name: /Sites Management/i })).toBeVisible({
+  await expect(page.getByRole("heading", { name: /Facilities Management/i })).toBeVisible({
     timeout: 30_000,
   });
   const card = page.locator("[data-testid^='site-card-']").filter({ hasText: siteName });
@@ -44,7 +44,7 @@ export async function siteExistsByName(page: Page, siteName: string): Promise<bo
  */
 export async function resolveLiveTestSiteName(page: Page): Promise<string> {
   await page.goto("/app/sites");
-  await expect(page.getByRole("heading", { name: /Sites Management/i })).toBeVisible({
+  await expect(page.getByRole("heading", { name: /Facilities Management/i })).toBeVisible({
     timeout: 30_000,
   });
 

@@ -171,10 +171,10 @@ export default function WorkOrders() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="site">Site *</Label>
+                  <Label htmlFor="site">Facility *</Label>
                   <Select value={newWorkOrder.siteId} onValueChange={(value) => setNewWorkOrder({ ...newWorkOrder, siteId: value })}>
                     <SelectTrigger data-testid="work-order-form-site">
-                      <SelectValue placeholder="Select site" />
+                      <SelectValue placeholder="Select facility" />
                     </SelectTrigger>
                     <SelectContent>
                       {sites?.map((site) => (

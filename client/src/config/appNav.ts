@@ -97,10 +97,10 @@ export const SIDEBAR_GROUPS: AppNavGroup[] = [
     ],
   },
   {
-    id: "sites",
-    label: "Sites",
+    id: "facilities",
+    label: "Facilities",
     icon: MapPin,
-    items: [{ label: "Sites", path: appPath("/sites"), icon: MapPin }],
+    items: [{ label: "Facilities", path: appPath("/sites"), icon: MapPin }],
   },
 ];
 
@@ -145,7 +145,7 @@ const GROUP_PREFIXES: { groupId: string; pathPrefix: string }[] = [
   { groupId: "compliance", pathPrefix: appPath("/audit-trail") },
   { groupId: "reports", pathPrefix: appPath("/reports") },
   { groupId: "reports", pathPrefix: appPath("/report-scheduling") },
-  { groupId: "sites", pathPrefix: appPath("/sites") },
+  { groupId: "facilities", pathPrefix: appPath("/sites") },
   { groupId: "administration", pathPrefix: appPath("/vendors") },
   { groupId: "administration", pathPrefix: appPath("/users") },
   { groupId: "administration", pathPrefix: appPath("/pending-users") },

@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MapPin, Navigation } from "lucide-react";
+import { appPath } from "@/lib/routes";
 
 export default function AssetMap() {
   const [selectedSite, setSelectedSite] = useState<string>("all");
@@ -59,7 +60,7 @@ export default function AssetMap() {
               <p style="margin: 4px 0; font-size: 14px;"><strong>City:</strong> ${site.city || 'N/A'}, ${site.state || 'N/A'}</p>
               <p style="margin: 4px 0; font-size: 14px;"><strong>Contact:</strong> ${site.contactPerson || 'N/A'}</p>
               <p style="margin: 4px 0; font-size: 14px;"><strong>Phone:</strong> ${site.contactPhone || 'N/A'}</p>
-              <a href="/app/sites" style="display: inline-block; margin-top: 8px; color: #DC2626; text-decoration: none; font-weight: 500;">View All Sites →</a>
+              <a href={appPath("/sites")} style="display: inline-block; margin-top: 8px; color: #DC2626; text-decoration: none; font-weight: 500;">View all facilities →</a>
             </div>
           `,
         });
@@ -208,7 +209,7 @@ export default function AssetMap() {
         <div>
           <h1 className="text-3xl font-bold">Asset Map</h1>
           <p className="text-muted-foreground mt-2">
-            Track asset locations across NRCS sites
+            Track asset locations across NRCS facilities
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -228,10 +229,10 @@ export default function AssetMap() {
             <label className="text-sm font-medium mb-2 block">Site</label>
             <Select value={selectedSite} onValueChange={setSelectedSite}>
               <SelectTrigger>
-                <SelectValue placeholder="All Sites" />
+                <SelectValue placeholder="All facilities" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Sites</SelectItem>
+                <SelectItem value="all">All facilities</SelectItem>
                 {sites?.map((site) => (
                   <SelectItem key={site.id} value={site.id.toString()}>
                     {site.name}

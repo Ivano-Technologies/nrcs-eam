@@ -19,7 +19,7 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import {
   appSettings,
-  InsertUser, users, sites, InsertSite, assetCategories, assets, InsertAsset,
+  InsertUser, users, sites, InsertSite, type Site, assetCategories, assets, InsertAsset,
   workOrders, InsertWorkOrder, maintenanceSchedules, InsertMaintenanceSchedule,
   inventoryItems, InsertInventoryItem, inventoryTransactions, vendors, InsertVendor,
   financialTransactions, complianceRecords, auditLogs, documents,
@@ -29,6 +29,7 @@ import {
   workOrderTemplates, InsertWorkOrderTemplate,
   pendingUsers,
 } from "../drizzle/schema";
+import type { FacilityType } from "../shared/facilities";
 import { getPostgresJsSslOption } from "../shared/mysqlSsl";
 import { ENV } from './_core/env';
 import type { InventoryTransaction } from "../drizzle/schema";
@@ -221,10 +222,109 @@ export async function getAllSites() {
   return await db.select().from(sites).orderBy(asc(sites.name));
 }
 
+export type SiteListRow = Site & {
+  parentFacilityName: string | null;
+  assetCount: number;
+  inventoryCount: number;
+  staffCount: number;
+};
+
+/** Facilities list with hierarchy label and aggregate counts (for UI / `sites.list`). */
+export async function getSitesList(): Promise<SiteListRow[]> {
+  const database = await getDb();
+  if (!database) return [];
+  const allSites = await database.select().from(sites).orderBy(asc(sites.name));
+  const [assetGroups, invGroups, staffGroups] = await Promise.all([
+    database
+      .select({ siteId: assets.siteId, c: sql<number>`cast(count(*) as int)` })
+      .from(assets)
+      .groupBy(assets.siteId),
+    database
+      .select({ siteId: inventoryItems.siteId, c: sql<number>`cast(count(*) as int)` })
+      .from(inventoryItems)
+      .groupBy(inventoryItems.siteId),
+    database
+      .select({ siteId: users.siteId, c: sql<number>`cast(count(*) as int)` })
+      .from(users)
+      .where(isNotNull(users.siteId))
+      .groupBy(users.siteId),
+  ]);
+  const assetMap = new Map(assetGroups.map((r) => [r.siteId, r.c]));
+  const invMap = new Map(invGroups.map((r) => [r.siteId, r.c]));
+  const staffMap = new Map(
+    staffGroups.filter((r): r is { siteId: number; c: number } => r.siteId != null).map((r) => [r.siteId, r.c])
+  );
+  const idToName = new Map(allSites.map((s) => [s.id, s.name]));
+
+  return allSites.map((s) => ({
+    ...s,
+    parentFacilityName:
+      s.parentFacilityId != null ? idToName.get(s.parentFacilityId) ?? null : null,
+    assetCount: assetMap.get(s.id) ?? 0,
+    inventoryCount: invMap.get(s.id) ?? 0,
+    staffCount: staffMap.get(s.id) ?? 0,
+  }));
+}
+
+export async function getFacilitiesByType(facilityType: FacilityType) {
+  const database = await getDb();
+  if (!database) return [];
+  return database
+    .select()
+    .from(sites)
+    .where(eq(sites.facilityType, facilityType))
+    .orderBy(asc(sites.name));
+}
+
+export async function getChildFacilities(parentId: number) {
+  const database = await getDb();
+  if (!database) return [];
+  return database
+    .select()
+    .from(sites)
+    .where(eq(sites.parentFacilityId, parentId))
+    .orderBy(asc(sites.name));
+}
+
+/** True if assigning `parentId` as parent of `siteId` would create a cycle. */
+export async function wouldCreateFacilityParentCycle(
+  siteId: number,
+  parentId: number | null
+): Promise<boolean> {
+  if (parentId == null) return false;
+  if (parentId === siteId) return true;
+  const database = await getDb();
+  if (!database) return false;
+  let current: number | null = parentId;
+  const visited = new Set<number>();
+  while (current != null) {
+    if (current === siteId) return true;
+    if (visited.has(current)) return false;
+    visited.add(current);
+    const row = await database
+      .select({ pid: sites.parentFacilityId })
+      .from(sites)
+      .where(eq(sites.id, current))
+      .limit(1);
+    current = row[0]?.pid ?? null;
+  }
+  return false;
+}
+
 export async function getSiteById(id: number) {
   const db = await getDb();
   if (!db) return null;
   return await db.select().from(sites).where(eq(sites.id, id)).limit(1).then(r => r[0] || null);
+}
+
+export async function getSiteByIdEnriched(id: number) {
+  const row = await getSiteById(id);
+  if (!row) return null;
+  let parentFacilityName: string | null = null;
+  if (row.parentFacilityId != null) {
+    parentFacilityName = (await getSiteById(row.parentFacilityId))?.name ?? null;
+  }
+  return { ...row, parentFacilityName };
 }
 
 export async function updateSite(id: number, data: Partial<InsertSite>) {
