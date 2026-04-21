@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,8 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ViewToggle } from "@/components/ViewToggle";
+import { CardQrCode } from "@/components/CardQrCode";
 
 const CATEGORIES = [
   "Food",
@@ -78,7 +80,14 @@ function maxRef(row: StockOverviewRow): number {
 
 export default function Inventory() {
   const { isAdmin, isManagerOrAdmin, isStaffOrAbove } = usePermissions();
-  const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
+  const [overviewViewMode, setOverviewViewMode] = useState<"table" | "card">(() => {
+    if (typeof window === "undefined") return "table";
+    return window.localStorage.getItem("viewMode_inventory") === "card" ? "card" : "table";
+  });
+  const [catalogueViewMode, setCatalogueViewMode] = useState<"table" | "card">(() => {
+    if (typeof window === "undefined") return "table";
+    return window.localStorage.getItem("viewMode_inventory_catalogue") === "card" ? "card" : "table";
+  });
   const [warehouseId, setWarehouseId] = useState<string>("all");
   const [category, setCategory] = useState<string>("all");
   const [status, setStatus] = useState<string>("all");
@@ -155,6 +164,18 @@ export default function Inventory() {
 
   const rows = overviewQuery.data ?? [];
   const catalogueRows = catalogueQuery.data ?? [];
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("viewMode_inventory", overviewViewMode);
+    }
+  }, [overviewViewMode]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("viewMode_inventory_catalogue", catalogueViewMode);
+    }
+  }, [catalogueViewMode]);
 
   return (
     <div className="space-y-5">
@@ -237,25 +258,12 @@ export default function Inventory() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            <div className="ml-auto flex items-center gap-1 rounded-md border p-1">
-              <Button
-                size="sm"
-                variant={viewMode === "grid" ? "secondary" : "ghost"}
-                onClick={() => setViewMode("grid")}
-              >
-                Grid
-              </Button>
-              <Button
-                size="sm"
-                variant={viewMode === "table" ? "secondary" : "ghost"}
-                onClick={() => setViewMode("table")}
-              >
-                Table
-              </Button>
+            <div className="ml-auto">
+              <ViewToggle value={overviewViewMode} onChange={setOverviewViewMode} />
             </div>
           </div>
 
-          {viewMode === "grid" ? (
+          {overviewViewMode === "card" ? (
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {rows.map((row) => {
                 const progress = Math.min(100, Math.round((row.quantityOnHand / maxRef(row)) * 100));
@@ -307,6 +315,19 @@ export default function Inventory() {
                           {statusLabel(row.status)}
                         </Badge>
                         <Badge variant="secondary">{row.category}</Badge>
+                      </div>
+                      <div className="mt-3 flex justify-end" onClick={(e) => e.stopPropagation()}>
+                        <CardQrCode
+                          idValue={`${row.catalogueId}-${row.warehouseId}`}
+                          title={row.itemName}
+                          subtitle={row.itemCode}
+                          encodedValue={JSON.stringify({
+                            type: "stock",
+                            catalogueId: row.catalogueId,
+                            warehouseId: row.warehouseId,
+                            code: row.itemCode,
+                          })}
+                        />
                       </div>
                     </CardContent>
                   </Card>
@@ -390,30 +411,8 @@ export default function Inventory() {
         <TabsContent value="catalogue" className="space-y-4">
           <div className="rounded-md border p-3">
             <div className="flex flex-wrap items-center gap-2">
-              {isManagerOrAdmin ? (
-                <Button className="h-9" disabled>
-                  Add Item
-                </Button>
-              ) : null}
-              {isManagerOrAdmin ? (
-                <Button
-                  className="h-9"
-                  variant="outline"
-                  onClick={() => importMutation.mutate({})}
-                  disabled={importMutation.isPending}
-                >
-                  <ArrowDownToLine className="mr-2 h-4 w-4" />
-                  Import from IFRC Catalogue
-                </Button>
-              ) : null}
-              {isManagerOrAdmin ? (
-                <Button className="h-9" variant="outline" disabled>
-                  <ArrowUpFromLine className="mr-2 h-4 w-4" />
-                  Export Catalogue
-                </Button>
-              ) : null}
               <Input
-                className="ml-auto h-9 min-w-[240px]"
+                className="h-9 min-w-[240px]"
                 placeholder="Search code/name"
                 value={catalogueSearch}
                 onChange={(e) => setCatalogueSearch(e.target.value)}
@@ -452,8 +451,68 @@ export default function Inventory() {
                   <SelectItem value="inactive">Inactive</SelectItem>
                 </SelectContent>
               </Select>
+              <div className="ml-auto flex flex-wrap items-center gap-2">
+                <ViewToggle value={catalogueViewMode} onChange={setCatalogueViewMode} />
+              {isManagerOrAdmin ? (
+                <Button className="h-9" disabled>
+                  Add Item
+                </Button>
+              ) : null}
+              {isManagerOrAdmin ? (
+                <Button
+                  className="h-9"
+                  variant="outline"
+                  onClick={() => importMutation.mutate({})}
+                  disabled={importMutation.isPending}
+                >
+                  <ArrowDownToLine className="mr-2 h-4 w-4" />
+                  Import from IFRC Catalogue
+                </Button>
+              ) : null}
+              {isManagerOrAdmin ? (
+                <Button className="h-9" variant="outline" disabled>
+                  <ArrowUpFromLine className="mr-2 h-4 w-4" />
+                  Export Catalogue
+                </Button>
+              ) : null}
+              </div>
             </div>
           </div>
+          {catalogueViewMode === "card" ? (
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {catalogueRows.map((row) => (
+                <Card
+                  key={row.id}
+                  className="cursor-pointer"
+                  onClick={() => setSelectedCatalogue(row)}
+                >
+                  <CardContent className="space-y-3 pt-4">
+                    <div className="flex h-20 items-center justify-center rounded-md bg-muted">
+                      <Package className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <div className="font-mono text-xs text-primary">{row.itemCode}</div>
+                    <p className="truncate font-medium" title={row.name}>{row.name}</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="secondary">{row.category}</Badge>
+                      <Badge variant="outline" className={cn("border", vedClass(row.vedClassification))}>
+                        {row.vedClassification ?? "desirable"}
+                      </Badge>
+                      {row.hasExpiry ? <Badge variant="outline">Expiry</Badge> : null}
+                      {row.coldChainRequired ? <Badge variant="outline">Cold Chain</Badge> : null}
+                    </div>
+                    <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
+                      <CardQrCode
+                        idValue={String(row.id)}
+                        title={row.name}
+                        subtitle={row.itemCode}
+                        encodedValue={JSON.stringify({ type: "catalogue", id: row.id, code: row.itemCode })}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
           <div className="overflow-x-auto rounded-md border">
             <table className="w-full text-sm">
               <thead className="bg-muted/60">
@@ -500,6 +559,7 @@ export default function Inventory() {
               </tbody>
             </table>
           </div>
+          )}
         </TabsContent>
 
         {isManagerOrAdmin ? (

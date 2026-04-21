@@ -41,6 +41,8 @@ import {
 import { cn } from "@/lib/utils";
 import { MapView } from "@/components/Map";
 import { Download, Edit2, MapPin, Plus, Save, Trash2, Upload, X } from "lucide-react";
+import { ViewToggle } from "@/components/ViewToggle";
+import { CardQrCode } from "@/components/CardQrCode";
 
 type ViewMode = "table" | "card" | "map";
 type SortKey = "code" | "name" | "facilityType" | "parentFacilityName" | "state" | "isActive";
@@ -87,7 +89,10 @@ const emptyForm = (): FacilityForm => ({
 export default function Facilities() {
   const [, setLocation] = useLocation();
   const { canEditFacilities } = usePermissions();
-  const [viewMode, setViewMode] = useState<ViewMode>("table");
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    if (typeof window === "undefined") return "table";
+    return window.localStorage.getItem("viewMode_facilities") === "card" ? "card" : "table";
+  });
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [stateFilter, setStateFilter] = useState<string>("all");
@@ -193,6 +198,12 @@ export default function Facilities() {
   }, [page, totalPages]);
 
   useEffect(() => {
+    if (typeof window !== "undefined" && (viewMode === "table" || viewMode === "card")) {
+      window.localStorage.setItem("viewMode_facilities", viewMode);
+    }
+  }, [viewMode]);
+
+  useEffect(() => {
     if (!map) return;
     markers.forEach((m) => m.setMap(null));
     const next: google.maps.Marker[] = [];
@@ -274,16 +285,15 @@ export default function Facilities() {
           <p className="mt-1 text-muted-foreground">Manage NRCS facilities</p>
         </div>
         <div className="flex gap-2">
-          <Select value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="table">Table view</SelectItem>
-              <SelectItem value="card">Card view</SelectItem>
-              <SelectItem value="map">Map view</SelectItem>
-            </SelectContent>
-          </Select>
+          <ViewToggle value={viewMode === "card" ? "card" : "table"} onChange={setViewMode} />
+          <Button
+            variant={viewMode === "map" ? "secondary" : "outline"}
+            className="h-9"
+            onClick={() => setViewMode("map")}
+          >
+            <MapPin className="mr-2 h-4 w-4" />
+            Map
+          </Button>
         </div>
       </div>
 
@@ -407,6 +417,17 @@ export default function Facilities() {
                 </div>
                 <div className="text-muted-foreground">{f.code ?? "—"}</div>
                 <div className="text-muted-foreground">{f.address ?? "—"}</div>
+                <div className="text-muted-foreground">{f.contactPerson ?? "—"}</div>
+                <div className="text-muted-foreground">{f.parentFacilityName ? `Parent: ${f.parentFacilityName}` : "Parent: —"}</div>
+                <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
+                  <CardQrCode
+                    idValue={String(f.id)}
+                    title={f.name}
+                    subtitle={f.code ?? `Facility #${f.id}`}
+                    encodedValue={`https://nrcseam.techivano.com/app/facilities/${f.id}`}
+                    labelSize="50x50"
+                  />
+                </div>
               </CardContent>
             </Card>
           ))}

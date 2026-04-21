@@ -10,6 +10,12 @@ import { DollarSign, Plus, TrendingUp, TrendingDown, ArrowUpCircle, ArrowDownCir
 import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
 
+const naira = new Intl.NumberFormat("en-NG", {
+  style: "currency",
+  currency: "NGN",
+  maximumFractionDigits: 2,
+});
+
 export default function Financial() {
   const { user } = useAuth();
   const { data: transactions, isLoading, refetch } = trpc.financial.list.useQuery();
@@ -214,7 +220,7 @@ export default function Financial() {
             <ArrowUpCircle className="h-5 w-5 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">₦{totalRevenue.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-green-600">{naira.format(totalRevenue)}</div>
             <p className="text-xs text-muted-foreground mt-1">{revenueTransactions.length} transactions</p>
           </CardContent>
         </Card>
@@ -225,7 +231,7 @@ export default function Financial() {
             <ArrowDownCircle className="h-5 w-5 text-red-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">₦{totalExpenses.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-red-600">{naira.format(totalExpenses)}</div>
             <p className="text-xs text-muted-foreground mt-1">{expenseTransactions.length} transactions</p>
           </CardContent>
         </Card>
@@ -241,7 +247,7 @@ export default function Financial() {
           </CardHeader>
           <CardContent>
             <div className={`text-2xl font-bold ${netProfit >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
-              ₦{netProfit.toLocaleString()}
+              {naira.format(netProfit)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               {netProfit >= 0 ? 'Profit' : 'Loss'}
@@ -300,7 +306,7 @@ export default function Financial() {
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="text-right">
-                          <p className="font-bold text-green-600">+₦{parseFloat(t.amount).toLocaleString()}</p>
+                          <p className="font-bold text-green-600">+{naira.format(parseFloat(t.amount))}</p>
                           <p className="text-xs text-muted-foreground">{t.currency}</p>
                         </div>
                         {canManageFinancial && (
@@ -386,7 +392,7 @@ export default function Financial() {
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="text-right">
-                          <p className="font-bold text-red-600">-₦{parseFloat(t.amount).toLocaleString()}</p>
+                          <p className="font-bold text-red-600">-{naira.format(parseFloat(t.amount))}</p>
                           <p className="text-xs text-muted-foreground">{t.currency}</p>
                         </div>
                         {canManageFinancial && (
