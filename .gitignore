@@ -130,6 +130,9 @@ certs/global-bundle.pem
 # Playwright (local runs)
 test-results/
 
+# Local screenshot / capture output
+artifacts/
+
 # MVP audit: regenerate with `pnpm test:e2e`
 tests/mvp-audit/screenshots/*
 !tests/mvp-audit/screenshots/.gitkeep

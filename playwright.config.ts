@@ -1,4 +1,10 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "@playwright/test";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+/** Default RDS CA bundle for local `dev:e2e` when `.env.e2e` enables strict DB TLS but omits the path. */
+const DEFAULT_DATABASE_SSL_CA = path.join(__dirname, "certs", "global-bundle.pem");
 
 const LIVE_AUTH_BASE = "https://nrcseam.techivano.com";
 
@@ -49,5 +55,11 @@ export default defineConfig({
         url: "http://127.0.0.1:3000/health",
         reuseExistingServer: true,
         timeout: 120_000,
+        env: {
+          ...process.env,
+          ...(process.env.DATABASE_SSL_CA_PATH?.trim()
+            ? {}
+            : { DATABASE_SSL_CA_PATH: DEFAULT_DATABASE_SSL_CA }),
+        },
       },
 });

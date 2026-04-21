@@ -1,14 +1,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
+import { formatNaira } from "@/lib/format";
 import { DollarSign, TrendingUp, Wrench, Building2, Users } from "lucide-react";
 import { useState } from "react";
-
-const naira = new Intl.NumberFormat("en-NG", {
-  style: "currency",
-  currency: "NGN",
-  maximumFractionDigits: 2,
-});
 
 export default function CostAnalytics() {
   const [days, setDays] = useState(30);
@@ -59,7 +54,7 @@ export default function CostAnalytics() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {naira.format(analytics?.totalCost ?? 0)}
+              {formatNaira(analytics?.totalCost ?? 0)}
             </div>
             <p className="text-xs text-muted-foreground">
               All expenses in selected period
@@ -74,7 +69,7 @@ export default function CostAnalytics() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {naira.format(analytics?.maintenanceCost ?? 0)}
+              {formatNaira(analytics?.maintenanceCost ?? 0)}
             </div>
             <p className="text-xs text-muted-foreground">
               Preventive maintenance costs
@@ -89,7 +84,7 @@ export default function CostAnalytics() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {naira.format(analytics?.repairCost ?? 0)}
+              {formatNaira(analytics?.repairCost ?? 0)}
             </div>
             <p className="text-xs text-muted-foreground">
               Emergency repair costs
@@ -113,7 +108,7 @@ export default function CostAnalytics() {
                     <div className="w-2 h-2 rounded-full bg-primary"></div>
                     <span className="font-medium">{cat.categoryName}</span>
                   </div>
-                  <span className="font-bold">{naira.format(cat.total)}</span>
+                  <span className="font-bold">{formatNaira(cat.total)}</span>
                 </div>
               ))}
             </div>
@@ -141,7 +136,7 @@ export default function CostAnalytics() {
                     <div className="w-2 h-2 rounded-full bg-blue-500"></div>
                     <span className="font-medium">{site.siteName}</span>
                   </div>
-                  <span className="font-bold">{naira.format(site.total)}</span>
+                  <span className="font-bold">{formatNaira(site.total)}</span>
                 </div>
               ))}
             </div>
@@ -174,7 +169,7 @@ export default function CostAnalytics() {
                       </span>
                     </div>
                   </div>
-                  <span className="font-bold">{naira.format(vendor.total)}</span>
+                  <span className="font-bold">{formatNaira(vendor.total)}</span>
                 </div>
               ))}
             </div>

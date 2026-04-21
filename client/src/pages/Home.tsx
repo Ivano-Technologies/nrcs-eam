@@ -131,6 +131,7 @@ export default function Home() {
             delta={kpi.delta}
             deltaDirection={kpi.deltaDirection}
             goodWhen={kpi.goodWhen}
+            valueTestId={`dashboard-kpi-value-${kpi.key}`}
           />
         ))}
       </div>

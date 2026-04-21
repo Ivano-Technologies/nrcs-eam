@@ -27,7 +27,7 @@ test.describe("sites module (live)", () => {
     if ((await sitesList.count()) > 0) {
       await expect(sitesList).toBeVisible({ timeout: 30_000 });
     } else if ((await firstSiteCard.count()) === 0) {
-      const grid = page.locator("div.space-y-6 > div.grid").first();
+      const grid = page.locator('[data-testid="sites-list"]').or(page.locator("div.grid.gap-3")).first();
       await expect(grid).toBeVisible({ timeout: 30_000 });
       firstSiteCard = grid.locator("> div").first();
     }

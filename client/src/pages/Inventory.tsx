@@ -625,7 +625,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                 onChange={(e) => setCatalogueSearch(e.target.value)}
               />
               <Select value={catalogueCategory} onValueChange={setCatalogueCategory}>
-                <SelectTrigger className="h-9 w-[220px]">
+                <SelectTrigger className="h-9 w-[220px]" data-testid="catalogue-category-filter">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
