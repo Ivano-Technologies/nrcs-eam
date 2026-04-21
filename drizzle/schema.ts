@@ -11,6 +11,8 @@ import {
   pgEnum,
   uuid,
   doublePrecision,
+  json,
+  unique,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { FACILITY_TYPE_VALUES } from "../shared/facilities";
@@ -346,6 +348,59 @@ export const inventoryTransactions = pgTable("inventoryTransactions", {
   createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
 });
 
+export const inventoryCatalogue = pgTable("inventory_catalogue", {
+  id: serial("id").primaryKey(),
+  itemCode: varchar("item_code", { length: 50 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  category: varchar("category", { length: 100 }).notNull(),
+  subcategory: varchar("subcategory", { length: 100 }),
+  unitOfMeasure: varchar("unit_of_measure", { length: 50 }).notNull(),
+  vedClassification: varchar("ved_classification", { length: 20 }),
+  unitWeightKg: doublePrecision("unit_weight_kg"),
+  packSize: integer("pack_size"),
+  packUnit: varchar("pack_unit", { length: 50 }),
+  hasExpiry: boolean("has_expiry").default(false),
+  coldChainRequired: boolean("cold_chain_required").default(false),
+  photoUrl: varchar("photo_url", { length: 500 }),
+  standardSuppliers: json("standard_suppliers"),
+  ifrcItemCode: varchar("ifrc_item_code", { length: 50 }),
+  notes: text("notes"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow(),
+});
+
+export const inventoryStock = pgTable(
+  "inventory_stock",
+  {
+    id: serial("id").primaryKey(),
+    catalogueId: integer("catalogue_id")
+      .notNull()
+      .references(() => inventoryCatalogue.id),
+    warehouseId: integer("warehouse_id")
+      .notNull()
+      .references(() => sites.id),
+    zoneLocation: varchar("zone_location", { length: 100 }),
+    quantityOnHand: doublePrecision("quantity_on_hand").default(0).notNull(),
+    quantityReserved: doublePrecision("quantity_reserved").default(0),
+    quantityInTransit: doublePrecision("quantity_in_transit").default(0),
+    minLevel: doublePrecision("min_level").default(0),
+    maxLevel: doublePrecision("max_level"),
+    safetyStockLevel: doublePrecision("safety_stock_level"),
+    lastCountedAt: timestamp("last_counted_at", { mode: "date" }),
+    lastMovementAt: timestamp("last_movement_at", { mode: "date" }),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow(),
+    updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow(),
+  },
+  (table) => ({
+    inventoryStockCatalogueWarehouseUnique: unique("inventory_stock_catalogue_warehouse_unique").on(
+      table.catalogueId,
+      table.warehouseId
+    ),
+  })
+);
+
 /**
  * Vendors
  */
@@ -454,6 +509,10 @@ export type InsertMaintenanceSchedule = typeof maintenanceSchedules.$inferInsert
 export type InventoryItem = typeof inventoryItems.$inferSelect;
 export type InsertInventoryItem = typeof inventoryItems.$inferInsert;
 export type InventoryTransaction = typeof inventoryTransactions.$inferSelect;
+export type InventoryCatalogue = typeof inventoryCatalogue.$inferSelect;
+export type InsertInventoryCatalogue = typeof inventoryCatalogue.$inferInsert;
+export type InventoryStock = typeof inventoryStock.$inferSelect;
+export type InsertInventoryStock = typeof inventoryStock.$inferInsert;
 export type Vendor = typeof vendors.$inferSelect;
 export type InsertVendor = typeof vendors.$inferInsert;
 export type FinancialTransaction = typeof financialTransactions.$inferSelect;
