@@ -9,12 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { DollarSign, Plus, TrendingUp, TrendingDown, ArrowUpCircle, ArrowDownCircle, Edit2, Save, X } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
-
-const naira = new Intl.NumberFormat("en-NG", {
-  style: "currency",
-  currency: "NGN",
-  maximumFractionDigits: 2,
-});
+import { formatNaira } from "@/lib/format";
 
 export default function Financial() {
   const { user } = useAuth();
@@ -220,7 +215,7 @@ export default function Financial() {
             <ArrowUpCircle className="h-5 w-5 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{naira.format(totalRevenue)}</div>
+            <div className="text-2xl font-bold text-green-600">{formatNaira(totalRevenue)}</div>
             <p className="text-xs text-muted-foreground mt-1">{revenueTransactions.length} transactions</p>
           </CardContent>
         </Card>
@@ -231,7 +226,7 @@ export default function Financial() {
             <ArrowDownCircle className="h-5 w-5 text-red-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{naira.format(totalExpenses)}</div>
+            <div className="text-2xl font-bold text-red-600">{formatNaira(totalExpenses)}</div>
             <p className="text-xs text-muted-foreground mt-1">{expenseTransactions.length} transactions</p>
           </CardContent>
         </Card>
@@ -247,7 +242,7 @@ export default function Financial() {
           </CardHeader>
           <CardContent>
             <div className={`text-2xl font-bold ${netProfit >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
-              {naira.format(netProfit)}
+              {formatNaira(netProfit)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               {netProfit >= 0 ? 'Profit' : 'Loss'}
@@ -306,7 +301,7 @@ export default function Financial() {
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="text-right">
-                          <p className="font-bold text-green-600">+{naira.format(parseFloat(t.amount))}</p>
+                          <p className="font-bold text-green-600">+{formatNaira(parseFloat(t.amount))}</p>
                           <p className="text-xs text-muted-foreground">{t.currency}</p>
                         </div>
                         {canManageFinancial && (
@@ -392,7 +387,7 @@ export default function Financial() {
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="text-right">
-                          <p className="font-bold text-red-600">-{naira.format(parseFloat(t.amount))}</p>
+                          <p className="font-bold text-red-600">-{formatNaira(parseFloat(t.amount))}</p>
                           <p className="text-xs text-muted-foreground">{t.currency}</p>
                         </div>
                         {canManageFinancial && (

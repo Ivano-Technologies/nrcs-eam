@@ -26,6 +26,8 @@ type Props = {
   deltaDirection?: DeltaDirection;
   /** Whether an increase ("up") or decrease ("down") in the metric is desirable. */
   goodWhen?: GoodWhen;
+  /** Stable hook for E2E (dashboard KPI values). */
+  valueTestId?: string;
 };
 
 function DeltaPill({
@@ -60,6 +62,7 @@ export function KpiCard({
   delta,
   deltaDirection = "flat",
   goodWhen = "up",
+  valueTestId,
 }: Props) {
   const showPill = Boolean(delta) && deltaDirection !== "flat";
 
@@ -73,7 +76,12 @@ export function KpiCard({
           </div>
         </header>
 
-        <div className="mt-3 min-w-0 break-words text-3xl font-bold tracking-tight text-foreground">{value}</div>
+        <div
+          className="mt-3 min-w-0 break-words text-3xl font-bold tracking-tight text-foreground"
+          data-testid={valueTestId}
+        >
+          {value}
+        </div>
 
         <footer className="mt-auto flex items-center justify-between gap-2 pt-4">
           {sub ? (

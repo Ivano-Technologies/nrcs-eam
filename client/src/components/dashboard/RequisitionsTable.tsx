@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { appPath } from "@/lib/routes";
 import { trpc } from "@/lib/trpc";
+import { formatNaira } from "@/lib/format";
 import { ChevronRight } from "lucide-react";
 import { Link } from "wouter";
 
@@ -42,7 +43,7 @@ export function RequisitionsTable() {
               <TableRow key={row.id}>
                 <TableCell className="font-mono text-[#DC2626]">{row.id}</TableCell>
                 <TableCell>{row.from}</TableCell>
-                <TableCell className="font-semibold">{row.amount}</TableCell>
+                <TableCell className="font-semibold">{formatNaira(row.amount)}</TableCell>
                 <TableCell>{row.type}</TableCell>
                 <TableCell>{row.submittedAt}</TableCell>
                 <TableCell>

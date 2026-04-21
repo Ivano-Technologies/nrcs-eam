@@ -40,6 +40,28 @@ async function renderAnyPng(source, size) {
     .toBuffer();
 }
 
+/**
+ * Favicons: outer ring text needs as many pixels as possible. The source is a square
+ * JPG with white margins; `contain` alone scales the whole canvas so the seal is
+ * tiny. Trim near-white padding first so the circular mark fills the bitmap, then
+ * scale to `size` (still physics-limited at 16px, but much better than before).
+ */
+async function renderFaviconPng(source, size) {
+  const trimmed = await sharp(source)
+    .trim({ threshold: 28 })
+    .toBuffer();
+
+  return sharp(trimmed)
+    .resize(size, size, {
+      fit: "contain",
+      position: "center",
+      background: { r: 255, g: 255, b: 255, alpha: 1 },
+      kernel: sharp.kernel.lanczos3,
+    })
+    .png()
+    .toBuffer();
+}
+
 /** Purpose "maskable": 80% safe zone (10% inset), solid white background. */
 async function renderMaskablePng(source, size) {
   const inner = Math.floor(size * 0.8);
@@ -87,9 +109,9 @@ async function main() {
     await writePng(buf, path.join("icons", `icon-${size}-maskable.png`));
   }
 
-  const fav16 = await renderAnyPng(source, 16);
-  const fav32 = await renderAnyPng(source, 32);
-  const fav48 = await renderAnyPng(source, 48);
+  const fav16 = await renderFaviconPng(source, 16);
+  const fav32 = await renderFaviconPng(source, 32);
+  const fav48 = await renderFaviconPng(source, 48);
   await writePng(fav16, "favicon-16x16.png");
   await writePng(fav32, "favicon-32x32.png");
   await writePng(fav48, "favicon-48x48.png");

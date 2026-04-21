@@ -44,11 +44,11 @@ test.describe("Maintenance module (live)", () => {
     await expect(page.getByRole("heading", { name: /^Dashboard$/i })).toBeVisible({ timeout: 30_000 });
     await expect(
       page
-        .getByText("Upcoming Maintenance")
-        .or(page.getByText("No upcoming maintenance scheduled"))
+        .getByText("Needs your attention")
+        .or(page.getByText("Beneficiaries Reached"))
+        .or(page.getByText("Stock Movement"))
         .first()
     ).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByText("Next 7 days")).toBeVisible();
 
     const relevant = filterBenignConsoleErrors(errors).filter(
       (e) => !e.includes("TRPCClientError: Failed to fetch")

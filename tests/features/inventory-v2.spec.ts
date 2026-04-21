@@ -19,8 +19,11 @@ test.describe("Inventory V2 (live)", () => {
     await expect(rows).toHaveCount(await rows.count());
     expect(await rows.count()).toBeGreaterThanOrEqual(40);
 
-    const categoryFilter = page.getByRole("combobox").nth(0);
-    await categoryFilter.click();
+    const catalogueToolbar = page
+      .locator("div.rounded-md.border.p-3")
+      .filter({ has: page.getByPlaceholder("Search code/name") });
+    const categoryTrigger = page.getByTestId("catalogue-category-filter").or(catalogueToolbar.getByRole("combobox").first());
+    await categoryTrigger.click();
     await page.getByRole("option", { name: "Food" }).click();
     await expect(rows.first()).toBeVisible();
     const firstTen = await rows.allTextContents();
@@ -34,8 +37,8 @@ test.describe("Inventory V2 (live)", () => {
 
     const table = page.locator("table").first();
     await expect(table).toBeVisible();
-    const stickyHeaders = table.locator("thead th").filter({ hasText: /Item Code|Item Name|Warehouse/ });
-    await expect(stickyHeaders).toHaveCount(3);
+    const stickyHeaders = table.locator("thead th.sticky");
+    await expect(stickyHeaders).toHaveCount(5);
 
     const stickyPositions = await stickyHeaders.evaluateAll((els) =>
       els.map((el) => window.getComputedStyle(el).position)
