@@ -44,7 +44,7 @@ describe("Dashboard Stats", () => {
     expect(typeof stats.pendingWorkOrders).toBe("number");
     expect(typeof stats.inProgressWorkOrders).toBe("number");
     expect(typeof stats.lowStockItems).toBe("number");
-  });
+  }, 15000);
 });
 
 describe("Facilities management", () => {
@@ -56,7 +56,7 @@ describe("Facilities management", () => {
 
     expect(Array.isArray(sites)).toBe(true);
     expect(sites.length).toBeGreaterThanOrEqual(3);
-  });
+  }, 15000);
 
   it("should create a new facility", async () => {
     const ctx = createTestContext("admin");

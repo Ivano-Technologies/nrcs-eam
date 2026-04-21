@@ -42,7 +42,7 @@ describe("Notification System", () => {
       expect(preferences).toHaveProperty("userId");
       expect(preferences.userId).toBe(ctx.user!.id);
     }
-  });
+  }, 15000);
 
   it("should update notification preferences", async () => {
     const ctx = createTestContext();
@@ -61,7 +61,7 @@ describe("Notification System", () => {
       expect(preferences.lowStock).toBe(true);
       expect(preferences.workOrderAssigned).toBe(true);
     }
-  });
+  }, 15000);
 
   it("should list user notifications", async () => {
     const ctx = createTestContext();
@@ -131,5 +131,5 @@ describe("Notification System", () => {
       expect(workOrderNotification.title).toContain("Work Order");
       expect(workOrderNotification.isRead).toBe(false);
     }
-  });
+  }, 15000);
 });

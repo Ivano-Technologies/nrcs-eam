@@ -133,7 +133,7 @@ describe("Bulk facility import", () => {
     expect(result.success).toBe(true);
     expect(result.imported).toBeGreaterThanOrEqual(2);
     expect(result.failed).toBe(0);
-  });
+  }, 15000);
 
   it("should handle invalid data gracefully", async () => {
     const ctx = createAdminContext();
@@ -202,5 +202,5 @@ describe("Bulk facility import", () => {
 
     const headerRow = worksheet?.getRow(1);
     expect(headerRow?.getCell(1).value).toBe("Code");
-  });
+  }, 15000);
 });

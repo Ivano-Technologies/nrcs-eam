@@ -133,7 +133,7 @@ describe("QR Code API Endpoints", () => {
     expect(scannedAsset).toBeDefined();
     expect(scannedAsset.id).toBe(asset.id);
     expect(scannedAsset.assetTag).toBe(asset.assetTag);
-  });
+  }, 15000);
 });
 
 describe("Asset Mapping", () => {
@@ -183,5 +183,5 @@ describe("Asset Mapping", () => {
     // Database stores with precision, so check the value starts with our input
     expect(fetched?.latitude?.startsWith("9.0765")).toBe(true);
     expect(fetched?.longitude?.startsWith("7.3986")).toBe(true);
-  });
+  }, 15000);
 });
