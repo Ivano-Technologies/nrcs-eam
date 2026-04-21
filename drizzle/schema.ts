@@ -13,6 +13,7 @@ import {
   doublePrecision,
   json,
   unique,
+  date,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { FACILITY_TYPE_VALUES } from "../shared/facilities";
@@ -401,6 +402,62 @@ export const inventoryStock = pgTable(
   })
 );
 
+export const inventoryBatches = pgTable("inventory_batches", {
+  id: serial("id").primaryKey(),
+  stockId: integer("stock_id")
+    .notNull()
+    .references(() => inventoryStock.id),
+  batchNumber: varchar("batch_number", { length: 100 }),
+  expiryDate: date("expiry_date"),
+  manufactureDate: date("manufacture_date"),
+  quantity: doublePrecision("quantity").notNull(),
+  supplierName: varchar("supplier_name", { length: 255 }),
+  receivedDate: timestamp("received_date", { mode: "date" }).defaultNow(),
+  notes: text("notes"),
+  status: varchar("status", { length: 50 }).default("active"),
+});
+
+export const inventoryDocuments = pgTable("inventory_documents", {
+  id: serial("id").primaryKey(),
+  documentType: varchar("document_type", { length: 50 }).notNull(),
+  documentNumber: varchar("document_number", { length: 100 }).notNull().unique(),
+  status: varchar("status", { length: 50 }).default("draft"),
+  fromWarehouseId: integer("from_warehouse_id").references(() => sites.id),
+  toWarehouseId: integer("to_warehouse_id").references(() => sites.id),
+  items: json("items"),
+  referenceDocument: varchar("reference_document", { length: 255 }),
+  transportDetails: json("transport_details"),
+  attachments: json("attachments"),
+  notes: text("notes"),
+  createdBy: integer("created_by").references(() => users.id),
+  approvedBy: integer("approved_by").references(() => users.id),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow(),
+  approvedAt: timestamp("approved_at", { mode: "date" }),
+  completedAt: timestamp("completed_at", { mode: "date" }),
+});
+
+export const inventoryMovements = pgTable("inventory_movements", {
+  id: serial("id").primaryKey(),
+  movementType: varchar("movement_type", { length: 50 }).notNull(),
+  catalogueId: integer("catalogue_id")
+    .notNull()
+    .references(() => inventoryCatalogue.id),
+  stockId: integer("stock_id").references(() => inventoryStock.id),
+  batchId: integer("batch_id").references(() => inventoryBatches.id),
+  fromWarehouseId: integer("from_warehouse_id").references(() => sites.id),
+  toWarehouseId: integer("to_warehouse_id").references(() => sites.id),
+  quantityChange: doublePrecision("quantity_change").notNull(),
+  balanceAfter: doublePrecision("balance_after").notNull(),
+  documentType: varchar("document_type", { length: 50 }),
+  documentId: integer("document_id"),
+  documentNumber: varchar("document_number", { length: 100 }),
+  performedBy: integer("performed_by").references(() => users.id),
+  approvedBy: integer("approved_by").references(() => users.id),
+  reason: varchar("reason", { length: 255 }),
+  notes: text("notes"),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow(),
+});
+
 /**
  * Vendors
  */
@@ -513,6 +570,12 @@ export type InventoryCatalogue = typeof inventoryCatalogue.$inferSelect;
 export type InsertInventoryCatalogue = typeof inventoryCatalogue.$inferInsert;
 export type InventoryStock = typeof inventoryStock.$inferSelect;
 export type InsertInventoryStock = typeof inventoryStock.$inferInsert;
+export type InventoryBatch = typeof inventoryBatches.$inferSelect;
+export type InsertInventoryBatch = typeof inventoryBatches.$inferInsert;
+export type InventoryMovement = typeof inventoryMovements.$inferSelect;
+export type InsertInventoryMovement = typeof inventoryMovements.$inferInsert;
+export type InventoryDocument = typeof inventoryDocuments.$inferSelect;
+export type InsertInventoryDocument = typeof inventoryDocuments.$inferInsert;
 export type Vendor = typeof vendors.$inferSelect;
 export type InsertVendor = typeof vendors.$inferInsert;
 export type FinancialTransaction = typeof financialTransactions.$inferSelect;
