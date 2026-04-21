@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="NRCS mask icon">
+  <rect width="512" height="512" rx="96" fill="#DC2626" />
+  <g fill="#FFFFFF">
+    <rect x="216" y="112" width="80" height="288" />
+    <rect x="112" y="216" width="288" height="80" />
+  </g>
+</svg>

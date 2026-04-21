@@ -1,6 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { DashboardWidgetSettings } from "@/components/DashboardWidgetSettings";
 import { OpenRegistrationSettings } from "@/components/OpenRegistrationSettings";
+import { InstallPWAButton } from "@/components/InstallPWAButton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -158,6 +159,28 @@ export default function DashboardSettings() {
               </Button>
             </>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Install App</CardTitle>
+          <CardDescription>
+            Install NRCS EAM as a standalone app on your device for quick access and a better experience.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <InstallPWAButton />
+          <div className="mt-4 rounded-lg bg-muted p-4 text-sm space-y-2">
+            <p className="font-medium">Benefits of installing:</p>
+            <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
+              <li>Quick access from your home screen or desktop</li>
+              <li>Full-screen experience without browser UI</li>
+              <li>Faster load times</li>
+              <li>Native app feel on mobile and desktop</li>
+              <li>Offline access (coming soon)</li>
+            </ul>
+          </div>
         </CardContent>
       </Card>
 
