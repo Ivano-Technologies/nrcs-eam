@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useSearch } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,9 @@ import { ViewToggle } from "@/components/ViewToggle";
 import { CardQrCode } from "@/components/CardQrCode";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { appPath } from "@/lib/routes";
+import { ITEM_CATEGORIES, isItemCategoryValue, itemCategoryLabel } from "@/lib/inventory";
+import type { ItemCategory } from "@shared/itemCategory";
 
 const CATEGORIES = [
   "Food",
@@ -124,7 +127,16 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
   const [movementRows, setMovementRows] = useState<any[]>([]);
   const [movementPreview, setMovementPreview] = useState<any[]>([]);
 
-  const overviewFilters = useMemo(
+  const [, navigate] = useLocation();
+  const [createItemOpen, setCreateItemOpen] = useState(false);
+  const [newItemCode, setNewItemCode] = useState("");
+  const [newItemName, setNewItemName] = useState("");
+  const [newItemProgramCategory, setNewItemProgramCategory] = useState<(typeof CATEGORIES)[number] | "">("");
+  const [newItemTaxonomy, setNewItemTaxonomy] = useState<ItemCategory | "">("");
+  const [newItemUom, setNewItemUom] = useState("");
+  const [editItemTaxonomy, setEditItemTaxonomy] = useState<ItemCategory | "">("");
+
+  const baseOverviewFilters = useMemo(
     () => ({
       warehouseId: warehouseId === "all" ? undefined : Number(warehouseId),
       category: category === "all" ? undefined : (category as (typeof CATEGORIES)[number]),
@@ -135,9 +147,41 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
     [warehouseId, category, status, ved, search]
   );
 
+  const itemCategoryParam = useMemo((): "all" | ItemCategory => {
+    const raw = new URLSearchParams(urlSearch).get("category");
+    if (!raw || !isItemCategoryValue(raw)) return "all";
+    return raw;
+  }, [urlSearch]);
+
+  const overviewFiltersForTable = useMemo(
+    () => ({
+      ...baseOverviewFilters,
+      itemCategory: itemCategoryParam === "all" ? undefined : itemCategoryParam,
+    }),
+    [baseOverviewFilters, itemCategoryParam]
+  );
+
+  const overviewCountQueryEnabled =
+    embedInShell && mainTab === "overview" && itemCategoryParam !== "all";
+
+  const mergeOverviewSearch = (updates: Record<string, string | undefined>) => {
+    const p = new URLSearchParams(urlSearch);
+    for (const [k, v] of Object.entries(updates)) {
+      if (v === undefined || v === "") p.delete(k);
+      else p.set(k, v);
+    }
+    const qs = p.toString();
+    navigate(qs ? `${appPath("/inventory/stock-overview")}?${qs}` : appPath("/inventory/stock-overview"));
+  };
+
   const { data: sites } = trpc.sites.list.useQuery();
   const warehouses = (sites ?? []).filter((s) => s.facilityType === "warehouse");
-  const overviewQuery = trpc.inventoryV2.stock.overview.useQuery(overviewFilters);
+  const overviewQuery = trpc.inventoryV2.stock.overview.useQuery(overviewFiltersForTable, {
+    enabled: mainTab === "overview",
+  });
+  const overviewCountQuery = trpc.inventoryV2.stock.overview.useQuery(baseOverviewFilters, {
+    enabled: overviewCountQueryEnabled,
+  });
   const catalogueQuery = trpc.inventoryV2.catalogue.list.useQuery({
     category: catalogueCategory === "all" ? undefined : (catalogueCategory as (typeof CATEGORIES)[number]),
     ved: catalogueVed === "all" ? undefined : (catalogueVed as (typeof VED)[number]),
@@ -158,17 +202,24 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
     { enabled: !!selectedStock || !!selectedCatalogue }
   );
 
+  const refetchOverview = () => {
+    void overviewQuery.refetch();
+    void overviewCountQuery.refetch();
+  };
+
   const importMutation = trpc.inventoryV2.catalogue.import.useMutation({
     onSuccess: (res) => {
       toast.success(`Catalogue import complete. ${res.imported} seeded items available.`);
       void catalogueQuery.refetch();
+      refetchOverview();
     },
     onError: (e) => toast.error(e.message),
   });
+
   const updateLevels = trpc.inventoryV2.stock.updateLevels.useMutation({
     onSuccess: () => {
       toast.success("Stock levels updated.");
-      void overviewQuery.refetch();
+      refetchOverview();
       void selectedStockByItem.refetch();
     },
     onError: (e) => toast.error(e.message),
@@ -176,8 +227,31 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
   const setZoneLocation = trpc.inventoryV2.stock.setZoneLocation.useMutation({
     onSuccess: () => {
       toast.success("Zone location updated.");
-      void overviewQuery.refetch();
+      refetchOverview();
       void selectedStockByItem.refetch();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+  const catalogueCreate = trpc.inventoryV2.catalogue.create.useMutation({
+    onSuccess: () => {
+      toast.success("Item created.");
+      setCreateItemOpen(false);
+      setNewItemCode("");
+      setNewItemName("");
+      setNewItemProgramCategory("");
+      setNewItemTaxonomy("");
+      setNewItemUom("");
+      void catalogueQuery.refetch();
+      refetchOverview();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+  const catalogueUpdate = trpc.inventoryV2.catalogue.update.useMutation({
+    onSuccess: () => {
+      toast.success("Item updated.");
+      void catalogueQuery.refetch();
+      void selectedItemDetail.refetch();
+      refetchOverview();
     },
     onError: (e) => toast.error(e.message),
   });
@@ -187,6 +261,22 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
   const movementConfirm = trpc.inventoryV2.adminData.importHistoricalMovementsConfirm.useMutation();
 
   const rows = overviewQuery.data ?? [];
+  const rowsForChipCounts = overviewCountQueryEnabled ? (overviewCountQuery.data ?? []) : rows;
+  const chipCounts = useMemo(() => {
+    const by = new Map<ItemCategory, number>();
+    let total = 0;
+    for (const row of rowsForChipCounts) {
+      total++;
+      const k = (row.itemCategory ?? "other") as ItemCategory;
+      by.set(k, (by.get(k) ?? 0) + 1);
+    }
+    return { total, by };
+  }, [rowsForChipCounts]);
+
+  useEffect(() => {
+    setEditItemTaxonomy(selectedItemDetail.data?.itemCategory ?? "");
+  }, [selectedItemDetail.data?.id, selectedItemDetail.data?.itemCategory]);
+
   const catalogueRows = catalogueQuery.data ?? [];
 
   async function parseExcelRows(file: File) {
@@ -243,6 +333,41 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
+          {embedInShell ? (
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => mergeOverviewSearch({ category: undefined })}
+                className={cn(
+                  "rounded-full border px-3 py-1.5 text-sm transition-colors",
+                  itemCategoryParam === "all"
+                    ? "border-gray-900 bg-gray-900 text-white dark:border-gray-900 dark:bg-gray-900"
+                    : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-300 dark:hover:bg-gray-900"
+                )}
+              >
+                All Items · {chipCounts.total}
+              </button>
+              {ITEM_CATEGORIES.map((c) => {
+                const active = itemCategoryParam === c.value;
+                return (
+                  <button
+                    key={c.value}
+                    type="button"
+                    onClick={() => mergeOverviewSearch({ category: c.value })}
+                    title={c.hint}
+                    className={cn(
+                      "rounded-full border px-3 py-1.5 text-sm transition-colors",
+                      active
+                        ? "border-gray-900 bg-gray-900 text-white dark:border-gray-900 dark:bg-gray-900"
+                        : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-300 dark:hover:bg-gray-900"
+                    )}
+                  >
+                    {c.label} · {chipCounts.by.get(c.value) ?? 0}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
           <div className="flex flex-wrap items-center gap-2 rounded-md border p-3">
             <Select value={warehouseId} onValueChange={setWarehouseId}>
               <SelectTrigger className="h-9 w-[220px]">
@@ -326,7 +451,12 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                         <div className="flex min-w-0 items-center gap-2">
                           <Package className="h-5 w-5 shrink-0 text-primary" />
                           <div className="min-w-0">
-                            <p className="truncate font-medium">{row.itemName}</p>
+                            <p className="flex min-w-0 items-center gap-1 truncate font-medium">
+                              {row.itemName}
+                              {row.itemCategory == null ? (
+                                <TriangleAlert className="h-3.5 w-3.5 shrink-0 text-amber-600" aria-label="Uncategorized" />
+                              ) : null}
+                            </p>
                             <p className="text-xs text-muted-foreground">{row.itemCode}</p>
                           </div>
                         </div>
@@ -346,7 +476,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                       <div className="mt-2 h-2 w-full rounded bg-muted">
                         <div className="h-2 rounded bg-primary" style={{ width: `${progress}%` }} />
                       </div>
-                      <div className="mt-2 flex items-center gap-2">
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
                         <Badge
                           variant="outline"
                           className={cn("border", statusClass(row.status))}
@@ -355,6 +485,13 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                         >
                           {statusLabel(row.status)}
                         </Badge>
+                        <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                          {row.itemCategory == null
+                            ? "—"
+                            : row.itemCategory === "other"
+                              ? "Other"
+                              : itemCategoryLabel(row.itemCategory)}
+                        </span>
                         <Badge variant="secondary">{row.category}</Badge>
                       </div>
                       <div className="mt-3 flex justify-end" onClick={(e) => e.stopPropagation()}>
@@ -377,13 +514,20 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
             </div>
           ) : (
             <div className="overflow-x-auto rounded-md border px-2 md:px-3">
-              <table className="min-w-[1300px] text-sm">
+              <table className="min-w-[1620px] text-sm">
                 <thead className="sticky top-0 z-40 bg-background">
                   <tr className="border-b">
                     <th className="sticky left-0 z-[45] border-r bg-background px-2 py-2 text-left">Item Code</th>
                     <th className="sticky left-[120px] z-[45] border-r bg-background px-2 py-2 text-left">Item Name</th>
-                    <th className="sticky left-[360px] z-[45] border-r bg-background px-2 py-2 text-left shadow-[4px_0_8px_-4px_rgba(0,0,0,0.25)]">Warehouse</th>
-                    <th className="px-2 py-2 text-left">Category</th>
+                    <th className="sticky left-[360px] z-[45] w-[140px] min-w-[140px] max-w-[140px] border-r bg-background px-2 py-2 text-left">
+                      Category
+                    </th>
+                    <th className="sticky left-[500px] z-[45] w-[140px] min-w-[140px] max-w-[140px] border-r bg-background px-2 py-2 text-left">
+                      Program
+                    </th>
+                    <th className="sticky left-[640px] z-[45] border-r bg-background px-2 py-2 text-left shadow-[4px_0_8px_-4px_rgba(0,0,0,0.25)]">
+                      Warehouse
+                    </th>
                     <th className="px-2 py-2 text-right">On Hand</th>
                     <th className="px-2 py-2 text-left">Unit</th>
                     <th className="px-2 py-2 text-right">Min</th>
@@ -410,12 +554,34 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                         {row.itemCode}
                       </td>
                       <td className="sticky left-[120px] z-[35] w-[240px] min-w-[240px] max-w-[240px] truncate border-r bg-background px-2 py-2">
-                        {row.itemName}
+                        <span className="inline-flex items-center gap-1">
+                          {row.itemName}
+                          {row.itemCategory == null ? (
+                            <TriangleAlert className="h-3.5 w-3.5 shrink-0 text-amber-600" aria-label="Uncategorized" />
+                          ) : null}
+                        </span>
                       </td>
-                      <td className="sticky left-[360px] z-[35] border-r bg-background px-2 py-2 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.25)]">
+                      <td className="sticky left-[360px] z-[35] w-[140px] min-w-[140px] max-w-[140px] border-r bg-background px-2 py-2">
+                        {row.itemCategory == null ? (
+                          <span className="text-muted-foreground">—</span>
+                        ) : row.itemCategory === "other" ? (
+                          <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                            Other
+                          </span>
+                        ) : (
+                          <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                            {itemCategoryLabel(row.itemCategory)}
+                          </span>
+                        )}
+                      </td>
+                      <td className="sticky left-[500px] z-[35] w-[140px] min-w-[140px] max-w-[140px] truncate border-r bg-background px-2 py-2">
+                        <Badge variant="secondary" className="max-w-full truncate font-normal">
+                          {row.category}
+                        </Badge>
+                      </td>
+                      <td className="sticky left-[640px] z-[35] border-r bg-background px-2 py-2 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.25)]">
                         {row.warehouseName}
                       </td>
-                      <td className="px-2 py-2">{row.category}</td>
                       <td className="px-2 py-2 text-right">{row.quantityOnHand}</td>
                       <td className="px-2 py-2">{row.unitOfMeasure}</td>
                       <td className="px-2 py-2 text-right">{row.minLevel}</td>
@@ -495,7 +661,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
               <div className="ml-auto flex flex-wrap items-center gap-2">
                 <ViewToggle value={catalogueViewMode} onChange={setCatalogueViewMode} />
               {isManagerOrAdmin ? (
-                <Button className="h-9" disabled>
+                <Button className="h-9" onClick={() => setCreateItemOpen(true)}>
                   Add Item
                 </Button>
               ) : null}
@@ -834,7 +1000,27 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                 <CardTitle className="text-base">Item Details</CardTitle>
               </CardHeader>
               <CardContent className="space-y-1 text-sm">
-                <p><span className="font-semibold">Category:</span> {selectedItemDetail.data?.category ?? selectedStock?.category}</p>
+                <p>
+                  <span className="font-semibold">Program (IFRC):</span>{" "}
+                  {selectedItemDetail.data?.category ?? selectedStock?.category}
+                </p>
+                <p className="flex flex-wrap items-center gap-1.5">
+                  <span className="font-semibold">Item category:</span>
+                  {selectedItemDetail.data?.itemCategory == null ? (
+                    <>
+                      <span className="text-muted-foreground">—</span>
+                      <TriangleAlert className="h-4 w-4 text-amber-600" aria-label="Uncategorized" />
+                    </>
+                  ) : selectedItemDetail.data.itemCategory === "other" ? (
+                    <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                      Other
+                    </span>
+                  ) : (
+                    <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                      {itemCategoryLabel(selectedItemDetail.data.itemCategory)}
+                    </span>
+                  )}
+                </p>
                 <p><span className="font-semibold">VED:</span> {selectedItemDetail.data?.vedClassification ?? selectedStock?.vedClassification ?? "desirable"}</p>
                 <p><span className="font-semibold">Unit:</span> {selectedItemDetail.data?.unitOfMeasure ?? selectedStock?.unitOfMeasure}</p>
                 <p><span className="font-semibold">Description:</span> {selectedItemDetail.data?.description ?? "—"}</p>
@@ -883,6 +1069,53 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
               </div>
             </CardContent>
           </Card>
+
+          {isManagerOrAdmin && selectedItemDetail.data?.id ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Item category (taxonomy)</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                <p className="text-muted-foreground">
+                  Distinct from the IFRC program category above. Used for Stock Overview filters.
+                </p>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-item-taxonomy">Category</Label>
+                  <Select
+                    value={editItemTaxonomy || undefined}
+                    onValueChange={(v) => setEditItemTaxonomy(v as ItemCategory)}
+                  >
+                    <SelectTrigger id="edit-item-taxonomy" className="max-w-md">
+                      <SelectValue placeholder="Not classified" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ITEM_CATEGORIES.map((c) => (
+                        <SelectItem key={c.value} value={c.value}>
+                          {c.label}
+                          {c.hint ? ` — ${c.hint}` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  size="sm"
+                  disabled={
+                    catalogueUpdate.isPending ||
+                    !editItemTaxonomy ||
+                    editItemTaxonomy === (selectedItemDetail.data.itemCategory ?? "")
+                  }
+                  onClick={() => {
+                    const id = selectedItemDetail.data!.id;
+                    if (!editItemTaxonomy || editItemTaxonomy === selectedItemDetail.data!.itemCategory) return;
+                    catalogueUpdate.mutate({ id, itemCategory: editItemTaxonomy });
+                  }}
+                >
+                  Save category
+                </Button>
+              </CardContent>
+            </Card>
+          ) : null}
 
           {selectedStock && isStaffOrAbove ? (
             <Card>
@@ -948,6 +1181,93 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
               }}
             >
               Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={createItemOpen} onOpenChange={setCreateItemOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>New catalogue item</DialogTitle>
+            <DialogDescription>Add a row to the item catalogue. Stock levels can be set per warehouse afterward.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="new-item-code">Item code</Label>
+              <Input id="new-item-code" value={newItemCode} onChange={(e) => setNewItemCode(e.target.value)} placeholder="e.g. LOC-001" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-item-name">Name</Label>
+              <Input id="new-item-name" value={newItemName} onChange={(e) => setNewItemName(e.target.value)} placeholder="Item name" />
+            </div>
+            <div className="space-y-2">
+              <Label>Program (IFRC)</Label>
+              <Select
+                value={newItemProgramCategory || undefined}
+                onValueChange={(v) => setNewItemProgramCategory(v as (typeof CATEGORIES)[number])}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select program category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORIES.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Item category (required)</Label>
+              <Select
+                value={newItemTaxonomy || undefined}
+                onValueChange={(v) => setNewItemTaxonomy(v as ItemCategory)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select taxonomy category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ITEM_CATEGORIES.map((c) => (
+                    <SelectItem key={c.value} value={c.value}>
+                      {c.label}
+                      {c.hint ? ` — ${c.hint}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-item-uom">Unit of measure</Label>
+              <Input id="new-item-uom" value={newItemUom} onChange={(e) => setNewItemUom(e.target.value)} placeholder="e.g. pcs, kg" />
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setCreateItemOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              disabled={
+                catalogueCreate.isPending ||
+                !newItemCode.trim() ||
+                !newItemName.trim() ||
+                !newItemProgramCategory ||
+                !newItemTaxonomy ||
+                !newItemUom.trim()
+              }
+              onClick={() => {
+                if (!newItemProgramCategory || !newItemTaxonomy) return;
+                catalogueCreate.mutate({
+                  itemCode: newItemCode.trim(),
+                  name: newItemName.trim(),
+                  category: newItemProgramCategory,
+                  itemCategory: newItemTaxonomy,
+                  unitOfMeasure: newItemUom.trim(),
+                });
+              }}
+            >
+              Create item
             </Button>
           </DialogFooter>
         </DialogContent>
