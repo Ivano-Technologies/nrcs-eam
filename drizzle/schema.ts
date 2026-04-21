@@ -92,6 +92,10 @@ export const complianceStatusEnum = pgEnum("compliance_status", [
 export const notificationTypeEnum = pgEnum("notification_type", [
   "maintenance_due",
   "low_stock",
+  "critical_stock",
+  "expiry_warning_90",
+  "expiry_warning_60",
+  "expiry_warning_30",
   "work_order_assigned",
   "work_order_completed",
   "asset_status_change",
@@ -458,6 +462,44 @@ export const inventoryMovements = pgTable("inventory_movements", {
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow(),
 });
 
+export const inventoryCounts = pgTable("inventory_counts", {
+  id: serial("id").primaryKey(),
+  countNumber: varchar("count_number", { length: 100 }).notNull().unique(),
+  countType: varchar("count_type", { length: 50 }).notNull(),
+  warehouseId: integer("warehouse_id")
+    .notNull()
+    .references(() => sites.id),
+  status: varchar("status", { length: 50 }).default("draft"),
+  scope: json("scope"),
+  plannedStartDate: date("planned_start_date"),
+  actualStartedAt: timestamp("actual_started_at", { mode: "date" }),
+  completedAt: timestamp("completed_at", { mode: "date" }),
+  conductedBy: integer("conducted_by").references(() => users.id),
+  approvedBy: integer("approved_by").references(() => users.id),
+  notes: text("notes"),
+  varianceCount: integer("variance_count"),
+  totalItemsCounted: integer("total_items_counted"),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow(),
+});
+
+export const inventoryCountLines = pgTable("inventory_count_lines", {
+  id: serial("id").primaryKey(),
+  countId: integer("count_id")
+    .notNull()
+    .references(() => inventoryCounts.id),
+  stockId: integer("stock_id")
+    .notNull()
+    .references(() => inventoryStock.id),
+  expectedQuantity: doublePrecision("expected_quantity"),
+  actualQuantity: doublePrecision("actual_quantity"),
+  varianceQuantity: doublePrecision("variance_quantity"),
+  variancePercent: doublePrecision("variance_percent"),
+  varianceReason: varchar("variance_reason", { length: 255 }),
+  varianceNotes: text("variance_notes"),
+  countedBy: integer("counted_by").references(() => users.id),
+  countedAt: timestamp("counted_at", { mode: "date" }),
+});
+
 /**
  * Vendors
  */
@@ -576,6 +618,10 @@ export type InventoryMovement = typeof inventoryMovements.$inferSelect;
 export type InsertInventoryMovement = typeof inventoryMovements.$inferInsert;
 export type InventoryDocument = typeof inventoryDocuments.$inferSelect;
 export type InsertInventoryDocument = typeof inventoryDocuments.$inferInsert;
+export type InventoryCount = typeof inventoryCounts.$inferSelect;
+export type InsertInventoryCount = typeof inventoryCounts.$inferInsert;
+export type InventoryCountLine = typeof inventoryCountLines.$inferSelect;
+export type InsertInventoryCountLine = typeof inventoryCountLines.$inferInsert;
 export type Vendor = typeof vendors.$inferSelect;
 export type InsertVendor = typeof vendors.$inferInsert;
 export type FinancialTransaction = typeof financialTransactions.$inferSelect;

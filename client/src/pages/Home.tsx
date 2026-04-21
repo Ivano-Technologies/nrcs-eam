@@ -11,6 +11,10 @@ export default function Home() {
   const { data: stats, isLoading } = trpc.dashboard.stats.useQuery();
   const { data: upcomingMaintenance } = trpc.maintenance.upcoming.useQuery({ days: 7 });
   const { data: lowStockItems } = trpc.inventory.lowStock.useQuery();
+  const { data: expiringSoon } = trpc.inventoryV2.expiry.upcoming.useQuery({ days: 30 });
+  const { data: criticalStock } = trpc.inventoryV2.stock.overview.useQuery({ status: "critical" });
+  const { data: lowStockV2 } = trpc.inventoryV2.stock.overview.useQuery({ status: "low" });
+  const { data: recentCounts } = trpc.inventoryV2.counts.list.useQuery();
 
   if (isLoading) {
     return (
@@ -54,12 +58,32 @@ export default function Home() {
     },
     {
       title: "Low Stock Items",
-      value: stats?.lowStockItems || 0,
+      value: lowStockV2?.length || stats?.lowStockItems || 0,
       icon: TrendingUp,
       description: "Need reordering",
       color: "text-purple-700",
       bgColor: "bg-purple-50",
       iconBg: "bg-gradient-to-br from-purple-500 to-purple-600",
+      roles: ["admin", "manager"],
+    },
+    {
+      title: "Critical Stock",
+      value: criticalStock?.length || 0,
+      icon: AlertTriangle,
+      description: "Below safety stock",
+      color: "text-red-700",
+      bgColor: "bg-red-50",
+      iconBg: "bg-gradient-to-br from-rose-500 to-rose-700",
+      roles: ["admin", "manager"],
+    },
+    {
+      title: "Expiring in 30 Days",
+      value: expiringSoon?.length || 0,
+      icon: Calendar,
+      description: "Batches nearing expiry",
+      color: "text-amber-700",
+      bgColor: "bg-amber-50",
+      iconBg: "bg-gradient-to-br from-amber-500 to-orange-600",
       roles: ["admin", "manager"],
     },
   ];
@@ -196,6 +220,35 @@ export default function Home() {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="border-t-4 border-t-indigo-500 shadow-md">
+        <CardHeader>
+          <CardTitle className="text-lg font-bold">Recent Cycle Counts</CardTitle>
+          <CardDescription>Recent sessions and variance alerts</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {(recentCounts ?? []).slice(0, 5).length ? (
+            <div className="space-y-2">
+              {(recentCounts ?? []).slice(0, 5).map((c) => (
+                <div key={c.id} className="flex items-center justify-between rounded border p-2 text-sm">
+                  <div>
+                    <p className="font-medium">{c.countNumber}</p>
+                    <p className="text-muted-foreground">{c.status}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold">{c.varianceCount ?? 0} variances</p>
+                  </div>
+                </div>
+              ))}
+              <Link href={appPath("/inventory/counts")}>
+                <Button variant="outline" size="sm">Open Stock Counts</Button>
+              </Link>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">No recent count sessions.</p>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Analytics Widgets */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

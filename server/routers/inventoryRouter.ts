@@ -2,6 +2,8 @@ import { TRPCError } from "@trpc/server";
 import { and, asc, desc, eq, gte, ilike, inArray, lte, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import {
+  inventoryCountLines,
+  inventoryCounts,
   inventoryBatches,
   inventoryCatalogue,
   inventoryDocuments,
@@ -11,6 +13,7 @@ import {
 } from "../../drizzle/schema";
 import { getDb, getAllUsers, createNotification } from "../db";
 import { protectedProcedure, requireRole, router } from "../_core/trpc";
+import { checkStockThreshold } from "../_core/inventoryAlerts";
 import {
   IFRC_CATALOGUE_SEED,
   INVENTORY_CATEGORIES,
@@ -133,6 +136,19 @@ async function notifyManagers(title: string, message: string, relatedEntityId?: 
       });
     }
   }
+}
+
+async function nextCountNumber() {
+  const db = await getDb();
+  if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+  const year = new Date().getFullYear();
+  const like = `COUNT-${year}-%`;
+  const rows = await db.select({ countNumber: inventoryCounts.countNumber }).from(inventoryCounts).where(ilike(inventoryCounts.countNumber, like));
+  const max = rows.reduce((acc, r) => {
+    const tail = Number(r.countNumber.split("-").at(-1));
+    return Number.isFinite(tail) ? Math.max(acc, tail) : acc;
+  }, 0);
+  return `COUNT-${year}-${String(max + 1).padStart(4, "0")}`;
 }
 
 async function importCatalogueRows(rows: InventoryCatalogueSeedItem[]) {
@@ -1003,6 +1019,7 @@ export const inventoryV2Router = router({
             .update(inventoryStock)
             .set({ quantityOnHand: Number(source.quantityOnHand) - Number(line.quantity), updatedAt: new Date() })
             .where(eq(inventoryStock.id, source.id));
+          await checkStockThreshold(source.id);
           await db
             .update(inventoryStock)
             .set({ quantityInTransit: Number(dest.quantityInTransit ?? 0) + Number(line.quantity), updatedAt: new Date() })
@@ -1051,6 +1068,7 @@ export const inventoryV2Router = router({
               updatedAt: new Date(),
             })
             .where(eq(inventoryStock.id, dest.id));
+          await checkStockThreshold(dest.id);
           await db.insert(inventoryMovements).values({
             movementType: "transfer_in",
             catalogueId: line.catalogueId,
@@ -1108,6 +1126,300 @@ export const inventoryV2Router = router({
           .where(and(eq(inventoryDocuments.id, input.documentId), eq(inventoryDocuments.documentType, "transfer_note")))
           .limit(1);
         return doc ?? null;
+      }),
+  }),
+
+  counts: router({
+    create: protectedProcedure
+      .input(
+        z.object({
+          warehouseId: z.number(),
+          countType: z.enum(["full", "cycle", "spot_check"]),
+          scope: z.any().optional(),
+          plannedStartDate: z.string().optional(),
+          notes: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["staff", "manager", "admin"]);
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        const countNumber = await nextCountNumber();
+        const [count] = await db
+          .insert(inventoryCounts)
+          .values({
+            countNumber,
+            countType: input.countType,
+            warehouseId: input.warehouseId,
+            status: "draft",
+            scope: input.scope ?? null,
+            plannedStartDate: input.plannedStartDate ?? null,
+            notes: input.notes ?? null,
+            conductedBy: ctx.user.id,
+          })
+          .returning();
+        return count;
+      }),
+
+    generateSheet: protectedProcedure
+      .input(z.object({ countId: z.number(), catalogueIds: z.array(z.number()).optional() }))
+      .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["staff", "manager", "admin"]);
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        const [count] = await db.select().from(inventoryCounts).where(eq(inventoryCounts.id, input.countId)).limit(1);
+        if (!count) throw new TRPCError({ code: "NOT_FOUND", message: "Count session not found." });
+        const filters = [eq(inventoryStock.warehouseId, count.warehouseId)];
+        if (input.catalogueIds?.length) filters.push(inArray(inventoryStock.catalogueId, input.catalogueIds));
+        const stocks = await db.select().from(inventoryStock).where(and(...filters));
+        for (const stock of stocks) {
+          await db.insert(inventoryCountLines).values({
+            countId: count.id,
+            stockId: stock.id,
+            expectedQuantity: stock.quantityOnHand,
+          });
+        }
+        await db.update(inventoryCounts).set({ status: "in_progress", actualStartedAt: new Date() }).where(eq(inventoryCounts.id, count.id));
+        return { lines: stocks.length };
+      }),
+
+    enterCount: protectedProcedure
+      .input(
+        z.object({
+          lineId: z.number(),
+          actualQuantity: z.number().min(0),
+          varianceReason: z.string().optional(),
+          varianceNotes: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["staff", "manager", "admin"]);
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        const [line] = await db.select().from(inventoryCountLines).where(eq(inventoryCountLines.id, input.lineId)).limit(1);
+        if (!line) throw new TRPCError({ code: "NOT_FOUND", message: "Count line not found." });
+        const expected = Number(line.expectedQuantity ?? 0);
+        const varianceQuantity = Number(input.actualQuantity) - expected;
+        const variancePercent = expected > 0 ? (varianceQuantity / expected) * 100 : 0;
+        const [updated] = await db
+          .update(inventoryCountLines)
+          .set({
+            actualQuantity: input.actualQuantity,
+            varianceQuantity,
+            variancePercent,
+            varianceReason: input.varianceReason ?? null,
+            varianceNotes: input.varianceNotes ?? null,
+            countedBy: ctx.user.id,
+            countedAt: new Date(),
+          })
+          .where(eq(inventoryCountLines.id, line.id))
+          .returning();
+        return updated;
+      }),
+
+    submitForReview: protectedProcedure
+      .input(z.object({ countId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["staff", "manager", "admin"]);
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        await db.update(inventoryCounts).set({ status: "pending_review", completedAt: new Date() }).where(eq(inventoryCounts.id, input.countId));
+        return { success: true as const };
+      }),
+
+    approve: protectedProcedure
+      .input(z.object({ countId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["manager", "admin"]);
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        const [count] = await db.select().from(inventoryCounts).where(eq(inventoryCounts.id, input.countId)).limit(1);
+        if (!count) throw new TRPCError({ code: "NOT_FOUND", message: "Count session not found." });
+        const lines = await db.select().from(inventoryCountLines).where(eq(inventoryCountLines.countId, count.id));
+        let varianceCount = 0;
+        for (const line of lines) {
+          if (line.actualQuantity == null) continue;
+          const [stock] = await db.select().from(inventoryStock).where(eq(inventoryStock.id, line.stockId)).limit(1);
+          if (!stock) continue;
+          const expected = Number(stock.quantityOnHand);
+          const actual = Number(line.actualQuantity);
+          if (actual !== expected) {
+            varianceCount += 1;
+            await db.insert(inventoryMovements).values({
+              movementType: "adjustment",
+              catalogueId: stock.catalogueId,
+              stockId: stock.id,
+              fromWarehouseId: stock.warehouseId,
+              quantityChange: actual - expected,
+              balanceAfter: actual,
+              reason: line.varianceReason ?? "count_variance",
+              notes: line.varianceNotes ?? null,
+              approvedBy: ctx.user.id,
+            });
+          }
+          await db
+            .update(inventoryStock)
+            .set({ quantityOnHand: actual, lastCountedAt: new Date(), updatedAt: new Date() })
+            .where(eq(inventoryStock.id, stock.id));
+          await checkStockThreshold(stock.id);
+        }
+        await db
+          .update(inventoryCounts)
+          .set({
+            status: "approved",
+            approvedBy: ctx.user.id,
+            varianceCount,
+            totalItemsCounted: lines.length,
+          })
+          .where(eq(inventoryCounts.id, count.id));
+        return { success: true as const, varianceCount };
+      }),
+
+    list: protectedProcedure
+      .input(z.object({ warehouseId: z.number().optional(), status: z.string().optional() }).optional())
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return [];
+        return db
+          .select()
+          .from(inventoryCounts)
+          .where(
+            and(
+              input?.warehouseId ? eq(inventoryCounts.warehouseId, input.warehouseId) : undefined,
+              input?.status ? eq(inventoryCounts.status, input.status) : undefined
+            )
+          )
+          .orderBy(desc(inventoryCounts.createdAt));
+      }),
+
+    get: protectedProcedure
+      .input(z.object({ countId: z.number() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return null;
+        const [count] = await db.select().from(inventoryCounts).where(eq(inventoryCounts.id, input.countId)).limit(1);
+        if (!count) return null;
+        const lines = await db
+          .select({
+            lineId: inventoryCountLines.id,
+            countId: inventoryCountLines.countId,
+            stockId: inventoryCountLines.stockId,
+            expectedQuantity: inventoryCountLines.expectedQuantity,
+            actualQuantity: inventoryCountLines.actualQuantity,
+            varianceQuantity: inventoryCountLines.varianceQuantity,
+            variancePercent: inventoryCountLines.variancePercent,
+            varianceReason: inventoryCountLines.varianceReason,
+            varianceNotes: inventoryCountLines.varianceNotes,
+            countedBy: inventoryCountLines.countedBy,
+            countedAt: inventoryCountLines.countedAt,
+            warehouseId: inventoryStock.warehouseId,
+            quantityOnHand: inventoryStock.quantityOnHand,
+            itemCode: inventoryCatalogue.itemCode,
+            itemName: inventoryCatalogue.name,
+          })
+          .from(inventoryCountLines)
+          .innerJoin(inventoryStock, eq(inventoryCountLines.stockId, inventoryStock.id))
+          .innerJoin(inventoryCatalogue, eq(inventoryStock.catalogueId, inventoryCatalogue.id))
+          .where(eq(inventoryCountLines.countId, count.id));
+        return { ...count, lines };
+      }),
+  }),
+
+  expiry: router({
+    upcoming: protectedProcedure
+      .input(z.object({ days: z.number().default(90) }).optional())
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return [];
+        const now = new Date();
+        const until = new Date(now.getTime() + (input?.days ?? 90) * 24 * 60 * 60 * 1000);
+        return db
+          .select({
+            batchId: inventoryBatches.id,
+            batchNumber: inventoryBatches.batchNumber,
+            expiryDate: inventoryBatches.expiryDate,
+            quantity: inventoryBatches.quantity,
+            status: inventoryBatches.status,
+            stockId: inventoryStock.id,
+            warehouseName: sites.name,
+            itemCode: inventoryCatalogue.itemCode,
+            itemName: inventoryCatalogue.name,
+          })
+          .from(inventoryBatches)
+          .innerJoin(inventoryStock, eq(inventoryBatches.stockId, inventoryStock.id))
+          .innerJoin(inventoryCatalogue, eq(inventoryStock.catalogueId, inventoryCatalogue.id))
+          .innerJoin(sites, eq(inventoryStock.warehouseId, sites.id))
+          .where(
+            and(
+              eq(inventoryBatches.status, "active"),
+              gte(inventoryBatches.expiryDate, now.toISOString().slice(0, 10)),
+              lte(inventoryBatches.expiryDate, until.toISOString().slice(0, 10))
+            )
+          )
+          .orderBy(asc(inventoryBatches.expiryDate));
+      }),
+
+    expired: protectedProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return [];
+      const today = new Date().toISOString().slice(0, 10);
+      return db
+        .select()
+        .from(inventoryBatches)
+        .where(or(eq(inventoryBatches.status, "expired"), lte(inventoryBatches.expiryDate, today)));
+    }),
+
+    markExpired: protectedProcedure
+      .input(z.object({ batchId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["manager", "admin"]);
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        const [batch] = await db.select().from(inventoryBatches).where(eq(inventoryBatches.id, input.batchId)).limit(1);
+        if (!batch) throw new TRPCError({ code: "NOT_FOUND", message: "Batch not found." });
+        const [stock] = await db.select().from(inventoryStock).where(eq(inventoryStock.id, batch.stockId)).limit(1);
+        if (!stock) throw new TRPCError({ code: "NOT_FOUND", message: "Stock not found." });
+        const next = Math.max(0, Number(stock.quantityOnHand) - Number(batch.quantity));
+        await db.update(inventoryBatches).set({ status: "expired" }).where(eq(inventoryBatches.id, batch.id));
+        await db.update(inventoryStock).set({ quantityOnHand: next, updatedAt: new Date() }).where(eq(inventoryStock.id, stock.id));
+        await db.insert(inventoryMovements).values({
+          movementType: "loss",
+          catalogueId: stock.catalogueId,
+          stockId: stock.id,
+          fromWarehouseId: stock.warehouseId,
+          batchId: batch.id,
+          quantityChange: -Math.abs(Number(batch.quantity)),
+          balanceAfter: next,
+          reason: "expired",
+          approvedBy: ctx.user.id,
+        });
+        await checkStockThreshold(stock.id);
+        return { success: true as const };
+      }),
+
+    disposeExpired: protectedProcedure
+      .input(z.object({ batchIds: z.array(z.number()).min(1) }))
+      .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["manager", "admin"]);
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        const docNumber = await nextDocumentNumber("WB");
+        const [doc] = await db
+          .insert(inventoryDocuments)
+          .values({
+            documentType: "waybill",
+            documentNumber: docNumber,
+            status: "completed",
+            notes: "Disposal waybill for expired inventory",
+            createdBy: ctx.user.id,
+            approvedBy: ctx.user.id,
+            completedAt: new Date(),
+          })
+          .returning();
+        for (const batchId of input.batchIds) {
+          await db.update(inventoryBatches).set({ status: "disposed" }).where(eq(inventoryBatches.id, batchId));
+        }
+        return { success: true as const, documentNumber: doc.documentNumber };
       }),
   }),
 });

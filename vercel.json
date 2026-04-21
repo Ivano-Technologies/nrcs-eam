@@ -10,8 +10,18 @@
     "api/health.ts": {
       "memory": 512,
       "maxDuration": 10
+    },
+    "api/cron/daily.ts": {
+      "memory": 512,
+      "maxDuration": 30
     }
   },
+  "crons": [
+    {
+      "path": "/api/cron/daily",
+      "schedule": "0 2 * * *"
+    }
+  ],
   "rewrites": [
     {
       "source": "/health",
