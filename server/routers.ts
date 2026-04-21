@@ -13,6 +13,7 @@ import {
   managerOrAdminProcedure,
   staffOrAboveProcedure,
 } from "./routers/roleProcedures";
+import { inventoryV2Router } from "./routers/inventoryRouter";
 import { requireRole } from "./_core/trpc";
 import {
   legacyStatusFromRegister,
@@ -1070,6 +1071,7 @@ export const appRouter = router({
         return { success: true as const };
       }),
   }),
+  inventoryV2: inventoryV2Router,
 
   // ============= VENDORS =============
   vendors: router({
