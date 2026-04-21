@@ -14,6 +14,10 @@ import FacilityDetail from "@/pages/FacilityDetail";
 import Financial from "@/pages/Financial";
 import Home from "@/pages/Home";
 import Inventory from "@/pages/Inventory";
+import InventoryIssues from "@/pages/inventory/Issues";
+import InventoryMovements from "@/pages/inventory/Movements";
+import InventoryReceipts from "@/pages/inventory/Receipts";
+import InventoryTransfers from "@/pages/inventory/Transfers";
 import Maintenance from "@/pages/Maintenance";
 import MobileWorkOrderDetail from "@/pages/MobileWorkOrderDetail";
 import MobileWorkOrders from "@/pages/MobileWorkOrders";
@@ -60,6 +64,10 @@ export default function ProtectedAppSection() {
           <Route path="/app/mobile-work-order/:id" component={MobileWorkOrderDetail} />
           <Route path="/app/work-order-templates" component={WorkOrderTemplates} />
           <Route path="/app/maintenance" component={Maintenance} />
+          <Route path="/app/inventory/receipts" component={InventoryReceipts} />
+          <Route path="/app/inventory/issues" component={InventoryIssues} />
+          <Route path="/app/inventory/transfers" component={InventoryTransfers} />
+          <Route path="/app/inventory/movements" component={InventoryMovements} />
           <Route path="/app/inventory" component={Inventory} />
           <Route path="/app/vendors" component={Vendors} />
           <Route path="/app/financial" component={Financial} />

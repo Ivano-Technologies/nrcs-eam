@@ -1,8 +1,15 @@
 import { TRPCError } from "@trpc/server";
-import { and, asc, eq, ilike, inArray, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, inArray, lte, or, sql } from "drizzle-orm";
 import { z } from "zod";
-import { inventoryCatalogue, inventoryStock, sites } from "../../drizzle/schema";
-import { getDb } from "../db";
+import {
+  inventoryBatches,
+  inventoryCatalogue,
+  inventoryDocuments,
+  inventoryMovements,
+  inventoryStock,
+  sites,
+} from "../../drizzle/schema";
+import { getDb, getAllUsers, createNotification } from "../db";
 import { protectedProcedure, requireRole, router } from "../_core/trpc";
 import {
   IFRC_CATALOGUE_SEED,
@@ -53,6 +60,79 @@ function deriveStockStatus(row: {
   if (row.safetyStockLevel != null && row.quantityOnHand < row.safetyStockLevel) return "critical";
   if (row.quantityOnHand < row.minLevel) return "low";
   return "normal";
+}
+
+const inventoryMovementTypeEnum = z.enum([
+  "receipt",
+  "issue",
+  "transfer_out",
+  "transfer_in",
+  "adjustment",
+  "count",
+  "loss",
+  "distribution",
+]);
+const inventoryDocumentTypeEnum = z.enum(["grn", "waybill", "transfer_note", "adjustment_note", "loss_report"]);
+const inventoryDocumentStatusEnum = z.enum([
+  "draft",
+  "pending_approval",
+  "approved",
+  "completed",
+  "cancelled",
+  "dispatched",
+]);
+
+const documentItemSchema = z.object({
+  catalogueId: z.number(),
+  quantity: z.number().positive(),
+  batchNumber: z.string().optional(),
+  expiryDate: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+async function getOrCreateStock(catalogueId: number, warehouseId: number) {
+  const db = await getDb();
+  if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+  const [existing] = await db
+    .select()
+    .from(inventoryStock)
+    .where(and(eq(inventoryStock.catalogueId, catalogueId), eq(inventoryStock.warehouseId, warehouseId)))
+    .limit(1);
+  if (existing) return existing;
+  const [created] = await db.insert(inventoryStock).values({ catalogueId, warehouseId }).returning();
+  return created;
+}
+
+async function nextDocumentNumber(prefix: "GRN" | "WB" | "TN") {
+  const db = await getDb();
+  if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+  const year = new Date().getFullYear();
+  const like = `${prefix}-${year}-%`;
+  const rows = await db
+    .select({ documentNumber: inventoryDocuments.documentNumber })
+    .from(inventoryDocuments)
+    .where(ilike(inventoryDocuments.documentNumber, like));
+  const max = rows.reduce((acc, r) => {
+    const tail = Number(r.documentNumber.split("-").at(-1));
+    return Number.isFinite(tail) ? Math.max(acc, tail) : acc;
+  }, 0);
+  return `${prefix}-${year}-${String(max + 1).padStart(4, "0")}`;
+}
+
+async function notifyManagers(title: string, message: string, relatedEntityId?: number) {
+  const users = await getAllUsers();
+  for (const user of users) {
+    if (user.role === "manager" || user.role === "admin") {
+      await createNotification({
+        userId: user.id,
+        type: "system_alert",
+        title,
+        message,
+        relatedEntityType: "inventory",
+        relatedEntityId: relatedEntityId ?? null,
+      });
+    }
+  }
 }
 
 async function importCatalogueRows(rows: InventoryCatalogueSeedItem[]) {
@@ -481,6 +561,553 @@ export const inventoryV2Router = router({
           })
           .returning();
         return created;
+      }),
+  }),
+
+  movements: router({
+    list: protectedProcedure
+      .input(
+        z
+          .object({
+            warehouseId: z.number().optional(),
+            itemId: z.number().optional(),
+            type: inventoryMovementTypeEnum.optional(),
+            dateFrom: z.coerce.date().optional(),
+            dateTo: z.coerce.date().optional(),
+          })
+          .optional()
+      )
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return [];
+        const filters = [];
+        if (input?.warehouseId) {
+          filters.push(
+            or(eq(inventoryMovements.fromWarehouseId, input.warehouseId), eq(inventoryMovements.toWarehouseId, input.warehouseId))!
+          );
+        }
+        if (input?.itemId) filters.push(eq(inventoryMovements.catalogueId, input.itemId));
+        if (input?.type) filters.push(eq(inventoryMovements.movementType, input.type));
+        if (input?.dateFrom) filters.push(gte(inventoryMovements.createdAt, input.dateFrom));
+        if (input?.dateTo) filters.push(lte(inventoryMovements.createdAt, input.dateTo));
+        return db
+          .select({
+            id: inventoryMovements.id,
+            createdAt: inventoryMovements.createdAt,
+            movementType: inventoryMovements.movementType,
+            quantityChange: inventoryMovements.quantityChange,
+            balanceAfter: inventoryMovements.balanceAfter,
+            documentNumber: inventoryMovements.documentNumber,
+            documentType: inventoryMovements.documentType,
+            fromWarehouseId: inventoryMovements.fromWarehouseId,
+            toWarehouseId: inventoryMovements.toWarehouseId,
+            itemCode: inventoryCatalogue.itemCode,
+            itemName: inventoryCatalogue.name,
+          })
+          .from(inventoryMovements)
+          .innerJoin(inventoryCatalogue, eq(inventoryMovements.catalogueId, inventoryCatalogue.id))
+          .where(filters.length ? and(...filters) : undefined)
+          .orderBy(desc(inventoryMovements.createdAt));
+      }),
+
+    byDocument: protectedProcedure
+      .input(z.object({ documentNumber: z.string().min(1) }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return [];
+        return db
+          .select()
+          .from(inventoryMovements)
+          .where(eq(inventoryMovements.documentNumber, input.documentNumber))
+          .orderBy(asc(inventoryMovements.id));
+      }),
+
+    byItem: protectedProcedure
+      .input(z.object({ catalogueId: z.number(), warehouseId: z.number().optional() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return [];
+        const filters = [eq(inventoryMovements.catalogueId, input.catalogueId)];
+        if (input.warehouseId) {
+          filters.push(
+            or(eq(inventoryMovements.fromWarehouseId, input.warehouseId), eq(inventoryMovements.toWarehouseId, input.warehouseId))!
+          );
+        }
+        return db
+          .select()
+          .from(inventoryMovements)
+          .where(and(...filters))
+          .orderBy(desc(inventoryMovements.createdAt));
+      }),
+  }),
+
+  receipts: router({
+    create: protectedProcedure
+      .input(
+        z.object({
+          warehouseId: z.number(),
+          receiptType: z.enum(["purchase", "donation", "transfer_in", "return"]),
+          supplierName: z.string().optional(),
+          referenceDocument: z.string().optional(),
+          transportDetails: z
+            .object({
+              carrier: z.string().optional(),
+              vehicleReg: z.string().optional(),
+              driverName: z.string().optional(),
+              driverPhone: z.string().optional(),
+            })
+            .optional(),
+          items: z.array(documentItemSchema).min(1),
+          notes: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["staff", "manager", "admin"]);
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        const documentNumber = await nextDocumentNumber("GRN");
+        const [doc] = await db
+          .insert(inventoryDocuments)
+          .values({
+            documentType: "grn",
+            documentNumber,
+            status: "pending_approval",
+            toWarehouseId: input.warehouseId,
+            items: input.items,
+            referenceDocument: input.referenceDocument ?? null,
+            transportDetails: input.transportDetails ?? null,
+            notes: input.notes ?? null,
+            createdBy: ctx.user.id,
+          })
+          .returning();
+        return doc;
+      }),
+
+    approve: protectedProcedure
+      .input(z.object({ documentId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["manager", "admin"]);
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        const [doc] = await db
+          .select()
+          .from(inventoryDocuments)
+          .where(and(eq(inventoryDocuments.id, input.documentId), eq(inventoryDocuments.documentType, "grn")))
+          .limit(1);
+        if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "GRN not found." });
+        const lines = Array.isArray(doc.items) ? (doc.items as z.infer<typeof documentItemSchema>[]) : [];
+        for (const line of lines) {
+          const stock = await getOrCreateStock(line.catalogueId, Number(doc.toWarehouseId));
+          const nextOnHand = Number(stock.quantityOnHand) + Number(line.quantity);
+          await db
+            .update(inventoryStock)
+            .set({ quantityOnHand: nextOnHand, lastMovementAt: new Date(), updatedAt: new Date() })
+            .where(eq(inventoryStock.id, stock.id));
+          let createdBatchId: number | null = null;
+          if (line.batchNumber || line.expiryDate) {
+            const [batch] = await db
+              .insert(inventoryBatches)
+              .values({
+                stockId: stock.id,
+                batchNumber: line.batchNumber ?? null,
+                expiryDate: line.expiryDate ?? null,
+                quantity: line.quantity,
+                supplierName: doc.referenceDocument ?? null,
+                notes: line.notes ?? null,
+              })
+              .returning();
+            createdBatchId = batch.id;
+          }
+          await db.insert(inventoryMovements).values({
+            movementType: "receipt",
+            catalogueId: line.catalogueId,
+            stockId: stock.id,
+            batchId: createdBatchId,
+            toWarehouseId: doc.toWarehouseId,
+            quantityChange: line.quantity,
+            balanceAfter: nextOnHand,
+            documentType: "grn",
+            documentId: doc.id,
+            documentNumber: doc.documentNumber,
+            performedBy: doc.createdBy,
+            approvedBy: ctx.user.id,
+            reason: "GRN approval",
+            notes: line.notes ?? null,
+          });
+        }
+        await db
+          .update(inventoryDocuments)
+          .set({ status: "completed", approvedBy: ctx.user.id, approvedAt: new Date(), completedAt: new Date() })
+          .where(eq(inventoryDocuments.id, doc.id));
+        await notifyManagers("GRN Approved", `GRN ${doc.documentNumber} completed.`, doc.id);
+        return { success: true as const };
+      }),
+
+    list: protectedProcedure
+      .input(z.object({ warehouseId: z.number().optional(), status: z.string().optional() }).optional())
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return [];
+        return db
+          .select()
+          .from(inventoryDocuments)
+          .where(
+            and(
+              eq(inventoryDocuments.documentType, "grn"),
+              input?.warehouseId ? eq(inventoryDocuments.toWarehouseId, input.warehouseId) : undefined,
+              input?.status ? eq(inventoryDocuments.status, input.status) : undefined
+            )
+          )
+          .orderBy(desc(inventoryDocuments.createdAt));
+      }),
+
+    get: protectedProcedure
+      .input(z.object({ documentId: z.number() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return null;
+        const [doc] = await db
+          .select()
+          .from(inventoryDocuments)
+          .where(and(eq(inventoryDocuments.id, input.documentId), eq(inventoryDocuments.documentType, "grn")))
+          .limit(1);
+        return doc ?? null;
+      }),
+  }),
+
+  issues: router({
+    create: protectedProcedure
+      .input(
+        z.object({
+          fromWarehouseId: z.number(),
+          destinationName: z.string().optional(),
+          issueType: z.enum(["distribution", "transfer_out", "return", "loss"]),
+          referenceDocument: z.string().optional(),
+          transportDetails: z.any().optional(),
+          items: z.array(documentItemSchema).min(1),
+          notes: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["staff", "manager", "admin"]);
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        const documentNumber = await nextDocumentNumber("WB");
+        const [doc] = await db
+          .insert(inventoryDocuments)
+          .values({
+            documentType: "waybill",
+            documentNumber,
+            status: "pending_approval",
+            fromWarehouseId: input.fromWarehouseId,
+            items: input.items,
+            referenceDocument: input.referenceDocument ?? input.destinationName ?? null,
+            transportDetails: input.transportDetails ?? null,
+            notes: input.notes ?? null,
+            createdBy: ctx.user.id,
+          })
+          .returning();
+        return doc;
+      }),
+
+    approve: protectedProcedure
+      .input(z.object({ documentId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["manager", "admin"]);
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        await db
+          .update(inventoryDocuments)
+          .set({ status: "approved", approvedBy: ctx.user.id, approvedAt: new Date() })
+          .where(and(eq(inventoryDocuments.id, input.documentId), eq(inventoryDocuments.documentType, "waybill")));
+        return { success: true as const };
+      }),
+
+    dispatch: protectedProcedure
+      .input(z.object({ documentId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["staff", "manager", "admin"]);
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        const [doc] = await db
+          .select()
+          .from(inventoryDocuments)
+          .where(and(eq(inventoryDocuments.id, input.documentId), eq(inventoryDocuments.documentType, "waybill")))
+          .limit(1);
+        if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "Waybill not found." });
+        const lines = Array.isArray(doc.items) ? (doc.items as z.infer<typeof documentItemSchema>[]) : [];
+        for (const line of lines) {
+          const stock = await getOrCreateStock(line.catalogueId, Number(doc.fromWarehouseId));
+          if (Number(stock.quantityOnHand) < Number(line.quantity)) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `Insufficient stock for catalogue item ${line.catalogueId}.`,
+            });
+          }
+          const nextOnHand = Number(stock.quantityOnHand) - Number(line.quantity);
+          await db
+            .update(inventoryStock)
+            .set({ quantityOnHand: nextOnHand, lastMovementAt: new Date(), updatedAt: new Date() })
+            .where(eq(inventoryStock.id, stock.id));
+          const batches = await db
+            .select()
+            .from(inventoryBatches)
+            .where(and(eq(inventoryBatches.stockId, stock.id), eq(inventoryBatches.status, "active")))
+            .orderBy(asc(inventoryBatches.expiryDate), asc(inventoryBatches.receivedDate));
+          let remaining = Number(line.quantity);
+          for (const batch of batches) {
+            if (remaining <= 0) break;
+            const consume = Math.min(remaining, Number(batch.quantity));
+            remaining -= consume;
+            await db
+              .update(inventoryBatches)
+              .set({ quantity: Number(batch.quantity) - consume, status: Number(batch.quantity) - consume <= 0 ? "disposed" : "active" })
+              .where(eq(inventoryBatches.id, batch.id));
+          }
+          await db.insert(inventoryMovements).values({
+            movementType: "issue",
+            catalogueId: line.catalogueId,
+            stockId: stock.id,
+            fromWarehouseId: doc.fromWarehouseId,
+            quantityChange: -Math.abs(line.quantity),
+            balanceAfter: nextOnHand,
+            documentType: "waybill",
+            documentId: doc.id,
+            documentNumber: doc.documentNumber,
+            performedBy: ctx.user.id,
+            approvedBy: doc.approvedBy,
+            reason: "Waybill dispatch",
+            notes: line.notes ?? null,
+          });
+        }
+        await db
+          .update(inventoryDocuments)
+          .set({ status: "dispatched", completedAt: new Date() })
+          .where(eq(inventoryDocuments.id, doc.id));
+        return { success: true as const };
+      }),
+
+    complete: protectedProcedure
+      .input(z.object({ documentId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["staff", "manager", "admin"]);
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        await db
+          .update(inventoryDocuments)
+          .set({ status: "completed", completedAt: new Date(), approvedBy: ctx.user.id })
+          .where(and(eq(inventoryDocuments.id, input.documentId), eq(inventoryDocuments.documentType, "waybill")));
+        return { success: true as const };
+      }),
+
+    list: protectedProcedure
+      .input(z.object({ warehouseId: z.number().optional(), status: z.string().optional() }).optional())
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return [];
+        return db
+          .select()
+          .from(inventoryDocuments)
+          .where(
+            and(
+              eq(inventoryDocuments.documentType, "waybill"),
+              input?.warehouseId ? eq(inventoryDocuments.fromWarehouseId, input.warehouseId) : undefined,
+              input?.status ? eq(inventoryDocuments.status, input.status) : undefined
+            )
+          )
+          .orderBy(desc(inventoryDocuments.createdAt));
+      }),
+
+    get: protectedProcedure
+      .input(z.object({ documentId: z.number() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return null;
+        const [doc] = await db
+          .select()
+          .from(inventoryDocuments)
+          .where(and(eq(inventoryDocuments.id, input.documentId), eq(inventoryDocuments.documentType, "waybill")))
+          .limit(1);
+        return doc ?? null;
+      }),
+  }),
+
+  transfers: router({
+    create: protectedProcedure
+      .input(
+        z.object({
+          fromWarehouseId: z.number(),
+          toWarehouseId: z.number(),
+          referenceDocument: z.string().optional(),
+          transportDetails: z.any().optional(),
+          items: z.array(documentItemSchema).min(1),
+          notes: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["manager", "admin"]);
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        const documentNumber = await nextDocumentNumber("TN");
+        const [doc] = await db
+          .insert(inventoryDocuments)
+          .values({
+            documentType: "transfer_note",
+            documentNumber,
+            status: "pending_approval",
+            fromWarehouseId: input.fromWarehouseId,
+            toWarehouseId: input.toWarehouseId,
+            items: input.items,
+            referenceDocument: input.referenceDocument ?? null,
+            transportDetails: input.transportDetails ?? null,
+            notes: input.notes ?? null,
+            createdBy: ctx.user.id,
+          })
+          .returning();
+        return doc;
+      }),
+
+    approve: protectedProcedure
+      .input(z.object({ documentId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["admin"]);
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        await db
+          .update(inventoryDocuments)
+          .set({ status: "approved", approvedBy: ctx.user.id, approvedAt: new Date() })
+          .where(and(eq(inventoryDocuments.id, input.documentId), eq(inventoryDocuments.documentType, "transfer_note")));
+        return { success: true as const };
+      }),
+
+    dispatch: protectedProcedure
+      .input(z.object({ documentId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["staff", "manager", "admin"]);
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        const [doc] = await db
+          .select()
+          .from(inventoryDocuments)
+          .where(and(eq(inventoryDocuments.id, input.documentId), eq(inventoryDocuments.documentType, "transfer_note")))
+          .limit(1);
+        if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "Transfer note not found." });
+        const lines = Array.isArray(doc.items) ? (doc.items as z.infer<typeof documentItemSchema>[]) : [];
+        for (const line of lines) {
+          const source = await getOrCreateStock(line.catalogueId, Number(doc.fromWarehouseId));
+          const dest = await getOrCreateStock(line.catalogueId, Number(doc.toWarehouseId));
+          if (Number(source.quantityOnHand) < Number(line.quantity)) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: `Insufficient stock for item ${line.catalogueId}.` });
+          }
+          await db
+            .update(inventoryStock)
+            .set({ quantityOnHand: Number(source.quantityOnHand) - Number(line.quantity), updatedAt: new Date() })
+            .where(eq(inventoryStock.id, source.id));
+          await db
+            .update(inventoryStock)
+            .set({ quantityInTransit: Number(dest.quantityInTransit ?? 0) + Number(line.quantity), updatedAt: new Date() })
+            .where(eq(inventoryStock.id, dest.id));
+          await db.insert(inventoryMovements).values({
+            movementType: "transfer_out",
+            catalogueId: line.catalogueId,
+            stockId: source.id,
+            fromWarehouseId: doc.fromWarehouseId,
+            toWarehouseId: doc.toWarehouseId,
+            quantityChange: -Math.abs(line.quantity),
+            balanceAfter: Number(source.quantityOnHand) - Number(line.quantity),
+            documentType: "transfer_note",
+            documentId: doc.id,
+            documentNumber: doc.documentNumber,
+            performedBy: ctx.user.id,
+            approvedBy: doc.approvedBy,
+            reason: "Transfer dispatch",
+          });
+        }
+        await db.update(inventoryDocuments).set({ status: "dispatched" }).where(eq(inventoryDocuments.id, doc.id));
+        return { success: true as const };
+      }),
+
+    receive: protectedProcedure
+      .input(z.object({ documentId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["staff", "manager", "admin"]);
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        const [doc] = await db
+          .select()
+          .from(inventoryDocuments)
+          .where(and(eq(inventoryDocuments.id, input.documentId), eq(inventoryDocuments.documentType, "transfer_note")))
+          .limit(1);
+        if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "Transfer note not found." });
+        const lines = Array.isArray(doc.items) ? (doc.items as z.infer<typeof documentItemSchema>[]) : [];
+        for (const line of lines) {
+          const dest = await getOrCreateStock(line.catalogueId, Number(doc.toWarehouseId));
+          await db
+            .update(inventoryStock)
+            .set({
+              quantityInTransit: Math.max(0, Number(dest.quantityInTransit ?? 0) - Number(line.quantity)),
+              quantityOnHand: Number(dest.quantityOnHand) + Number(line.quantity),
+              lastMovementAt: new Date(),
+              updatedAt: new Date(),
+            })
+            .where(eq(inventoryStock.id, dest.id));
+          await db.insert(inventoryMovements).values({
+            movementType: "transfer_in",
+            catalogueId: line.catalogueId,
+            stockId: dest.id,
+            fromWarehouseId: doc.fromWarehouseId,
+            toWarehouseId: doc.toWarehouseId,
+            quantityChange: Math.abs(line.quantity),
+            balanceAfter: Number(dest.quantityOnHand) + Number(line.quantity),
+            documentType: "transfer_note",
+            documentId: doc.id,
+            documentNumber: doc.documentNumber,
+            performedBy: ctx.user.id,
+            approvedBy: doc.approvedBy,
+            reason: "Transfer receive",
+          });
+        }
+        await db
+          .update(inventoryDocuments)
+          .set({ status: "completed", completedAt: new Date() })
+          .where(eq(inventoryDocuments.id, doc.id));
+        return { success: true as const };
+      }),
+
+    list: protectedProcedure
+      .input(z.object({ warehouseId: z.number().optional(), status: z.string().optional() }).optional())
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return [];
+        return db
+          .select()
+          .from(inventoryDocuments)
+          .where(
+            and(
+              eq(inventoryDocuments.documentType, "transfer_note"),
+              input?.warehouseId
+                ? or(
+                    eq(inventoryDocuments.fromWarehouseId, input.warehouseId),
+                    eq(inventoryDocuments.toWarehouseId, input.warehouseId)
+                  )
+                : undefined,
+              input?.status ? eq(inventoryDocuments.status, input.status) : undefined
+            )
+          )
+          .orderBy(desc(inventoryDocuments.createdAt));
+      }),
+
+    get: protectedProcedure
+      .input(z.object({ documentId: z.number() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return null;
+        const [doc] = await db
+          .select()
+          .from(inventoryDocuments)
+          .where(and(eq(inventoryDocuments.id, input.documentId), eq(inventoryDocuments.documentType, "transfer_note")))
+          .limit(1);
+        return doc ?? null;
       }),
   }),
 });

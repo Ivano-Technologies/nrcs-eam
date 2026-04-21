@@ -35,6 +35,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ViewToggle } from "@/components/ViewToggle";
 import { CardQrCode } from "@/components/CardQrCode";
+import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
 
 const CATEGORIES = [
   "Food",
@@ -185,6 +186,7 @@ export default function Inventory() {
           Humanitarian stock management for relief materials across warehouses.
         </p>
       </div>
+      <InventorySecondaryNav />
 
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList>
