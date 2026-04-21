@@ -20,7 +20,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Table,
@@ -289,15 +288,15 @@ export default function Facilities() {
       </div>
 
       <div className="rounded-md border p-3">
-        <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-7">
+        <div className="flex flex-wrap items-center gap-2">
           <Input
             placeholder="Search name, code, address"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="lg:col-span-2"
+            className="h-9 min-w-[240px] md:min-w-[280px]"
           />
           <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger><SelectValue placeholder="Type" /></SelectTrigger>
+            <SelectTrigger className="h-9 w-[170px]"><SelectValue placeholder="Type" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All types</SelectItem>
               {FACILITY_TYPE_VALUES.map((t) => (
@@ -306,14 +305,14 @@ export default function Facilities() {
             </SelectContent>
           </Select>
           <Select value={stateFilter} onValueChange={setStateFilter}>
-            <SelectTrigger><SelectValue placeholder="State" /></SelectTrigger>
+            <SelectTrigger className="h-9 w-[170px]"><SelectValue placeholder="State" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All states</SelectItem>
               {stateOptions.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
+            <SelectTrigger className="h-9 w-[170px]"><SelectValue placeholder="Status" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All status</SelectItem>
               <SelectItem value="active">Active</SelectItem>
@@ -321,6 +320,7 @@ export default function Facilities() {
             </SelectContent>
           </Select>
           <Button
+            className="h-9"
             variant="outline"
             onClick={async () => {
               const res = await exportQuery.refetch();
@@ -329,8 +329,9 @@ export default function Facilities() {
           >
             <Download className="mr-2 h-4 w-4" />Export to Excel
           </Button>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <Button
+              className="h-9"
               variant="outline"
               onClick={async () => {
                 const res = await templateQuery.refetch();
@@ -340,7 +341,7 @@ export default function Facilities() {
               Template
             </Button>
             <label className="inline-flex">
-              <Button asChild variant="outline"><span><Upload className="mr-2 h-4 w-4" />Import</span></Button>
+              <Button className="h-9" asChild variant="outline"><span><Upload className="mr-2 h-4 w-4" />Import</span></Button>
               <input
                 type="file"
                 className="hidden"
@@ -348,15 +349,17 @@ export default function Facilities() {
                 onChange={(e) => handleImport(e.target.files?.[0])}
               />
             </label>
+            {canEditFacilities && (
+              <Button className="h-9" onClick={() => setIsCreateOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />Add Facility
+              </Button>
+            )}
           </div>
         </div>
       </div>
 
       {canEditFacilities && (
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogTrigger asChild>
-            <Button><Plus className="mr-2 h-4 w-4" />Add Facility</Button>
-          </DialogTrigger>
           <DialogContent className="max-w-3xl">
             <DialogHeader>
               <DialogTitle>Add Facility</DialogTitle>
@@ -409,17 +412,17 @@ export default function Facilities() {
           ))}
         </div>
       ) : (
-        <div className="rounded-md border" data-testid="sites-list">
+        <div className="overflow-x-auto rounded-md border px-2 md:px-3" data-testid="sites-list">
           <Table className="min-w-[1600px] text-xs">
-            <TableHeader className="sticky top-0 z-20 bg-background">
+            <TableHeader className="sticky top-0 z-40 bg-background">
               <TableRow>
-                <StickyHead left={0} onClick={() => sort("code")}>S/No</StickyHead>
-                <StickyHead left={56} onClick={() => sort("code")}>Code</StickyHead>
-                <StickyHead left={220} onClick={() => sort("name")}>Name</StickyHead>
+                <StickyHead left={0}>S/No</StickyHead>
+                <StickyHead left={56} onClick={() => sort("name")}>Name</StickyHead>
+                <StickyHead left={316} onClick={() => sort("state")} className="shadow-[4px_0_8px_-4px_rgba(0,0,0,0.25)]">State/Region</StickyHead>
+                <TableHead>Address</TableHead>
+                <TableHead onClick={() => sort("code")} className="cursor-pointer">Code</TableHead>
                 <TableHead onClick={() => sort("facilityType")} className="cursor-pointer">Type</TableHead>
                 <TableHead onClick={() => sort("parentFacilityName")} className="cursor-pointer">Parent Facility</TableHead>
-                <TableHead onClick={() => sort("state")} className="cursor-pointer">State/Region</TableHead>
-                <TableHead>Address</TableHead>
                 <TableHead>Contact</TableHead>
                 <TableHead>Phone</TableHead>
                 <TableHead>Postal Code</TableHead>
@@ -435,22 +438,22 @@ export default function Facilities() {
                   <TableRow
                     key={f.id}
                     data-testid={`facility-row-${f.id}`}
-                    className={cn("h-9 cursor-pointer", rowCls)}
+                    className={cn("relative z-10 h-9 cursor-pointer", rowCls)}
                     onClick={() => setLocation(appPath(`/facilities/${f.id}`))}
                   >
                     <StickyCell left={0}>{rowNo}</StickyCell>
-                    <StickyCell left={56}>{f.code ?? "—"}</StickyCell>
-                    <StickyCell left={220} className="font-medium" data-testid={`facility-name-${f.id}`}>{f.name}</StickyCell>
+                    <StickyCell left={56} className="w-[260px] min-w-[260px] max-w-[260px] truncate font-medium" data-testid={`facility-name-${f.id}`}>{f.name}</StickyCell>
+                    <StickyCell left={316} className="w-[160px] min-w-[160px] max-w-[160px] truncate shadow-[4px_0_8px_-4px_rgba(0,0,0,0.25)]">{f.state ?? "—"}</StickyCell>
+                    <TableCell title={f.address ?? ""} className="max-w-[260px] truncate">
+                      {f.address ?? "—"}
+                    </TableCell>
+                    <TableCell>{f.code ?? "—"}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className={cn("border", TYPE_BADGE[f.facilityType])}>
                         {FACILITY_TYPE_LABELS[f.facilityType]}
                       </Badge>
                     </TableCell>
                     <TableCell>{f.parentFacilityName ?? "—"}</TableCell>
-                    <TableCell>{f.state ?? "—"}</TableCell>
-                    <TableCell title={f.address ?? ""} className="max-w-[240px] truncate">
-                      {f.address ?? "—"}
-                    </TableCell>
                     <TableCell>{f.contactPerson ?? "—"}</TableCell>
                     <TableCell>{f.contactPhone ?? "—"}</TableCell>
                     <TableCell>{f.postalCode ?? "—"}</TableCell>
@@ -621,7 +624,7 @@ function StickyHead(props: ComponentProps<typeof TableHead> & { left: number }) 
   const { left, className, ...rest } = props;
   return (
     <TableHead
-      className={cn("sticky z-30 bg-background cursor-pointer", className)}
+      className={cn("sticky z-[45] border-r bg-background cursor-pointer", className)}
       style={{ left }}
       {...rest}
     />
@@ -632,7 +635,7 @@ function StickyCell(props: ComponentProps<typeof TableCell> & { left: number }) 
   const { left, className, ...rest } = props;
   return (
     <TableCell
-      className={cn("sticky z-10 bg-background", className)}
+      className={cn("sticky z-[35] border-r bg-background", className)}
       style={{ left }}
       {...rest}
     />

@@ -52,6 +52,18 @@ export const SIDEBAR_GROUPS: AppNavGroup[] = [
     ],
   },
   {
+    id: "facilities",
+    label: "Facilities",
+    icon: MapPin,
+    items: [{ label: "Facilities", path: appPath("/facilities"), icon: MapPin }],
+  },
+  {
+    id: "inventory",
+    label: "Inventory",
+    icon: Warehouse,
+    items: [{ label: "Inventory", path: appPath("/inventory"), icon: Warehouse }],
+  },
+  {
     id: "maintenance",
     label: "Maintenance",
     icon: Wrench,
@@ -61,12 +73,6 @@ export const SIDEBAR_GROUPS: AppNavGroup[] = [
       { label: "Work Order Templates", path: appPath("/work-order-templates"), icon: FileText },
       { label: "Warranty Alerts", path: appPath("/warranty-alerts"), icon: FileText },
     ],
-  },
-  {
-    id: "inventory",
-    label: "Inventory",
-    icon: Warehouse,
-    items: [{ label: "Inventory", path: appPath("/inventory"), icon: Warehouse }],
   },
   {
     id: "finance",
@@ -95,12 +101,6 @@ export const SIDEBAR_GROUPS: AppNavGroup[] = [
       { label: "Reports", path: appPath("/reports"), icon: FileBarChart },
       { label: "Report Scheduling", path: appPath("/report-scheduling"), icon: FileBarChart },
     ],
-  },
-  {
-    id: "facilities",
-    label: "Facilities",
-    icon: MapPin,
-    items: [{ label: "Facilities", path: appPath("/facilities"), icon: MapPin }],
   },
 ];
 
@@ -131,13 +131,14 @@ export const SIDEBAR_BOTTOM: AppNavItem[] = [
 
 const GROUP_PREFIXES: { groupId: string; pathPrefix: string }[] = [
   { groupId: "assets", pathPrefix: appPath("/assets") },
+  { groupId: "facilities", pathPrefix: appPath("/facilities") },
+  { groupId: "inventory", pathPrefix: appPath("/inventory") },
   { groupId: "maintenance", pathPrefix: appPath("/maintenance") },
   { groupId: "maintenance", pathPrefix: appPath("/work-orders") },
   { groupId: "maintenance", pathPrefix: appPath("/work-order-templates") },
   { groupId: "maintenance", pathPrefix: appPath("/warranty-alerts") },
   { groupId: "maintenance", pathPrefix: appPath("/mobile-work-orders") },
   { groupId: "maintenance", pathPrefix: appPath("/mobile-work-order") },
-  { groupId: "inventory", pathPrefix: appPath("/inventory") },
   { groupId: "finance", pathPrefix: appPath("/cost-analytics") },
   { groupId: "finance", pathPrefix: appPath("/financial") },
   { groupId: "finance", pathPrefix: appPath("/quickbooks") },
@@ -145,7 +146,6 @@ const GROUP_PREFIXES: { groupId: string; pathPrefix: string }[] = [
   { groupId: "compliance", pathPrefix: appPath("/audit-trail") },
   { groupId: "reports", pathPrefix: appPath("/reports") },
   { groupId: "reports", pathPrefix: appPath("/report-scheduling") },
-  { groupId: "facilities", pathPrefix: appPath("/facilities") },
   { groupId: "administration", pathPrefix: appPath("/vendors") },
   { groupId: "administration", pathPrefix: appPath("/users") },
   { groupId: "administration", pathPrefix: appPath("/pending-users") },
