@@ -10,42 +10,31 @@ interface BeforeInstallPromptEvent extends Event {
 export function InstallPWAButton() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
-  const [isInstallable, setIsInstallable] = useState(false);
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    if (import.meta.env.DEV || window.location.hostname === "nrcseam.techivano.com") {
-      console.log("[PWA Debug]", {
-        standalone: window.matchMedia("(display-mode: standalone)").matches,
-        serviceWorkerSupported: "serviceWorker" in navigator,
-        serviceWorkerController: navigator.serviceWorker?.controller,
-        isSecureContext: window.isSecureContext,
-      });
-    }
-
-    if (window.matchMedia("(display-mode: standalone)").matches) {
+    if (
+      window.matchMedia("(display-mode: standalone)").matches ||
+      (window.navigator as any).standalone === true
+    ) {
       setIsInstalled(true);
-      return;
-    }
-
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-    if (isIOS) {
-      setIsInstallable(true);
       return;
     }
 
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
-      setIsInstallable(true);
+      setIsReady(true);
     };
     const installedHandler = () => {
       setIsInstalled(true);
-      setIsInstallable(false);
+      setIsReady(false);
       setDeferredPrompt(null);
     };
 
     window.addEventListener("beforeinstallprompt", handler);
     window.addEventListener("appinstalled", installedHandler);
+    setIsReady(true);
 
     return () => {
       window.removeEventListener("beforeinstallprompt", handler);
@@ -54,47 +43,61 @@ export function InstallPWAButton() {
   }, []);
 
   const handleInstall = async () => {
-    if (!deferredPrompt) {
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-      if (isIOS) {
-        alert(
-          "To install NRCS EAM on iOS:\n\n" +
-            "1. Tap the Share button (square with arrow up)\n" +
-            "2. Scroll down and tap 'Add to Home Screen'\n" +
-            "3. Tap 'Add' in the top right"
-        );
+    if (deferredPrompt) {
+      try {
+        await deferredPrompt.prompt();
+        const choice = await deferredPrompt.userChoice;
+        if (choice.outcome === "accepted") {
+          setIsInstalled(true);
+        }
+        setDeferredPrompt(null);
+      } catch (err) {
+        console.error("Install prompt failed:", err);
       }
       return;
     }
 
-    await deferredPrompt.prompt();
-    const choiceResult = await deferredPrompt.userChoice;
-    if (choiceResult.outcome === "accepted") {
-      setIsInstalled(true);
-      setIsInstallable(false);
+    const ua = navigator.userAgent;
+    const isIOS = /iPad|iPhone|iPod/.test(ua) && !(window as any).MSStream;
+    const isAndroid = /Android/.test(ua);
+
+    let message = "";
+    if (isIOS) {
+      message =
+        "To install NRCS EAM on iOS:\n\n" +
+        "1. Tap the Share button (square with arrow up)\n" +
+        "2. Scroll down and tap 'Add to Home Screen'\n" +
+        "3. Tap 'Add' in the top right";
+    } else if (isAndroid) {
+      message =
+        "To install NRCS EAM on Android:\n\n" +
+        "1. Tap the three-dot menu in Chrome\n" +
+        "2. Tap 'Install app' or 'Add to Home screen'\n" +
+        "3. Confirm installation";
+    } else {
+      message =
+        "To install NRCS EAM on your desktop:\n\n" +
+        "Chrome / Edge:\n" +
+        "- Look for the install icon in the address bar (right side)\n" +
+        "- Or click the three-dot menu -> 'Install NRCS EAM'\n\n" +
+        "Safari (Mac):\n" +
+        "- Click File -> Add to Dock\n\n" +
+        "If the option isn't showing, interact with the app for a few minutes first - browsers require engagement before offering install.";
     }
-    setDeferredPrompt(null);
+    alert(message);
   };
 
   if (isInstalled) {
     return (
-      <div className="flex items-center gap-2 text-sm text-green-600">
+      <div className="flex items-center gap-2 text-sm text-green-600" data-testid="install-pwa-installed">
         <Check className="h-4 w-4" />
-        App installed
-      </div>
-    );
-  }
-
-  if (!isInstallable) {
-    return (
-      <div className="text-sm text-muted-foreground">
-        This app cannot be installed on your current browser. Try Chrome, Edge, or Safari on mobile.
+        App installed - open from your home screen or desktop
       </div>
     );
   }
 
   return (
-    <Button onClick={handleInstall} variant="default" data-testid="install-pwa-btn">
+    <Button onClick={handleInstall} variant="default" data-testid="install-pwa-btn" disabled={!isReady}>
       <Download className="mr-2 h-4 w-4" />
       Install NRCS EAM App
     </Button>
