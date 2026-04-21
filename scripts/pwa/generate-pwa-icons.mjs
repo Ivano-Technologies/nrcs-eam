@@ -8,68 +8,51 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, "..", "..");
 const PUBLIC_DIR = path.join(ROOT_DIR, "client", "public");
+const ICONS_DIR = path.join(PUBLIC_DIR, "icons");
+const SOURCE_PRIMARY = path.join(PUBLIC_DIR, "nrcs-logo-source.png");
+const SOURCE_FALLBACK = path.join(PUBLIC_DIR, "nrcs-logo.png");
 
-function buildCircleSvg(size) {
-  return Buffer.from(
-    `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2}" fill="#FFFFFF"/>
-    </svg>`,
+const ANY_SIZES = [72, 96, 128, 144, 152, 192, 384, 512];
+const MASKABLE_SIZES = [192, 512];
+
+async function readSourceBuffer() {
+  for (const p of [SOURCE_PRIMARY, SOURCE_FALLBACK]) {
+    try {
+      return await fs.readFile(p);
+    } catch {
+      /* try next */
+    }
+  }
+  throw new Error(
+    `Missing logo source. Add ${path.relative(ROOT_DIR, SOURCE_PRIMARY)} (or nrcs-logo.png as fallback).`
   );
 }
 
-function buildCrossSvg(size, inset = 4) {
-  const stroke = Math.round(size * 0.26);
-  const arm = size - inset * 2;
-  const left = Math.round((size - stroke) / 2);
-  const top = inset;
-  const horizontalTop = Math.round((size - stroke) / 2);
-  return Buffer.from(
-    `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
-      <rect x="${left}" y="${top}" width="${stroke}" height="${arm}" fill="#DC2626"/>
-      <rect x="${inset}" y="${horizontalTop}" width="${arm}" height="${stroke}" fill="#DC2626"/>
-    </svg>`,
-  );
+/** Purpose "any": logo centered on white square. */
+async function renderAnyPng(source, size) {
+  return sharp(source)
+    .resize(size, size, {
+      fit: "contain",
+      position: "center",
+      background: { r: 255, g: 255, b: 255, alpha: 1 },
+    })
+    .png()
+    .toBuffer();
 }
 
-async function writePng(buffer, filename, size) {
-  const target = path.join(PUBLIC_DIR, filename);
-  await sharp(buffer).resize(size, size, { fit: "fill" }).png().toFile(target);
-  return target;
-}
-
-async function generateCircularFavicon() {
-  const size = 256;
-  const circle = buildCircleSvg(size);
-  const cross = buildCrossSvg(size, 10);
-
-  const faviconMaster = await sharp({
-    create: {
-      width: size,
-      height: size,
-      channels: 4,
-      background: { r: 0, g: 0, b: 0, alpha: 0 },
-    },
-  })
-    .composite([
-      { input: circle, top: 0, left: 0 },
-      { input: cross, top: 0, left: 0 },
-    ])
+/** Purpose "maskable": 80% safe zone (10% inset), solid white background. */
+async function renderMaskablePng(source, size) {
+  const inner = Math.floor(size * 0.8);
+  const innerBuf = await sharp(source)
+    .resize(inner, inner, {
+      fit: "contain",
+      position: "center",
+      background: { r: 255, g: 255, b: 255, alpha: 1 },
+    })
     .png()
     .toBuffer();
 
-  const png16 = await writePng(faviconMaster, "favicon-16x16.png", 16);
-  const png32 = await writePng(faviconMaster, "favicon-32x32.png", 32);
-  const png48 = await writePng(faviconMaster, "favicon-48x48.png", 48);
-
-  const icoBuffer = await pngToIco([png16, png32, png48]);
-  await fs.writeFile(path.join(PUBLIC_DIR, "favicon.ico"), icoBuffer);
-}
-
-async function generateAppleTouchIcon() {
-  const size = 180;
-  const cross = buildCrossSvg(size, 18);
-
-  await sharp({
+  return sharp({
     create: {
       width: size,
       height: size,
@@ -77,15 +60,47 @@ async function generateAppleTouchIcon() {
       background: { r: 255, g: 255, b: 255, alpha: 1 },
     },
   })
-    .composite([{ input: cross, top: 0, left: 0 }])
+    .composite([{ input: innerBuf, gravity: "center" }])
     .png()
-    .toFile(path.join(PUBLIC_DIR, "apple-touch-icon.png"));
+    .toBuffer();
+}
+
+async function writePng(buffer, relativePath) {
+  const target = path.join(PUBLIC_DIR, relativePath);
+  await fs.mkdir(path.dirname(target), { recursive: true });
+  await fs.writeFile(target, buffer);
+  return target;
 }
 
 async function main() {
-  await generateCircularFavicon();
-  await generateAppleTouchIcon();
-  console.log("Generated favicon and apple-touch-icon assets.");
+  const source = await readSourceBuffer();
+
+  await fs.mkdir(ICONS_DIR, { recursive: true });
+
+  for (const size of ANY_SIZES) {
+    const buf = await renderAnyPng(source, size);
+    await writePng(buf, path.join("icons", `icon-${size}x${size}.png`));
+  }
+
+  for (const size of MASKABLE_SIZES) {
+    const buf = await renderMaskablePng(source, size);
+    await writePng(buf, path.join("icons", `icon-${size}-maskable.png`));
+  }
+
+  const fav16 = await renderAnyPng(source, 16);
+  const fav32 = await renderAnyPng(source, 32);
+  const fav48 = await renderAnyPng(source, 48);
+  await writePng(fav16, "favicon-16x16.png");
+  await writePng(fav32, "favicon-32x32.png");
+  await writePng(fav48, "favicon-48x48.png");
+
+  const icoBuffer = await pngToIco([fav16, fav32, fav48]);
+  await fs.writeFile(path.join(PUBLIC_DIR, "favicon.ico"), icoBuffer);
+
+  const apple180 = await renderAnyPng(source, 180);
+  await writePng(apple180, "apple-touch-icon.png");
+
+  console.log("PWA icons generated from NRCS logo source.");
 }
 
 main().catch((error) => {
