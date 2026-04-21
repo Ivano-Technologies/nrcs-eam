@@ -10,6 +10,19 @@ import { InventorySecondaryNav } from "@/components/inventory/InventorySecondary
 import { toast } from "sonner";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 
+function downloadBase64File(data: string, filename: string, mimeType: string) {
+  const bytes = atob(data);
+  const arr = new Uint8Array(bytes.length);
+  for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+  const blob = new Blob([arr], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function Issues() {
   const { isManagerOrAdmin, isStaffOrAbove } = usePermissions();
   const [status, setStatus] = useState("all");
@@ -41,6 +54,9 @@ export default function Issues() {
       toast.success("Waybill dispatched.");
       void waybills.refetch();
     },
+    onError: (e) => toast.error(e.message),
+  });
+  const downloadPdfMutation = trpc.inventoryV2.issues.downloadPdf.useMutation({
     onError: (e) => toast.error(e.message),
   });
 
@@ -90,6 +106,22 @@ export default function Issues() {
                 <td className="px-2 py-2">{row.fromWarehouseId ?? "—"}</td>
                 <td className="px-2 py-2">{row.createdAt ? new Date(row.createdAt).toLocaleString() : "—"}</td>
                 <td className="px-2 py-2 space-x-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={downloadPdfMutation.isPending}
+                    onClick={async () => {
+                      try {
+                        const file = await downloadPdfMutation.mutateAsync({ documentId: row.id });
+                        downloadBase64File(file.data, file.filename || `${row.documentNumber}.pdf`, file.mimeType);
+                        toast.success("PDF downloaded.");
+                      } catch {
+                        // handled by mutation
+                      }
+                    }}
+                  >
+                    {downloadPdfMutation.isPending ? "Generating..." : "Download PDF"}
+                  </Button>
                   {isManagerOrAdmin && row.status === "pending_approval" ? (
                     <Button size="sm" onClick={() => approveMutation.mutate({ documentId: row.id })}>Approve</Button>
                   ) : null}

@@ -10,6 +10,19 @@ import { InventorySecondaryNav } from "@/components/inventory/InventorySecondary
 import { toast } from "sonner";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 
+function downloadBase64File(data: string, filename: string, mimeType: string) {
+  const bytes = atob(data);
+  const arr = new Uint8Array(bytes.length);
+  for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+  const blob = new Blob([arr], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 type Line = { catalogueId: string; quantity: string; batchNumber: string; expiryDate: string; notes: string };
 
 export default function Receipts() {
@@ -42,6 +55,9 @@ export default function Receipts() {
       toast.success("GRN approved.");
       void receipts.refetch();
     },
+    onError: (e) => toast.error(e.message),
+  });
+  const downloadPdfMutation = trpc.inventoryV2.receipts.downloadPdf.useMutation({
     onError: (e) => toast.error(e.message),
   });
 
@@ -96,6 +112,23 @@ export default function Receipts() {
                 <td className="px-2 py-2">{row.toWarehouseId ?? "—"}</td>
                 <td className="px-2 py-2">{row.createdAt ? new Date(row.createdAt).toLocaleString() : "—"}</td>
                 <td className="px-2 py-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="mr-2"
+                    disabled={downloadPdfMutation.isPending}
+                    onClick={async () => {
+                      try {
+                        const file = await downloadPdfMutation.mutateAsync({ documentId: row.id });
+                        downloadBase64File(file.data, file.filename || `${row.documentNumber}.pdf`, file.mimeType);
+                        toast.success("PDF downloaded.");
+                      } catch {
+                        // handled in mutation onError
+                      }
+                    }}
+                  >
+                    {downloadPdfMutation.isPending ? "Generating..." : "Download PDF"}
+                  </Button>
                   {isManagerOrAdmin && row.status === "pending_approval" ? (
                     <Button
                       size="sm"

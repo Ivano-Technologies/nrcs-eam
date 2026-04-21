@@ -13,6 +13,19 @@ import { ViewToggle, type ViewMode } from "@/components/ViewToggle";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { toast } from "sonner";
 
+function downloadBase64File(data: string, filename: string, mimeType: string) {
+  const bytes = atob(data);
+  const arr = new Uint8Array(bytes.length);
+  for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+  const blob = new Blob([arr], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 type ReqLine = { catalogueId: string; quantity: string; urgency: string; notes: string };
 
 function priorityVariant(priority?: string) {
@@ -61,6 +74,9 @@ export default function Requisitions() {
   const approveHqMutation = trpc.inventoryV2.requisitions.approveHq.useMutation({ onSuccess: () => void list.refetch() });
   const fulfillMutation = trpc.inventoryV2.requisitions.fulfill.useMutation({ onSuccess: () => void list.refetch() });
   const rejectMutation = trpc.inventoryV2.requisitions.reject.useMutation({ onSuccess: () => void list.refetch() });
+  const downloadPdfMutation = trpc.inventoryV2.requisitions.downloadPdf.useMutation({
+    onError: (e) => toast.error(e.message),
+  });
 
   const warehouses = useMemo(() => (facilities ?? []).filter((f) => f.facilityType === "warehouse"), [facilities]);
 
@@ -142,6 +158,22 @@ export default function Requisitions() {
                   <td className="px-2 py-2">{row.requestingFacility}</td>
                   <td className="px-2 py-2">{Array.isArray(row.items) ? row.items.length : 0}</td>
                   <td className="px-2 py-2 space-x-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={async () => {
+                        try {
+                          const file = await downloadPdfMutation.mutateAsync({ requisitionId: row.id });
+                          downloadBase64File(file.data, file.filename || `${row.reqNumber}.pdf`, file.mimeType);
+                          toast.success("PDF downloaded.");
+                        } catch {
+                          // handled by mutation
+                        }
+                      }}
+                      disabled={downloadPdfMutation.isPending}
+                    >
+                      {downloadPdfMutation.isPending ? "Generating..." : "Download PDF"}
+                    </Button>
                     {row.status === "draft" ? <Button size="sm" onClick={() => submitMutation.mutate({ requisitionId: row.id })}>Submit</Button> : null}
                     {row.status === "submitted" ? <Button size="sm" data-testid="req-approve-branch-btn" onClick={() => approveBranchMutation.mutate({ requisitionId: row.id })}>Approve Branch</Button> : null}
                     {row.status === "branch_approved" && isAdmin ? <Button size="sm" data-testid="req-approve-hq-btn" onClick={() => approveHqMutation.mutate({ requisitionId: row.id })}>Approve HQ</Button> : null}

@@ -14,6 +14,7 @@ import {
   json,
   unique,
   date,
+  index,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { FACILITY_TYPE_VALUES } from "../shared/facilities";
@@ -403,23 +404,30 @@ export const inventoryStock = pgTable(
       table.catalogueId,
       table.warehouseId
     ),
+    warehouseItemIdx: index("inv_stock_warehouse_item_idx").on(table.catalogueId, table.warehouseId),
   })
 );
 
-export const inventoryBatches = pgTable("inventory_batches", {
-  id: serial("id").primaryKey(),
-  stockId: integer("stock_id")
-    .notNull()
-    .references(() => inventoryStock.id),
-  batchNumber: varchar("batch_number", { length: 100 }),
-  expiryDate: date("expiry_date"),
-  manufactureDate: date("manufacture_date"),
-  quantity: doublePrecision("quantity").notNull(),
-  supplierName: varchar("supplier_name", { length: 255 }),
-  receivedDate: timestamp("received_date", { mode: "date" }).defaultNow(),
-  notes: text("notes"),
-  status: varchar("status", { length: 50 }).default("active"),
-});
+export const inventoryBatches = pgTable(
+  "inventory_batches",
+  {
+    id: serial("id").primaryKey(),
+    stockId: integer("stock_id")
+      .notNull()
+      .references(() => inventoryStock.id),
+    batchNumber: varchar("batch_number", { length: 100 }),
+    expiryDate: date("expiry_date"),
+    manufactureDate: date("manufacture_date"),
+    quantity: doublePrecision("quantity").notNull(),
+    supplierName: varchar("supplier_name", { length: 255 }),
+    receivedDate: timestamp("received_date", { mode: "date" }).defaultNow(),
+    notes: text("notes"),
+    status: varchar("status", { length: 50 }).default("active"),
+  },
+  (table) => ({
+    activeExpiryIdx: index("inv_batch_active_expiry_idx").on(table.expiryDate),
+  })
+);
 
 export const inventoryDocuments = pgTable("inventory_documents", {
   id: serial("id").primaryKey(),
@@ -440,27 +448,34 @@ export const inventoryDocuments = pgTable("inventory_documents", {
   completedAt: timestamp("completed_at", { mode: "date" }),
 });
 
-export const inventoryMovements = pgTable("inventory_movements", {
-  id: serial("id").primaryKey(),
-  movementType: varchar("movement_type", { length: 50 }).notNull(),
-  catalogueId: integer("catalogue_id")
-    .notNull()
-    .references(() => inventoryCatalogue.id),
-  stockId: integer("stock_id").references(() => inventoryStock.id),
-  batchId: integer("batch_id").references(() => inventoryBatches.id),
-  fromWarehouseId: integer("from_warehouse_id").references(() => sites.id),
-  toWarehouseId: integer("to_warehouse_id").references(() => sites.id),
-  quantityChange: doublePrecision("quantity_change").notNull(),
-  balanceAfter: doublePrecision("balance_after").notNull(),
-  documentType: varchar("document_type", { length: 50 }),
-  documentId: integer("document_id"),
-  documentNumber: varchar("document_number", { length: 100 }),
-  performedBy: integer("performed_by").references(() => users.id),
-  approvedBy: integer("approved_by").references(() => users.id),
-  reason: varchar("reason", { length: 255 }),
-  notes: text("notes"),
-  createdAt: timestamp("created_at", { mode: "date" }).defaultNow(),
-});
+export const inventoryMovements = pgTable(
+  "inventory_movements",
+  {
+    id: serial("id").primaryKey(),
+    movementType: varchar("movement_type", { length: 50 }).notNull(),
+    catalogueId: integer("catalogue_id")
+      .notNull()
+      .references(() => inventoryCatalogue.id),
+    stockId: integer("stock_id").references(() => inventoryStock.id),
+    batchId: integer("batch_id").references(() => inventoryBatches.id),
+    fromWarehouseId: integer("from_warehouse_id").references(() => sites.id),
+    toWarehouseId: integer("to_warehouse_id").references(() => sites.id),
+    quantityChange: doublePrecision("quantity_change").notNull(),
+    balanceAfter: doublePrecision("balance_after").notNull(),
+    documentType: varchar("document_type", { length: 50 }),
+    documentId: integer("document_id"),
+    documentNumber: varchar("document_number", { length: 100 }),
+    performedBy: integer("performed_by").references(() => users.id),
+    approvedBy: integer("approved_by").references(() => users.id),
+    reason: varchar("reason", { length: 255 }),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow(),
+  },
+  (table) => ({
+    catalogueCreatedIdx: index("inv_mov_catalogue_created_idx").on(table.catalogueId, table.createdAt),
+    warehouseCreatedIdx: index("inv_mov_warehouse_created_idx").on(table.fromWarehouseId, table.createdAt),
+  })
+);
 
 export const inventoryCounts = pgTable("inventory_counts", {
   id: serial("id").primaryKey(),
@@ -500,34 +515,40 @@ export const inventoryCountLines = pgTable("inventory_count_lines", {
   countedAt: timestamp("counted_at", { mode: "date" }),
 });
 
-export const requisitions = pgTable("requisitions", {
-  id: serial("id").primaryKey(),
-  reqNumber: varchar("req_number", { length: 100 }).notNull().unique(),
-  title: varchar("title", { length: 255 }).notNull(),
-  status: varchar("status", { length: 50 }).default("draft"),
-  priority: varchar("priority", { length: 50 }).default("routine"),
-  requestedBy: integer("requested_by")
-    .notNull()
-    .references(() => users.id),
-  requestingFacility: integer("requesting_facility")
-    .notNull()
-    .references(() => sites.id),
-  justification: text("justification").notNull(),
-  incidentReference: varchar("incident_reference", { length: 255 }),
-  affectedPopulation: integer("affected_population"),
-  items: json("items"),
-  suggestedWarehouseId: integer("suggested_warehouse_id").references(() => sites.id),
-  approvedBranchBy: integer("approved_branch_by").references(() => users.id),
-  approvedBranchAt: timestamp("approved_branch_at", { mode: "date" }),
-  approvedHqBy: integer("approved_hq_by").references(() => users.id),
-  approvedHqAt: timestamp("approved_hq_at", { mode: "date" }),
-  rejectedBy: integer("rejected_by").references(() => users.id),
-  rejectionReason: text("rejection_reason"),
-  fulfilledAt: timestamp("fulfilled_at", { mode: "date" }),
-  linkedWaybills: json("linked_waybills"),
-  createdAt: timestamp("created_at", { mode: "date" }).defaultNow(),
-  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow(),
-});
+export const requisitions = pgTable(
+  "requisitions",
+  {
+    id: serial("id").primaryKey(),
+    reqNumber: varchar("req_number", { length: 100 }).notNull().unique(),
+    title: varchar("title", { length: 255 }).notNull(),
+    status: varchar("status", { length: 50 }).default("draft"),
+    priority: varchar("priority", { length: 50 }).default("routine"),
+    requestedBy: integer("requested_by")
+      .notNull()
+      .references(() => users.id),
+    requestingFacility: integer("requesting_facility")
+      .notNull()
+      .references(() => sites.id),
+    justification: text("justification").notNull(),
+    incidentReference: varchar("incident_reference", { length: 255 }),
+    affectedPopulation: integer("affected_population"),
+    items: json("items"),
+    suggestedWarehouseId: integer("suggested_warehouse_id").references(() => sites.id),
+    approvedBranchBy: integer("approved_branch_by").references(() => users.id),
+    approvedBranchAt: timestamp("approved_branch_at", { mode: "date" }),
+    approvedHqBy: integer("approved_hq_by").references(() => users.id),
+    approvedHqAt: timestamp("approved_hq_at", { mode: "date" }),
+    rejectedBy: integer("rejected_by").references(() => users.id),
+    rejectionReason: text("rejection_reason"),
+    fulfilledAt: timestamp("fulfilled_at", { mode: "date" }),
+    linkedWaybills: json("linked_waybills"),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow(),
+    updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow(),
+  },
+  (table) => ({
+    statusPriorityIdx: index("req_status_priority_idx").on(table.status, table.priority),
+  })
+);
 
 export const distributions = pgTable("distributions", {
   id: serial("id").primaryKey(),
