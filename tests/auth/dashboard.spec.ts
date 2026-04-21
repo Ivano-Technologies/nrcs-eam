@@ -12,10 +12,8 @@ function metricValueLocator(page: import("@playwright/test").Page, title: string
     .getByRole("heading", { name: /^Dashboard$/i })
     .locator("xpath=ancestor::div[2]/following-sibling::div[1]");
   const card = kpiGrid.locator(":scope > div").filter({ hasText: pattern });
-  const numeric =
-    pattern.source.includes("Beneficiaries") || pattern.source.includes("beneficiaries")
-      ? card.getByText(/^\d[\d,]*$/)
-      : card.getByText(/^\d+$/);
+  /** Integers with optional thousands separators (e.g. beneficiaries); avoids matching footer copy. */
+  const numeric = card.getByText(/^[\d,]+$/);
   return byTestId.or(numeric.first()).first();
 }
 
@@ -27,11 +25,14 @@ test.describe("dashboard (live)", () => {
       timeout: 30_000,
     });
 
-    const beneficiaries = metricValueLocator(page, /Beneficiaries Reached/, "dashboard-kpi-value-beneficiaries");
+    /** First KPI is low stock in current app; production may still ship beneficiaries until deploy. */
+    const firstKpi = metricValueLocator(page, /Low Stock Items/, "dashboard-kpi-value-lowStock").or(
+      metricValueLocator(page, /Beneficiaries Reached/, "dashboard-kpi-value-beneficiaries")
+    );
     const pending = metricValueLocator(page, /Pending Approvals/, "dashboard-kpi-value-approvals");
 
-    await expect(beneficiaries).toBeVisible({ timeout: 30_000 });
-    await expect(beneficiaries).toHaveText(/[\d,]+/);
+    await expect(firstKpi).toBeVisible({ timeout: 30_000 });
+    await expect(firstKpi).toHaveText(/[\d,]+/);
 
     await expect(pending).toBeVisible({ timeout: 15_000 });
     await expect(pending).toHaveText(/\d+/);

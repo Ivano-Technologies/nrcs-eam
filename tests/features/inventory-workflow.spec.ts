@@ -53,7 +53,9 @@ test.describe("Inventory Phase 4 workflow (live)", () => {
     if (page.url().includes("/app/welcome")) {
       test.skip(true, "Live admin user is redirected to welcome page; dashboard widgets not available.");
     }
-    await expect(page.getByText("Beneficiaries Reached")).toBeVisible({ timeout: 15000 });
+    await expect(
+      page.getByText("Low Stock Items").or(page.getByText(/Beneficiaries Reached/))
+    ).toBeVisible({ timeout: 15000 });
   });
 
   test("Assemble kit from components", async ({ page }) => {

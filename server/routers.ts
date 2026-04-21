@@ -1304,12 +1304,13 @@ export const appRouter = router({
         })
       )
       .query(async ({ input }) => {
+        const stats = await db.getDashboardStats();
         const periodDeltaMap = {
-          Today: { beneficiaries: 2.1, stock: 4.2, response: -0.1 },
-          Week: { beneficiaries: 5.8, stock: 8.4, response: -0.3 },
-          Month: { beneficiaries: 12.4, stock: 18, response: -0.8 },
-          Quarter: { beneficiaries: 19.2, stock: 26, response: -1.3 },
-          Year: { beneficiaries: 27.5, stock: 43, response: -2.1 },
+          Today: { stock: 4.2, response: -0.1 },
+          Week: { stock: 8.4, response: -0.3 },
+          Month: { stock: 18, response: -0.8 },
+          Quarter: { stock: 26, response: -1.3 },
+          Year: { stock: 43, response: -2.1 },
         } as const;
         const d = periodDeltaMap[input.period];
         const stockDeltaNaira = 18_000_000 + Math.round((d.stock - 18) * 1_000_000);
@@ -1317,14 +1318,18 @@ export const appRouter = router({
           stockDeltaNaira > 0 ? ("up" as const) : stockDeltaNaira < 0 ? ("down" as const) : ("flat" as const);
         const pendingDeltaByPeriod = { Today: -1, Week: -2, Month: -3, Quarter: -4, Year: -5 } as const;
         const pendingDelta = pendingDeltaByPeriod[input.period];
+        const lowStockDeltaByPeriod = { Today: -1, Week: -2, Month: -3, Quarter: -5, Year: -8 } as const;
+        const lowStockDelta = lowStockDeltaByPeriod[input.period];
+        const lowStockDirection =
+          lowStockDelta < 0 ? ("down" as const) : lowStockDelta > 0 ? ("up" as const) : ("flat" as const);
         const responseDir =
           d.response < 0 ? ("down" as const) : d.response > 0 ? ("up" as const) : ("flat" as const);
         return {
-          beneficiariesReached: {
-            value: 452380,
-            delta: `+${d.beneficiaries}%`,
-            direction: "up" as const,
-            goodWhen: "up" as const,
+          lowStockItems: {
+            value: Number(stats?.lowStockItems ?? 0),
+            delta: `${lowStockDelta > 0 ? "+" : ""}${lowStockDelta}`,
+            direction: lowStockDirection,
+            goodWhen: "down" as const,
           },
           activeFacilities: { value: 37, total: 42, offline: 5, goodWhen: "up" as const },
           stockValue: {

@@ -45,7 +45,7 @@ test.describe("Maintenance module (live)", () => {
     await expect(
       page
         .getByText("Needs your attention")
-        .or(page.getByText("Beneficiaries Reached"))
+        .or(page.getByText("Low Stock Items"))
         .or(page.getByText("Stock Movement"))
         .first()
     ).toBeVisible({ timeout: 30_000 });
