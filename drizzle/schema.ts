@@ -18,6 +18,7 @@ import {
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { FACILITY_TYPE_VALUES } from "../shared/facilities";
+import { ITEM_CATEGORY_VALUES } from "../shared/itemCategory";
 
 export const userRoleEnum = pgEnum("user_role", [
   "user",
@@ -141,6 +142,8 @@ export const pendingUserStatusEnum = pgEnum("pending_user_status", [
 ]);
 
 export const facilityTypeEnum = pgEnum("facility_type", [...FACILITY_TYPE_VALUES]);
+
+export const itemCategoryEnum = pgEnum("item_category", [...ITEM_CATEGORY_VALUES]);
 
 /**
  * Core user table backing auth flow with extended roles for EAM system
@@ -360,6 +363,8 @@ export const inventoryCatalogue = pgTable("inventory_catalogue", {
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
   category: varchar("category", { length: 100 }).notNull(),
+  /** Humanitarian item taxonomy (distinct from IFRC `category`). */
+  itemCategory: itemCategoryEnum("item_category").notNull().default("other"),
   subcategory: varchar("subcategory", { length: 100 }),
   unitOfMeasure: varchar("unit_of_measure", { length: 50 }).notNull(),
   vedClassification: varchar("ved_classification", { length: 20 }),
