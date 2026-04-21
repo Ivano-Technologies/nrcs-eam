@@ -433,57 +433,57 @@ export default function Facilities() {
           ))}
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-md border px-2 md:px-3" data-testid="sites-list">
-          <Table className="min-w-[1600px] text-xs">
+        <div className="overflow-x-auto rounded-md border bg-card px-2 md:px-3" data-testid="sites-list">
+          <Table className="min-w-[1600px] text-sm">
             <TableHeader className="sticky top-0 z-40 bg-background">
               <TableRow>
-                <StickyHead left={0}>S/No</StickyHead>
-                <StickyHead left={56} onClick={() => sort("name")}>Name</StickyHead>
-                <StickyHead left={316} onClick={() => sort("state")} className="shadow-[4px_0_8px_-4px_rgba(0,0,0,0.25)]">State/Region</StickyHead>
-                <TableHead>Address</TableHead>
-                <TableHead onClick={() => sort("code")} className="cursor-pointer">Code</TableHead>
-                <TableHead onClick={() => sort("facilityType")} className="cursor-pointer">Type</TableHead>
-                <TableHead onClick={() => sort("parentFacilityName")} className="cursor-pointer">Parent Facility</TableHead>
-                <TableHead>Contact</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Postal Code</TableHead>
-                <TableHead onClick={() => sort("isActive")} className="cursor-pointer">Status</TableHead>
-                <TableHead>Actions</TableHead>
+                <StickyHead left={0} className="px-2 py-1.5 text-left font-medium whitespace-nowrap">S/No</StickyHead>
+                <StickyHead left={56} onClick={() => sort("name")} className="px-2 py-1.5 text-left font-medium whitespace-nowrap">Name</StickyHead>
+                <StickyHead left={316} onClick={() => sort("state")} className="px-2 py-1.5 text-left font-medium whitespace-nowrap shadow-[4px_0_8px_-4px_rgba(0,0,0,0.25)]">State/Region</StickyHead>
+                <TableHead className="px-2 py-1.5 text-left font-medium whitespace-nowrap">Address</TableHead>
+                <TableHead onClick={() => sort("code")} className="cursor-pointer px-2 py-1.5 text-left font-medium whitespace-nowrap">Code</TableHead>
+                <TableHead onClick={() => sort("facilityType")} className="cursor-pointer px-2 py-1.5 text-left font-medium whitespace-nowrap">Type</TableHead>
+                <TableHead onClick={() => sort("parentFacilityName")} className="cursor-pointer px-2 py-1.5 text-left font-medium whitespace-nowrap">Parent Facility</TableHead>
+                <TableHead className="px-2 py-1.5 text-left font-medium whitespace-nowrap">Contact</TableHead>
+                <TableHead className="px-2 py-1.5 text-left font-medium whitespace-nowrap">Phone</TableHead>
+                <TableHead className="px-2 py-1.5 text-left font-medium whitespace-nowrap">Postal Code</TableHead>
+                <TableHead onClick={() => sort("isActive")} className="cursor-pointer px-2 py-1.5 text-left font-medium whitespace-nowrap">Status</TableHead>
+                <TableHead className="px-2 py-1.5 text-left font-medium whitespace-nowrap">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {pageRows.map((f, idx) => {
                 const rowNo = (page - 1) * pageSizeNum + idx + 1;
-                const rowCls = idx % 2 ? "bg-muted/20" : "";
+                const rowCls = idx % 2 ? "bg-muted/30" : "bg-background";
                 return (
                   <TableRow
                     key={f.id}
                     data-testid={`facility-row-${f.id}`}
-                    className={cn("relative z-10 h-9 cursor-pointer", rowCls)}
+                    className={cn("relative z-10 h-9 cursor-pointer hover:bg-muted/50", rowCls)}
                     onClick={() => setLocation(appPath(`/facilities/${f.id}`))}
                   >
-                    <StickyCell left={0}>{rowNo}</StickyCell>
-                    <StickyCell left={56} className="w-[260px] min-w-[260px] max-w-[260px] truncate font-medium" data-testid={`facility-name-${f.id}`}>{f.name}</StickyCell>
-                    <StickyCell left={316} className="w-[160px] min-w-[160px] max-w-[160px] truncate shadow-[4px_0_8px_-4px_rgba(0,0,0,0.25)]">{f.state ?? "—"}</StickyCell>
-                    <TableCell title={f.address ?? ""} className="max-w-[260px] truncate">
+                    <StickyCell left={0} className="px-2 py-1 text-muted-foreground">{rowNo}</StickyCell>
+                    <StickyCell left={56} className="px-2 py-1 w-[260px] min-w-[260px] max-w-[260px] truncate font-medium" data-testid={`facility-name-${f.id}`}>{f.name}</StickyCell>
+                    <StickyCell left={316} className="px-2 py-1 w-[160px] min-w-[160px] max-w-[160px] truncate shadow-[4px_0_8px_-4px_rgba(0,0,0,0.25)]">{f.state ?? "—"}</StickyCell>
+                    <TableCell title={f.address ?? ""} className="px-2 py-1 max-w-[260px] truncate">
                       {f.address ?? "—"}
                     </TableCell>
-                    <TableCell>{f.code ?? "—"}</TableCell>
-                    <TableCell>
+                    <TableCell className="px-2 py-1">{f.code ?? "—"}</TableCell>
+                    <TableCell className="px-2 py-1">
                       <Badge variant="outline" className={cn("border", TYPE_BADGE[f.facilityType])}>
                         {FACILITY_TYPE_LABELS[f.facilityType]}
                       </Badge>
                     </TableCell>
-                    <TableCell>{f.parentFacilityName ?? "—"}</TableCell>
-                    <TableCell>{f.contactPerson ?? "—"}</TableCell>
-                    <TableCell>{f.contactPhone ?? "—"}</TableCell>
-                    <TableCell>{f.postalCode ?? "—"}</TableCell>
-                    <TableCell>
+                    <TableCell className="px-2 py-1">{f.parentFacilityName ?? "—"}</TableCell>
+                    <TableCell className="px-2 py-1">{f.contactPerson ?? "—"}</TableCell>
+                    <TableCell className="px-2 py-1">{f.contactPhone ?? "—"}</TableCell>
+                    <TableCell className="px-2 py-1">{f.postalCode ?? "—"}</TableCell>
+                    <TableCell className="px-2 py-1">
                       <Badge variant={f.isActive ? "default" : "secondary"}>
                         {f.isActive ? "Active" : "Inactive"}
                       </Badge>
                     </TableCell>
-                    <TableCell onClick={(e) => e.stopPropagation()}>
+                    <TableCell className="px-2 py-1" onClick={(e) => e.stopPropagation()}>
                       {canEditFacilities && (
                         <div className="flex items-center gap-1">
                           {editingId === f.id ? (
