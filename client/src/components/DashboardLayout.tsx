@@ -30,6 +30,8 @@ import { ThemeToggle } from "./ui/ThemeToggle";
 import { SidebarGroupedNav } from "./SidebarGroupedNav";
 import { GlobalSearch } from "./GlobalSearch";
 import { flattenNavItems } from "@/config/appNav";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
+import { Link } from "wouter";
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
 const DEFAULT_WIDTH = 360;
@@ -189,14 +191,21 @@ function DashboardLayoutContent({
           >
             {sidebarWidth <= PRESET_WIDTHS.narrow ? (
               <div className="flex flex-col items-center gap-2 px-1 w-full">
-                <div className="flex justify-center w-full">
-                  <img
-                    src="/nrcs-logo.png"
-                    alt=""
-                    className="h-10 w-10 shrink-0 object-contain mx-auto"
-                    data-testid="sidebar-logo-collapsed"
-                  />
-                </div>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Link href={appPath("/")}>
+                      <div className="flex justify-center w-full rounded-md transition-opacity hover:opacity-80 cursor-pointer">
+                        <img
+                          src="/nrcs-logo.png"
+                          alt="Nigerian Red Cross Society"
+                          className="h-10 w-10 shrink-0 object-contain mx-auto"
+                          data-testid="sidebar-logo-collapsed"
+                        />
+                      </div>
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">Go to Dashboard</TooltipContent>
+                </Tooltip>
                 <button
                   type="button"
                   onClick={toggleSidebarWidth}
@@ -209,23 +218,32 @@ function DashboardLayoutContent({
               </div>
             ) : (
               <div className="flex items-center gap-3 px-3 transition-all w-full">
-                <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <img
-                    src="/nrcs-logo.png"
-                    alt="Nigerian Red Cross Society"
-                    className="h-12 w-12 shrink-0"
-                  />
-                  <div className="flex flex-col min-w-0">
-                    <span
-                      className="font-bold text-[15px] text-sidebar-foreground truncate"
-                      data-testid="sidebar-org-name"
-                    >
-                      Nigerian Red Cross Society
-                    </span>
-                    <span className="text-[14px] text-sidebar-foreground/70 truncate">
-                      Enterprise Asset Management
-                    </span>
-                  </div>
+                <div className="min-w-0 flex-1">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Link href={appPath("/")}>
+                        <div className="flex items-center gap-3 min-w-0 rounded-md px-1 py-1 transition-opacity hover:opacity-80 cursor-pointer">
+                          <img
+                            src="/nrcs-logo.png"
+                            alt="Nigerian Red Cross Society"
+                            className="h-12 w-12 shrink-0"
+                          />
+                          <div className="flex flex-col min-w-0">
+                            <span
+                              className="font-bold text-[15px] text-sidebar-foreground truncate"
+                              data-testid="sidebar-org-name"
+                            >
+                              Nigerian Red Cross Society
+                            </span>
+                            <span className="text-[14px] text-sidebar-foreground/70 truncate">
+                              Enterprise Asset Management
+                            </span>
+                          </div>
+                        </div>
+                      </Link>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">Go to Dashboard</TooltipContent>
+                  </Tooltip>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
