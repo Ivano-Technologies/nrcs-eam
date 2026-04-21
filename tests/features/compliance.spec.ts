@@ -32,7 +32,9 @@ test.describe("Compliance and audit trail (live)", () => {
     await expect(page.getByRole("heading", { name: /^Audit Trail$/ })).toBeVisible({ timeout: 60_000 });
     await expect(page.getByText("Complete history of all system changes")).toBeVisible();
     await expect(page.getByText("Filters", { exact: true }).first()).toBeVisible();
-    await expect(page.getByText("Activity Log", { exact: true })).toBeVisible();
+    await expect(
+      page.getByTestId("app-page-main").getByText("Activity Log", { exact: true })
+    ).toBeVisible();
 
     await expect(
       page
