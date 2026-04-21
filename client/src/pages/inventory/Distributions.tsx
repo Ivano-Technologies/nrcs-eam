@@ -11,6 +11,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { ViewToggle, type ViewMode } from "@/components/ViewToggle";
 import { toast } from "sonner";
 
+function downloadBase64File(data: string, filename: string, mimeType: string) {
+  const bytes = atob(data);
+  const arr = new Uint8Array(bytes.length);
+  for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+  const blob = new Blob([arr], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function Distributions() {
   const [viewMode, setViewMode] = useState<ViewMode>(() => (localStorage.getItem("viewMode_inventory_distributions") as ViewMode) || "table");
   const [open, setOpen] = useState(false);
@@ -40,6 +53,9 @@ export default function Distributions() {
       setOpen(false);
       void list.refetch();
     },
+    onError: (e) => toast.error(e.message),
+  });
+  const downloadPdfMutation = trpc.inventoryV2.distributions.downloadPdf.useMutation({
     onError: (e) => toast.error(e.message),
   });
 
@@ -79,6 +95,7 @@ export default function Distributions() {
                 <th className="px-2 py-2 text-left">Households</th>
                 <th className="px-2 py-2 text-left">Conducted By</th>
                 <th className="px-2 py-2 text-left">Incident</th>
+                <th className="px-2 py-2 text-left">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -91,6 +108,24 @@ export default function Distributions() {
                   <td className="px-2 py-2">{row.householdCount ?? 0}</td>
                   <td className="px-2 py-2">{row.conductedBy ?? "—"}</td>
                   <td className="px-2 py-2">{row.incidentReference ?? "—"}</td>
+                  <td className="px-2 py-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={downloadPdfMutation.isPending}
+                      onClick={async () => {
+                        try {
+                          const file = await downloadPdfMutation.mutateAsync({ id: row.id });
+                          downloadBase64File(file.data, file.filename || `${row.distributionNumber}.pdf`, file.mimeType);
+                          toast.success("PDF downloaded.");
+                        } catch {
+                          // handled by mutation
+                        }
+                      }}
+                    >
+                      {downloadPdfMutation.isPending ? "Generating..." : "Download PDF"}
+                    </Button>
+                  </td>
                 </tr>
               ))}
             </tbody>

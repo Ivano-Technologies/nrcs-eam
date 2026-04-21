@@ -24,6 +24,10 @@ import {
   INVENTORY_VED_VALUES,
   type InventoryCatalogueSeedItem,
 } from "../../shared/inventoryCatalogueSeed";
+import { generateGrnPdf } from "../_core/pdfTemplates/grnPdf";
+import { generateWaybillPdf } from "../_core/pdfTemplates/waybillPdf";
+import { generateRequisitionPdf } from "../_core/pdfTemplates/requisitionPdf";
+import { generateDistributionReportPdf } from "../_core/pdfTemplates/distributionReport";
 
 const vedEnum = z.enum(INVENTORY_VED_VALUES);
 const categoryEnum = z.enum(INVENTORY_CATEGORIES);
@@ -104,6 +108,27 @@ const documentItemSchema = z.object({
   quantity: z.number().positive(),
   batchNumber: z.string().optional(),
   expiryDate: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+const openingStockRowSchema = z.object({
+  warehouseCode: z.string(),
+  itemCode: z.string(),
+  quantityOnHand: z.number(),
+  minLevel: z.number().optional(),
+  maxLevel: z.number().nullable().optional(),
+  safetyLevel: z.number().nullable().optional(),
+  batchNumber: z.string().optional(),
+  expiryDate: z.string().optional(),
+});
+
+const historicalMovementRowSchema = z.object({
+  date: z.string(),
+  warehouseCode: z.string(),
+  itemCode: z.string(),
+  movementType: z.enum(["receipt", "issue", "transfer_in", "transfer_out", "adjustment", "loss", "distribution", "count"]),
+  quantity: z.number(),
+  documentNumber: z.string().optional(),
   notes: z.string().optional(),
 });
 
@@ -832,6 +857,31 @@ export const inventoryV2Router = router({
           .limit(1);
         return doc ?? null;
       }),
+    downloadPdf: protectedProcedure
+      .input(z.object({ documentId: z.number() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        const [doc] = await db
+          .select()
+          .from(inventoryDocuments)
+          .where(and(eq(inventoryDocuments.id, input.documentId), eq(inventoryDocuments.documentType, "grn")))
+          .limit(1);
+        if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "GRN not found." });
+        const rows = [
+          { label: "Document Number", value: doc.documentNumber },
+          { label: "Status", value: doc.status ?? "draft" },
+          { label: "Reference", value: doc.referenceDocument ?? "—" },
+          { label: "Created At", value: doc.createdAt ? new Date(doc.createdAt).toISOString() : "—" },
+          { label: "Notes", value: doc.notes ?? "—" },
+        ];
+        const buffer = await generateGrnPdf({ rows });
+        return {
+          data: buffer.toString("base64"),
+          filename: `${doc.documentNumber}.pdf`,
+          mimeType: "application/pdf",
+        };
+      }),
   }),
 
   issues: router({
@@ -988,6 +1038,31 @@ export const inventoryV2Router = router({
           .where(and(eq(inventoryDocuments.id, input.documentId), eq(inventoryDocuments.documentType, "waybill")))
           .limit(1);
         return doc ?? null;
+      }),
+    downloadPdf: protectedProcedure
+      .input(z.object({ documentId: z.number() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        const [doc] = await db
+          .select()
+          .from(inventoryDocuments)
+          .where(and(eq(inventoryDocuments.id, input.documentId), eq(inventoryDocuments.documentType, "waybill")))
+          .limit(1);
+        if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "Waybill not found." });
+        const rows = [
+          { label: "Document Number", value: doc.documentNumber },
+          { label: "Status", value: doc.status ?? "draft" },
+          { label: "From Warehouse", value: doc.fromWarehouseId ?? "—" },
+          { label: "Created At", value: doc.createdAt ? new Date(doc.createdAt).toISOString() : "—" },
+          { label: "Notes", value: doc.notes ?? "—" },
+        ];
+        const buffer = await generateWaybillPdf({ rows });
+        return {
+          data: buffer.toString("base64"),
+          filename: `${doc.documentNumber}.pdf`,
+          mimeType: "application/pdf",
+        };
       }),
   }),
 
@@ -1340,6 +1415,27 @@ export const inventoryV2Router = router({
       }
       return null;
     }),
+    downloadPdf: protectedProcedure
+      .input(z.object({ requisitionId: z.number() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        const [req] = await db.select().from(requisitions).where(eq(requisitions.id, input.requisitionId)).limit(1);
+        if (!req) throw new TRPCError({ code: "NOT_FOUND", message: "Requisition not found." });
+        const rows = [
+          { label: "Requisition Number", value: req.reqNumber },
+          { label: "Title", value: req.title },
+          { label: "Status", value: req.status ?? "draft" },
+          { label: "Priority", value: req.priority ?? "routine" },
+          { label: "Justification", value: req.justification },
+        ];
+        const buffer = await generateRequisitionPdf({ rows });
+        return {
+          data: buffer.toString("base64"),
+          filename: `${req.reqNumber}.pdf`,
+          mimeType: "application/pdf",
+        };
+      }),
   }),
 
   distributions: router({
@@ -1442,6 +1538,28 @@ export const inventoryV2Router = router({
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
         await db.update(distributions).set({ beneficiaryList: out }).where(eq(distributions.id, input.distributionId));
         return { imported: out.length };
+      }),
+    downloadPdf: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        const [row] = await db.select().from(distributions).where(eq(distributions.id, input.id)).limit(1);
+        if (!row) throw new TRPCError({ code: "NOT_FOUND", message: "Distribution not found." });
+        const rows = [
+          { label: "Distribution Number", value: row.distributionNumber },
+          { label: "Date", value: row.distributionDate },
+          { label: "Location", value: row.location },
+          { label: "Beneficiaries", value: row.beneficiaryCount ?? 0 },
+          { label: "Households", value: row.householdCount ?? 0 },
+          { label: "Incident", value: row.incidentReference ?? "—" },
+        ];
+        const buffer = await generateDistributionReportPdf({ rows });
+        return {
+          data: buffer.toString("base64"),
+          filename: `${row.distributionNumber}.pdf`,
+          mimeType: "application/pdf",
+        };
       }),
   }),
 
@@ -2051,6 +2169,141 @@ export const inventoryV2Router = router({
           validRows += 1;
         }
         return { validRows, errors };
+      }),
+
+    importOpeningStockDryRun: protectedProcedure
+      .input(z.object({ rows: z.array(openingStockRowSchema) }))
+      .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["admin"]);
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        const facilities = await db.select({ id: sites.id, code: sites.code }).from(sites);
+        const catalogue = await db.select({ id: inventoryCatalogue.id, itemCode: inventoryCatalogue.itemCode }).from(inventoryCatalogue);
+        const facilityMap = new Map(facilities.map((f) => [String(f.code ?? "").toLowerCase(), f.id]));
+        const itemMap = new Map(catalogue.map((c) => [String(c.itemCode ?? "").toLowerCase(), c.id]));
+        const preview = input.rows.map((row, idx) => {
+          const warehouseId = facilityMap.get(row.warehouseCode.toLowerCase());
+          const catalogueId = itemMap.get(row.itemCode.toLowerCase());
+          const messages: string[] = [];
+          if (!warehouseId) messages.push("Warehouse not found");
+          if (!catalogueId) messages.push("Item not found");
+          if (row.quantityOnHand < 0) messages.push("Quantity must be non-negative");
+          const status = messages.length ? "error" : "ok";
+          return { rowNumber: idx + 1, ...row, warehouseId: warehouseId ?? null, catalogueId: catalogueId ?? null, status, messages };
+        });
+        return {
+          preview,
+          summary: {
+            ok: preview.filter((x) => x.status === "ok").length,
+            errors: preview.filter((x) => x.status === "error").length,
+          },
+        };
+      }),
+
+    importOpeningStockConfirm: protectedProcedure
+      .input(z.object({ rows: z.array(openingStockRowSchema) }))
+      .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["admin"]);
+        const dryRun = await inventoryV2Router.createCaller(ctx).adminData.importOpeningStockDryRun({ rows: input.rows });
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        let imported = 0;
+        let skipped = 0;
+        const errors: string[] = [];
+        for (const row of dryRun.preview) {
+          if (row.status !== "ok" || !row.warehouseId || !row.catalogueId) {
+            skipped += 1;
+            errors.push(`Row ${row.rowNumber}: ${row.messages.join(", ")}`);
+            continue;
+          }
+          const stock = await getOrCreateStock(row.catalogueId, row.warehouseId);
+          await db
+            .update(inventoryStock)
+            .set({
+              quantityOnHand: row.quantityOnHand,
+              minLevel: row.minLevel ?? stock.minLevel,
+              maxLevel: row.maxLevel ?? stock.maxLevel,
+              safetyStockLevel: row.safetyLevel ?? stock.safetyStockLevel,
+              updatedAt: new Date(),
+            })
+            .where(eq(inventoryStock.id, stock.id));
+          if (row.batchNumber || row.expiryDate) {
+            await db.insert(inventoryBatches).values({
+              stockId: stock.id,
+              batchNumber: row.batchNumber ?? null,
+              expiryDate: row.expiryDate ?? null,
+              quantity: row.quantityOnHand,
+              status: "active",
+            });
+          }
+          imported += 1;
+        }
+        return { imported, skipped, errors };
+      }),
+
+    importHistoricalMovementsDryRun: protectedProcedure
+      .input(z.object({ rows: z.array(historicalMovementRowSchema) }))
+      .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["admin"]);
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        const facilities = await db.select({ id: sites.id, code: sites.code }).from(sites);
+        const catalogue = await db.select({ id: inventoryCatalogue.id, itemCode: inventoryCatalogue.itemCode }).from(inventoryCatalogue);
+        const facilityMap = new Map(facilities.map((f) => [String(f.code ?? "").toLowerCase(), f.id]));
+        const itemMap = new Map(catalogue.map((c) => [String(c.itemCode ?? "").toLowerCase(), c.id]));
+        const preview = input.rows.map((row, idx) => {
+          const warehouseId = facilityMap.get(row.warehouseCode.toLowerCase());
+          const catalogueId = itemMap.get(row.itemCode.toLowerCase());
+          const messages: string[] = [];
+          if (!warehouseId) messages.push("Warehouse not found");
+          if (!catalogueId) messages.push("Item not found");
+          if (row.quantity < 0) messages.push("Quantity must be non-negative");
+          const status = messages.length ? "error" : "ok";
+          return { rowNumber: idx + 1, ...row, warehouseId: warehouseId ?? null, catalogueId: catalogueId ?? null, status, messages };
+        });
+        return {
+          preview,
+          summary: { ok: preview.filter((x) => x.status === "ok").length, errors: preview.filter((x) => x.status === "error").length },
+        };
+      }),
+
+    importHistoricalMovementsConfirm: protectedProcedure
+      .input(z.object({ rows: z.array(historicalMovementRowSchema) }))
+      .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["admin"]);
+        const dryRun = await inventoryV2Router.createCaller(ctx).adminData.importHistoricalMovementsDryRun({ rows: input.rows });
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        let imported = 0;
+        let skipped = 0;
+        const errors: string[] = [];
+        for (const row of dryRun.preview) {
+          if (row.status !== "ok" || !row.warehouseId || !row.catalogueId) {
+            skipped += 1;
+            errors.push(`Row ${row.rowNumber}: ${row.messages.join(", ")}`);
+            continue;
+          }
+          const stock = await getOrCreateStock(row.catalogueId, row.warehouseId);
+          const nextBalance =
+            row.movementType === "issue" || row.movementType === "transfer_out" || row.movementType === "loss"
+              ? Number(stock.quantityOnHand) - row.quantity
+              : Number(stock.quantityOnHand) + row.quantity;
+          await db.insert(inventoryMovements).values({
+            movementType: row.movementType,
+            catalogueId: row.catalogueId,
+            stockId: stock.id,
+            fromWarehouseId: row.warehouseId,
+            quantityChange: ["issue", "transfer_out", "loss"].includes(row.movementType) ? -Math.abs(row.quantity) : Math.abs(row.quantity),
+            balanceAfter: nextBalance,
+            documentNumber: row.documentNumber ?? null,
+            notes: row.notes ?? null,
+            createdAt: new Date(row.date),
+            performedBy: ctx.user.id,
+          });
+          await db.update(inventoryStock).set({ quantityOnHand: nextBalance, updatedAt: new Date() }).where(eq(inventoryStock.id, stock.id));
+          imported += 1;
+        }
+        return { imported, skipped, errors };
       }),
   }),
 

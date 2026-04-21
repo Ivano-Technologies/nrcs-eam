@@ -36,6 +36,7 @@ import { cn } from "@/lib/utils";
 import { ViewToggle } from "@/components/ViewToggle";
 import { CardQrCode } from "@/components/CardQrCode";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 const CATEGORIES = [
   "Food",
@@ -104,6 +105,10 @@ export default function Inventory() {
   const [minInput, setMinInput] = useState("0");
   const [maxInput, setMaxInput] = useState("");
   const [safetyInput, setSafetyInput] = useState("");
+  const [openingRows, setOpeningRows] = useState<any[]>([]);
+  const [openingPreview, setOpeningPreview] = useState<any[]>([]);
+  const [movementRows, setMovementRows] = useState<any[]>([]);
+  const [movementPreview, setMovementPreview] = useState<any[]>([]);
 
   const overviewFilters = useMemo(
     () => ({
@@ -162,9 +167,21 @@ export default function Inventory() {
     },
     onError: (e) => toast.error(e.message),
   });
+  const openingDryRun = trpc.inventoryV2.adminData.importOpeningStockDryRun.useMutation();
+  const openingConfirm = trpc.inventoryV2.adminData.importOpeningStockConfirm.useMutation();
+  const movementDryRun = trpc.inventoryV2.adminData.importHistoricalMovementsDryRun.useMutation();
+  const movementConfirm = trpc.inventoryV2.adminData.importHistoricalMovementsConfirm.useMutation();
 
   const rows = overviewQuery.data ?? [];
   const catalogueRows = catalogueQuery.data ?? [];
+
+  async function parseExcelRows(file: File) {
+    const XLSX = await import("xlsx");
+    const data = await file.arrayBuffer();
+    const wb = XLSX.read(data, { type: "array" });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    return XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
+  }
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -609,6 +626,163 @@ export default function Inventory() {
                     Reset Stock Levels
                   </Button>
                 </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Opening Stock Balances Import</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Input
+                  type="file"
+                  accept=".xlsx,.xls"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    try {
+                      const rawRows = await parseExcelRows(file);
+                      const mapped = rawRows.map((r) => ({
+                        warehouseCode: String(r.warehouseCode ?? ""),
+                        itemCode: String(r.itemCode ?? ""),
+                        quantityOnHand: Number(r.quantityOnHand ?? 0),
+                        minLevel: Number(r.minLevel ?? 0),
+                        maxLevel: r.maxLevel === "" ? null : Number(r.maxLevel),
+                        safetyLevel: r.safetyLevel === "" ? null : Number(r.safetyLevel),
+                        batchNumber: String(r.batchNumber ?? ""),
+                        expiryDate: String(r.expiryDate ?? ""),
+                      }));
+                      setOpeningRows(mapped);
+                      toast.success(`Loaded ${mapped.length} opening stock rows.`);
+                    } catch (err) {
+                      toast.error(err instanceof Error ? err.message : "Failed to parse file.");
+                    }
+                  }}
+                />
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    disabled={!openingRows.length || openingDryRun.isPending}
+                    onClick={async () => {
+                      const res = await openingDryRun.mutateAsync({ rows: openingRows });
+                      setOpeningPreview(res.preview);
+                      toast.success(`Dry run completed. ${res.summary.ok} valid row(s).`);
+                    }}
+                  >
+                    Dry-run
+                  </Button>
+                  <Button
+                    disabled={!openingRows.length || !isAdmin || openingConfirm.isPending}
+                    onClick={async () => {
+                      const res = await openingConfirm.mutateAsync({ rows: openingRows });
+                      toast.success(`Imported ${res.imported}, skipped ${res.skipped}, errors ${res.errors.length}.`);
+                    }}
+                  >
+                    Confirm & Import
+                  </Button>
+                </div>
+                {!!openingPreview.length && (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Row</TableHead>
+                        <TableHead>Warehouse</TableHead>
+                        <TableHead>Item</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Messages</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {openingPreview.map((row) => (
+                        <TableRow key={row.rowNumber} className={row.status === "ok" ? "bg-green-50" : "bg-red-50"}>
+                          <TableCell>{row.rowNumber}</TableCell>
+                          <TableCell>{row.warehouseCode}</TableCell>
+                          <TableCell>{row.itemCode}</TableCell>
+                          <TableCell>{row.status}</TableCell>
+                          <TableCell>{(row.messages ?? []).join(", ") || "OK"}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Historical Movements Import</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Input
+                  type="file"
+                  accept=".xlsx,.xls"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    try {
+                      const rawRows = await parseExcelRows(file);
+                      const mapped = rawRows.map((r) => ({
+                        date: String(r.date ?? ""),
+                        warehouseCode: String(r.warehouseCode ?? ""),
+                        itemCode: String(r.itemCode ?? ""),
+                        movementType: String(r.movementType ?? "adjustment"),
+                        quantity: Number(r.quantity ?? 0),
+                        documentNumber: String(r.documentNumber ?? ""),
+                        notes: String(r.notes ?? ""),
+                      }));
+                      setMovementRows(mapped);
+                      toast.success(`Loaded ${mapped.length} historical movement rows.`);
+                    } catch (err) {
+                      toast.error(err instanceof Error ? err.message : "Failed to parse file.");
+                    }
+                  }}
+                />
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    disabled={!movementRows.length || movementDryRun.isPending}
+                    onClick={async () => {
+                      const res = await movementDryRun.mutateAsync({ rows: movementRows as any });
+                      setMovementPreview(res.preview);
+                      toast.success(`Dry run completed. ${res.summary.ok} valid row(s).`);
+                    }}
+                  >
+                    Dry-run
+                  </Button>
+                  <Button
+                    disabled={!movementRows.length || !isAdmin || movementConfirm.isPending}
+                    onClick={async () => {
+                      const res = await movementConfirm.mutateAsync({ rows: movementRows as any });
+                      toast.success(`Imported ${res.imported}, skipped ${res.skipped}, errors ${res.errors.length}.`);
+                    }}
+                  >
+                    Confirm & Import
+                  </Button>
+                </div>
+                {!!movementPreview.length && (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Row</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Warehouse</TableHead>
+                        <TableHead>Item</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {movementPreview.map((row) => (
+                        <TableRow key={row.rowNumber} className={row.status === "ok" ? "bg-green-50" : "bg-red-50"}>
+                          <TableCell>{row.rowNumber}</TableCell>
+                          <TableCell>{row.date}</TableCell>
+                          <TableCell>{row.warehouseCode}</TableCell>
+                          <TableCell>{row.itemCode}</TableCell>
+                          <TableCell>{row.movementType}</TableCell>
+                          <TableCell>{row.status}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
