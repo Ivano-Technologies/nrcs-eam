@@ -137,7 +137,7 @@ export default function Welcome() {
             </p>
           </div>
           <div className="grid gap-4 md:grid-cols-2 max-w-2xl mx-auto">
-            <Button size="lg" onClick={() => setLocation(appPath("/sites"))}>
+            <Button size="lg" onClick={() => setLocation(appPath("/facilities"))}>
               <Package className="mr-2 h-5 w-5" />
               Add First Site
             </Button>

@@ -31,7 +31,7 @@ import Welcome from "@/pages/Welcome";
 import WorkOrderDetail from "@/pages/WorkOrderDetail";
 import WorkOrders from "@/pages/WorkOrders";
 import WorkOrderTemplates from "@/pages/WorkOrderTemplates";
-import { Route, Switch } from "wouter";
+import { Redirect, Route, Switch } from "wouter";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 
 /**
@@ -64,8 +64,14 @@ export default function ProtectedAppSection() {
           <Route path="/app/vendors" component={Vendors} />
           <Route path="/app/financial" component={Financial} />
           <Route path="/app/compliance" component={Compliance} />
-          <Route path="/app/sites/:id" component={FacilityDetail} />
-          <Route path="/app/sites" component={Facilities} />
+          <Route path="/app/sites/:id">
+            {(params) => <Redirect to={`/app/facilities/${params.id}`} />}
+          </Route>
+          <Route path="/app/sites">
+            <Redirect to="/app/facilities" />
+          </Route>
+          <Route path="/app/facilities/:id" component={FacilityDetail} />
+          <Route path="/app/facilities" component={Facilities} />
           <Route path="/app/users" component={Users} />
           <Route path="/app/users/pending" component={PendingUsers} />
           <Route path="/app/pending-users" component={PendingUsers} />

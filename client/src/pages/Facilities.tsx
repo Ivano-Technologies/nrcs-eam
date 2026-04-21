@@ -204,7 +204,7 @@ export default function Facilities() {
         position: { lat: parseFloat(f.latitude), lng: parseFloat(f.longitude) },
         title: f.name,
       });
-      marker.addListener("click", () => setLocation(appPath(`/sites/${f.id}`)));
+      marker.addListener("click", () => setLocation(appPath(`/facilities/${f.id}`)));
       next.push(marker);
     });
     setMarkers(next);
@@ -389,7 +389,7 @@ export default function Facilities() {
       ) : viewMode === "card" ? (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3" data-testid="sites-list">
           {pageRows.map((f) => (
-            <Card key={f.id} onClick={() => setLocation(appPath(`/sites/${f.id}`))} className="cursor-pointer">
+            <Card key={f.id} onClick={() => setLocation(appPath(`/facilities/${f.id}`))} className="cursor-pointer">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">{f.name}</CardTitle>
               </CardHeader>
@@ -434,12 +434,13 @@ export default function Facilities() {
                 return (
                   <TableRow
                     key={f.id}
+                    data-testid={`facility-row-${f.id}`}
                     className={cn("h-9 cursor-pointer", rowCls)}
-                    onClick={() => setLocation(appPath(`/sites/${f.id}`))}
+                    onClick={() => setLocation(appPath(`/facilities/${f.id}`))}
                   >
                     <StickyCell left={0}>{rowNo}</StickyCell>
                     <StickyCell left={56}>{f.code ?? "—"}</StickyCell>
-                    <StickyCell left={220} className="font-medium">{f.name}</StickyCell>
+                    <StickyCell left={220} className="font-medium" data-testid={`facility-name-${f.id}`}>{f.name}</StickyCell>
                     <TableCell>
                       <Badge variant="outline" className={cn("border", TYPE_BADGE[f.facilityType])}>
                         {FACILITY_TYPE_LABELS[f.facilityType]}
