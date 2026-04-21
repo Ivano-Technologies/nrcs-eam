@@ -139,7 +139,7 @@ export function SidebarGroupedNav({
           className={cn("h-10 transition-all font-normal", isNarrow ? "justify-center" : "")}
         >
           <item.icon className={cn("h-[20px] w-[20px]", isActive ? "text-primary" : "")} />
-          {!isNarrow && <span className="text-[17px]">{item.label}</span>}
+          {!isNarrow && <span className="text-[15px]">{item.label}</span>}
         </SidebarMenuButton>
       </SidebarMenuItem>
     );
@@ -154,7 +154,7 @@ export function SidebarGroupedNav({
         type="button"
         title={isNarrow ? g.label : undefined}
         className={cn(
-          "flex w-full items-center gap-2 rounded-md border border-transparent px-2 py-1.5 text-left text-[17px] font-normal text-white transition-colors",
+          "flex w-full items-center gap-2 rounded-md border border-transparent px-2 py-1.5 text-left text-[15px] font-normal text-white transition-colors",
           "bg-sidebar-accent/40 hover:bg-sidebar-accent/70",
           isNarrow && "justify-center px-0"
         )}

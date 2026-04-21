@@ -29,7 +29,7 @@ export function InventorySecondaryNav() {
           <Link key={link.path} href={link.path}>
             <a
               className={cn(
-                "rounded-md border px-3 py-1.5 text-sm transition-colors",
+                "rounded-md border px-3 py-1.5 text-[13px] transition-colors",
                 active ? "bg-primary text-primary-foreground" : "hover:bg-muted"
               )}
             >
