@@ -7,7 +7,7 @@ test.describe("Inventory V2 (live)", () => {
     await page.goto("/app/inventory");
 
     await expect(page.getByTestId("inventory-tab-overview")).toBeVisible({ timeout: 60_000 });
-    await expect(page.getByText("All warehouses")).toBeVisible();
+    await expect(page.getByPlaceholder("Search item code/name")).toBeVisible();
     await expect(page.getByRole("button", { name: "Grid" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Table" })).toBeVisible();
 
@@ -19,7 +19,7 @@ test.describe("Inventory V2 (live)", () => {
     await expect(rows).toHaveCount(await rows.count());
     expect(await rows.count()).toBeGreaterThanOrEqual(40);
 
-    const categoryFilter = page.locator("div[role='combobox']").nth(0);
+    const categoryFilter = page.getByRole("combobox").nth(0);
     await categoryFilter.click();
     await page.getByRole("option", { name: "Food" }).click();
     await expect(rows.first()).toBeVisible();
