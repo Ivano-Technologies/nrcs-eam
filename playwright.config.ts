@@ -5,6 +5,7 @@ import { defineConfig } from "@playwright/test";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 /** Default RDS CA bundle for local `dev:e2e` when `.env.e2e` enables strict DB TLS but omits the path. */
 const DEFAULT_DATABASE_SSL_CA = path.join(__dirname, "certs", "global-bundle.pem");
+const MVP_AUDIT_AUTH_FILE = path.join(__dirname, "playwright", ".auth", "mvp-audit-user.json");
 
 const LIVE_AUTH_BASE = "https://nrcseam.techivano.com";
 
@@ -29,6 +30,15 @@ export default defineConfig({
   workers: 1,
   projects: [
     {
+      name: "mvp-audit-setup",
+      testMatch: "**/mvp-audit/**/*.setup.ts",
+      use: {
+        baseURL: "http://127.0.0.1:3000",
+        trace: "retain-on-failure",
+        screenshot: "only-on-failure",
+      },
+    },
+    {
       name: "live-auth",
       testMatch: ["**/auth/**/*.spec.ts", "**/features/**/*.spec.ts"],
       use: {
@@ -40,11 +50,14 @@ export default defineConfig({
     {
       name: "mvp-audit",
       testMatch: "**/mvp-audit/**/*.spec.ts",
+      testIgnore: "**/mvp-audit/**/*.setup.ts",
+      dependencies: ["mvp-audit-setup"],
       use: {
         baseURL: "http://127.0.0.1:3000",
         headless: false,
         screenshot: "on",
         trace: "retain-on-failure",
+        storageState: MVP_AUDIT_AUTH_FILE,
       },
     },
   ],

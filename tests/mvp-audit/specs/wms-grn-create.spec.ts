@@ -2,7 +2,7 @@ import { execSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
-import { testUser } from "../fixtures/testUser";
+import { loginViaMagicLink } from "../helpers/e2eAuth";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.join(__dirname, "..", "..", "..");
@@ -19,8 +19,7 @@ test.describe.configure({ mode: "serial" });
 
 test("WMS GRN create -> draft -> finalize -> print", async ({ page }) => {
   seedE2E();
-  await page.goto(`/auth/verify?token=${testUser.magicToken}`);
-  await page.waitForURL(/\/app(\/|$)/, { timeout: 30_000 });
+  await loginViaMagicLink(page);
 
   await page.goto("/app/inventory/receipts");
   await page.getByTestId("new-grn-btn").click();

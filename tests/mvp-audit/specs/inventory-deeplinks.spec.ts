@@ -2,7 +2,7 @@ import { execSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { test, expect } from "@playwright/test";
-import { testUser } from "../fixtures/testUser";
+import { loginViaMagicLink } from "../helpers/e2eAuth";
 import {
   attachGuards,
   createGuardState,
@@ -50,8 +50,7 @@ test.describe("Inventory deep links — tracking tab + sidebar", () => {
     guard = createGuardState();
     attachGuards(page, guard);
     seedE2E();
-    await page.goto(`/auth/verify?token=${testUser.magicToken}`);
-    await page.waitForURL(/\/app(\/|$)/, { timeout: 30_000 });
+    await loginViaMagicLink(page);
     await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible({
       timeout: 20_000,
     });
