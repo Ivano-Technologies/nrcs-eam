@@ -50,17 +50,17 @@ export function InventoryShell({ activeTab, children }: InventoryShellProps) {
           const href = tabHref(t.path);
           const active = isTabActive(t.tab, t.path, locPath);
           return (
-            <Link key={t.path} href={href}>
-              <a
-                data-testid={`inventory-shell-tab-${t.tab}`}
-                data-active={active ? "true" : "false"}
-                className={cn(
-                  "rounded-md border px-3 py-1.5 text-[13px] transition-colors",
-                  active ? "bg-primary text-primary-foreground" : "hover:bg-muted"
-                )}
-              >
-                {t.label}
-              </a>
+            <Link
+              key={t.path}
+              href={href}
+              data-testid={`inventory-shell-tab-${t.tab}`}
+              data-active={active ? "true" : "false"}
+              className={cn(
+                "rounded-md border px-3 py-1.5 text-[13px] transition-colors",
+                active ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+              )}
+            >
+              {t.label}
             </Link>
           );
         })}
