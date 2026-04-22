@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,6 +8,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
 import { toast } from "sonner";
 import { usePermissions } from "@/_core/hooks/usePermissions";
+import { Badge } from "@/components/ui/badge";
+import { ModuleFiltersCard, ModuleFilterSearch } from "@/components/ModuleFiltersCard";
+import { useLocation } from "wouter";
 
 function downloadBase64File(data: string, filename: string, mimeType: string) {
   const bytes = atob(data);
@@ -26,9 +28,14 @@ function downloadBase64File(data: string, filename: string, mimeType: string) {
 type Line = { catalogueId: string; ctnId: string; quantity: string; batchNumber: string; expiryDate: string; notes: string };
 
 export default function Receipts({ embedInShell = false }: { embedInShell?: boolean } = {}) {
+  const [, setLocation] = useLocation();
   const { isManagerOrAdmin, isStaffOrAbove } = usePermissions();
-  const [status, setStatus] = useState("all");
+  const [status, setStatus] = useState<"all" | "draft" | "finalized" | "claim_raised">("all");
   const [warehouseId, setWarehouseId] = useState("all");
+  const [search, setSearch] = useState("");
+  const [receivedFrom, setReceivedFrom] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [open, setOpen] = useState(false);
   const [referenceDocument, setReferenceDocument] = useState("");
   const [supplierName, setSupplierName] = useState("");
@@ -42,6 +49,10 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
   const receipts = trpc.inventoryV2.receipts.list.useQuery({
     warehouseId: warehouseId === "all" ? undefined : Number(warehouseId),
     status: status === "all" ? undefined : status,
+    search: search || undefined,
+    receivedFrom: receivedFrom || undefined,
+    dateFrom: dateFrom || undefined,
+    dateTo: dateTo || undefined,
   });
 
   const createMutation = trpc.inventoryV2.receipts.create.useMutation({
@@ -71,66 +82,99 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
           <InventorySecondaryNav />
         </>
       ) : null}
-      <Card>
-        <CardContent className="flex flex-wrap items-center gap-2 pt-4">
-          <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All status</SelectItem>
-              <SelectItem value="draft">Draft</SelectItem>
-              <SelectItem value="pending_approval">Pending</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={warehouseId} onValueChange={setWarehouseId}>
-            <SelectTrigger className="w-[220px]"><SelectValue placeholder="Location" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All locations</SelectItem>
-              {wh.map((w) => (
-                <SelectItem key={w.id} value={String(w.id)}>{w.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {isStaffOrAbove ? (
-            <Button data-testid="new-grn-btn" className="ml-auto" onClick={() => setOpen(true)}>
-              New GRN
-            </Button>
-          ) : null}
-        </CardContent>
-      </Card>
+      <ModuleFiltersCard
+        filterRow={
+          <>
+            <ModuleFilterSearch
+              placeholder="Search GRN number or consignment"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <Input
+              className="h-9 w-[220px]"
+              placeholder="Received from"
+              value={receivedFrom}
+              onChange={(e) => setReceivedFrom(e.target.value)}
+            />
+            <Input className="h-9 w-[170px]" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+            <Input className="h-9 w-[170px]" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+            <Select value={status} onValueChange={(v) => setStatus(v as typeof status)}>
+              <SelectTrigger className="h-9 w-[180px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All status</SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="finalized">Finalized</SelectItem>
+                <SelectItem value="claim_raised">Claim Raised</SelectItem>
+              </SelectContent>
+            </Select>
+          </>
+        }
+        toolbarEnd={
+          <>
+            <Button variant="outline">Export</Button>
+            <Button variant="outline">Template</Button>
+            <Button variant="outline">Import</Button>
+            {isStaffOrAbove ? (
+              <Button data-testid="new-grn-btn" onClick={() => setLocation("/app/inventory/receipts/new")}>
+                New GRN
+              </Button>
+            ) : null}
+          </>
+        }
+      />
 
       <div className="rounded-md border">
         <table className="w-full text-sm">
           <thead className="bg-muted/50">
             <tr className="border-b">
               <th className="px-2 py-2 text-left">Document #</th>
+              <th className="px-2 py-2 text-left">Date of Arrival</th>
+              <th className="px-2 py-2 text-left">Received From</th>
+              <th className="px-2 py-2 text-left">Consignment(s)</th>
+              <th className="px-2 py-2 text-left">Items</th>
               <th className="px-2 py-2 text-left">Status</th>
-              <th className="px-2 py-2 text-left">Warehouse</th>
-              <th className="px-2 py-2 text-left">Created</th>
               <th className="px-2 py-2 text-left">Actions</th>
             </tr>
           </thead>
           <tbody>
             {(receipts.data ?? []).map((row) => (
-              <tr key={row.id} data-testid={`grn-row-${row.documentNumber}`} className="border-b">
+              <tr
+                key={row.id}
+                data-testid={`grn-row-${row.documentNumber}`}
+                className="cursor-pointer border-b hover:bg-muted/30"
+                onClick={() => setLocation(`/app/inventory/receipts/${row.id}`)}
+              >
                 <td className="px-2 py-2 font-mono">{row.documentNumber}</td>
-                <td className="px-2 py-2">{row.status}</td>
-                <td className="px-2 py-2">{row.toWarehouseId ?? "—"}</td>
-                <td className="px-2 py-2">{row.createdAt ? new Date(row.createdAt).toLocaleString() : "—"}</td>
+                <td className="px-2 py-2">{row.createdAt ? new Date(row.createdAt).toLocaleDateString() : "—"}</td>
+                <td className="px-2 py-2">{row.referenceDocument ?? "—"}</td>
+                <td className="px-2 py-2">{row.referenceDocument ?? "—"}</td>
+                <td className="px-2 py-2">{Array.isArray(row.items) ? row.items.length : 0}</td>
+                <td className="px-2 py-2">
+                  {row.status === "completed" ? (
+                    <Badge className="bg-green-600">finalized</Badge>
+                  ) : row.status === "claim_raised" ? (
+                    <Badge variant="destructive">claim_raised</Badge>
+                  ) : (
+                    <Badge variant="secondary">draft</Badge>
+                  )}
+                </td>
                 <td className="px-2 py-2">
                   <Button
                     size="sm"
                     variant="outline"
                     className="mr-2"
                     disabled={downloadPdfMutation.isPending}
-                    onClick={async () => {
-                      try {
-                        const file = await downloadPdfMutation.mutateAsync({ documentId: row.id });
-                        downloadBase64File(file.data, file.filename || `${row.documentNumber}.pdf`, file.mimeType);
-                        toast.success("PDF downloaded.");
-                      } catch {
-                        // handled in mutation onError
-                      }
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void (async () => {
+                        try {
+                          const file = await downloadPdfMutation.mutateAsync({ documentId: row.id });
+                          downloadBase64File(file.data, file.filename || `${row.documentNumber}.pdf`, file.mimeType);
+                          toast.success("PDF downloaded.");
+                        } catch {
+                          // handled in mutation onError
+                        }
+                      })();
                     }}
                   >
                     {downloadPdfMutation.isPending ? "Generating..." : "Download PDF"}
@@ -139,7 +183,10 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
                     <Button
                       size="sm"
                       data-testid="approve-grn-btn"
-                      onClick={() => approveMutation.mutate({ documentId: row.id })}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        approveMutation.mutate({ documentId: row.id });
+                      }}
                     >
                       Approve
                     </Button>

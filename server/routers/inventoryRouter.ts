@@ -843,10 +843,31 @@ export const inventoryV2Router = router({
       }),
 
     list: protectedProcedure
-      .input(z.object({ warehouseId: z.number().optional(), status: z.string().optional() }).optional())
+      .input(
+        z
+          .object({
+            warehouseId: z.number().optional(),
+            status: z.enum(["draft", "finalized", "claim_raised"]).optional(),
+            search: z.string().optional(),
+            receivedFrom: z.string().optional(),
+            dateFrom: z.string().optional(),
+            dateTo: z.string().optional(),
+          })
+          .optional()
+      )
       .query(async ({ input }) => {
         const db = await getDb();
         if (!db) return [];
+        const statusFilter =
+          input?.status === "draft"
+            ? "pending_approval"
+            : input?.status === "finalized"
+              ? "completed"
+              : input?.status === "claim_raised"
+                ? "claim_raised"
+                : undefined;
+        const search = input?.search?.trim();
+        const receivedFrom = input?.receivedFrom?.trim();
         return db
           .select()
           .from(inventoryDocuments)
@@ -854,7 +875,16 @@ export const inventoryV2Router = router({
             and(
               eq(inventoryDocuments.documentType, "grn"),
               input?.warehouseId ? eq(inventoryDocuments.toWarehouseId, input.warehouseId) : undefined,
-              input?.status ? eq(inventoryDocuments.status, input.status) : undefined
+              statusFilter ? eq(inventoryDocuments.status, statusFilter) : undefined,
+              search
+                ? or(
+                    ilike(inventoryDocuments.documentNumber, `%${search}%`),
+                    ilike(inventoryDocuments.referenceDocument, `%${search}%`)
+                  )
+                : undefined,
+              receivedFrom ? ilike(inventoryDocuments.referenceDocument, `%${receivedFrom}%`) : undefined,
+              input?.dateFrom ? gte(inventoryDocuments.createdAt, new Date(`${input.dateFrom}T00:00:00.000Z`)) : undefined,
+              input?.dateTo ? lte(inventoryDocuments.createdAt, new Date(`${input.dateTo}T23:59:59.999Z`)) : undefined
             )
           )
           .orderBy(desc(inventoryDocuments.createdAt));
