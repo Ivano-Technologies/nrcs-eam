@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
 import { GrnLineItemsTable, type GrnLineItem } from "@/components/wms/GrnLineItemsTable";
 import { SignatureBlock, type SignatureValue } from "@/components/wms/SignatureBlock";
+import { CtnInlineCreator } from "@/components/wms/CtnInlineCreator";
 
 const emptyLine = (): GrnLineItem => ({
   consignmentNumber: "",
@@ -60,6 +61,8 @@ export default function ReceiptDetail() {
   const [receivedBy, setReceivedBy] = useState<SignatureValue>(emptySignature());
   const [dirty, setDirty] = useState(false);
   const [savedId, setSavedId] = useState<number | null>(documentId);
+  const [inlineCreatorOpen, setInlineCreatorOpen] = useState(false);
+  const [inlineCreatorLineIndex, setInlineCreatorLineIndex] = useState<number | null>(null);
 
   const { data: sites } = trpc.sites.list.useQuery();
   const warehouses = useMemo(() => (sites ?? []).filter((s) => s.facilityType === "warehouse"), [sites]);
@@ -317,6 +320,10 @@ export default function ReceiptDetail() {
                 onChange={(next) => { setLines(next); setDirty(true); }}
                 onAddLine={() => { setLines((prev) => [...prev, emptyLine()]); setDirty(true); }}
                 onRemoveLine={(index) => { setLines((prev) => prev.filter((_, i) => i !== index)); setDirty(true); }}
+                onCreateCtnForLine={(index) => {
+                  setInlineCreatorLineIndex(index);
+                  setInlineCreatorOpen(true);
+                }}
               />
             </div>
 
@@ -357,6 +364,18 @@ export default function ReceiptDetail() {
           </CardContent>
         </Card>
       </div>
+
+      <CtnInlineCreator
+        open={inlineCreatorOpen}
+        onOpenChange={setInlineCreatorOpen}
+        defaultReceivedDate={form.dateOfArrival}
+        defaultQuantity={inlineCreatorLineIndex != null ? lines[inlineCreatorLineIndex]?.nbOfUnits : ""}
+        onCreated={(ctn) => {
+          if (inlineCreatorLineIndex == null) return;
+          setLines((prev) => prev.map((line, i) => (i === inlineCreatorLineIndex ? { ...line, ctnId: String(ctn.id) } : line)));
+          setDirty(true);
+        }}
+      />
     </div>
   );
 }
