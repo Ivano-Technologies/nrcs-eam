@@ -23,7 +23,7 @@ function downloadBase64File(data: string, filename: string, mimeType: string) {
   URL.revokeObjectURL(url);
 }
 
-type Line = { catalogueId: string; quantity: string; batchNumber: string; expiryDate: string; notes: string };
+type Line = { catalogueId: string; ctnId: string; quantity: string; batchNumber: string; expiryDate: string; notes: string };
 
 export default function Receipts({ embedInShell = false }: { embedInShell?: boolean } = {}) {
   const { isManagerOrAdmin, isStaffOrAbove } = usePermissions();
@@ -32,7 +32,9 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
   const [open, setOpen] = useState(false);
   const [referenceDocument, setReferenceDocument] = useState("");
   const [supplierName, setSupplierName] = useState("");
-  const [lines, setLines] = useState<Line[]>([{ catalogueId: "", quantity: "", batchNumber: "", expiryDate: "", notes: "" }]);
+  const [lines, setLines] = useState<Line[]>([
+    { catalogueId: "", ctnId: "", quantity: "", batchNumber: "", expiryDate: "", notes: "" },
+  ]);
 
   const { data: warehouses } = trpc.sites.list.useQuery();
   const wh = useMemo(() => (warehouses ?? []).filter((x) => x.facilityType === "warehouse"), [warehouses]);
@@ -183,6 +185,11 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
                     </SelectContent>
                   </Select>
                   <Input
+                    placeholder="CTN ID"
+                    value={line.ctnId}
+                    onChange={(e) => setLines((prev) => prev.map((x, i) => (i === idx ? { ...x, ctnId: e.target.value } : x)))}
+                  />
+                  <Input
                     placeholder="Qty"
                     value={line.quantity}
                     onChange={(e) => setLines((prev) => prev.map((x, i) => (i === idx ? { ...x, quantity: e.target.value } : x)))}
@@ -204,7 +211,12 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
                   />
                 </div>
               ))}
-              <Button variant="outline" onClick={() => setLines((p) => [...p, { catalogueId: "", quantity: "", batchNumber: "", expiryDate: "", notes: "" }])}>
+              <Button
+                variant="outline"
+                onClick={() =>
+                  setLines((p) => [...p, { catalogueId: "", ctnId: "", quantity: "", batchNumber: "", expiryDate: "", notes: "" }])
+                }
+              >
                 Add Line
               </Button>
             </div>
@@ -218,9 +230,10 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
                     supplierName,
                     referenceDocument,
                     items: lines
-                      .filter((x) => x.catalogueId && Number(x.quantity) > 0)
+                      .filter((x) => x.catalogueId && x.ctnId && Number(x.quantity) > 0)
                       .map((x) => ({
                         catalogueId: Number(x.catalogueId),
+                        ctnId: Number(x.ctnId),
                         quantity: Number(x.quantity),
                         batchNumber: x.batchNumber || undefined,
                         expiryDate: x.expiryDate || undefined,

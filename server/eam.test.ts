@@ -171,6 +171,25 @@ describe("Inventory Management", () => {
 
     expect(Array.isArray(lowStock)).toBe(true);
   });
+
+  it("should reject GRN creation without ctnId on lines", async () => {
+    const ctx = createTestContext("manager");
+    const caller = appRouter.createCaller(ctx);
+
+    await expect(
+      caller.inventoryV2.receipts.create({
+        warehouseId: 1,
+        receiptType: "donation",
+        items: [
+          {
+            catalogueId: 1,
+            quantity: 5,
+            // Intentionally missing ctnId
+          },
+        ],
+      } as any)
+    ).rejects.toThrow();
+  });
 });
 
 describe("Vendors Management", () => {
