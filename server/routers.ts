@@ -14,6 +14,7 @@ import {
   staffOrAboveProcedure,
 } from "./routers/roleProcedures";
 import { inventoryV2Router } from "./routers/inventoryRouter";
+import { wmsRouter } from "./routers/wmsRouter";
 import { requireRole } from "./_core/trpc";
 import {
   legacyStatusFromRegister,
@@ -1080,6 +1081,7 @@ export const appRouter = router({
       }),
   }),
   inventoryV2: inventoryV2Router,
+  wms: wmsRouter,
 
   // ============= VENDORS =============
   vendors: router({

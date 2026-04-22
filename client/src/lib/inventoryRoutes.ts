@@ -1,8 +1,7 @@
 export type InventoryShellTab =
   | "stock-overview"
-  | "incoming"
-  | "outgoing"
+  | "tracking"
+  | "ctn-registry"
   | "requisitions"
-  | "transfers"
-  | "stock-takes"
-  | "adjustments";
+  | "receipts"
+  | "issues";

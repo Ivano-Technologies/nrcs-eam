@@ -207,6 +207,7 @@ const GROUP_PREFIXES: { groupId: string; pathPrefix: string }[] = [
   { groupId: "facilities", pathPrefix: appPath("/facilities/new") },
   { groupId: "facilities", pathPrefix: appPath("/facilities") },
   { groupId: "inventory", pathPrefix: appPath("/inventory/stock-overview") },
+  { groupId: "inventory", pathPrefix: appPath("/inventory/ctn-registry") },
   { groupId: "inventory", pathPrefix: appPath("/inventory/tracking") },
   { groupId: "inventory", pathPrefix: appPath("/inventory/requisitions") },
   { groupId: "inventory", pathPrefix: appPath("/inventory/receipts") },
