@@ -282,12 +282,10 @@ export type SidebarNavCounts = {
   };
   inventory: {
     stockOverview: number | null;
-    incoming: number | null;
-    outgoing: number | null;
+    tracking: number | null;
     requisitions: number | null;
-    transfers: number | null;
-    stockTakes: number | null;
-    adjustments: number | null;
+    receipts: number | null;
+    issues: number | null;
   };
 };
 
@@ -325,12 +323,10 @@ export async function getNavSidebarCounts(): Promise<SidebarNavCounts | null> {
     facilities: { all, nationalHq, branches, clinics, warehouses },
     inventory: {
       stockOverview,
-      incoming: null,
-      outgoing: null,
+      tracking: null,
       requisitions: reqRow?.c ?? null,
-      transfers: null,
-      stockTakes: null,
-      adjustments: null,
+      receipts: null,
+      issues: null,
     },
   };
 }
