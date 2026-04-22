@@ -38,15 +38,15 @@ export function InventorySecondaryNav() {
           }
         }
         return (
-          <Link key={link.label} href={link.path}>
-            <a
-              className={cn(
-                "rounded-md border px-3 py-1.5 text-[13px] transition-colors",
-                active ? "bg-primary text-primary-foreground" : "hover:bg-muted"
-              )}
-            >
-              {link.label}
-            </a>
+          <Link
+            key={link.label}
+            href={link.path}
+            className={cn(
+              "rounded-md border px-3 py-1.5 text-[13px] transition-colors",
+              active ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+            )}
+          >
+            {link.label}
           </Link>
         );
       })}

@@ -43,11 +43,9 @@ export function FacilitiesShell({
         </div>
         {canEditFacilities ? (
           <Button className="h-9 shrink-0" asChild>
-            <Link href={newHref}>
-              <a className="inline-flex items-center">
-                <Plus className="mr-2 h-4 w-4" />
-                Add Facility
-              </a>
+            <Link href={newHref} className="inline-flex items-center">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Facility
             </Link>
           </Button>
         ) : null}
@@ -61,15 +59,15 @@ export function FacilitiesShell({
             const h = href.replace(/\/$/, "") || "/";
             const active = loc === h;
             return (
-              <Link key={t.path} href={href}>
-                <a
-                  className={cn(
-                    "rounded-md border px-3 py-1.5 text-[13px] transition-colors",
-                    active ? "bg-primary text-primary-foreground" : "hover:bg-muted"
-                  )}
-                >
-                  {t.label}
-                </a>
+              <Link
+                key={t.path}
+                href={href}
+                className={cn(
+                  "rounded-md border px-3 py-1.5 text-[13px] transition-colors",
+                  active ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+                )}
+              >
+                {t.label}
               </Link>
             );
           })}
