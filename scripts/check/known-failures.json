@@ -1,18 +1,37 @@
 {
   "playwrightKnownFailuresByProject": {
-    "mvp-audit": [
-      "assets.spec.ts",
-      "auth.spec.ts",
-      "dashboard.spec.ts",
-      "email.spec.ts",
-      "pdf.spec.ts",
-      "proxy-debug.spec.ts",
-      "settings.spec.ts"
-    ],
-    "live-auth": [
-      "users-management.spec.ts",
-      "inventory-counts.spec.ts",
-      "inventory-movements.spec.ts"
-    ]
+    "mvp-audit": {
+      "environmental": [
+        "assets.spec.ts",
+        "auth.spec.ts",
+        "dashboard.spec.ts",
+        "email.spec.ts",
+        "pdf.spec.ts",
+        "proxy-debug.spec.ts",
+        "settings.spec.ts"
+      ],
+      "flaky-pending-cleanup": [
+        {
+          "file": "inventory-deeplinks.spec.ts",
+          "reason": "Flaky under full-suite runs due to per-test seedE2E dependency on Supabase network. Test logic is correct (specs pass when Supabase is stable). Scheduled for follow-up in test infrastructure cleanup workstream.",
+          "addedAt": "2026-04-22",
+          "plannedFixPhase": "2.5 — test infrastructure cleanup"
+        },
+        {
+          "file": "wms-grn-create.spec.ts",
+          "reason": "Flaky under full-suite runs due to per-test seedE2E dependency on Supabase network. Test logic is correct (specs pass when Supabase is stable). Scheduled for follow-up in test infrastructure cleanup workstream.",
+          "addedAt": "2026-04-22",
+          "plannedFixPhase": "2.5 — test infrastructure cleanup"
+        }
+      ]
+    },
+    "live-auth": {
+      "environmental": [
+        "users-management.spec.ts",
+        "inventory-counts.spec.ts",
+        "inventory-movements.spec.ts"
+      ],
+      "flaky-pending-cleanup": []
+    }
   }
 }

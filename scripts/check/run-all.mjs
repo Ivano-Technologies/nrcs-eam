@@ -38,6 +38,28 @@ function extractFailedSpecsByProject(suites, failedByProject = new Map()) {
   return failedByProject;
 }
 
+function knownFilesForProject(projectConfig) {
+  if (!projectConfig) return new Set();
+  if (Array.isArray(projectConfig)) return new Set(projectConfig);
+
+  const files = new Set();
+  const environmental = projectConfig.environmental ?? [];
+  for (const file of environmental) {
+    files.add(file);
+  }
+
+  const flakyPendingCleanup = projectConfig["flaky-pending-cleanup"] ?? [];
+  for (const item of flakyPendingCleanup) {
+    if (typeof item === "string") {
+      files.add(item);
+    } else if (item && typeof item.file === "string") {
+      files.add(item.file);
+    }
+  }
+
+  return files;
+}
+
 function runPlaywrightWithKnownFailures() {
   const reportPath = path.join(repoRoot, ".check-playwright.json");
   if (fs.existsSync(reportPath)) {
@@ -76,7 +98,7 @@ function runPlaywrightWithKnownFailures() {
   const unexpectedFailures = [];
   let knownFailureCount = 0;
   for (const [project, failedFiles] of failedByProject.entries()) {
-    const knownFiles = new Set(knownFailuresByProject[project] ?? []);
+    const knownFiles = knownFilesForProject(knownFailuresByProject[project]);
     for (const file of failedFiles) {
       if (knownFiles.has(file)) {
         knownFailureCount += 1;
