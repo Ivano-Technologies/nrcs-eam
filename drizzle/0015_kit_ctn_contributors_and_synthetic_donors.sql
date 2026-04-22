@@ -29,12 +29,5 @@ VALUES
 	'multilateral',
 	NULL,
 	'System-generated donor for kits assembled from multiple contributor CTNs. Contributing donors tracked per kit CTN.'
-),
-(
-	'Legacy Stock (pre-WMS)',
-	'LEGACY',
-	'synthetic',
-	NULL,
-	'System-generated donor for stock introduced before WMS adoption at a facility.'
 )
 ON CONFLICT ("code") DO NOTHING;

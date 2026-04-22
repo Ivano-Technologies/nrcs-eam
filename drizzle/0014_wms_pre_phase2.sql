@@ -24,6 +24,20 @@ END $$;
 -- Canonical facility codes for seed facility names (see scripts/db/seed-facilities.ts).
 -- Clear stale NHQ/LAG/KAN assignments so unique `sites.code` is not violated by other rows.
 UPDATE "sites" SET "code" = NULL WHERE "code" IN ('NHQ', 'LAG', 'KAN');
-UPDATE "sites" SET "code" = 'NHQ' WHERE "name" = 'NRCS Headquarters - Abuja';
-UPDATE "sites" SET "code" = 'LAG' WHERE "name" = 'NRCS Lagos Branch';
-UPDATE "sites" SET "code" = 'KAN' WHERE "name" = 'NRCS Kano Branch';
+
+-- Apply each seed code to one canonical row only (lowest id for matching name),
+-- and force all other same-name rows to NULL to preserve unique(code).
+WITH ranked AS (
+  SELECT id, name, row_number() OVER (PARTITION BY name ORDER BY id) AS rn
+  FROM "sites"
+  WHERE name IN ('NRCS Headquarters - Abuja', 'NRCS Lagos Branch', 'NRCS Kano Branch')
+)
+UPDATE "sites" s
+SET "code" = CASE
+  WHEN r.name = 'NRCS Headquarters - Abuja' AND r.rn = 1 THEN 'NHQ'
+  WHEN r.name = 'NRCS Lagos Branch' AND r.rn = 1 THEN 'LAG'
+  WHEN r.name = 'NRCS Kano Branch' AND r.rn = 1 THEN 'KAN'
+  ELSE NULL
+END
+FROM ranked r
+WHERE s.id = r.id;
