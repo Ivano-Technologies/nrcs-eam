@@ -10,6 +10,7 @@ import { getDb, resetDbConnection } from "../../server/db";
 
 const SEED = [
   {
+    code: "NHQ",
     name: "NRCS Headquarters - Abuja",
     address: "11 Eko Akete Close, Off Okotie Eboh Street",
     city: "Abuja",
@@ -22,6 +23,7 @@ const SEED = [
     parentFacilityId: null as number | null,
   },
   {
+    code: "LAG",
     name: "NRCS Lagos Branch",
     address: "Lagos Office Complex",
     city: "Lagos",
@@ -32,6 +34,7 @@ const SEED = [
     parentFacilityId: null,
   },
   {
+    code: "KAN",
     name: "NRCS Kano Branch",
     address: "Kano Office",
     city: "Kano",
@@ -53,7 +56,8 @@ async function main() {
   for (const row of SEED) {
     const existing = await db.select({ id: sites.id }).from(sites).where(eq(sites.name, row.name)).limit(1);
     if (existing.length > 0) {
-      console.log(`Skip (exists): ${row.name}`);
+      await db.update(sites).set({ code: row.code }).where(eq(sites.name, row.name));
+      console.log(`Updated code (exists): ${row.name} -> ${row.code}`);
       continue;
     }
     await db.insert(sites).values(row);

@@ -1,4 +1,4 @@
-/** Seed rows for `donors` — IFRC / humanitarian partners (WMS Phase 1). */
+/** Seed rows for `donors` — IFRC / humanitarian partners (WMS Phase 1) + system donors (Decision 4). */
 export const WMS_DONOR_SEED: Array<{
   name: string;
   code: string;
@@ -7,7 +7,8 @@ export const WMS_DONOR_SEED: Array<{
     | "multilateral"
     | "corporate"
     | "government"
-    | "individual";
+    | "individual"
+    | "synthetic";
   country: string | null;
   notes: string | null;
 }> = [
@@ -49,5 +50,20 @@ export const WMS_DONOR_SEED: Array<{
     type: "individual",
     country: null,
     notes: "Use for ad-hoc or unspecified donors",
+  },
+  {
+    name: "Blended Contributors",
+    code: "BLENDED",
+    type: "multilateral",
+    country: null,
+    notes:
+      "System-generated donor for kits assembled from multiple contributor CTNs. Contributing donors tracked per kit CTN.",
+  },
+  {
+    name: "Legacy Stock (pre-WMS)",
+    code: "LEGACY",
+    type: "synthetic",
+    country: null,
+    notes: "System-generated donor for stock introduced before WMS adoption at a facility.",
   },
 ];
