@@ -33,6 +33,11 @@ function requireEnv(name: string): string {
   return value;
 }
 
+function isDuplicateSupabaseUserError(message: string | undefined): boolean {
+  if (!message) return false;
+  return /already exists|duplicate|already been registered/i.test(message);
+}
+
 function getSupabaseUrl() {
   return requireEnv("SUPABASE_URL");
 }
@@ -65,19 +70,27 @@ export async function createTestUserInSupabase(): Promise<User> {
   const admin = createAdminClient();
   const password = getE2EPassword();
 
-  const { data: created, error: createErr } = await admin.auth.admin.createUser({
-    email: testUser.email,
-    password,
-    email_confirm: true,
-    user_metadata: { full_name: testUser.name },
-  });
-
-  if (createErr && !/already exists|duplicate/i.test(createErr.message)) {
-    throw new Error(`[e2e auth] createUser failed: ${createErr.message}`);
+  let createdUser: User | null = null;
+  try {
+    const { data, error } = await admin.auth.admin.createUser({
+      email: testUser.email,
+      password,
+      email_confirm: true,
+      user_metadata: { full_name: testUser.name },
+    });
+    if (error && !isDuplicateSupabaseUserError(error.message)) {
+      throw new Error(`[e2e auth] createUser failed: ${error.message}`);
+    }
+    createdUser = data.user;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!isDuplicateSupabaseUserError(message)) {
+      throw error;
+    }
   }
 
-  if (created.user) {
-    return created.user;
+  if (createdUser) {
+    return createdUser;
   }
 
   const { data: listed, error: listErr } = await admin.auth.admin.listUsers({
