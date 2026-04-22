@@ -29,6 +29,11 @@ import { generateGrnPdf } from "../_core/pdfTemplates/grnPdf";
 import { generateWaybillPdf } from "../_core/pdfTemplates/waybillPdf";
 import { generateRequisitionPdf } from "../_core/pdfTemplates/requisitionPdf";
 import { generateDistributionReportPdf } from "../_core/pdfTemplates/distributionReport";
+import {
+  assertCtnMatchesCatalogue,
+  ensureStockCardForCtnAtLocation,
+  insertGrnReceiptMovement,
+} from "../wms/grnStockLedger";
 
 const vedEnum = z.enum(INVENTORY_VED_VALUES);
 const categoryEnum = z.enum(INVENTORY_CATEGORIES);
@@ -107,6 +112,8 @@ const inventoryDocumentStatusEnum = z.enum([
 const documentItemSchema = z.object({
   catalogueId: z.number(),
   quantity: z.number().positive(),
+  /** When set, GRN approval writes `stock_movements` (WMS Phase 2) instead of `inventory_movements`. */
+  ctnId: z.number().int().positive().optional(),
   batchNumber: z.string().optional(),
   expiryDate: z.string().optional(),
   notes: z.string().optional(),
@@ -795,6 +802,31 @@ export const inventoryV2Router = router({
             .update(inventoryStock)
             .set({ quantityOnHand: nextOnHand, lastMovementAt: new Date(), updatedAt: new Date() })
             .where(eq(inventoryStock.id, stock.id));
+
+          if (line.ctnId != null) {
+            try {
+              await assertCtnMatchesCatalogue(db, line.ctnId, line.catalogueId);
+            } catch (e) {
+              throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: e instanceof Error ? e.message : String(e),
+              });
+            }
+            const stockCardId = await ensureStockCardForCtnAtLocation(db, {
+              ctnId: line.ctnId,
+              locationId: Number(doc.toWarehouseId),
+            });
+            await insertGrnReceiptMovement(db, {
+              stockCardId,
+              quantityIn: line.quantity,
+              documentNumber: doc.documentNumber,
+              fromTo: doc.referenceDocument ?? null,
+              remarks: line.notes ?? null,
+              createdBy: ctx.user.id,
+            });
+            continue;
+          }
+
           let createdBatchId: number | null = null;
           if (line.batchNumber || line.expiryDate) {
             const [batch] = await db

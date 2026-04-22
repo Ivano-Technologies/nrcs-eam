@@ -1,6 +1,6 @@
 /**
  * WMS (IFRC supply chain) — CTN registry and related procedures.
- * Ledger alignment with `inventory_movements` is Phase 2+.
+ * GRN lines with `ctnId` write to `stock_movements` on approval (Phase 2 — see `server/wms/grnStockLedger.ts`).
  */
 import { TRPCError } from "@trpc/server";
 import { and, count, desc, eq, gte, ilike, lte, or, sql } from "drizzle-orm";
