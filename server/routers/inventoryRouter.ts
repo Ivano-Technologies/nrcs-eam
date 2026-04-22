@@ -124,6 +124,33 @@ const grnDocumentItemSchema = documentItemSchema.extend({
   ctnId: z.number().int().positive(),
 });
 
+const grnDraftInputSchema = z.object({
+  grnNumber: z.string().min(1).max(100),
+  countryCode: z.string().max(8).optional(),
+  delegationLocationId: z.number(),
+  receivedFrom: z.string().min(1).max(500),
+  dateOfArrival: z.string(),
+  documentWellReceived: z.boolean().default(true),
+  incompleteDocumentsNotes: z.string().optional(),
+  meansOfTransport: z.enum(["road", "rail", "air", "sea", "handcarried"]).optional(),
+  awbNumber: z.string().optional(),
+  waybillCmrNumber: z.string().optional(),
+  blNumber: z.string().optional(),
+  flightNumber: z.string().optional(),
+  registrationNumber: z.string().optional(),
+  vesselName: z.string().optional(),
+  comments: z.string().optional(),
+  deliveredByName: z.string().optional(),
+  deliveredByFunction: z.string().optional(),
+  deliveredByDate: z.string().optional(),
+  deliveredBySignature: z.string().optional(),
+  receivedByName: z.string().optional(),
+  receivedByFunction: z.string().optional(),
+  receivedByDate: z.string().optional(),
+  receivedBySignature: z.string().optional(),
+  items: z.array(grnDocumentItemSchema).min(1),
+});
+
 const openingStockRowSchema = z.object({
   warehouseCode: z.string(),
   itemCode: z.string(),
@@ -746,6 +773,126 @@ export const inventoryV2Router = router({
   }),
 
   receipts: router({
+    createDraft: protectedProcedure.input(grnDraftInputSchema).mutation(async ({ input, ctx }) => {
+      requireRole(ctx, ["staff", "manager", "admin"]);
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+      const [dupe] = await db
+        .select({ id: inventoryDocuments.id })
+        .from(inventoryDocuments)
+        .where(eq(inventoryDocuments.documentNumber, input.grnNumber))
+        .limit(1);
+      if (dupe) {
+        throw new TRPCError({ code: "CONFLICT", message: "GRN number already exists." });
+      }
+      const [doc] = await db
+        .insert(inventoryDocuments)
+        .values({
+          documentType: "grn",
+          documentNumber: input.grnNumber,
+          status: "draft",
+          toWarehouseId: input.delegationLocationId,
+          items: input.items,
+          referenceDocument: input.receivedFrom,
+          transportDetails: {
+            countryCode: input.countryCode ?? "NG",
+            dateOfArrival: input.dateOfArrival,
+            documentWellReceived: input.documentWellReceived,
+            incompleteDocumentsNotes: input.incompleteDocumentsNotes ?? null,
+            meansOfTransport: input.meansOfTransport ?? null,
+            awbNumber: input.awbNumber ?? null,
+            waybillCmrNumber: input.waybillCmrNumber ?? null,
+            blNumber: input.blNumber ?? null,
+            flightNumber: input.flightNumber ?? null,
+            registrationNumber: input.registrationNumber ?? null,
+            vesselName: input.vesselName ?? null,
+            comments: input.comments ?? null,
+            deliveredByName: input.deliveredByName ?? null,
+            deliveredByFunction: input.deliveredByFunction ?? null,
+            deliveredByDate: input.deliveredByDate ?? null,
+            deliveredBySignature: input.deliveredBySignature ?? null,
+            receivedByName: input.receivedByName ?? null,
+            receivedByFunction: input.receivedByFunction ?? null,
+            receivedByDate: input.receivedByDate ?? null,
+            receivedBySignature: input.receivedBySignature ?? null,
+          },
+          notes: input.comments ?? null,
+          createdBy: ctx.user.id,
+        })
+        .returning();
+      return doc;
+    }),
+
+    updateDraft: protectedProcedure
+      .input(
+        z.object({
+          documentId: z.number(),
+          payload: grnDraftInputSchema,
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["staff", "manager", "admin"]);
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        const [doc] = await db
+          .select()
+          .from(inventoryDocuments)
+          .where(and(eq(inventoryDocuments.id, input.documentId), eq(inventoryDocuments.documentType, "grn")))
+          .limit(1);
+        if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "GRN not found." });
+        if (doc.status !== "draft" && doc.status !== "pending_approval") {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Only draft GRNs can be edited." });
+        }
+        const [dupe] = await db
+          .select({ id: inventoryDocuments.id })
+          .from(inventoryDocuments)
+          .where(
+            and(
+              eq(inventoryDocuments.documentNumber, input.payload.grnNumber),
+              sql`${inventoryDocuments.id} <> ${input.documentId}`
+            )
+          )
+          .limit(1);
+        if (dupe) {
+          throw new TRPCError({ code: "CONFLICT", message: "GRN number already exists." });
+        }
+        const [updated] = await db
+          .update(inventoryDocuments)
+          .set({
+            documentNumber: input.payload.grnNumber,
+            toWarehouseId: input.payload.delegationLocationId,
+            referenceDocument: input.payload.receivedFrom,
+            items: input.payload.items,
+            transportDetails: {
+              countryCode: input.payload.countryCode ?? "NG",
+              dateOfArrival: input.payload.dateOfArrival,
+              documentWellReceived: input.payload.documentWellReceived,
+              incompleteDocumentsNotes: input.payload.incompleteDocumentsNotes ?? null,
+              meansOfTransport: input.payload.meansOfTransport ?? null,
+              awbNumber: input.payload.awbNumber ?? null,
+              waybillCmrNumber: input.payload.waybillCmrNumber ?? null,
+              blNumber: input.payload.blNumber ?? null,
+              flightNumber: input.payload.flightNumber ?? null,
+              registrationNumber: input.payload.registrationNumber ?? null,
+              vesselName: input.payload.vesselName ?? null,
+              comments: input.payload.comments ?? null,
+              deliveredByName: input.payload.deliveredByName ?? null,
+              deliveredByFunction: input.payload.deliveredByFunction ?? null,
+              deliveredByDate: input.payload.deliveredByDate ?? null,
+              deliveredBySignature: input.payload.deliveredBySignature ?? null,
+              receivedByName: input.payload.receivedByName ?? null,
+              receivedByFunction: input.payload.receivedByFunction ?? null,
+              receivedByDate: input.payload.receivedByDate ?? null,
+              receivedBySignature: input.payload.receivedBySignature ?? null,
+            },
+            notes: input.payload.comments ?? null,
+            status: "draft",
+          })
+          .where(eq(inventoryDocuments.id, input.documentId))
+          .returning();
+        return updated;
+      }),
+
     create: protectedProcedure
       .input(
         z.object({
