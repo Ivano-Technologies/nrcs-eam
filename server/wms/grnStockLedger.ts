@@ -6,6 +6,7 @@ import { and, eq, sql } from "drizzle-orm";
 import {
   commodityTrackingNumbers,
   inventoryCatalogue,
+  inventoryStock,
   stockCards,
   stockMovements,
 } from "../../drizzle/schema";
@@ -118,4 +119,33 @@ export async function insertGrnReceiptMovement(
     sourceType: "grn",
     createdBy: params.createdBy,
   });
+}
+
+export async function applyTransitionalInventoryStockReceipt(
+  db: Db,
+  params: { catalogueId: number; warehouseId: number; quantity: number }
+): Promise<void> {
+  const [stock] = await db
+    .select()
+    .from(inventoryStock)
+    .where(and(eq(inventoryStock.catalogueId, params.catalogueId), eq(inventoryStock.warehouseId, params.warehouseId)))
+    .limit(1);
+
+  const current = stock
+    ? stock
+    : (
+        await db
+          .insert(inventoryStock)
+          .values({ catalogueId: params.catalogueId, warehouseId: params.warehouseId })
+          .returning()
+      )[0];
+
+  const nextOnHand = Number(current.quantityOnHand) + Number(params.quantity);
+  // TODO(Phase 5): TRANSITIONAL: inventory_stock is written alongside stock_movements
+  // until Phase 5 migrates UI reads to stock_movements aggregates. Remove this dual-write
+  // in Phase 5. See docs/inventory-ledger-architecture.md § Transitional dual-writes.
+  await db
+    .update(inventoryStock)
+    .set({ quantityOnHand: nextOnHand, lastMovementAt: new Date(), updatedAt: new Date() })
+    .where(eq(inventoryStock.id, current.id));
 }

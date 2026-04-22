@@ -30,6 +30,7 @@ import { generateWaybillPdf } from "../_core/pdfTemplates/waybillPdf";
 import { generateRequisitionPdf } from "../_core/pdfTemplates/requisitionPdf";
 import { generateDistributionReportPdf } from "../_core/pdfTemplates/distributionReport";
 import {
+  applyTransitionalInventoryStockReceipt,
   assertCtnMatchesCatalogue,
   ensureStockCardForCtnAtLocation,
   insertGrnReceiptMovement,
@@ -117,6 +118,10 @@ const documentItemSchema = z.object({
   batchNumber: z.string().optional(),
   expiryDate: z.string().optional(),
   notes: z.string().optional(),
+});
+
+const grnDocumentItemSchema = documentItemSchema.extend({
+  ctnId: z.number().int().positive(),
 });
 
 const openingStockRowSchema = z.object({
@@ -756,7 +761,7 @@ export const inventoryV2Router = router({
               driverPhone: z.string().optional(),
             })
             .optional(),
-          items: z.array(documentItemSchema).min(1),
+          items: z.array(grnDocumentItemSchema).min(1),
           notes: z.string().optional(),
         })
       )
@@ -794,69 +799,39 @@ export const inventoryV2Router = router({
           .where(and(eq(inventoryDocuments.id, input.documentId), eq(inventoryDocuments.documentType, "grn")))
           .limit(1);
         if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "GRN not found." });
-        const lines = Array.isArray(doc.items) ? (doc.items as z.infer<typeof documentItemSchema>[]) : [];
+        const lines = Array.isArray(doc.items) ? (doc.items as z.infer<typeof grnDocumentItemSchema>[]) : [];
         for (const line of lines) {
-          const stock = await getOrCreateStock(line.catalogueId, Number(doc.toWarehouseId));
-          const nextOnHand = Number(stock.quantityOnHand) + Number(line.quantity);
-          await db
-            .update(inventoryStock)
-            .set({ quantityOnHand: nextOnHand, lastMovementAt: new Date(), updatedAt: new Date() })
-            .where(eq(inventoryStock.id, stock.id));
-
-          if (line.ctnId != null) {
-            try {
-              await assertCtnMatchesCatalogue(db, line.ctnId, line.catalogueId);
-            } catch (e) {
-              throw new TRPCError({
-                code: "BAD_REQUEST",
-                message: e instanceof Error ? e.message : String(e),
-              });
-            }
-            const stockCardId = await ensureStockCardForCtnAtLocation(db, {
-              ctnId: line.ctnId,
-              locationId: Number(doc.toWarehouseId),
+          if (line.ctnId == null) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message:
+                "GRN lines must specify a CTN. Create the CTN in the CTN Registry first, or use the GRN form's inline CTN creator.",
             });
-            await insertGrnReceiptMovement(db, {
-              stockCardId,
-              quantityIn: line.quantity,
-              documentNumber: doc.documentNumber,
-              fromTo: doc.referenceDocument ?? null,
-              remarks: line.notes ?? null,
-              createdBy: ctx.user.id,
+          }
+          try {
+            await assertCtnMatchesCatalogue(db, line.ctnId, line.catalogueId);
+          } catch (e) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: e instanceof Error ? e.message : String(e),
             });
-            continue;
           }
-
-          let createdBatchId: number | null = null;
-          if (line.batchNumber || line.expiryDate) {
-            const [batch] = await db
-              .insert(inventoryBatches)
-              .values({
-                stockId: stock.id,
-                batchNumber: line.batchNumber ?? null,
-                expiryDate: line.expiryDate ?? null,
-                quantity: line.quantity,
-                supplierName: doc.referenceDocument ?? null,
-                notes: line.notes ?? null,
-              })
-              .returning();
-            createdBatchId = batch.id;
-          }
-          await db.insert(inventoryMovements).values({
-            movementType: "receipt",
+          await applyTransitionalInventoryStockReceipt(db, {
             catalogueId: line.catalogueId,
-            stockId: stock.id,
-            batchId: createdBatchId,
-            toWarehouseId: doc.toWarehouseId,
-            quantityChange: line.quantity,
-            balanceAfter: nextOnHand,
-            documentType: "grn",
-            documentId: doc.id,
+            warehouseId: Number(doc.toWarehouseId),
+            quantity: line.quantity,
+          });
+          const stockCardId = await ensureStockCardForCtnAtLocation(db, {
+            ctnId: line.ctnId,
+            locationId: Number(doc.toWarehouseId),
+          });
+          await insertGrnReceiptMovement(db, {
+            stockCardId,
+            quantityIn: line.quantity,
             documentNumber: doc.documentNumber,
-            performedBy: doc.createdBy,
-            approvedBy: ctx.user.id,
-            reason: "GRN approval",
-            notes: line.notes ?? null,
+            fromTo: doc.referenceDocument ?? null,
+            remarks: line.notes ?? null,
+            createdBy: ctx.user.id,
           });
         }
         await db
