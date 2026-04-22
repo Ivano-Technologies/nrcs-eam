@@ -40,7 +40,7 @@ test.describe("WMS CTN registry (Phase 1)", () => {
     attachGuards(page, guard);
     seedE2E();
     await loginViaMagicLink(page);
-    await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible({
+    await expect(page.getByTestId("sidebar-nav-dashboard")).toBeVisible({
       timeout: 20_000,
     });
   });

@@ -18,7 +18,7 @@ setup("bootstrap mvp-audit auth storage state", async ({ browser, baseURL }) => 
   const page = await context.newPage();
   await page.goto("/app");
   await expect(page).toHaveURL(/\/app(\/|$)/);
-  await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible({
+  await expect(page.getByRole("button", { name: /E2E Admin/i })).toBeVisible({
     timeout: 20_000,
   });
 
