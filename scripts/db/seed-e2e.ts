@@ -8,7 +8,8 @@
 import "dotenv/config";
 import { eq } from "drizzle-orm";
 import { createClient } from "@supabase/supabase-js";
-import { users } from "../../drizzle/schema";
+import { donors, users } from "../../drizzle/schema";
+import { WMS_DONOR_SEED } from "../../shared/wmsDonors";
 import { getDb } from "../../server/db";
 
 export const E2E_OPENID = "e2e-playwright-openid";
@@ -23,6 +24,8 @@ export async function runSeedE2e() {
     .from(users)
     .where(eq(users.email, E2E_EMAIL))
     .limit(1);
+
+  await db.insert(donors).values(WMS_DONOR_SEED).onConflictDoNothing({ target: donors.code });
 
   if (existing.length === 0) {
     await db.insert(users).values({

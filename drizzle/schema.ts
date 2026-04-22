@@ -145,6 +145,51 @@ export const facilityTypeEnum = pgEnum("facility_type", [...FACILITY_TYPE_VALUES
 
 export const itemCategoryEnum = pgEnum("item_category", [...ITEM_CATEGORY_VALUES]);
 
+/** WMS — donor classification (IFRC supply chain). */
+export const donorTypeEnum = pgEnum("donor_type", [
+  "national_society",
+  "multilateral",
+  "corporate",
+  "government",
+  "individual",
+]);
+
+/** WMS — transport on GRN / waybill. */
+export const wmsMeansOfTransportEnum = pgEnum("wms_means_of_transport", [
+  "road",
+  "rail",
+  "air",
+  "sea",
+  "handcarried",
+]);
+
+export const grnStatusEnum = pgEnum("grn_status", ["draft", "finalized", "claim_raised"]);
+
+export const waybillDocTypeEnum = pgEnum("waybill_doc_type", ["waybill", "delivery_note"]);
+
+export const waybillStatusEnum = pgEnum("waybill_status", [
+  "draft",
+  "dispatched",
+  "received",
+  "claim_raised",
+]);
+
+/**
+ * WMS ledger source. Separate from `inventory_movements` (catalogue-centric);
+ * alignment with on-hand stock is Phase 2+.
+ */
+export const wmsStockMovementSourceEnum = pgEnum("wms_stock_movement_source", [
+  "grn",
+  "waybill",
+  "stock_check",
+  "adjustment",
+  "import",
+]);
+
+export const ctnRegistryStatusEnum = pgEnum("ctn_registry_status", ["active", "locked", "depleted"]);
+
+export const wmsDocTypeEnum = pgEnum("wms_doc_type", ["grn", "waybill"]);
+
 /**
  * Core user table backing auth flow with extended roles for EAM system
  */
@@ -164,6 +209,8 @@ export const users = pgTable("users", {
     .notNull(),
   /** Supabase Auth user id (`auth.users.id`). */
   authUserId: uuid("auth_user_id").unique(),
+  /** Public URL for profile photo (e.g. from app upload or external HTTPS URL). */
+  avatarUrl: text("avatar_url"),
 });
 
 /** System-wide key/value settings (e.g. openRegistration). */
@@ -520,11 +567,121 @@ export const inventoryCountLines = pgTable("inventory_count_lines", {
   countedAt: timestamp("counted_at", { mode: "date" }),
 });
 
+/**
+ * WMS — humanitarian donors (IFRC partners). Seeded with common NS / multilateral codes.
+ */
+export const donors = pgTable(
+  "donors",
+  {
+    id: serial("id").primaryKey(),
+    name: varchar("name", { length: 255 }).notNull(),
+    code: varchar("code", { length: 32 }).notNull().unique(),
+    type: donorTypeEnum("type").notNull(),
+    country: varchar("country", { length: 100 }),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  },
+  (table) => ({
+    donorTypeIdx: index("donors_type_idx").on(table.type),
+  })
+);
+
+/**
+ * WMS — Commodity Tracking Number: one row per consignment of a catalogue item.
+ */
+export const commodityTrackingNumbers = pgTable(
+  "commodity_tracking_numbers",
+  {
+    id: serial("id").primaryKey(),
+    ctnCode: varchar("ctn_code", { length: 64 }).notNull().unique(),
+    donorId: integer("donor_id")
+      .notNull()
+      .references(() => donors.id),
+    itemId: integer("item_id")
+      .notNull()
+      .references(() => inventoryCatalogue.id),
+    receivedDate: date("received_date"),
+    expiryDate: date("expiry_date"),
+    unit: varchar("unit", { length: 50 }).notNull(),
+    originalQuantity: doublePrecision("original_quantity").notNull(),
+    notes: text("notes"),
+    status: ctnRegistryStatusEnum("status").notNull().default("active"),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+  },
+  (table) => ({
+    ctnDonorIdx: index("ctn_donor_idx").on(table.donorId),
+    ctnItemIdx: index("ctn_item_idx").on(table.itemId),
+    ctnExpiryIdx: index("ctn_expiry_idx").on(table.expiryDate),
+  })
+);
+
+export const goodsReceivedNotes = pgTable(
+  "goods_received_notes",
+  {
+    id: serial("id").primaryKey(),
+    grnNumber: varchar("grn_number", { length: 100 }).notNull().unique(),
+    consignmentNumber: varchar("consignment_number", { length: 100 }),
+    delegationLocationId: integer("delegation_location_id")
+      .notNull()
+      .references(() => sites.id),
+    receivedFrom: varchar("received_from", { length: 500 }).notNull(),
+    dateOfArrival: date("date_of_arrival").notNull(),
+    documentWellReceived: boolean("document_well_received").default(true),
+    incompleteDocumentsNotes: text("incomplete_documents_notes"),
+    meansOfTransport: wmsMeansOfTransportEnum("means_of_transport"),
+    awbNumber: varchar("awb_number", { length: 100 }),
+    waybillCmrNumber: varchar("waybill_cmr_number", { length: 100 }),
+    blNumber: varchar("bl_number", { length: 100 }),
+    flightNumber: varchar("flight_number", { length: 100 }),
+    registrationNumber: varchar("registration_number", { length: 100 }),
+    vesselName: varchar("vessel_name", { length: 255 }),
+    deliveredByName: varchar("delivered_by_name", { length: 255 }),
+    deliveredByFunction: varchar("delivered_by_function", { length: 255 }),
+    deliveredByDate: date("delivered_by_date"),
+    deliveredBySignatureUrl: text("delivered_by_signature_url"),
+    receivedByName: varchar("received_by_name", { length: 255 }),
+    receivedByFunction: varchar("received_by_function", { length: 255 }),
+    receivedByDate: date("received_by_date"),
+    receivedBySignatureUrl: text("received_by_signature_url"),
+    comments: text("comments"),
+    status: grnStatusEnum("status").notNull().default("draft"),
+    createdBy: integer("created_by").references(() => users.id),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+  },
+  (table) => ({
+    grnDelegationDateIdx: index("grn_delegation_date_idx").on(
+      table.delegationLocationId,
+      table.dateOfArrival
+    ),
+  })
+);
+
+export const goodsReceivedNoteLines = pgTable("goods_received_note_lines", {
+  id: serial("id").primaryKey(),
+  grnId: integer("grn_id")
+    .notNull()
+    .references(() => goodsReceivedNotes.id, { onDelete: "cascade" }),
+  consignmentNumber: varchar("consignment_number", { length: 100 }),
+  description: text("description").notNull(),
+  ctnOrDonor: varchar("ctn_or_donor", { length: 255 }),
+  ctnId: integer("ctn_id").references(() => commodityTrackingNumbers.id),
+  nbOfUnits: doublePrecision("nb_of_units").notNull(),
+  unitType: varchar("unit_type", { length: 50 }).notNull(),
+  weightKg: doublePrecision("weight_kg"),
+  receivedInGoodCondition: boolean("received_in_good_condition").default(true),
+  claimNotes: text("claim_notes"),
+  lineOrder: integer("line_order").default(0).notNull(),
+});
+
 export const requisitions = pgTable(
   "requisitions",
   {
     id: serial("id").primaryKey(),
     reqNumber: varchar("req_number", { length: 100 }).notNull().unique(),
+    /** Logistics requisition number (WMS); may mirror req_number or be distinct. */
+    lrNumber: varchar("lr_number", { length: 100 }).unique(),
     title: varchar("title", { length: 255 }).notNull(),
     status: varchar("status", { length: 50 }).default("draft"),
     priority: varchar("priority", { length: 50 }).default("routine"),
@@ -534,11 +691,17 @@ export const requisitions = pgTable(
     requestingFacility: integer("requesting_facility")
       .notNull()
       .references(() => sites.id),
+    /** Requesting unit label (WMS logistics). */
+    requestingUnit: varchar("requesting_unit", { length: 255 }),
+    /** Purpose / narrative (WMS); complements justification. */
+    purpose: text("purpose"),
     justification: text("justification").notNull(),
     incidentReference: varchar("incident_reference", { length: 255 }),
     affectedPopulation: integer("affected_population"),
     items: json("items"),
     suggestedWarehouseId: integer("suggested_warehouse_id").references(() => sites.id),
+    authorizedBy: integer("authorized_by").references(() => users.id),
+    dateAuthorized: timestamp("date_authorized", { mode: "date" }),
     approvedBranchBy: integer("approved_branch_by").references(() => users.id),
     approvedBranchAt: timestamp("approved_branch_at", { mode: "date" }),
     approvedHqBy: integer("approved_hq_by").references(() => users.id),
@@ -552,6 +715,173 @@ export const requisitions = pgTable(
   },
   (table) => ({
     statusPriorityIdx: index("req_status_priority_idx").on(table.status, table.priority),
+  })
+);
+
+export const waybills = pgTable(
+  "waybills",
+  {
+    id: serial("id").primaryKey(),
+    wbNumber: varchar("wb_number", { length: 100 }).notNull().unique(),
+    docType: waybillDocTypeEnum("doc_type").notNull(),
+    countryCode: varchar("country_code", { length: 8 }),
+    date: date("date").notNull(),
+    warehouseId: integer("warehouse_id")
+      .notNull()
+      .references(() => sites.id),
+    destinationBeneficiary: text("destination_beneficiary").notNull(),
+    transportContractRef: varchar("transport_contract_ref", { length: 255 }),
+    vehicle1: varchar("vehicle_1", { length: 255 }),
+    vehicle2: varchar("vehicle_2", { length: 255 }),
+    registration1: varchar("registration_1", { length: 100 }),
+    registration2: varchar("registration_2", { length: 100 }),
+    meansOfTransport: wmsMeansOfTransportEnum("means_of_transport"),
+    etd: timestamp("etd", { mode: "date" }),
+    loadedByName: varchar("loaded_by_name", { length: 255 }),
+    loadedByDate: date("loaded_by_date"),
+    loadedByFunction: varchar("loaded_by_function", { length: 255 }),
+    loadedBySignatureUrl: text("loaded_by_signature_url"),
+    transportedByName: varchar("transported_by_name", { length: 255 }),
+    transportedByDate: date("transported_by_date"),
+    transportedByFunction: varchar("transported_by_function", { length: 255 }),
+    transportedBySignatureUrl: text("transported_by_signature_url"),
+    receivedByName: varchar("received_by_name", { length: 255 }),
+    receivedByDate: date("received_by_date"),
+    receivedByFunction: varchar("received_by_function", { length: 255 }),
+    receivedBySignatureUrl: text("received_by_signature_url"),
+    receivedAtLocation: varchar("received_at_location", { length: 500 }),
+    receivedCondition: text("received_condition"),
+    comments: text("comments"),
+    commentsFromReceiver: text("comments_from_receiver"),
+    requisitionId: integer("requisition_id").references(() => requisitions.id),
+    status: waybillStatusEnum("status").notNull().default("draft"),
+    createdBy: integer("created_by").references(() => users.id),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+  },
+  (table) => ({
+    waybillWarehouseDateIdx: index("waybill_warehouse_date_idx").on(table.warehouseId, table.date),
+  })
+);
+
+export const waybillLines = pgTable("waybill_lines", {
+  id: serial("id").primaryKey(),
+  waybillId: integer("waybill_id")
+    .notNull()
+    .references(() => waybills.id, { onDelete: "cascade" }),
+  itemDescription: text("item_description").notNull(),
+  ctnId: integer("ctn_id")
+    .notNull()
+    .references(() => commodityTrackingNumbers.id),
+  nbOfUnits: doublePrecision("nb_of_units").notNull(),
+  unitType: varchar("unit_type", { length: 50 }).notNull(),
+  weightKg: doublePrecision("weight_kg"),
+  volumeM3: doublePrecision("volume_m3"),
+  requisitionLineId: varchar("requisition_line_id", { length: 64 }),
+  remarks: text("remarks"),
+  lineOrder: integer("line_order").default(0).notNull(),
+});
+
+/**
+ * WMS — one stock card per CTN per stock location (facility).
+ */
+export const stockCards = pgTable(
+  "stock_cards",
+  {
+    id: serial("id").primaryKey(),
+    ctnId: integer("ctn_id")
+      .notNull()
+      .references(() => commodityTrackingNumbers.id),
+    locationId: integer("location_id")
+      .notNull()
+      .references(() => sites.id),
+    description: text("description"),
+    itemCode: varchar("item_code", { length: 50 }),
+    measureUnit: varchar("measure_unit", { length: 50 }),
+    expiryDate: date("expiry_date"),
+    stockMinimum: doublePrecision("stock_minimum"),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  },
+  (table) => ({
+    stockCardCtnLocationUnique: unique("stock_card_ctn_location_unique").on(table.ctnId, table.locationId),
+    stockCardLocationIdx: index("stock_card_location_idx").on(table.locationId),
+  })
+);
+
+export const binCardStatusEnum = pgEnum("bin_card_status", ["open", "closed"]);
+
+export const binCards = pgTable(
+  "bin_cards",
+  {
+    id: serial("id").primaryKey(),
+    stockCardId: integer("stock_card_id")
+      .notNull()
+      .references(() => stockCards.id, { onDelete: "cascade" }),
+    binNumber: varchar("bin_number", { length: 64 }).notNull(),
+    stockLocation: varchar("stock_location", { length: 255 }),
+    itemCode: varchar("item_code", { length: 50 }),
+    itemDescription: text("item_description"),
+    commodityTrackingNumber: varchar("commodity_tracking_number", { length: 64 }),
+    donorCode: varchar("donor_code", { length: 32 }),
+    unit: varchar("unit", { length: 50 }),
+    expiryDate: date("expiry_date"),
+    openedAt: timestamp("opened_at", { mode: "date" }).defaultNow().notNull(),
+    closedAt: timestamp("closed_at", { mode: "date" }),
+    status: binCardStatusEnum("status").notNull().default("open"),
+  },
+  (table) => ({
+    binStockCardNumberUnique: unique("bin_stock_card_number_unique").on(table.stockCardId, table.binNumber),
+  })
+);
+
+/**
+ * WMS physical ledger rows. See module comment: separate from `inventory_movements`.
+ */
+export const stockMovements = pgTable(
+  "stock_movements",
+  {
+    id: serial("id").primaryKey(),
+    stockCardId: integer("stock_card_id")
+      .notNull()
+      .references(() => stockCards.id, { onDelete: "cascade" }),
+    binCardId: integer("bin_card_id").references(() => binCards.id),
+    date: date("date").notNull(),
+    documentRef: varchar("document_ref", { length: 100 }),
+    fromTo: varchar("from_to", { length: 500 }),
+    quantityIn: doublePrecision("quantity_in").default(0).notNull(),
+    quantityOut: doublePrecision("quantity_out").default(0).notNull(),
+    balanceAfter: doublePrecision("balance_after").notNull(),
+    remarks: text("remarks"),
+    storekeeperInitials: varchar("storekeeper_initials", { length: 32 }),
+    signatureUrl: text("signature_url"),
+    sourceType: wmsStockMovementSourceEnum("source_type").notNull(),
+    createdBy: integer("created_by").references(() => users.id),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  },
+  (table) => ({
+    stockMovementsCardDateIdx: index("stock_movements_card_date_idx").on(table.stockCardId, table.date),
+  })
+);
+
+/** Prenumbered GRN / waybill series per facility (Phase 2 numbering UX). */
+export const documentNumberSequences = pgTable(
+  "document_number_sequences",
+  {
+    id: serial("id").primaryKey(),
+    facilityId: integer("facility_id")
+      .notNull()
+      .references(() => sites.id, { onDelete: "cascade" }),
+    docType: wmsDocTypeEnum("doc_type").notNull(),
+    year: integer("year").notNull(),
+    prefix: varchar("prefix", { length: 32 }).notNull(),
+    lastSeq: integer("last_seq").notNull().default(0),
+  },
+  (table) => ({
+    docSeqUnique: unique("document_number_sequences_unique").on(
+      table.facilityId,
+      table.docType,
+      table.year
+    ),
   })
 );
 
@@ -736,6 +1066,18 @@ export type InventoryCountLine = typeof inventoryCountLines.$inferSelect;
 export type InsertInventoryCountLine = typeof inventoryCountLines.$inferInsert;
 export type Requisition = typeof requisitions.$inferSelect;
 export type InsertRequisition = typeof requisitions.$inferInsert;
+export type Donor = typeof donors.$inferSelect;
+export type InsertDonor = typeof donors.$inferInsert;
+export type CommodityTrackingNumber = typeof commodityTrackingNumbers.$inferSelect;
+export type InsertCommodityTrackingNumber = typeof commodityTrackingNumbers.$inferInsert;
+export type GoodsReceivedNote = typeof goodsReceivedNotes.$inferSelect;
+export type GoodsReceivedNoteLine = typeof goodsReceivedNoteLines.$inferSelect;
+export type Waybill = typeof waybills.$inferSelect;
+export type WaybillLine = typeof waybillLines.$inferSelect;
+export type StockCard = typeof stockCards.$inferSelect;
+export type BinCard = typeof binCards.$inferSelect;
+export type StockMovement = typeof stockMovements.$inferSelect;
+export type DocumentNumberSequence = typeof documentNumberSequences.$inferSelect;
 export type Distribution = typeof distributions.$inferSelect;
 export type InsertDistribution = typeof distributions.$inferInsert;
 export type InventoryKit = typeof inventoryKits.$inferSelect;

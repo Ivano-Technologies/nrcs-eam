@@ -25,6 +25,7 @@
     "db:seed:e2e": "dotenv -e .env.e2e -- node scripts/db/seed-db.mjs",
     "seed-e2e:local": "dotenv -e .env.e2e -- tsx scripts/db/seed-e2e.ts",
     "db:seed:sample": "node scripts/db/seed-sample-data.mjs",
+    "db:seed:wms-donors": "tsx scripts/db/seed-wms-donors.ts",
     "db:cleanup": "node scripts/db/cleanup-database.mjs",
     "db:clean-test-data": "tsx scripts/db/clean-test-data.ts",
     "db:full-reset": "tsx scripts/db/full-reset.ts",

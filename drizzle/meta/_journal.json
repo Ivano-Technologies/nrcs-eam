@@ -85,6 +85,20 @@
       "when": 1776227212600,
       "tag": "0011_inventory_item_category",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1776227212700,
+      "tag": "0012_user_avatar_url",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1776227212800,
+      "tag": "0013_wms_phase1",
+      "breakpoints": true
     }
   ]
 }

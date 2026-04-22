@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 const TABS: { tab: InventoryShellTab; label: string; path: string }[] = [
   { tab: "stock-overview", label: "Stock overview", path: "/inventory/stock-overview" },
   { tab: "tracking", label: "Inventory tracking", path: "/inventory/tracking" },
+  { tab: "ctn-registry", label: "CTN registry", path: "/inventory/ctn-registry" },
   { tab: "requisitions", label: "Order fulfillment", path: "/inventory/requisitions" },
   { tab: "receipts", label: "Receiving", path: "/inventory/receipts" },
   { tab: "issues", label: "Shipping / Tracking", path: "/inventory/issues" },
@@ -19,8 +20,8 @@ function tabHref(path: string): string {
 function isTabActive(tab: InventoryShellTab, path: string, locPath: string): boolean {
   const href = tabHref(path);
   if (locPath === href) return true;
-  if (tab !== "tracking") return false;
-  return locationMatchesInventoryTracking(locPath);
+  if (tab === "tracking") return locationMatchesInventoryTracking(locPath);
+  return false;
 }
 
 type InventoryShellProps = {
