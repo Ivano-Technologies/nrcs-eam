@@ -10,12 +10,16 @@ test("auth magic-link smoke: generateLink -> verify -> redirect -> persisted ses
   runSeedE2E();
 
   const magicLink = await generateMagicLinkForTestUser();
-  expect(magicLink.actionLink).toContain("token_hash=");
+  const generatedActionUrl = new URL(magicLink.actionLink);
+  const generatedToken = magicLink.emailOtp;
+  expect(generatedActionUrl.searchParams.get("token")).toBeTruthy();
+  expect(generatedActionUrl.searchParams.get("type")).toBeTruthy();
+  expect(generatedToken).toBeTruthy();
   expect(magicLink.hashedToken.length).toBeGreaterThan(10);
 
   const verifyUrl = new URL("/auth/verify", "http://127.0.0.1:3000");
   verifyUrl.searchParams.set("email", testUser.email);
-  verifyUrl.searchParams.set("token_hash", magicLink.hashedToken);
+  verifyUrl.searchParams.set("token", generatedToken!);
   verifyUrl.searchParams.set("type", "email");
 
   await page.goto(verifyUrl.toString());
