@@ -92,6 +92,7 @@ export function GrnLineItemsTable({
               <TableCell>
                 <Input
                   className="h-9 min-w-[120px]"
+                  aria-label="Number of units"
                   inputMode="decimal"
                   value={line.nbOfUnits}
                   onChange={(e) => update(index, { nbOfUnits: e.target.value })}

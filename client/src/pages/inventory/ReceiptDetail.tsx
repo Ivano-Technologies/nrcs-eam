@@ -256,8 +256,8 @@ export default function ReceiptDetail() {
           <CardContent className="space-y-4">
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1">
-                <Label>GRN number</Label>
-                <Input value={form.grnNumber} onChange={(e) => { setForm((p) => ({ ...p, grnNumber: e.target.value })); setDirty(true); }} />
+                <Label htmlFor="grn-number">GRN number</Label>
+                <Input id="grn-number" value={form.grnNumber} onChange={(e) => { setForm((p) => ({ ...p, grnNumber: e.target.value })); setDirty(true); }} />
                 {!looksLikeGrnNumber(form.grnNumber) ? (
                   <p className="text-xs text-amber-600">Expected format: NRCS-{'{FACILITY_CODE}'}-{'{YYYY}'}-{'{SEQ}'}</p>
                 ) : null}
@@ -270,21 +270,21 @@ export default function ReceiptDetail() {
                 <Input value={form.countryCode} onChange={(e) => { setForm((p) => ({ ...p, countryCode: e.target.value })); setDirty(true); }} />
               </div>
               <div className="space-y-1">
-                <Label>Delegation/Consignee Location</Label>
+                <Label htmlFor="grn-delegation-location">Delegation/Consignee Location</Label>
                 <Select value={form.delegationLocationId || undefined} onValueChange={(v) => { setForm((p) => ({ ...p, delegationLocationId: v })); setDirty(true); }}>
-                  <SelectTrigger className="h-9"><SelectValue placeholder="Select facility" /></SelectTrigger>
+                  <SelectTrigger id="grn-delegation-location" className="h-9"><SelectValue placeholder="Select facility" /></SelectTrigger>
                   <SelectContent>
                     {warehouses.map((w) => <SelectItem key={w.id} value={String(w.id)}>{w.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1">
-                <Label>Received from</Label>
-                <Input value={form.receivedFrom} onChange={(e) => { setForm((p) => ({ ...p, receivedFrom: e.target.value })); setDirty(true); }} />
+                <Label htmlFor="grn-received-from">Received from</Label>
+                <Input id="grn-received-from" value={form.receivedFrom} onChange={(e) => { setForm((p) => ({ ...p, receivedFrom: e.target.value })); setDirty(true); }} />
               </div>
               <div className="space-y-1">
-                <Label>Date of arrival</Label>
-                <Input type="date" value={form.dateOfArrival} onChange={(e) => { setForm((p) => ({ ...p, dateOfArrival: e.target.value })); setDirty(true); }} />
+                <Label htmlFor="grn-date-of-arrival">Date of arrival</Label>
+                <Input id="grn-date-of-arrival" type="date" value={form.dateOfArrival} onChange={(e) => { setForm((p) => ({ ...p, dateOfArrival: e.target.value })); setDirty(true); }} />
               </div>
               <div className="space-y-1">
                 <Label>Means of transport</Label>

@@ -65,13 +65,13 @@ export function CtnInlineCreator({
         </DialogHeader>
         <div className="grid gap-3 md:grid-cols-2">
           <div className="space-y-1">
-            <Label>CTN code</Label>
-            <Input value={ctnCode} onChange={(e) => setCtnCode(e.target.value)} />
+            <Label htmlFor="ctn-inline-code">CTN code</Label>
+            <Input id="ctn-inline-code" value={ctnCode} onChange={(e) => setCtnCode(e.target.value)} />
           </div>
           <div className="space-y-1">
-            <Label>Donor</Label>
+            <Label htmlFor="ctn-inline-donor">Donor</Label>
             <Select value={donorId || undefined} onValueChange={setDonorId}>
-              <SelectTrigger className="h-9">
+              <SelectTrigger id="ctn-inline-donor" className="h-9">
                 <SelectValue placeholder="Select donor" />
               </SelectTrigger>
               <SelectContent>
@@ -84,7 +84,7 @@ export function CtnInlineCreator({
             </Select>
           </div>
           <div className="space-y-1">
-            <Label>Item</Label>
+            <Label htmlFor="ctn-inline-item">Item</Label>
             <Select
               value={itemId || undefined}
               onValueChange={(value) => {
@@ -93,7 +93,7 @@ export function CtnInlineCreator({
                 if (item?.unitOfMeasure) setUnit(item.unitOfMeasure);
               }}
             >
-              <SelectTrigger className="h-9">
+              <SelectTrigger id="ctn-inline-item" className="h-9">
                 <SelectValue placeholder="Select item" />
               </SelectTrigger>
               <SelectContent>
@@ -106,20 +106,20 @@ export function CtnInlineCreator({
             </Select>
           </div>
           <div className="space-y-1">
-            <Label>Received date</Label>
-            <Input type="date" value={receivedDate} onChange={(e) => setReceivedDate(e.target.value)} />
+            <Label htmlFor="ctn-inline-received-date">Received date</Label>
+            <Input id="ctn-inline-received-date" type="date" value={receivedDate} onChange={(e) => setReceivedDate(e.target.value)} />
           </div>
           <div className="space-y-1">
-            <Label>Expiry date</Label>
-            <Input type="date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} />
+            <Label htmlFor="ctn-inline-expiry-date">Expiry date</Label>
+            <Input id="ctn-inline-expiry-date" type="date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} />
           </div>
           <div className="space-y-1">
-            <Label>Unit</Label>
-            <Input value={unit} onChange={(e) => setUnit(e.target.value)} />
+            <Label htmlFor="ctn-inline-unit">Unit</Label>
+            <Input id="ctn-inline-unit" value={unit} onChange={(e) => setUnit(e.target.value)} />
           </div>
           <div className="space-y-1">
-            <Label>Original quantity</Label>
-            <Input inputMode="decimal" value={originalQuantity} onChange={(e) => setOriginalQuantity(e.target.value)} />
+            <Label htmlFor="ctn-inline-original-qty">Original quantity</Label>
+            <Input id="ctn-inline-original-qty" inputMode="decimal" value={originalQuantity} onChange={(e) => setOriginalQuantity(e.target.value)} />
           </div>
           <div className="space-y-1 md:col-span-2">
             <Label>Notes</Label>
