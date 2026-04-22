@@ -234,7 +234,7 @@ export type InsertAppSetting = typeof appSettings.$inferInsert;
  */
 export const sites = pgTable("sites", {
   id: serial("id").primaryKey(),
-  code: varchar("code", { length: 64 }).unique(),
+  code: varchar("code", { length: 8 }).unique(),
   name: varchar("name", { length: 255 }).notNull(),
   facilityType: facilityTypeEnum("facilityType").default("branch").notNull(),
   parentFacilityId: integer("parentFacilityId").references((): AnyPgColumn => sites.id, {

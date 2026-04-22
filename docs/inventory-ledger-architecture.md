@@ -92,7 +92,7 @@ Do **not** drop `inventory_documents` until this is resolved.
 ### Facility `code`
 
 - Table `sites` already has a nullable **`code`** column (`varchar`, unique).
-- **Constraint (enforced in migration 0014):** when present, `code` must match **`^[A-Z0-9]{2,5}$`** (uppercase alphanumeric, 2–5 characters).
+- **Constraint (updated in migration 0016):** when present, `code` must match **`^[A-Z0-9]{2,8}$`** (uppercase alphanumeric, 2–8 characters, no hyphens). This keeps codes canonical while allowing meaningful abbreviations like `ABUJAHQ` and `LAGOSWH`.
 - **Seeding:** migration 0014 sets codes for known seed facility **names** (e.g. NHQ, LAG, KAN). Additional facilities (ONDO, MAI, PH, ENU, …) receive codes when created or via a follow-up seed/migration after approval.
 
 ---
