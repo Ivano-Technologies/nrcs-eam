@@ -37,6 +37,7 @@ import { cn } from "@/lib/utils";
 import { ViewToggle } from "@/components/ViewToggle";
 import { CardQrCode } from "@/components/CardQrCode";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
+import { ModuleFiltersCard, ModuleFilterSearch } from "@/components/ModuleFiltersCard";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { appPath } from "@/lib/routes";
 import { ITEM_CATEGORIES, isItemCategoryValue, itemCategoryLabel } from "@/lib/inventory";
@@ -368,66 +369,67 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
               })}
             </div>
           ) : null}
-          <div className="flex flex-wrap items-center gap-2 rounded-md border p-3">
-            <Select value={warehouseId} onValueChange={setWarehouseId}>
-              <SelectTrigger className="h-9 w-[220px]">
-                <SelectValue placeholder="Warehouse" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All warehouses</SelectItem>
-                {warehouses.map((w) => (
-                  <SelectItem key={w.id} value={String(w.id)}>
-                    {w.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger className="h-9 w-[220px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All categories</SelectItem>
-                {CATEGORIES.map((c) => (
-                  <SelectItem key={c} value={c}>
-                    {c}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger className="h-9 w-[170px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
-                <SelectItem value="normal">Normal</SelectItem>
-                <SelectItem value="low">Low</SelectItem>
-                <SelectItem value="critical">Critical</SelectItem>
-                <SelectItem value="out_of_stock">Out of Stock</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={ved} onValueChange={setVed}>
-              <SelectTrigger className="h-9 w-[170px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All VED</SelectItem>
-                <SelectItem value="vital">Vital</SelectItem>
-                <SelectItem value="essential">Essential</SelectItem>
-                <SelectItem value="desirable">Desirable</SelectItem>
-              </SelectContent>
-            </Select>
-            <Input
-              className="h-9 min-w-[220px]"
-              placeholder="Search item code/name"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            <div className="ml-auto">
-              <ViewToggle value={overviewViewMode} onChange={setOverviewViewMode} />
-            </div>
-          </div>
+          <ModuleFiltersCard
+            filterRow={
+              <>
+                <ModuleFilterSearch
+                  placeholder="Search item code/name"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+                <Select value={warehouseId} onValueChange={setWarehouseId}>
+                  <SelectTrigger className="h-9 w-[220px]">
+                    <SelectValue placeholder="Location" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All locations</SelectItem>
+                    {warehouses.map((w) => (
+                      <SelectItem key={w.id} value={String(w.id)}>
+                        {w.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={category} onValueChange={setCategory}>
+                  <SelectTrigger className="h-9 w-[220px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All categories</SelectItem>
+                    {CATEGORIES.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={status} onValueChange={setStatus}>
+                  <SelectTrigger className="h-9 w-[170px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All statuses</SelectItem>
+                    <SelectItem value="normal">Normal</SelectItem>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="critical">Critical</SelectItem>
+                    <SelectItem value="out_of_stock">Out of Stock</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={ved} onValueChange={setVed}>
+                  <SelectTrigger className="h-9 w-[170px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All VED</SelectItem>
+                    <SelectItem value="vital">Vital</SelectItem>
+                    <SelectItem value="essential">Essential</SelectItem>
+                    <SelectItem value="desirable">Desirable</SelectItem>
+                  </SelectContent>
+                </Select>
+              </>
+            }
+            toolbarStart={<ViewToggle value={overviewViewMode} onChange={setOverviewViewMode} />}
+          />
 
           {overviewViewMode === "card" ? (
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -469,7 +471,9 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                           {(row.vedClassification ?? "desirable").toUpperCase().charAt(0)}
                         </Badge>
                       </div>
-                      <p className="text-sm text-muted-foreground">{row.warehouseName}</p>
+                      <p className="text-sm text-muted-foreground">
+                        <span className="font-medium text-foreground">Location:</span> {row.warehouseName}
+                      </p>
                       <div className="mt-2 text-sm">
                         <span className="font-semibold">{row.quantityOnHand}</span> {row.unitOfMeasure}
                       </div>
@@ -517,17 +521,17 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
               <table className="min-w-[1620px] text-sm">
                 <thead className="sticky top-0 z-40 bg-background">
                   <tr className="border-b">
-                    <th className="sticky left-0 z-[45] border-r bg-background px-2 py-2 text-left">Item Code</th>
-                    <th className="sticky left-[120px] z-[45] border-r bg-background px-2 py-2 text-left">Item Name</th>
-                    <th className="sticky left-[360px] z-[45] w-[140px] min-w-[140px] max-w-[140px] border-r bg-background px-2 py-2 text-left">
-                      Category
+                    <th className="sticky left-0 z-[45] w-[120px] min-w-[120px] border-r bg-background px-2 py-2 text-left">
+                      Item Code
                     </th>
-                    <th className="sticky left-[500px] z-[45] w-[140px] min-w-[140px] max-w-[140px] border-r bg-background px-2 py-2 text-left">
-                      Program
+                    <th className="sticky left-[120px] z-[45] w-[200px] min-w-[200px] border-r bg-background px-2 py-2 text-left">
+                      Location
                     </th>
-                    <th className="sticky left-[640px] z-[45] border-r bg-background px-2 py-2 text-left shadow-[4px_0_8px_-4px_rgba(0,0,0,0.25)]">
-                      Warehouse
+                    <th className="sticky left-[320px] z-[45] w-[240px] min-w-[240px] max-w-[240px] border-r bg-background px-2 py-2 text-left shadow-[4px_0_8px_-4px_rgba(0,0,0,0.25)]">
+                      Item Name
                     </th>
+                    <th className="px-2 py-2 text-left">Category</th>
+                    <th className="px-2 py-2 text-left">Program</th>
                     <th className="px-2 py-2 text-right">On Hand</th>
                     <th className="px-2 py-2 text-left">Unit</th>
                     <th className="px-2 py-2 text-right">Min</th>
@@ -550,10 +554,13 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                         setSafetyInput(row.safetyStockLevel == null ? "" : String(row.safetyStockLevel));
                       }}
                     >
-                      <td className="sticky left-0 z-[35] border-r bg-background px-2 py-2">
+                      <td className="sticky left-0 z-[35] w-[120px] min-w-[120px] border-r bg-background px-2 py-2">
                         {row.itemCode}
                       </td>
-                      <td className="sticky left-[120px] z-[35] w-[240px] min-w-[240px] max-w-[240px] truncate border-r bg-background px-2 py-2">
+                      <td className="sticky left-[120px] z-[35] w-[200px] min-w-[200px] truncate border-r bg-background px-2 py-2">
+                        {row.warehouseName}
+                      </td>
+                      <td className="sticky left-[320px] z-[35] w-[240px] min-w-[240px] max-w-[240px] truncate border-r bg-background px-2 py-2 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.25)]">
                         <span className="inline-flex items-center gap-1">
                           {row.itemName}
                           {row.itemCategory == null ? (
@@ -561,7 +568,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                           ) : null}
                         </span>
                       </td>
-                      <td className="sticky left-[360px] z-[35] w-[140px] min-w-[140px] max-w-[140px] border-r bg-background px-2 py-2">
+                      <td className="px-2 py-2">
                         {row.itemCategory == null ? (
                           <span className="text-muted-foreground">—</span>
                         ) : row.itemCategory === "other" ? (
@@ -574,13 +581,10 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                           </span>
                         )}
                       </td>
-                      <td className="sticky left-[500px] z-[35] w-[140px] min-w-[140px] max-w-[140px] truncate border-r bg-background px-2 py-2">
+                      <td className="px-2 py-2">
                         <Badge variant="secondary" className="max-w-full truncate font-normal">
                           {row.category}
                         </Badge>
-                      </td>
-                      <td className="sticky left-[640px] z-[35] border-r bg-background px-2 py-2 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.25)]">
-                        {row.warehouseName}
                       </td>
                       <td className="px-2 py-2 text-right">{row.quantityOnHand}</td>
                       <td className="px-2 py-2">{row.unitOfMeasure}</td>
@@ -616,75 +620,74 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
         </TabsContent>
 
         <TabsContent value="catalogue" className="space-y-4">
-          <div className="rounded-md border p-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <Input
-                className="h-9 min-w-[240px]"
-                placeholder="Search code/name"
-                value={catalogueSearch}
-                onChange={(e) => setCatalogueSearch(e.target.value)}
-              />
-              <Select value={catalogueCategory} onValueChange={setCatalogueCategory}>
-                <SelectTrigger className="h-9 w-[220px]" data-testid="catalogue-category-filter">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All categories</SelectItem>
-                  {CATEGORIES.map((c) => (
-                    <SelectItem key={c} value={c}>
-                      {c}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={catalogueVed} onValueChange={setCatalogueVed}>
-                <SelectTrigger className="h-9 w-[170px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All VED</SelectItem>
-                  <SelectItem value="vital">Vital</SelectItem>
-                  <SelectItem value="essential">Essential</SelectItem>
-                  <SelectItem value="desirable">Desirable</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={catalogueActive} onValueChange={setCatalogueActive}>
-                <SelectTrigger className="h-9 w-[170px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All statuses</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
-              <div className="ml-auto flex flex-wrap items-center gap-2">
-                <ViewToggle value={catalogueViewMode} onChange={setCatalogueViewMode} />
-              {isManagerOrAdmin ? (
-                <Button className="h-9" onClick={() => setCreateItemOpen(true)}>
-                  Add Item
-                </Button>
-              ) : null}
-              {isManagerOrAdmin ? (
-                <Button
-                  className="h-9"
-                  variant="outline"
-                  onClick={() => importMutation.mutate({})}
-                  disabled={importMutation.isPending}
-                >
-                  <ArrowDownToLine className="mr-2 h-4 w-4" />
-                  Import from IFRC Catalogue
-                </Button>
-              ) : null}
-              {isManagerOrAdmin ? (
-                <Button className="h-9" variant="outline" disabled>
-                  <ArrowUpFromLine className="mr-2 h-4 w-4" />
-                  Export Catalogue
-                </Button>
-              ) : null}
-              </div>
-            </div>
-          </div>
+          <ModuleFiltersCard
+            filterRow={
+              <>
+                <ModuleFilterSearch
+                  placeholder="Search code/name"
+                  value={catalogueSearch}
+                  onChange={(e) => setCatalogueSearch(e.target.value)}
+                />
+                <Select value={catalogueCategory} onValueChange={setCatalogueCategory}>
+                  <SelectTrigger className="h-9 w-[220px]" data-testid="catalogue-category-filter">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All categories</SelectItem>
+                    {CATEGORIES.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={catalogueVed} onValueChange={setCatalogueVed}>
+                  <SelectTrigger className="h-9 w-[170px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All VED</SelectItem>
+                    <SelectItem value="vital">Vital</SelectItem>
+                    <SelectItem value="essential">Essential</SelectItem>
+                    <SelectItem value="desirable">Desirable</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={catalogueActive} onValueChange={setCatalogueActive}>
+                  <SelectTrigger className="h-9 w-[170px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All statuses</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </>
+            }
+            toolbarStart={<ViewToggle value={catalogueViewMode} onChange={setCatalogueViewMode} />}
+            toolbarEnd={
+              isManagerOrAdmin ? (
+                <>
+                  <Button
+                    className="h-9"
+                    variant="outline"
+                    onClick={() => importMutation.mutate({})}
+                    disabled={importMutation.isPending}
+                  >
+                    <ArrowDownToLine className="mr-2 h-4 w-4" />
+                    Import
+                  </Button>
+                  <Button className="h-9" variant="outline" disabled>
+                    <ArrowUpFromLine className="mr-2 h-4 w-4" />
+                    Export
+                  </Button>
+                  <Button className="h-9" onClick={() => setCreateItemOpen(true)}>
+                    Add Item
+                  </Button>
+                </>
+              ) : null
+            }
+          />
           {catalogueViewMode === "card" ? (
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {catalogueRows.map((row) => (
@@ -1045,7 +1048,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b bg-muted/50">
-                      <th className="px-2 py-2 text-left">Warehouse</th>
+                      <th className="px-2 py-2 text-left">Location</th>
                       <th className="px-2 py-2 text-left">On Hand</th>
                       <th className="px-2 py-2 text-left">Min</th>
                       <th className="px-2 py-2 text-left">Max</th>
