@@ -113,6 +113,13 @@
       "when": 1776227213000,
       "tag": "0015_kit_ctn_contributors_and_synthetic_donors",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1776227213100,
+      "tag": "0016_relax_sites_code_constraint",
+      "breakpoints": true
     }
   ]
 }
