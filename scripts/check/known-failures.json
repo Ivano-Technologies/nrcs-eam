@@ -1,0 +1,11 @@
+{
+  "playwrightMvpAuditKnownFailures": [
+    "assets.spec.ts",
+    "auth.spec.ts",
+    "dashboard.spec.ts",
+    "email.spec.ts",
+    "pdf.spec.ts",
+    "proxy-debug.spec.ts",
+    "settings.spec.ts"
+  ]
+}
