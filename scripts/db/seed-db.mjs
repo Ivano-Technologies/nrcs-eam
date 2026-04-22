@@ -22,6 +22,7 @@ async function seed() {
 
   const siteData = [
     {
+      code: "NHQ",
       name: "NRCS Headquarters - Abuja",
       address: "11 Eko Akete Close, Off Okotie Eboh Street",
       city: "Abuja",
@@ -34,6 +35,7 @@ async function seed() {
       parentFacilityId: null,
     },
     {
+      code: "LAG",
       name: "NRCS Lagos Branch",
       address: "Lagos Office Complex",
       city: "Lagos",
@@ -44,6 +46,7 @@ async function seed() {
       parentFacilityId: null,
     },
     {
+      code: "KAN",
       name: "NRCS Kano Branch",
       address: "Kano Office",
       city: "Kano",

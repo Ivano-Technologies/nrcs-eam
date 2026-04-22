@@ -3,12 +3,15 @@ import { inArray, sql } from "drizzle-orm";
 import { inventoryCatalogue } from "../../drizzle/schema";
 import { getDb } from "../../server/db";
 import { IFRC_CATALOGUE_SEED } from "../../shared/inventoryCatalogueSeed";
+import { assertFullIfrcCoverage, IFRC_CATALOGUE_CLASSIFICATION } from "../../shared/ifrcCatalogueWmsClassification";
 
 async function run() {
   const db = await getDb();
   if (!db) {
     throw new Error("Database unavailable");
   }
+
+  assertFullIfrcCoverage(IFRC_CATALOGUE_SEED.map((x) => x.itemCode));
 
   await db
     .insert(inventoryCatalogue)
@@ -18,7 +21,7 @@ async function run() {
         name: item.name,
         description: item.description ?? null,
         category: item.category,
-        itemCategory: "other",
+        itemCategory: IFRC_CATALOGUE_CLASSIFICATION[item.itemCode].itemCategory,
         unitOfMeasure: item.unitOfMeasure,
         vedClassification: item.vedClassification,
         hasExpiry: item.hasExpiry ?? false,
@@ -29,7 +32,22 @@ async function run() {
         isActive: true,
       }))
     )
-    .onConflictDoNothing({ target: inventoryCatalogue.itemCode });
+    .onConflictDoUpdate({
+      target: inventoryCatalogue.itemCode,
+      set: {
+        itemCategory: sql`excluded.item_category`,
+        name: sql`excluded.name`,
+        description: sql`excluded.description`,
+        category: sql`excluded.category`,
+        unitOfMeasure: sql`excluded.unit_of_measure`,
+        vedClassification: sql`excluded.ved_classification`,
+        hasExpiry: sql`excluded.has_expiry`,
+        coldChainRequired: sql`excluded.cold_chain_required`,
+        ifrcItemCode: sql`excluded.ifrc_item_code`,
+        isActive: sql`excluded.is_active`,
+        updatedAt: new Date(),
+      },
+    });
 
   const [{ count }] = await db
     .select({ count: sql<number>`cast(count(*) as int)` })

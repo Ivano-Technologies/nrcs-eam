@@ -145,13 +145,14 @@ export const facilityTypeEnum = pgEnum("facility_type", [...FACILITY_TYPE_VALUES
 
 export const itemCategoryEnum = pgEnum("item_category", [...ITEM_CATEGORY_VALUES]);
 
-/** WMS — donor classification (IFRC supply chain). */
+/** WMS — donor classification (IFRC supply chain + synthetic system donors). */
 export const donorTypeEnum = pgEnum("donor_type", [
   "national_society",
   "multilateral",
   "corporate",
   "government",
   "individual",
+  "synthetic",
 ]);
 
 /** WMS — transport on GRN / waybill. */
@@ -175,8 +176,8 @@ export const waybillStatusEnum = pgEnum("waybill_status", [
 ]);
 
 /**
- * WMS ledger source. Separate from `inventory_movements` (catalogue-centric);
- * alignment with on-hand stock is Phase 2+.
+ * WMS ledger source — sole quantity ledger per Decision 1 (inventory-ledger-architecture.md).
+ * Legacy `inventory_movements` writers migrate through Phases 2–6; enum extended in migration 0014.
  */
 export const wmsStockMovementSourceEnum = pgEnum("wms_stock_movement_source", [
   "grn",
@@ -184,6 +185,11 @@ export const wmsStockMovementSourceEnum = pgEnum("wms_stock_movement_source", [
   "stock_check",
   "adjustment",
   "import",
+  "transfer_in",
+  "transfer_out",
+  "kit_assembly",
+  "kit_disassembly",
+  "expiry",
 ]);
 
 export const ctnRegistryStatusEnum = pgEnum("ctn_registry_status", ["active", "locked", "depleted"]);
@@ -863,6 +869,38 @@ export const stockMovements = pgTable(
   })
 );
 
+/**
+ * WMS — per kit CTN, which component CTNs (and donors) contributed at assembly.
+ * See Decision 4 (inventory-ledger-architecture.md). `assembly_event_id` points to
+ * the `stock_movements` row that recorded that component consumption (typically `quantity_out`, `kit_assembly`).
+ */
+export const kitCtnContributors = pgTable(
+  "kit_ctn_contributors",
+  {
+    id: serial("id").primaryKey(),
+    kitCtnId: integer("kit_ctn_id")
+      .notNull()
+      .references(() => commodityTrackingNumbers.id),
+    componentCtnId: integer("component_ctn_id")
+      .notNull()
+      .references(() => commodityTrackingNumbers.id),
+    componentDonorId: integer("component_donor_id")
+      .notNull()
+      .references(() => donors.id),
+    quantityConsumed: doublePrecision("quantity_consumed").notNull(),
+    assemblyEventId: integer("assembly_event_id")
+      .notNull()
+      .references(() => stockMovements.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  },
+  (table) => ({
+    kitCtnIdx: index("kit_ctn_contributors_kit_ctn_idx").on(table.kitCtnId),
+    componentCtnIdx: index("kit_ctn_contributors_component_ctn_idx").on(table.componentCtnId),
+    assemblyEventIdx: index("kit_ctn_contributors_assembly_event_idx").on(table.assemblyEventId),
+    componentDonorIdx: index("kit_ctn_contributors_component_donor_idx").on(table.componentDonorId),
+  })
+);
+
 /** Prenumbered GRN / waybill series per facility (Phase 2 numbering UX). */
 export const documentNumberSequences = pgTable(
   "document_number_sequences",
@@ -1077,6 +1115,9 @@ export type WaybillLine = typeof waybillLines.$inferSelect;
 export type StockCard = typeof stockCards.$inferSelect;
 export type BinCard = typeof binCards.$inferSelect;
 export type StockMovement = typeof stockMovements.$inferSelect;
+export type InsertStockMovement = typeof stockMovements.$inferInsert;
+export type KitCtnContributor = typeof kitCtnContributors.$inferSelect;
+export type InsertKitCtnContributor = typeof kitCtnContributors.$inferInsert;
 export type DocumentNumberSequence = typeof documentNumberSequences.$inferSelect;
 export type Distribution = typeof distributions.$inferSelect;
 export type InsertDistribution = typeof distributions.$inferInsert;
