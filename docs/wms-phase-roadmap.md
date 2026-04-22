@@ -16,7 +16,7 @@ This roadmap implements [inventory-ledger-architecture.md](inventory-ledger-arch
 | **2** | GRN + transfers | GRN approve: lines with **`ctnId`** → `stock_movements` (`grn`); legacy lines still use `inventory_movements` until UI supplies CTNs. Transfers CTN-aware next. |
 | **3** | Waybill + kits | Waybill finalize → `stock_movements` only. Kits CTN-aware: `kit_assembly` / `kit_disassembly`. Kit donor rules: **Decision 4** — BLENDED + `kit_ctn_contributors`; single-donor assemblies skip BLENDED. |
 | **4** | Stock / bin cards / counts / expiry | Read from `stock_movements`. Count approve → `stock_check`. Expiry batch + manual → `expiry`. Remove count path to `inventory_movements`. |
-| **5** | Monthly report | Reporting reads **only** `stock_movements` (plus related WMS tables). |
+| **5** | Monthly report | Reporting reads **only** `stock_movements` (plus related WMS tables). Remove `inventory_stock` dual-write from WMS finalize paths. |
 | **6** | Import + cutover | Historical import → `import` on `stock_movements`. After verification: **drop** `inventory_movements`; drop `inventory_documents` when **no FKs** remain (fix `distributions.waybill_id` first). Dead code cleanup. |
 | **7** | Print / export infra | Unchanged by ledger decisions; shared document output. |
 
