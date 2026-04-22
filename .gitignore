@@ -129,6 +129,7 @@ certs/global-bundle.pem
 
 # Playwright (local runs)
 test-results/
+playwright/.auth/
 
 # Local screenshot / capture output
 artifacts/
@@ -140,3 +141,4 @@ tests/mvp-audit/screenshots/*
 # SES zone file (upload via Vercel DNS; do not commit)
 ses-dns-records.txt
 .vercel
+screenshots/
