@@ -1,47 +1,26 @@
 import { appPath } from "@/lib/routes";
 import type { InventoryShellTab } from "@/lib/inventoryRoutes";
-import { Button } from "@/components/ui/button";
+import { locationMatchesInventoryTracking } from "@/lib/inventoryTrackingNav";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 const TABS: { tab: InventoryShellTab; label: string; path: string }[] = [
-  { tab: "stock-overview", label: "Stock Overview", path: "/inventory/stock-overview" },
-  { tab: "incoming", label: "Incoming", path: "/inventory/incoming" },
-  { tab: "outgoing", label: "Outgoing", path: "/inventory/outgoing" },
-  { tab: "requisitions", label: "Requisitions", path: "/inventory/requisitions" },
-  { tab: "transfers", label: "Transfers", path: "/inventory/transfers" },
-  { tab: "stock-takes", label: "Stock Takes", path: "/inventory/stock-takes" },
-  { tab: "adjustments", label: "Adjustments", path: "/inventory/adjustments" },
+  { tab: "stock-overview", label: "Stock overview", path: "/inventory/stock-overview" },
+  { tab: "tracking", label: "Inventory tracking", path: "/inventory/tracking" },
+  { tab: "requisitions", label: "Order fulfillment", path: "/inventory/requisitions" },
+  { tab: "receipts", label: "Receiving", path: "/inventory/receipts" },
+  { tab: "issues", label: "Shipping / Tracking", path: "/inventory/issues" },
 ];
 
-function primaryForTab(tab: InventoryShellTab): {
-  label: string;
-  comingSoon: boolean;
-} | null {
-  switch (tab) {
-    case "stock-overview":
-      return null;
-    case "incoming":
-      return { label: "New Receipt", comingSoon: true };
-    case "outgoing":
-      return { label: "New Issue", comingSoon: true };
-    case "requisitions":
-      return null;
-    case "transfers":
-      return null;
-    case "stock-takes":
-      return { label: "Start Stock Take", comingSoon: true };
-    case "adjustments":
-      return { label: "New Adjustment", comingSoon: true };
-    default:
-      return null;
-  }
+function tabHref(path: string): string {
+  return appPath(path).replace(/\/$/, "") || "/";
+}
+
+function isTabActive(tab: InventoryShellTab, path: string, locPath: string): boolean {
+  const href = tabHref(path);
+  if (locPath === href) return true;
+  if (tab !== "tracking") return false;
+  return locationMatchesInventoryTracking(locPath);
 }
 
 type InventoryShellProps = {
@@ -50,9 +29,9 @@ type InventoryShellProps = {
 };
 
 export function InventoryShell({ activeTab, children }: InventoryShellProps) {
+  void activeTab;
   const [location] = useLocation();
   const locPath = (location.split("?")[0] || "/").replace(/\/$/, "") || "/";
-  const primary = primaryForTab(activeTab);
 
   return (
     <div className="space-y-5">
@@ -63,34 +42,17 @@ export function InventoryShell({ activeTab, children }: InventoryShellProps) {
             Humanitarian stock management for relief materials across warehouses.
           </p>
         </div>
-        {primary ? (
-          <TooltipProvider delayDuration={200}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="shrink-0">
-                  <Button className="h-9" disabled={primary.comingSoon}>
-                    {primary.label}
-                  </Button>
-                </span>
-              </TooltipTrigger>
-              {primary.comingSoon ? (
-                <TooltipContent side="left" className="max-w-[220px] text-xs">
-                  Coming soon
-                </TooltipContent>
-              ) : null}
-            </Tooltip>
-          </TooltipProvider>
-        ) : null}
       </div>
 
       <div className="flex flex-wrap gap-2 border-b border-border pb-2">
         {TABS.map((t) => {
-          const href = appPath(t.path);
-          const h = href.replace(/\/$/, "") || "/";
-          const active = locPath === h;
+          const href = tabHref(t.path);
+          const active = isTabActive(t.tab, t.path, locPath);
           return (
             <Link key={t.path} href={href}>
               <a
+                data-testid={`inventory-shell-tab-${t.tab}`}
+                data-active={active ? "true" : "false"}
                 className={cn(
                   "rounded-md border px-3 py-1.5 text-[13px] transition-colors",
                   active ? "bg-primary text-primary-foreground" : "hover:bg-muted"

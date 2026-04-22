@@ -11,6 +11,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { appPath } from "@/lib/routes";
+import { locationMatchesInventoryTracking } from "@/lib/inventoryTrackingNav";
 import {
   SIDEBAR_BOTTOM,
   SIDEBAR_GROUPS,
@@ -21,11 +23,7 @@ import {
   type AppNavGroup,
   type AppNavItem,
 } from "@/config/appNav";
-import {
-  DEFAULT_GROUP_CHEVRON,
-  GROUP_HEADER_CHEVRONS,
-  subTrailIconForIndex,
-} from "@/config/sidebarChevrons";
+import { SIDEBAR_GROUP_CHEVRON, SIDEBAR_LEAF_TRAIL_ICON } from "@/config/sidebarChevrons";
 import { chevronClickTransformClasses } from "@/lib/chevronMotion";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "../../../server/routers";
@@ -33,6 +31,8 @@ import type { AppRouter } from "../../../server/routers";
 export type SidebarNavCountsPayload = NonNullable<
   inferRouterOutputs<AppRouter>["nav"]["sidebarCounts"]
 >;
+
+const INVENTORY_TRACKING_SIDEBAR_PATH = appPath("/inventory/tracking").replace(/\/$/, "") || "/";
 
 function navBadgeValue(
   counts: SidebarNavCountsPayload | null | undefined,
@@ -156,10 +156,12 @@ export function SidebarGroupedNav({
   const renderItemButton = (item: AppNavItem, subsectionIndex?: number) => {
     const base = item.path.replace(/\/$/, "") || "/";
     const loc = location.replace(/\/$/, "") || "/";
-    const isActive =
-      loc === base || (base !== "/app" && loc.startsWith(base + "/"));
+    let isActive = loc === base || (base !== "/app" && loc.startsWith(base + "/"));
+    if (!isActive && base === INVENTORY_TRACKING_SIDEBAR_PATH && locationMatchesInventoryTracking(loc)) {
+      isActive = true;
+    }
     const badge = item.navCountBadge ? navBadgeValue(sidebarCounts ?? undefined, item.navCountBadge) : undefined;
-    const TrailIcon = subsectionIndex != null ? subTrailIconForIndex(subsectionIndex) : null;
+    const TrailIcon = subsectionIndex != null ? SIDEBAR_LEAF_TRAIL_ICON : null;
     return (
       <SidebarMenuItem key={item.path}>
         <SidebarMenuButton
@@ -190,7 +192,7 @@ export function SidebarGroupedNav({
     const open = isGroupExpanded(g.id);
     if (q && g.items.length === 0) return null;
 
-    const chevronDef = GROUP_HEADER_CHEVRONS[g.id] ?? DEFAULT_GROUP_CHEVRON;
+    const chevronDef = SIDEBAR_GROUP_CHEVRON;
     const HeaderChevron = chevronDef.Icon;
 
     const headerBtn = (
