@@ -8,6 +8,9 @@ Operational and deployment docs live here so the **repository root** stays limit
 |----------|-------------|
 | [ARCHITECTURE.md](ARCHITECTURE.md) | System overview, env loading, auth, routing |
 | [ADR/0001-app-routing-and-auth-surfaces.md](ADR/0001-app-routing-and-auth-surfaces.md) | Decision record: `/`, `/app`, OAuth vs magic link |
+| [inventory-ledger-architecture.md](inventory-ledger-architecture.md) | WMS ledger (Option A), assets scope, document numbering |
+| [wms-phase-roadmap.md](wms-phase-roadmap.md) | Phases 2–7 rollout aligned to the ledger architecture |
+| [inventory-catalogue-wms-audit.md](inventory-catalogue-wms-audit.md) | Catalogue rows: RELIEF_ITEM / CONSUMABLE / ASSET (await approval) |
 
 ## Infrastructure and hosting
 
