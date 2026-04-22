@@ -27,6 +27,11 @@ function requireEnv(name: string): string {
   return value;
 }
 
+function isDuplicateSupabaseUserError(message: string | undefined): boolean {
+  if (!message) return false;
+  return /already exists|duplicate|already been registered/i.test(message);
+}
+
 export async function runSeedE2e() {
   const db = await getDb();
   if (!db) throw new Error("DB unavailable");
@@ -73,17 +78,30 @@ export async function runSeedE2e() {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const { data: created, error: createErr } = await admin.auth.admin.createUser({
-    email: E2E_EMAIL,
-    password,
-    email_confirm: true,
-    user_metadata: { full_name: "E2E Admin" },
-  });
-  if (createErr && !/already exists|duplicate/i.test(createErr.message)) {
-    throw new Error(`[seed-e2e] Supabase createUser failed: ${createErr.message}`);
+  let created:
+    | {
+        user: { id?: string | null } | null;
+      }
+    | undefined;
+  try {
+    const response = await admin.auth.admin.createUser({
+      email: E2E_EMAIL,
+      password,
+      email_confirm: true,
+      user_metadata: { full_name: "E2E Admin" },
+    });
+    created = response.data as typeof created;
+    if (response.error && !isDuplicateSupabaseUserError(response.error.message)) {
+      throw new Error(`[seed-e2e] Supabase createUser failed: ${response.error.message}`);
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!isDuplicateSupabaseUserError(message)) {
+      throw error;
+    }
   }
 
-  let authId = created?.user?.id;
+  let authId = created?.user?.id ?? undefined;
   if (!authId) {
     const { data: listed, error: listErr } = await admin.auth.admin.listUsers({
       page: 1,
