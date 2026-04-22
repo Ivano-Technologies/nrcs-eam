@@ -21,3 +21,14 @@ When Playwright fails, `check:full` ignores only the known deferred failures lis
 - `CHECK_FULL_SKIP_E2E_DB=1` skips the `.env.e2e` migration-applied check.
 
 Both skips print explicit warnings in the command output when enabled.
+
+## E2E Auth Environment
+
+`tests/mvp-audit` uses Supabase email+password auth for test execution (with one dedicated magic-link smoke spec).
+
+Required in `.env.e2e`:
+
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `TEST_USER_PASSWORD`

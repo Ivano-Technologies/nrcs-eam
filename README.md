@@ -75,7 +75,7 @@ Open the app at the URL printed by the dev server (typically `http://localhost:3
 `tests/mvp-audit` now authenticates with Supabase session bootstrap instead of a seeded magic-token table.
 
 - Required in `.env.e2e`: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
-- Optional: `E2E_SUPABASE_PASSWORD` (defaults to `E2E_Supabase_ChangeMe_9!`)
+- Required in `.env.e2e`: `TEST_USER_PASSWORD`
 - `pnpm run seed-e2e:local` ensures the app `users` row plus Supabase Auth user exist and are linked.
 - Playwright setup (`tests/mvp-audit/auth.setup.ts`) signs in via Supabase, injects `sb-access-token` and `sb-refresh-token` cookies, and writes `playwright/.auth/mvp-audit-user.json`.
 - All mvp-audit specs reuse that `storageState`; the only real `/auth/verify` path coverage is `tests/mvp-audit/specs/auth-magic-link-smoke.spec.ts`.

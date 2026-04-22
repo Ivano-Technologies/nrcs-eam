@@ -6,6 +6,7 @@
  * - SUPABASE_URL
  * - SUPABASE_ANON_KEY
  * - SUPABASE_SERVICE_ROLE_KEY
+ * - TEST_USER_PASSWORD
  *
  * This script no longer writes legacy magic-link tables; auth is Supabase session-based.
  */
@@ -69,7 +70,7 @@ export async function runSeedE2e() {
   const supabaseUrl = requireEnv("SUPABASE_URL");
   const supabaseAnonKey = requireEnv("SUPABASE_ANON_KEY");
   const supabaseServiceRole = requireEnv("SUPABASE_SERVICE_ROLE_KEY");
-  const password = process.env.E2E_SUPABASE_PASSWORD ?? "E2E_Supabase_ChangeMe_9!";
+  const password = requireEnv("TEST_USER_PASSWORD");
 
   const admin = createClient(supabaseUrl, supabaseServiceRole, {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -114,6 +115,15 @@ export async function runSeedE2e() {
   }
   if (!authId) {
     throw new Error("[seed-e2e] Could not resolve Supabase auth user id for E2E user");
+  }
+
+  const { error: updateErr } = await admin.auth.admin.updateUserById(authId, {
+    password,
+    email_confirm: true,
+    user_metadata: { full_name: "E2E Admin" },
+  });
+  if (updateErr) {
+    throw new Error(`[seed-e2e] Supabase updateUserById failed: ${updateErr.message}`);
   }
 
   const { error: signInErr } = await anon.auth.signInWithPassword({
