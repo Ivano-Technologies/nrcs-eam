@@ -63,7 +63,9 @@ describe("Bulk facility import", () => {
   it("should import facilities from Excel file", async () => {
     const ctx = createAdminContext();
     const caller = appRouter.createCaller(ctx);
-    const unique = Date.now().toString().slice(-6);
+    const seed = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const code1 = `T1${seed}`;
+    const code2 = `T2${seed}`;
 
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Facilities");
@@ -87,8 +89,8 @@ describe("Bulk facility import", () => {
     ];
 
     worksheet.addRow({
-      code: `TST-BRN-${unique}-1`,
-      name: `Test Facility Alpha ${unique}`,
+      code: code1,
+      name: `Test Facility Alpha ${seed}`,
       postalCode: "100001",
       address: "123 Test Street",
       city: "Test City",
@@ -105,8 +107,8 @@ describe("Bulk facility import", () => {
     });
 
     worksheet.addRow({
-      code: `TST-BRN-${unique}-2`,
-      name: `Test Facility Beta ${unique}`,
+      code: code2,
+      name: `Test Facility Beta ${seed}`,
       postalCode: "100002",
       address: "456 Demo Avenue",
       city: "Demo City",
