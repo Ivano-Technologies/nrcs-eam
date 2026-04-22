@@ -24,7 +24,7 @@ function downloadBase64File(data: string, filename: string, mimeType: string) {
   URL.revokeObjectURL(url);
 }
 
-export default function Distributions() {
+export default function Distributions({ embedInShell = false }: { embedInShell?: boolean } = {}) {
   const [viewMode, setViewMode] = useState<ViewMode>(() => (localStorage.getItem("viewMode_inventory_distributions") as ViewMode) || "table");
   const [open, setOpen] = useState(false);
   const [incident, setIncident] = useState("");
@@ -61,8 +61,12 @@ export default function Distributions() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-3xl font-bold">Distributions</h1>
-      <InventorySecondaryNav />
+      {!embedInShell ? (
+        <>
+          <h1 className="text-3xl font-bold">Distributions</h1>
+          <InventorySecondaryNav />
+        </>
+      ) : null}
       <Card>
         <CardContent className="flex flex-wrap items-center gap-2 pt-4">
           <Input placeholder="Incident" className="w-[220px]" value={incident} onChange={(e) => setIncident(e.target.value)} />

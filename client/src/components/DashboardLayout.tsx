@@ -1,5 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
 import { appPath } from "@/lib/routes";
-import { LogOut, Settings, Maximize2, Search } from "lucide-react";
+import { LogOut, Settings, Maximize2, Search, User } from "lucide-react";
 import { CSSProperties, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -325,6 +325,9 @@ function DashboardLayoutContent({
                   className={`flex items-center gap-3 rounded-lg px-1 py-1 hover:bg-accent/50 transition-colors w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${sidebarWidth === PRESET_WIDTHS.narrow ? 'justify-center' : ''}`}
                 >
                   <Avatar className="h-[47px] w-[47px] border shrink-0">
+                    {user?.avatarUrl ? (
+                      <AvatarImage src={user.avatarUrl} alt="" className="object-cover" />
+                    ) : null}
                     <AvatarFallback className="text-[16px] font-medium">
                       {user?.name?.charAt(0).toUpperCase()}
                     </AvatarFallback>
@@ -342,6 +345,12 @@ function DashboardLayoutContent({
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem asChild>
+                  <Link href={appPath("/dashboard-settings")} className="cursor-pointer">
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Profile</span>
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => setLocation(appPath("/notification-preferences"))}
                   className="cursor-pointer"

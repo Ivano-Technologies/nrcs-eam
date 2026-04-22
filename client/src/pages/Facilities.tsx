@@ -42,9 +42,11 @@ import {
 } from "@shared/facilities";
 import { cn } from "@/lib/utils";
 import { MapView } from "@/components/Map";
-import { Download, Edit2, MapPin, Save, Trash2, Upload, X } from "lucide-react";
+import { DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM_COUNTRY } from "@/lib/mapDefaults";
+import { Download, Edit2, MapPin, Plus, Save, Trash2, Upload, X } from "lucide-react";
 import { ViewToggle } from "@/components/ViewToggle";
 import { CardQrCode } from "@/components/CardQrCode";
+import { ModuleFiltersCard, ModuleFilterSearch } from "@/components/ModuleFiltersCard";
 
 type ViewMode = "table" | "card" | "map";
 type SortKey = "code" | "name" | "facilityType" | "parentFacilityName" | "state" | "isActive";
@@ -233,17 +235,29 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
     if (!map) return;
     markers.forEach((m) => m.setMap(null));
     const next: google.maps.Marker[] = [];
+    const bounds = new google.maps.LatLngBounds();
     (facilities ?? []).forEach((f) => {
       if (!f.latitude || !f.longitude) return;
+      const position = { lat: parseFloat(f.latitude), lng: parseFloat(f.longitude) };
       const marker = new google.maps.Marker({
         map,
-        position: { lat: parseFloat(f.latitude), lng: parseFloat(f.longitude) },
+        position,
         title: f.name,
       });
       marker.addListener("click", () => setLocation(appPath(`/facilities/${f.id}`)));
       next.push(marker);
+      bounds.extend(position);
     });
     setMarkers(next);
+    if (next.length > 0) {
+      map.fitBounds(bounds);
+      if (next.length === 1) {
+        map.setZoom(12);
+      }
+    } else {
+      map.setCenter(DEFAULT_MAP_CENTER);
+      map.setZoom(DEFAULT_MAP_ZOOM_COUNTRY);
+    }
   }, [facilities, map, setLocation]);
 
   const sort = (k: SortKey) => {
@@ -305,69 +319,80 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex gap-2">
-          <ViewToggle value={viewMode === "card" ? "card" : "table"} onChange={setViewMode} />
-          <Button
-            variant={viewMode === "map" ? "secondary" : "outline"}
-            className="h-9"
-            onClick={() => setViewMode("map")}
-          >
-            <MapPin className="mr-2 h-4 w-4" />
-            Map
-          </Button>
-        </div>
-      </div>
-
-      <div className="rounded-md border p-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <Input
-            placeholder="Search name, code, address"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="h-9 min-w-[240px] md:min-w-[280px]"
-          />
-          {lockedFacilityType == null ? (
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
+      <ModuleFiltersCard
+        filterRow={
+          <>
+            <ModuleFilterSearch
+              placeholder="Search name, code, address"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            {lockedFacilityType == null ? (
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger className="h-9 w-[170px]">
+                  <SelectValue placeholder="Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All types</SelectItem>
+                  {FACILITY_TYPE_VALUES.map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {FACILITY_TYPE_LABELS[t]}s
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : null}
+            <Select value={stateFilter} onValueChange={setStateFilter}>
               <SelectTrigger className="h-9 w-[170px]">
-                <SelectValue placeholder="Type" />
+                <SelectValue placeholder="State" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All types</SelectItem>
-                {FACILITY_TYPE_VALUES.map((t) => (
-                  <SelectItem key={t} value={t}>
-                    {FACILITY_TYPE_LABELS[t]}s
+                <SelectItem value="all">All states</SelectItem>
+                {stateOptions.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {s}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-          ) : null}
-          <Select value={stateFilter} onValueChange={setStateFilter}>
-            <SelectTrigger className="h-9 w-[170px]"><SelectValue placeholder="State" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All states</SelectItem>
-              {stateOptions.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="h-9 w-[170px]"><SelectValue placeholder="Status" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All status</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="inactive">Inactive</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button
-            className="h-9"
-            variant="outline"
-            onClick={async () => {
-              const res = await exportQuery.refetch();
-              if (res.data) downloadBase64(res.data.data, res.data.filename);
-            }}
-          >
-            <Download className="mr-2 h-4 w-4" />Export to Excel
-          </Button>
-          <div className="flex items-center gap-2">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="h-9 w-[170px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+          </>
+        }
+        toolbarStart={
+          <>
+            <ViewToggle value={viewMode === "card" ? "card" : "table"} onChange={setViewMode} />
+            <Button
+              variant={viewMode === "map" ? "secondary" : "outline"}
+              className="h-9"
+              onClick={() => setViewMode("map")}
+            >
+              <MapPin className="mr-2 h-4 w-4" />
+              Map
+            </Button>
+          </>
+        }
+        toolbarEnd={
+          <>
+            <Button
+              className="h-9"
+              variant="outline"
+              onClick={async () => {
+                const res = await exportQuery.refetch();
+                if (res.data) downloadBase64(res.data.data, res.data.filename);
+              }}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Export to Excel
+            </Button>
             <Button
               className="h-9"
               variant="outline"
@@ -376,10 +401,16 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
                 if (res.data) downloadBase64(res.data.data, res.data.filename);
               }}
             >
+              <Download className="mr-2 h-4 w-4" />
               Template
             </Button>
-            <label className="inline-flex">
-              <Button className="h-9" asChild variant="outline"><span><Upload className="mr-2 h-4 w-4" />Import</span></Button>
+            <label className="inline-flex cursor-pointer">
+              <Button className="h-9" asChild variant="outline">
+                <span>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Import
+                </span>
+              </Button>
               <input
                 type="file"
                 className="hidden"
@@ -387,9 +418,15 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
                 onChange={(e) => handleImport(e.target.files?.[0])}
               />
             </label>
-          </div>
-        </div>
-      </div>
+            {canEditFacilities ? (
+              <Button className="h-9" onClick={() => setIsCreateOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Facility
+              </Button>
+            ) : null}
+          </>
+        }
+      />
 
       {canEditFacilities && (
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>

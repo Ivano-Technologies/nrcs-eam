@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
 
-export default function Movements() {
+export default function Movements({ embedInShell = false }: { embedInShell?: boolean } = {}) {
   const [warehouseId, setWarehouseId] = useState("all");
   const [type, setType] = useState("all");
   const [itemId, setItemId] = useState("all");
@@ -52,8 +52,12 @@ export default function Movements() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-3xl font-bold">Inventory Movements</h1>
-      <InventorySecondaryNav />
+      {!embedInShell ? (
+        <>
+          <h1 className="text-3xl font-bold">Inventory Movements</h1>
+          <InventorySecondaryNav />
+        </>
+      ) : null}
       <Card>
         <CardContent className="flex flex-wrap items-center gap-2 pt-4">
           <Select value={warehouseId} onValueChange={setWarehouseId}>

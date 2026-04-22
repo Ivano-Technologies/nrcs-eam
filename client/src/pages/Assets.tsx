@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search, Download, Upload, Edit2, Trash2 } from "lucide-react";
+import { Plus, Download, Upload, Edit2, Trash2 } from "lucide-react";
 import { useLocation } from "wouter";
 import {
   AlertDialog,
@@ -41,6 +41,7 @@ import { cn } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ViewToggle, type ViewMode } from "@/components/ViewToggle";
 import { CardQrCode } from "@/components/CardQrCode";
+import { ModuleFiltersCard, ModuleFilterSearch } from "@/components/ModuleFiltersCard";
 
 const REGISTER_STATUS_FILTER = [
   { value: "all", label: "All statuses" },
@@ -856,22 +857,15 @@ export default function Assets() {
         </div>
       </div>
 
-      <Card className="overflow-hidden">
-        <CardHeader>
-          <CardTitle>Filters</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative md:col-span-2">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                data-testid="asset-search-input"
-                placeholder="Search description, code, serial..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="h-9 min-w-[260px] pl-9"
-              />
-            </div>
+      <ModuleFiltersCard
+        filterRow={
+          <>
+            <ModuleFilterSearch
+              data-testid="asset-search-input"
+              placeholder="Search description, code, serial..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="h-9 w-[170px]" data-testid="asset-filter-status">
                 <SelectValue placeholder="Status" />
@@ -920,38 +914,40 @@ export default function Assets() {
                 <SelectItem value="inventory">Inventory</SelectItem>
               </SelectContent>
             </Select>
-            <div className="ml-auto flex flex-wrap items-center gap-2">
-              <ViewToggle value={viewMode} onChange={setViewMode} />
-              <Button
-                className="h-9"
-                variant="outline"
-                data-testid="asset-export-excel-btn"
-                onClick={handleExportExcel}
-                disabled={isExporting}
-              >
-                <Download className="mr-2 h-4 w-4" />
-                Export to Excel
-              </Button>
-              {canEditAssets ? (
-                <>
-                  <Button className="h-9" variant="outline" onClick={handleDownloadTemplate} disabled={isDownloading}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Template
-                  </Button>
-                  <Button className="h-9" variant="outline" onClick={() => setIsImportDialogOpen(true)}>
-                    <Upload className="mr-2 h-4 w-4" />
-                    Import
-                  </Button>
-                  <Button className="h-9" onClick={() => setIsCreateDialogOpen(true)} data-testid="asset-create-btn">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Asset
-                  </Button>
-                </>
-              ) : null}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </>
+        }
+        toolbarStart={<ViewToggle value={viewMode} onChange={setViewMode} />}
+        toolbarEnd={
+          <>
+            <Button
+              className="h-9"
+              variant="outline"
+              data-testid="asset-export-excel-btn"
+              onClick={handleExportExcel}
+              disabled={isExporting}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Export to Excel
+            </Button>
+            {canEditAssets ? (
+              <>
+                <Button className="h-9" variant="outline" onClick={handleDownloadTemplate} disabled={isDownloading}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Template
+                </Button>
+                <Button className="h-9" variant="outline" onClick={() => setIsImportDialogOpen(true)}>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Import
+                </Button>
+                <Button className="h-9" onClick={() => setIsCreateDialogOpen(true)} data-testid="asset-create-btn">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Asset
+                </Button>
+              </>
+            ) : null}
+          </>
+        }
+      />
 
       {viewMode === "card" ? (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3" data-testid="asset-list-cards">

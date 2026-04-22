@@ -4,6 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { formatNaira } from "@/lib/format";
 import { DollarSign, TrendingUp, Wrench, Building2, Users } from "lucide-react";
 import { useState } from "react";
+import { ModuleFiltersCard } from "@/components/ModuleFiltersCard";
 
 export default function CostAnalytics() {
   const [days, setDays] = useState(30);
@@ -25,25 +26,28 @@ export default function CostAnalytics() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Cost Analytics</h1>
-          <p className="text-muted-foreground">Maintenance and operational cost breakdown</p>
-        </div>
-        <Select value={days.toString()} onValueChange={(v) => setDays(parseInt(v))}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="7">Last 7 days</SelectItem>
-            <SelectItem value="30">Last 30 days</SelectItem>
-            <SelectItem value="90">Last 90 days</SelectItem>
-            <SelectItem value="180">Last 180 days</SelectItem>
-            <SelectItem value="365">Last year</SelectItem>
-          </SelectContent>
-        </Select>
+    <div className="container mx-auto space-y-6 p-6">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Cost Analytics</h1>
+        <p className="text-muted-foreground">Maintenance and operational cost breakdown</p>
       </div>
+
+      <ModuleFiltersCard
+        filterRow={
+          <Select value={days.toString()} onValueChange={(v) => setDays(parseInt(v, 10))}>
+            <SelectTrigger className="h-9 w-[180px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7">Last 7 days</SelectItem>
+              <SelectItem value="30">Last 30 days</SelectItem>
+              <SelectItem value="90">Last 90 days</SelectItem>
+              <SelectItem value="180">Last 180 days</SelectItem>
+              <SelectItem value="365">Last year</SelectItem>
+            </SelectContent>
+          </Select>
+        }
+      />
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-3">

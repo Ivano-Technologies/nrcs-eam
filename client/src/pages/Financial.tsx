@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { DollarSign, Plus, TrendingUp, TrendingDown, ArrowUpCircle, ArrowDownCir
 import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { formatNaira } from "@/lib/format";
+import { ModuleFiltersCard, ModuleFilterSearch } from "@/components/ModuleFiltersCard";
 
 export default function Financial() {
   const { user } = useAuth();
@@ -26,6 +27,9 @@ export default function Financial() {
     assetId: "",
     receiptNumber: "",
   });
+
+  const [finSearch, setFinSearch] = useState("");
+  const [finType, setFinType] = useState<string>("all");
 
   const createTransactionMutation = trpc.financial.create.useMutation({
     onSuccess: () => {
@@ -104,33 +108,80 @@ export default function Financial() {
     setEditData({});
   };
 
-  if (isLoading) {
-    return <div className="flex items-center justify-center h-96"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>;
-  }
+  const filteredTransactions = useMemo(() => {
+    let rows = transactions ?? [];
+    if (finType !== "all") {
+      rows = rows.filter((t) => t.transactionType === finType);
+    }
+    const q = finSearch.trim().toLowerCase();
+    if (q) {
+      rows = rows.filter((t) => {
+        const hay = `${t.description ?? ""} ${t.receiptNumber ?? ""} ${String(t.transactionType)} ${t.amount}`.toLowerCase();
+        return hay.includes(q);
+      });
+    }
+    return rows;
+  }, [transactions, finSearch, finType]);
 
-  // Separate revenue and expenses
-  const revenueTransactions = transactions?.filter(t => t.transactionType === "revenue") || [];
-  const expenseTransactions = transactions?.filter(t => t.transactionType !== "revenue") || [];
-  
+  const revenueTransactions = filteredTransactions.filter((t) => t.transactionType === "revenue");
+  const expenseTransactions = filteredTransactions.filter((t) => t.transactionType !== "revenue");
+
   const totalRevenue = revenueTransactions.reduce((sum, t) => sum + parseFloat(t.amount), 0);
   const totalExpenses = expenseTransactions.reduce((sum, t) => sum + parseFloat(t.amount), 0);
   const netProfit = totalRevenue - totalExpenses;
 
   const canManageFinancial = user?.role === "admin" || user?.role === "manager";
 
+  if (isLoading) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Financial Tracking</h1>
-          <p className="text-muted-foreground mt-2">Monitor revenue, costs, and expenses</p>
-        </div>
-        {canManageFinancial && (
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button><Plus className="mr-2 h-4 w-4" />Add Transaction</Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+      <div>
+        <h1 className="text-3xl font-bold">Financial Tracking</h1>
+        <p className="mt-2 text-muted-foreground">Monitor revenue, costs, and expenses</p>
+      </div>
+
+      <ModuleFiltersCard
+        filterRow={
+          <>
+            <ModuleFilterSearch
+              placeholder="Search description, receipt, type..."
+              value={finSearch}
+              onChange={(e) => setFinSearch(e.target.value)}
+            />
+            <Select value={finType} onValueChange={setFinType}>
+              <SelectTrigger className="h-9 w-[200px]">
+                <SelectValue placeholder="Transaction type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All types</SelectItem>
+                <SelectItem value="revenue">Revenue</SelectItem>
+                <SelectItem value="acquisition">Acquisition</SelectItem>
+                <SelectItem value="maintenance">Maintenance</SelectItem>
+                <SelectItem value="repair">Repair</SelectItem>
+                <SelectItem value="disposal">Disposal</SelectItem>
+                <SelectItem value="depreciation">Depreciation</SelectItem>
+                <SelectItem value="other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+          </>
+        }
+        toolbarEnd={
+          canManageFinancial ? (
+            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="h-9">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Transaction
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle>Add Financial Transaction</DialogTitle>
                 <DialogDescription>Record a new revenue or expense transaction</DialogDescription>
@@ -203,9 +254,10 @@ export default function Financial() {
                 </Button>
               </DialogFooter>
             </DialogContent>
-          </Dialog>
-        )}
-      </div>
+            </Dialog>
+          ) : null
+        }
+      />
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-3">

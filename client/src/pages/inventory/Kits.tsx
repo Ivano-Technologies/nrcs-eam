@@ -13,7 +13,7 @@ import { toast } from "sonner";
 
 type ComponentLine = { catalogueId: string; quantity: string };
 
-export default function Kits() {
+export default function Kits({ embedInShell = false }: { embedInShell?: boolean } = {}) {
   const { isManagerOrAdmin, isStaffOrAbove } = usePermissions();
   const [open, setOpen] = useState(false);
   const [kitCode, setKitCode] = useState("");
@@ -42,8 +42,12 @@ export default function Kits() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-3xl font-bold">Kits</h1>
-      <InventorySecondaryNav />
+      {!embedInShell ? (
+        <>
+          <h1 className="text-3xl font-bold">Kits</h1>
+          <InventorySecondaryNav />
+        </>
+      ) : null}
       <Tabs defaultValue="catalogue">
         <TabsList>
           <TabsTrigger value="catalogue">Kit Catalogue</TabsTrigger>
