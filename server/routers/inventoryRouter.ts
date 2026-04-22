@@ -2,9 +2,12 @@ import { TRPCError } from "@trpc/server";
 import { and, asc, desc, eq, gte, ilike, inArray, lte, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import {
+  commodityTrackingNumbers,
+  donors,
   distributions,
   inventoryKits,
   kitAssemblies,
+  kitCtnContributors,
   requisitions,
   inventoryCountLines,
   inventoryCounts,
@@ -13,7 +16,13 @@ import {
   inventoryDocuments,
   inventoryMovements,
   inventoryStock,
+  stockCards,
+  stockMovements,
   sites,
+  users,
+  waybillLineCtnSources,
+  waybillLines,
+  waybills,
 } from "../../drizzle/schema";
 import { getDb, getAllUsers, createNotification } from "../db";
 import { protectedProcedure, requireRole, router } from "../_core/trpc";
@@ -35,6 +44,7 @@ import {
   ensureStockCardForCtnAtLocation,
   insertGrnReceiptMovement,
 } from "../wms/grnStockLedger";
+import { expandKitDonorContribution } from "../wms/kitDonorContribution";
 
 const vedEnum = z.enum(INVENTORY_VED_VALUES);
 const categoryEnum = z.enum(INVENTORY_CATEGORIES);
@@ -151,6 +161,46 @@ const grnDraftInputSchema = z.object({
   items: z.array(grnDocumentItemSchema).min(1),
 });
 
+const waybillSourceSchema = z.object({
+  ctnId: z.number().int().positive(),
+  quantity: z.number().positive(),
+  overrideByUserId: z.number().int().positive().optional(),
+  overrideReason: z.string().optional(),
+});
+
+const waybillLineSchema = z.object({
+  itemId: z.number().int().positive(),
+  itemDescription: z.string().min(1),
+  nbOfUnits: z.number().positive(),
+  unitType: z.string().min(1).default("pieces"),
+  weightKg: z.number().optional(),
+  volumeM3: z.number().optional(),
+  requisitionLineId: z.string().optional(),
+  remarks: z.string().optional(),
+  ctnSources: z.array(waybillSourceSchema).min(1),
+});
+
+const waybillDraftSchema = z.object({
+  wbNumber: z.string().optional(),
+  date: z.string(),
+  warehouseId: z.number().int().positive(),
+  destinationType: z.enum(["beneficiary", "branch_store", "other"]),
+  destinationBeneficiary: z.string().min(1),
+  destinationLocation: z.string().optional(),
+  requisitionId: z.number().int().positive().optional(),
+  meansOfTransport: z.enum(["road", "rail", "air", "sea", "handcarried"]).optional(),
+  vehicle1: z.string().optional(),
+  registration1: z.string().optional(),
+  transportedByName: z.string().optional(),
+  loadedByName: z.string().optional(),
+  loadedByDate: z.string().optional(),
+  loadedByFunction: z.string().optional(),
+  transportedByDate: z.string().optional(),
+  transportedByFunction: z.string().optional(),
+  comments: z.string().optional(),
+  lines: z.array(waybillLineSchema).min(1),
+});
+
 const openingStockRowSchema = z.object({
   warehouseCode: z.string(),
   itemCode: z.string(),
@@ -257,6 +307,51 @@ async function nextDistributionNumber() {
     return Number.isFinite(tail) ? Math.max(acc, tail) : acc;
   }, 0);
   return `DIST-${year}-${String(max + 1).padStart(4, "0")}`;
+}
+
+async function nextWaybillNumber(warehouseId: number) {
+  const db = await getDb();
+  if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+  const [warehouse] = await db.select({ code: sites.code }).from(sites).where(eq(sites.id, warehouseId)).limit(1);
+  const facilityCode = (warehouse?.code || "UNK").toUpperCase();
+  const year = new Date().getFullYear();
+  const prefix = `NRCS-${facilityCode}-${year}-WB-`;
+  const like = `${prefix}%`;
+  const rows = await db.select({ wbNumber: waybills.wbNumber }).from(waybills).where(ilike(waybills.wbNumber, like));
+  const max = rows.reduce((acc, r) => {
+    const tail = Number(r.wbNumber.split("-").at(-1));
+    return Number.isFinite(tail) ? Math.max(acc, tail) : acc;
+  }, 0);
+  return `${prefix}${String(max + 1).padStart(4, "0")}`;
+}
+
+async function ensureStockCard(ctnId: number, warehouseId: number) {
+  const db = await getDb();
+  if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+  const [card] = await db
+    .select({ id: stockCards.id })
+    .from(stockCards)
+    .where(and(eq(stockCards.ctnId, ctnId), eq(stockCards.locationId, warehouseId)))
+    .limit(1);
+  if (!card) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: `CTN ${ctnId} is not currently held in source warehouse ${warehouseId}.`,
+    });
+  }
+  return card.id;
+}
+
+async function stockCardNet(stockCardId: number) {
+  const db = await getDb();
+  if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+  const [agg] = await db
+    .select({
+      net: sql<number>`coalesce(sum(${stockMovements.quantityIn} - ${stockMovements.quantityOut}), 0)`.mapWith(Number),
+    })
+    .from(stockMovements)
+    .where(eq(stockMovements.stockCardId, stockCardId));
+  return Number(agg?.net ?? 0);
 }
 
 async function importCatalogueRows(rows: InventoryCatalogueSeedItem[]) {
@@ -1102,6 +1197,387 @@ export const inventoryV2Router = router({
       }),
   }),
 
+  waybills: router({
+    list: protectedProcedure
+      .input(
+        z
+          .object({
+            search: z.string().optional(),
+            dateFrom: z.string().optional(),
+            dateTo: z.string().optional(),
+            warehouseId: z.number().optional(),
+            status: z.enum(["draft", "dispatched", "received", "claim_raised"]).optional(),
+            destinationType: z.enum(["beneficiary", "branch_store", "other"]).optional(),
+          })
+          .optional()
+      )
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return [];
+        const filters = [];
+        if (input?.warehouseId) filters.push(eq(waybills.warehouseId, input.warehouseId));
+        if (input?.status) filters.push(eq(waybills.status, input.status));
+        if (input?.destinationType) filters.push(eq(waybills.destinationType, input.destinationType));
+        if (input?.dateFrom) filters.push(gte(waybills.date, input.dateFrom));
+        if (input?.dateTo) filters.push(lte(waybills.date, input.dateTo));
+        if (input?.search?.trim()) {
+          const q = `%${input.search.trim()}%`;
+          filters.push(or(ilike(waybills.wbNumber, q), ilike(waybills.destinationBeneficiary, q))!);
+        }
+        const rows = await db.select().from(waybills).where(filters.length ? and(...filters) : undefined).orderBy(desc(waybills.createdAt));
+        const withCounts = await Promise.all(
+          rows.map(async (row) => {
+            const lineRows = await db.select().from(waybillLines).where(eq(waybillLines.waybillId, row.id));
+            const totalUnits = lineRows.reduce((sum, line) => sum + Number(line.nbOfUnits), 0);
+            return {
+              ...row,
+              lineCount: lineRows.length,
+              totalUnits,
+            };
+          })
+        );
+        return withCounts;
+      }),
+
+    get: protectedProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return null;
+      const [wb] = await db.select().from(waybills).where(eq(waybills.id, input.id)).limit(1);
+      if (!wb) return null;
+      const lines = await db.select().from(waybillLines).where(eq(waybillLines.waybillId, wb.id)).orderBy(asc(waybillLines.lineOrder));
+      const lineIds = lines.map((line) => line.id);
+      const sources =
+        lineIds.length > 0
+          ? await db
+              .select()
+              .from(waybillLineCtnSources)
+              .where(inArray(waybillLineCtnSources.waybillLineId, lineIds))
+              .orderBy(asc(waybillLineCtnSources.sourceOrder))
+          : [];
+      return {
+        ...wb,
+        lines: lines.map((line) => ({
+          ...line,
+          ctnSources: sources.filter((source) => source.waybillLineId === line.id),
+        })),
+      };
+    }),
+
+    generateNumber: protectedProcedure
+      .input(z.object({ warehouseId: z.number().int().positive() }))
+      .query(async ({ input }) => ({ suggested: await nextWaybillNumber(input.warehouseId) })),
+
+    create: protectedProcedure.input(waybillDraftSchema).mutation(async ({ input, ctx }) => {
+      requireRole(ctx, ["staff", "manager", "admin"]);
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+      const wbNumber = input.wbNumber?.trim() || (await nextWaybillNumber(input.warehouseId));
+      const [created] = await db
+        .insert(waybills)
+        .values({
+          wbNumber,
+          docType: "waybill",
+          date: input.date,
+          warehouseId: input.warehouseId,
+          destinationType: input.destinationType,
+          destinationBeneficiary: input.destinationBeneficiary,
+          destinationLocation: input.destinationLocation ?? null,
+          meansOfTransport: input.meansOfTransport ?? null,
+          vehicle1: input.vehicle1 ?? null,
+          registration1: input.registration1 ?? null,
+          transportedByName: input.transportedByName ?? null,
+          transportedByDate: input.transportedByDate ?? null,
+          transportedByFunction: input.transportedByFunction ?? null,
+          loadedByName: input.loadedByName ?? null,
+          loadedByDate: input.loadedByDate ?? null,
+          loadedByFunction: input.loadedByFunction ?? null,
+          comments: input.comments ?? null,
+          requisitionId: input.requisitionId ?? null,
+          status: "draft",
+          createdBy: ctx.user.id,
+        })
+        .returning();
+
+      for (let index = 0; index < input.lines.length; index += 1) {
+        const line = input.lines[index]!;
+        const firstSource = line.ctnSources[0];
+        const [createdLine] = await db
+          .insert(waybillLines)
+          .values({
+            waybillId: created.id,
+              itemId: line.itemId,
+            itemDescription: line.itemDescription,
+            ctnId: firstSource.ctnId,
+            nbOfUnits: line.nbOfUnits,
+            unitType: line.unitType,
+            weightKg: line.weightKg ?? null,
+            volumeM3: line.volumeM3 ?? null,
+            requisitionLineId: line.requisitionLineId ?? null,
+            remarks: line.remarks ?? null,
+            lineOrder: index,
+          })
+          .returning();
+        await db.insert(waybillLineCtnSources).values(
+          line.ctnSources.map((source: z.infer<typeof waybillSourceSchema>, sourceIndex: number) => ({
+            waybillLineId: createdLine.id,
+            ctnId: source.ctnId,
+            quantity: source.quantity,
+            overrideByUserId: source.overrideByUserId ?? null,
+            overrideReason: source.overrideReason ?? null,
+            sourceOrder: sourceIndex,
+          }))
+        );
+      }
+      return created;
+    }),
+
+    update: protectedProcedure
+      .input(
+        z.object({
+          id: z.number().int().positive(),
+          payload: waybillDraftSchema,
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["staff", "manager", "admin"]);
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        const [existing] = await db.select().from(waybills).where(eq(waybills.id, input.id)).limit(1);
+        if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Waybill not found." });
+        if (existing.status !== "draft") throw new TRPCError({ code: "BAD_REQUEST", message: "Only draft waybills can be updated." });
+
+        await db
+          .update(waybills)
+          .set({
+            wbNumber: input.payload.wbNumber?.trim() || existing.wbNumber,
+            date: input.payload.date,
+            warehouseId: input.payload.warehouseId,
+            destinationType: input.payload.destinationType,
+            destinationBeneficiary: input.payload.destinationBeneficiary,
+            destinationLocation: input.payload.destinationLocation ?? null,
+            meansOfTransport: input.payload.meansOfTransport ?? null,
+            vehicle1: input.payload.vehicle1 ?? null,
+            registration1: input.payload.registration1 ?? null,
+            transportedByName: input.payload.transportedByName ?? null,
+            transportedByDate: input.payload.transportedByDate ?? null,
+            transportedByFunction: input.payload.transportedByFunction ?? null,
+            loadedByName: input.payload.loadedByName ?? null,
+            loadedByDate: input.payload.loadedByDate ?? null,
+            loadedByFunction: input.payload.loadedByFunction ?? null,
+            comments: input.payload.comments ?? null,
+            requisitionId: input.payload.requisitionId ?? null,
+            updatedAt: new Date(),
+          })
+          .where(eq(waybills.id, input.id));
+
+        const currentLines = await db.select().from(waybillLines).where(eq(waybillLines.waybillId, input.id));
+        if (currentLines.length > 0) {
+          await db.delete(waybillLineCtnSources).where(inArray(waybillLineCtnSources.waybillLineId, currentLines.map((x) => x.id)));
+        }
+        await db.delete(waybillLines).where(eq(waybillLines.waybillId, input.id));
+
+        for (let index = 0; index < input.payload.lines.length; index += 1) {
+          const line = input.payload.lines[index]!;
+          const [createdLine] = await db
+            .insert(waybillLines)
+            .values({
+              waybillId: input.id,
+              itemId: line.itemId,
+              itemDescription: line.itemDescription,
+              ctnId: line.ctnSources[0]!.ctnId,
+              nbOfUnits: line.nbOfUnits,
+              unitType: line.unitType,
+              weightKg: line.weightKg ?? null,
+              volumeM3: line.volumeM3 ?? null,
+              requisitionLineId: line.requisitionLineId ?? null,
+              remarks: line.remarks ?? null,
+              lineOrder: index,
+            })
+            .returning();
+          await db.insert(waybillLineCtnSources).values(
+            line.ctnSources.map((source: z.infer<typeof waybillSourceSchema>, sourceIndex: number) => ({
+              waybillLineId: createdLine.id,
+              ctnId: source.ctnId,
+              quantity: source.quantity,
+              overrideByUserId: source.overrideByUserId ?? null,
+              overrideReason: source.overrideReason ?? null,
+              sourceOrder: sourceIndex,
+            }))
+          );
+        }
+        return { success: true as const };
+      }),
+
+    dispatch: protectedProcedure
+      .input(
+        z.object({
+          id: z.number().int().positive(),
+          overrideApprovals: z
+            .array(
+              z.object({
+                ctnSourceId: z.number().int().positive(),
+                overrideByUserId: z.number().int().positive(),
+                overrideReason: z.string().min(1),
+              })
+            )
+            .optional(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["staff", "manager", "admin"]);
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        const [wb] = await db.select().from(waybills).where(eq(waybills.id, input.id)).limit(1);
+        if (!wb) throw new TRPCError({ code: "NOT_FOUND", message: "Waybill not found." });
+        if (wb.status !== "draft") throw new TRPCError({ code: "BAD_REQUEST", message: "Waybill is not in draft state." });
+        if (!wb.loadedByName || !wb.transportedByName) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Loaded by and transported by signatures are required." });
+        }
+
+        const lines = await db.select().from(waybillLines).where(eq(waybillLines.waybillId, wb.id));
+        const lineIds = lines.map((line) => line.id);
+        const sources =
+          lineIds.length > 0
+            ? await db.select().from(waybillLineCtnSources).where(inArray(waybillLineCtnSources.waybillLineId, lineIds))
+            : [];
+        const overrideBySourceId = new Map((input.overrideApprovals ?? []).map((entry) => [entry.ctnSourceId, entry]));
+        const errors: string[] = [];
+
+        for (const line of lines) {
+          const lineSources = sources.filter((source) => source.waybillLineId === line.id);
+          if (lineSources.length === 0) {
+            errors.push(`Line ${line.id}: at least one CTN source is required.`);
+            continue;
+          }
+          const lineQty = Number(line.nbOfUnits);
+          const sourceQty = lineSources.reduce((sum, source) => sum + Number(source.quantity), 0);
+          if (Math.abs(lineQty - sourceQty) > 0.0001) {
+            errors.push(`Line ${line.id}: CTN source quantities must equal line quantity.`);
+          }
+
+          for (const source of lineSources) {
+            const [ctn] = await db
+              .select({
+                itemId: commodityTrackingNumbers.itemId,
+                expiryDate: commodityTrackingNumbers.expiryDate,
+              })
+              .from(commodityTrackingNumbers)
+              .where(eq(commodityTrackingNumbers.id, source.ctnId))
+              .limit(1);
+            if (!ctn) {
+              errors.push(`Line ${line.id}: CTN ${source.ctnId} not found.`);
+              continue;
+            }
+            if (ctn.itemId !== line.itemId) {
+              errors.push(`Line ${line.id}: CTN ${source.ctnId} item does not match selected line item.`);
+            }
+            const stockCardId = await ensureStockCard(source.ctnId, wb.warehouseId);
+            const balance = await stockCardNet(stockCardId);
+            if (balance < Number(source.quantity)) {
+              errors.push(`Line ${line.id}: CTN ${source.ctnId} balance ${balance} is below requested ${source.quantity}.`);
+            }
+            const isExpired = ctn.expiryDate ? new Date(ctn.expiryDate).getTime() < Date.now() : false;
+            if (isExpired) {
+              const override = overrideBySourceId.get(source.id);
+              if (!override) {
+                errors.push(`Line ${line.id}: expired CTN ${source.ctnId} requires manager override.`);
+                continue;
+              }
+              const [manager] = await db
+                .select({ id: users.id, role: users.role })
+                .from(users)
+                .where(eq(users.id, override.overrideByUserId))
+                .limit(1);
+              if (!manager || !["manager", "admin"].includes(manager.role)) {
+                errors.push(`Line ${line.id}: override user must be manager or admin.`);
+                continue;
+              }
+            }
+          }
+        }
+
+        if (errors.length > 0) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: errors.join(" ") });
+        }
+
+        const today = new Date().toISOString().slice(0, 10);
+        for (const source of sources) {
+          const line = lines.find((l) => l.id === source.waybillLineId)!;
+          const stockCardId = await ensureStockCard(source.ctnId, wb.warehouseId);
+          const prev = await stockCardNet(stockCardId);
+          const next = prev - Number(source.quantity);
+          const override = overrideBySourceId.get(source.id);
+          await db.insert(stockMovements).values({
+            stockCardId,
+            date: today,
+            documentRef: wb.wbNumber,
+            fromTo: wb.destinationBeneficiary,
+            quantityIn: 0,
+            quantityOut: Number(source.quantity),
+            balanceAfter: next,
+            remarks: line.remarks ?? wb.comments ?? null,
+            sourceType: "waybill",
+            createdBy: ctx.user.id,
+          });
+          await applyTransitionalInventoryStockReceipt(db, {
+            catalogueId: (
+              await db
+                .select({ itemId: commodityTrackingNumbers.itemId })
+                .from(commodityTrackingNumbers)
+                .where(eq(commodityTrackingNumbers.id, source.ctnId))
+                .limit(1)
+            )[0]!.itemId,
+            warehouseId: wb.warehouseId,
+            quantity: -Math.abs(Number(source.quantity)),
+          });
+          if (override) {
+            await db
+              .update(waybillLineCtnSources)
+              .set({
+                overrideByUserId: override.overrideByUserId,
+                overrideAt: new Date(),
+                overrideReason: override.overrideReason,
+              })
+              .where(eq(waybillLineCtnSources.id, source.id));
+          }
+        }
+        await db.update(waybills).set({ status: "dispatched", updatedAt: new Date() }).where(eq(waybills.id, wb.id));
+        return { success: true as const };
+      }),
+
+    previewDiscrepancy: protectedProcedure
+      .input(z.object({ waybillId: z.number().int().positive(), grnDocumentId: z.number().int().positive() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        const wbLines = await db.select().from(waybillLines).where(eq(waybillLines.waybillId, input.waybillId));
+        const [grn] = await db
+          .select()
+          .from(inventoryDocuments)
+          .where(and(eq(inventoryDocuments.id, input.grnDocumentId), eq(inventoryDocuments.documentType, "grn")))
+          .limit(1);
+        if (!grn) throw new TRPCError({ code: "NOT_FOUND", message: "GRN not found." });
+        const grnItems = Array.isArray(grn.items) ? (grn.items as Array<{ catalogueId: number; quantity: number }>) : [];
+        const wbByItem = new Map<number, number>();
+        for (const line of wbLines) wbByItem.set(line.itemId, (wbByItem.get(line.itemId) ?? 0) + Number(line.nbOfUnits));
+        const grnByItem = new Map<number, number>();
+        for (const item of grnItems) grnByItem.set(item.catalogueId, (grnByItem.get(item.catalogueId) ?? 0) + Number(item.quantity));
+        const allItemIds = new Set(Array.from(wbByItem.keys()).concat(Array.from(grnByItem.keys())));
+        const discrepancies = Array.from(allItemIds.values())
+          .map((itemId) => ({
+            itemId,
+            dispatched: wbByItem.get(itemId) ?? 0,
+            received: grnByItem.get(itemId) ?? 0,
+            delta: (grnByItem.get(itemId) ?? 0) - (wbByItem.get(itemId) ?? 0),
+          }))
+          .filter((row) => Math.abs(row.delta) > 0.0001);
+        if (discrepancies.length > 0) {
+          await db.update(waybills).set({ status: "claim_raised", updatedAt: new Date() }).where(eq(waybills.id, input.waybillId));
+        }
+        return { discrepancies, claimRaised: discrepancies.length > 0 };
+      }),
+  }),
+
   issues: router({
     create: protectedProcedure
       .input(
@@ -1821,31 +2297,114 @@ export const inventoryV2Router = router({
         const [kit] = await db.select().from(inventoryKits).where(eq(inventoryKits.id, input.kitId)).limit(1);
         if (!kit) throw new TRPCError({ code: "NOT_FOUND", message: "Kit not found." });
         const components = Array.isArray(kit.components) ? (kit.components as Array<{ catalogueId: number; quantity: number }>) : [];
+        const blendedDonorCode = "BLENDED";
+        const [blendedDonor] = await db
+          .select({ id: donors.id })
+          .from(donors)
+          .where(eq(donors.code, blendedDonorCode))
+          .limit(1);
+        if (!blendedDonor) throw new TRPCError({ code: "BAD_REQUEST", message: "BLENDED donor is missing." });
+
+        const consumedContributors: Array<{ componentCtnId: number; componentDonorId: number; quantityConsumed: number; assemblyEventId: number }> = [];
+        const distinctDonors = new Set<number>();
+
         for (const comp of components) {
-          const stock = await getOrCreateStock(comp.catalogueId, input.warehouseId);
           const required = Number(comp.quantity) * Number(input.quantity);
-          if (Number(stock.quantityOnHand) < required) throw new TRPCError({ code: "BAD_REQUEST", message: "Insufficient components." });
-        }
-        for (const comp of components) {
+          const stockCardsForItem = await db
+            .select({
+              stockCardId: stockCards.id,
+              ctnId: stockCards.ctnId,
+              donorId: commodityTrackingNumbers.donorId,
+            })
+            .from(stockCards)
+            .innerJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
+            .where(and(eq(stockCards.locationId, input.warehouseId), eq(commodityTrackingNumbers.itemId, comp.catalogueId)));
+
+          let remaining = required;
+          for (const card of stockCardsForItem) {
+            if (remaining <= 0) break;
+            const balance = await stockCardNet(card.stockCardId);
+            if (balance <= 0) continue;
+            const consume = Math.min(balance, remaining);
+            const next = balance - consume;
+            const [movement] = await db
+              .insert(stockMovements)
+              .values({
+                stockCardId: card.stockCardId,
+                date: new Date().toISOString().slice(0, 10),
+                fromTo: `kit:${kit.kitCode}`,
+                quantityIn: 0,
+                quantityOut: consume,
+                balanceAfter: next,
+                sourceType: "kit_assembly",
+                remarks: input.notes ?? null,
+                createdBy: ctx.user.id,
+              })
+              .returning({ id: stockMovements.id });
+            consumedContributors.push({
+              componentCtnId: card.ctnId,
+              componentDonorId: card.donorId,
+              quantityConsumed: consume,
+              assemblyEventId: movement.id,
+            });
+            distinctDonors.add(card.donorId);
+            remaining -= consume;
+          }
+          if (remaining > 0) throw new TRPCError({ code: "BAD_REQUEST", message: "Insufficient components for kit assembly." });
           const stock = await getOrCreateStock(comp.catalogueId, input.warehouseId);
-          const used = Number(comp.quantity) * Number(input.quantity);
-          const next = Number(stock.quantityOnHand) - used;
-          await db.update(inventoryStock).set({ quantityOnHand: next, updatedAt: new Date() }).where(eq(inventoryStock.id, stock.id));
-          await db.insert(inventoryMovements).values({
-            movementType: "adjustment",
-            catalogueId: comp.catalogueId,
-            stockId: stock.id,
-            fromWarehouseId: input.warehouseId,
-            quantityChange: -used,
-            balanceAfter: next,
-            reason: "kit_assembly",
-            performedBy: ctx.user.id,
-          });
+          // TODO(Phase 5): TRANSITIONAL: inventory_stock is written alongside stock_movements.
+          await db
+            .update(inventoryStock)
+            .set({ quantityOnHand: Number(stock.quantityOnHand) - required, updatedAt: new Date(), lastMovementAt: new Date() })
+            .where(eq(inventoryStock.id, stock.id));
         }
+
         if (kit.catalogueId) {
+          const kitCtnCode = `KIT-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
+          const [kitCtn] = await db
+            .insert(commodityTrackingNumbers)
+            .values({
+              ctnCode: kitCtnCode,
+              donorId: distinctDonors.size === 1 ? Array.from(distinctDonors)[0]! : blendedDonor.id,
+              itemId: kit.catalogueId,
+              unit: "pieces",
+              originalQuantity: input.quantity,
+              notes: "Generated from kit assembly",
+              status: "active",
+            })
+            .returning();
+          const kitStockCardId = await ensureStockCardForCtnAtLocation(db, { ctnId: kitCtn.id, locationId: input.warehouseId });
+          const prevKitBalance = await stockCardNet(kitStockCardId);
+          const [kitInMovement] = await db
+            .insert(stockMovements)
+            .values({
+              stockCardId: kitStockCardId,
+              date: new Date().toISOString().slice(0, 10),
+              fromTo: "kit_assembly",
+              quantityIn: input.quantity,
+              quantityOut: 0,
+              balanceAfter: prevKitBalance + input.quantity,
+              sourceType: "kit_assembly",
+              remarks: input.notes ?? null,
+              createdBy: ctx.user.id,
+            })
+            .returning({ id: stockMovements.id });
+
+          await db.insert(kitCtnContributors).values(
+            consumedContributors.map((row) => ({
+              kitCtnId: kitCtn.id,
+              componentCtnId: row.componentCtnId,
+              componentDonorId: row.componentDonorId,
+              quantityConsumed: row.quantityConsumed,
+              assemblyEventId: row.assemblyEventId || kitInMovement.id,
+            }))
+          );
           const kitStock = await getOrCreateStock(kit.catalogueId, input.warehouseId);
-          const nextKit = Number(kitStock.quantityOnHand) + Number(input.quantity);
-          await db.update(inventoryStock).set({ quantityOnHand: nextKit, updatedAt: new Date() }).where(eq(inventoryStock.id, kitStock.id));
+          // TODO(Phase 5): TRANSITIONAL: inventory_stock is written alongside stock_movements.
+          await db
+            .update(inventoryStock)
+            .set({ quantityOnHand: Number(kitStock.quantityOnHand) + Number(input.quantity), updatedAt: new Date(), lastMovementAt: new Date() })
+            .where(eq(inventoryStock.id, kitStock.id));
         }
         await db.insert(kitAssemblies).values({ kitId: kit.id, warehouseId: input.warehouseId, direction: "assemble", quantity: input.quantity, performedBy: ctx.user.id, notes: input.notes ?? null });
         return { success: true as const };
@@ -1860,22 +2419,42 @@ export const inventoryV2Router = router({
         if (!kit || !kit.catalogueId) throw new TRPCError({ code: "NOT_FOUND", message: "Kit not found." });
         const kitStock = await getOrCreateStock(kit.catalogueId, input.warehouseId);
         if (Number(kitStock.quantityOnHand) < input.quantity) throw new TRPCError({ code: "BAD_REQUEST", message: "Insufficient kit stock." });
-        await db.update(inventoryStock).set({ quantityOnHand: Number(kitStock.quantityOnHand) - input.quantity, updatedAt: new Date() }).where(eq(inventoryStock.id, kitStock.id));
+        // TODO(Phase 5): TRANSITIONAL: inventory_stock is written alongside stock_movements.
+        await db.update(inventoryStock).set({ quantityOnHand: Number(kitStock.quantityOnHand) - input.quantity, updatedAt: new Date(), lastMovementAt: new Date() }).where(eq(inventoryStock.id, kitStock.id));
         const components = Array.isArray(kit.components) ? (kit.components as Array<{ catalogueId: number; quantity: number }>) : [];
+        const [blendedDonor] = await db.select({ id: donors.id }).from(donors).where(eq(donors.code, "BLENDED")).limit(1);
+        if (!blendedDonor) throw new TRPCError({ code: "BAD_REQUEST", message: "BLENDED donor is missing." });
         for (const comp of components) {
           const stock = await getOrCreateStock(comp.catalogueId, input.warehouseId);
           const add = Number(comp.quantity) * Number(input.quantity);
           const next = Number(stock.quantityOnHand) + add;
-          await db.update(inventoryStock).set({ quantityOnHand: next, updatedAt: new Date() }).where(eq(inventoryStock.id, stock.id));
-          await db.insert(inventoryMovements).values({
-            movementType: "adjustment",
-            catalogueId: comp.catalogueId,
-            stockId: stock.id,
-            toWarehouseId: input.warehouseId,
-            quantityChange: add,
-            balanceAfter: next,
-            reason: "kit_disassembly",
-            performedBy: ctx.user.id,
+          // TODO(Phase 5): TRANSITIONAL: inventory_stock is written alongside stock_movements.
+          await db.update(inventoryStock).set({ quantityOnHand: next, updatedAt: new Date(), lastMovementAt: new Date() }).where(eq(inventoryStock.id, stock.id));
+          const recoveredCtnCode = `RCV-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}-${comp.catalogueId}`;
+          const [recoveredCtn] = await db
+            .insert(commodityTrackingNumbers)
+            .values({
+              ctnCode: recoveredCtnCode,
+              donorId: blendedDonor.id,
+              itemId: comp.catalogueId,
+              unit: "pieces",
+              originalQuantity: add,
+              notes: "Recovered by kit disassembly",
+              status: "active",
+            })
+            .returning();
+          const stockCardId = await ensureStockCardForCtnAtLocation(db, { ctnId: recoveredCtn.id, locationId: input.warehouseId });
+          const prev = await stockCardNet(stockCardId);
+          await db.insert(stockMovements).values({
+            stockCardId,
+            date: new Date().toISOString().slice(0, 10),
+            fromTo: `kit:${kit.kitCode}`,
+            quantityIn: add,
+            quantityOut: 0,
+            balanceAfter: prev + add,
+            sourceType: "kit_disassembly",
+            remarks: input.notes ?? null,
+            createdBy: ctx.user.id,
           });
         }
         await db.insert(kitAssemblies).values({ kitId: kit.id, warehouseId: input.warehouseId, direction: "disassemble", quantity: input.quantity, performedBy: ctx.user.id, notes: input.notes ?? null });
@@ -1909,6 +2488,15 @@ export const inventoryV2Router = router({
   }),
 
   reports: router({
+    donorContributionPreview: protectedProcedure
+      .input(z.object({ kitCtnId: z.number().int().positive() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return [];
+        const totals = await expandKitDonorContribution(db, input.kitCtnId);
+        return Array.from(totals.entries()).map(([donorId, totalUnits]) => ({ donorId, totalUnits }));
+      }),
+
     stockStatus: protectedProcedure
       .input(
         z
