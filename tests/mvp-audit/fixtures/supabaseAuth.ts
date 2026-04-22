@@ -2,7 +2,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import dotenv from "dotenv";
 import { createClient, type User } from "@supabase/supabase-js";
-import type { BrowserContext } from "@playwright/test";
+import type { BrowserContext, Page } from "@playwright/test";
 import {
   SUPABASE_ACCESS_TOKEN_COOKIE,
   SUPABASE_REFRESH_TOKEN_COOKIE,
@@ -51,7 +51,11 @@ function getSupabaseServiceRoleKey() {
 }
 
 function getE2EPassword() {
-  return process.env.E2E_SUPABASE_PASSWORD?.trim() || "E2E_Supabase_ChangeMe_9!";
+  const password = process.env.TEST_USER_PASSWORD?.trim();
+  if (!password) {
+    throw new Error("Missing required env var: TEST_USER_PASSWORD");
+  }
+  return password;
 }
 
 function createAdminClient() {
@@ -89,28 +93,36 @@ export async function createTestUserInSupabase(): Promise<User> {
     }
   }
 
-  if (createdUser) {
-    return createdUser;
+  let user = createdUser;
+  if (!user) {
+    const { data: listed, error: listErr } = await admin.auth.admin.listUsers({
+      page: 1,
+      perPage: 1000,
+    });
+    if (listErr) {
+      throw new Error(`[e2e auth] listUsers failed: ${listErr.message}`);
+    }
+    user = listed.users.find((u) => (u.email ?? "").toLowerCase() === testUser.email.toLowerCase()) ?? null;
   }
-
-  const { data: listed, error: listErr } = await admin.auth.admin.listUsers({
-    page: 1,
-    perPage: 1000,
-  });
-  if (listErr) {
-    throw new Error(`[e2e auth] listUsers failed: ${listErr.message}`);
-  }
-  const existing = listed.users.find(
-    (u) => (u.email ?? "").toLowerCase() === testUser.email.toLowerCase(),
-  );
-  if (!existing) {
+  if (!user?.id) {
     throw new Error("[e2e auth] test user not found after create/list");
   }
-  return existing;
+
+  const { data: updated, error: updateErr } = await admin.auth.admin.updateUserById(user.id, {
+    password,
+    email_confirm: true,
+    user_metadata: { full_name: testUser.name },
+  });
+  if (updateErr) {
+    throw new Error(`[e2e auth] updateUserById failed: ${updateErr.message}`);
+  }
+  if (!updated.user) {
+    throw new Error("[e2e auth] updateUserById returned no user");
+  }
+  return updated.user;
 }
 
 export async function generateSessionForTestUser(): Promise<SessionPayload> {
-  await createTestUserInSupabase();
   const password = getE2EPassword();
   const anon = createAnonClient();
   const { data, error } = await anon.auth.signInWithPassword({
@@ -125,6 +137,14 @@ export async function generateSessionForTestUser(): Promise<SessionPayload> {
     refresh_token: data.session.refresh_token,
     user: data.user,
   };
+}
+
+export async function signInTestUser(page: Page): Promise<void> {
+  const session = await generateSessionForTestUser();
+  await injectSessionIntoContext(page.context(), session, "http://127.0.0.1:3000");
+  await page.goto("/app");
+  await page.waitForURL(/\/app(\/|$)/, { timeout: 30_000 });
+  await page.getByRole("button", { name: /E2E Admin/i }).waitFor({ state: "visible", timeout: 20_000 });
 }
 
 export async function generateMagicLinkForTestUser(): Promise<MagicLinkPayload> {

@@ -2,6 +2,7 @@ import { execSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Page } from "@playwright/test";
+import { signInTestUser } from "../fixtures/supabaseAuth";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 
@@ -29,8 +30,7 @@ export function runSeedE2E() {
   }
 }
 
-/** Retained name for compatibility; now validates seeded auth state from storageState. */
+/** Retained name for compatibility; now signs in with Supabase email+password. */
 export async function loginViaMagicLink(page: Page) {
-  await page.goto("/app");
-  await page.waitForURL(/\/app(\/|$)/, { timeout: 30_000 });
+  await signInTestUser(page);
 }
