@@ -7,6 +7,7 @@ import { clearSessionCookies, setSessionCookies } from "../_core/supabaseSession
 import { getSupabaseAnonServer, getSupabaseServiceRole } from "../_core/supabase";
 import { toPublicUser } from "../_core/sanitizeUser";
 import * as db from "../db";
+import type { InsertUser } from "../../drizzle/schema";
 import { createSignupRequest } from "../pendingUsersService";
 
 const emailSchema = z.string().email();
@@ -257,6 +258,35 @@ export const authRouter = router({
         openId: appUser.openId,
         lastSignedIn: new Date(),
       });
+      return { success: true as const };
+    }),
+
+  updateProfile: protectedProcedure
+    .input(
+      z.object({
+        name: z.string().max(200).optional(),
+        avatarUrl: z.union([z.string().url().max(2048), z.literal("")]).optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const patch: Partial<InsertUser> = { updatedAt: new Date() };
+      if (input.name !== undefined) {
+        const trimmed = input.name.trim();
+        if (!trimmed) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Name cannot be empty",
+          });
+        }
+        patch.name = trimmed;
+      }
+      if (input.avatarUrl !== undefined) {
+        patch.avatarUrl = input.avatarUrl === "" ? null : input.avatarUrl;
+      }
+      if (Object.keys(patch).length <= 1) {
+        return { success: true as const };
+      }
+      await db.updateUser(ctx.user.id, patch);
       return { success: true as const };
     }),
 
