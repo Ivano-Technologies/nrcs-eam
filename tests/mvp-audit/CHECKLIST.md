@@ -1,6 +1,6 @@
 # MVP audit checklist (NRCS EAM)
 
-Legend: `[x]` covered by automated MVP audit (Playwright) · Stack: Vite + React + wouter, Express + tRPC + Drizzle + MySQL
+Legend: `[x]` covered by automated MVP audit (Playwright) · Stack: Vite + React + wouter, Express + tRPC + Drizzle + PostgreSQL (Supabase)
 
 ---
 
@@ -15,10 +15,11 @@ Legend: `[x]` covered by automated MVP audit (Playwright) · Stack: Vite + React
 | [x] | `/legal/terms` |
 | [x] | `/legal/privacy` |
 | [x] | `/404` NotFound |
-| [x] | **2a** Magic-link login (seeded 64-char token) → `/app` |
+| [x] | **2a** Session-injected login bootstrap (Playwright storageState) → `/app` |
 | [x] | **2a** Session persists after `reload` |
 | [x] | **2a** Logout → `/login` |
 | [x] | **2a** Protected route when logged out → redirect `/login` |
+| [x] | Magic-link smoke (`auth-magic-link-smoke.spec.ts`) verifies `/auth/verify` with `email + token_hash + type=email` |
 
 ---
 
