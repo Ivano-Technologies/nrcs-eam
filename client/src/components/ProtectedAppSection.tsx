@@ -47,13 +47,22 @@ import Welcome from "@/pages/Welcome";
 import WorkOrderDetail from "@/pages/WorkOrderDetail";
 import WorkOrders from "@/pages/WorkOrders";
 import WorkOrderTemplates from "@/pages/WorkOrderTemplates";
-import { Redirect, Route, Switch } from "wouter";
+import { Redirect, Route, Switch, useRoute } from "wouter";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 
 /**
  * Authenticated area: all routes live under /app/...
  */
 export default function ProtectedAppSection() {
+  const [isReceiptPrintRoute] = useRoute("/app/inventory/receipts/:id/print/:copyType");
+  if (isReceiptPrintRoute) {
+    return (
+      <ProtectedRoute>
+        <Route path="/app/inventory/receipts/:id/print/:copyType" component={ReceiptPrint} />
+      </ProtectedRoute>
+    );
+  }
+
   return (
     <ProtectedRoute>
       <>
