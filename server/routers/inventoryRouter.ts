@@ -773,6 +773,32 @@ export const inventoryV2Router = router({
   }),
 
   receipts: router({
+    suggestNumber: protectedProcedure
+      .input(z.object({ facilityId: z.number().optional() }).optional())
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        const year = new Date().getUTCFullYear();
+        const [site] = input?.facilityId
+          ? await db.select({ code: sites.code }).from(sites).where(eq(sites.id, input.facilityId)).limit(1)
+          : [{ code: null as string | null }];
+        const facilityCode = (site?.code ?? "LOC").toUpperCase();
+        const prefix = `NRCS-${facilityCode}-${year}-`;
+        const rows = await db
+          .select({ documentNumber: inventoryDocuments.documentNumber })
+          .from(inventoryDocuments)
+          .where(and(eq(inventoryDocuments.documentType, "grn"), ilike(inventoryDocuments.documentNumber, `${prefix}%`)));
+        const max = rows.reduce((acc, row) => {
+          const tail = Number(row.documentNumber.split("-").at(-1));
+          return Number.isFinite(tail) ? Math.max(acc, tail) : acc;
+        }, 0);
+        return {
+          suggested: `${prefix}${String(max + 1).padStart(4, "0")}`,
+          facilityCode,
+          year,
+        };
+      }),
+
     createDraft: protectedProcedure.input(grnDraftInputSchema).mutation(async ({ input, ctx }) => {
       requireRole(ctx, ["staff", "manager", "admin"]);
       const db = await getDb();
