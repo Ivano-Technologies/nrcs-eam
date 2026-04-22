@@ -24,12 +24,14 @@ export function GrnLineItemsTable({
   onChange,
   onAddLine,
   onRemoveLine,
+  onCreateCtnForLine,
 }: {
   lines: GrnLineItem[];
   ctnOptions: Array<{ id: number; label: string }>;
   onChange: (next: GrnLineItem[]) => void;
   onAddLine: () => void;
   onRemoveLine: (index: number) => void;
+  onCreateCtnForLine: (index: number) => void;
 }) {
   const update = (index: number, patch: Partial<GrnLineItem>) => {
     onChange(lines.map((row, i) => (i === index ? { ...row, ...patch } : row)));
@@ -69,18 +71,23 @@ export function GrnLineItemsTable({
                 />
               </TableCell>
               <TableCell>
-                <Select value={line.ctnId || undefined} onValueChange={(v) => update(index, { ctnId: v })}>
-                  <SelectTrigger className="h-9 min-w-[220px]">
-                    <SelectValue placeholder="Select CTN" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ctnOptions.map((opt) => (
-                      <SelectItem key={opt.id} value={String(opt.id)}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="space-y-1">
+                  <Select value={line.ctnId || undefined} onValueChange={(v) => update(index, { ctnId: v })}>
+                    <SelectTrigger className="h-9 min-w-[220px]">
+                      <SelectValue placeholder="Select CTN" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ctnOptions.map((opt) => (
+                        <SelectItem key={opt.id} value={String(opt.id)}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => onCreateCtnForLine(index)}>
+                    + Create new CTN
+                  </Button>
+                </div>
               </TableCell>
               <TableCell>
                 <Input
