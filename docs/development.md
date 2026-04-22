@@ -11,9 +11,9 @@ Use `pnpm check:full` before pushing. It runs the full pre-push verification pip
 5. Dev DB migration coverage (`.env`)
 6. E2E DB migration coverage (`.env.e2e`)
 7. Vitest (`pnpm exec vitest run`)
-8. Playwright MVP audit suite (`pnpm exec playwright test tests/mvp-audit/specs/ --project=mvp-audit`)
+8. Playwright regression suites (`pnpm exec playwright test --project=mvp-audit --project=live-auth`)
 
-When Playwright fails, `check:full` ignores only the known deferred failures listed in `scripts/check/known-failures.json`. Any new failing spec outside that list fails the command.
+When Playwright fails, `check:full` ignores only the known deferred failures listed per project in `scripts/check/known-failures.json`. Any new failing spec outside that list fails the command.
 
 ### Optional skip flags
 
