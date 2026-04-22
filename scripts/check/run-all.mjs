@@ -19,20 +19,23 @@ function runStep(command, args, options = {}) {
   }
 }
 
-function extractFailedSpecFiles(suites, failedFiles = new Set()) {
+function extractFailedSpecsByProject(suites, failedByProject = new Map()) {
   for (const suite of suites ?? []) {
     const suiteSpecs = suite.specs ?? [];
     for (const spec of suiteSpecs) {
-      const hasUnexpected = (spec.tests ?? []).some((test) =>
+      const failingTest = (spec.tests ?? []).find((test) =>
         (test.results ?? []).some((result) => result.status === "failed" || result.status === "timedOut")
       );
-      if (hasUnexpected && spec.file) {
-        failedFiles.add(path.basename(spec.file));
+      if (failingTest && spec.file) {
+        const project = failingTest.projectName ?? "unknown";
+        const files = failedByProject.get(project) ?? new Set();
+        files.add(path.basename(spec.file));
+        failedByProject.set(project, files);
       }
     }
-    extractFailedSpecFiles(suite.suites ?? [], failedFiles);
+    extractFailedSpecsByProject(suite.suites ?? [], failedByProject);
   }
-  return failedFiles;
+  return failedByProject;
 }
 
 function runPlaywrightWithKnownFailures() {
@@ -49,7 +52,7 @@ function runPlaywrightWithKnownFailures() {
 
   const result = spawnSync(
     "pnpm",
-    ["exec", "playwright", "test", "tests/mvp-audit/specs/", "--project=mvp-audit", "--reporter=json"],
+    ["exec", "playwright", "test", "--project=mvp-audit", "--project=live-auth", "--reporter=json"],
     {
       cwd: repoRoot,
       stdio: "inherit",
@@ -66,13 +69,22 @@ function runPlaywrightWithKnownFailures() {
   const report = JSON.parse(fs.readFileSync(reportPath, "utf8"));
   fs.unlinkSync(reportPath);
 
-  const knownFailures = new Set(
-    JSON.parse(fs.readFileSync(knownFailuresPath, "utf8")).playwrightMvpAuditKnownFailures ?? []
-  );
+  const knownFailuresByProject =
+    JSON.parse(fs.readFileSync(knownFailuresPath, "utf8")).playwrightKnownFailuresByProject ?? {};
 
-  const failedFiles = [...extractFailedSpecFiles(report.suites)].sort();
-  const unexpectedFailures = failedFiles.filter((file) => !knownFailures.has(file));
-  const knownFailureCount = failedFiles.length - unexpectedFailures.length;
+  const failedByProject = extractFailedSpecsByProject(report.suites);
+  const unexpectedFailures = [];
+  let knownFailureCount = 0;
+  for (const [project, failedFiles] of failedByProject.entries()) {
+    const knownFiles = new Set(knownFailuresByProject[project] ?? []);
+    for (const file of failedFiles) {
+      if (knownFiles.has(file)) {
+        knownFailureCount += 1;
+      } else {
+        unexpectedFailures.push(`${project}:${file}`);
+      }
+    }
+  }
   const passed = report.stats?.expected ?? 0;
 
   if (unexpectedFailures.length > 0) {

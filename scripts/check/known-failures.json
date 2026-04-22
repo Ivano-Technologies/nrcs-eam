@@ -1,11 +1,18 @@
 {
-  "playwrightMvpAuditKnownFailures": [
-    "assets.spec.ts",
-    "auth.spec.ts",
-    "dashboard.spec.ts",
-    "email.spec.ts",
-    "pdf.spec.ts",
-    "proxy-debug.spec.ts",
-    "settings.spec.ts"
-  ]
+  "playwrightKnownFailuresByProject": {
+    "mvp-audit": [
+      "assets.spec.ts",
+      "auth.spec.ts",
+      "dashboard.spec.ts",
+      "email.spec.ts",
+      "pdf.spec.ts",
+      "proxy-debug.spec.ts",
+      "settings.spec.ts"
+    ],
+    "live-auth": [
+      "users-management.spec.ts",
+      "inventory-counts.spec.ts",
+      "inventory-movements.spec.ts"
+    ]
+  }
 }
