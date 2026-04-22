@@ -20,6 +20,8 @@ import InventoryTransfersRoute from "@/pages/inventory/InventoryTransfersRoute";
 import InventoryTrackingPage from "@/pages/inventory/InventoryTrackingPage";
 import ReceiptDetail from "@/pages/inventory/ReceiptDetail";
 import ReceiptPrint from "@/pages/inventory/ReceiptPrint";
+import WaybillDetail from "@/pages/inventory/WaybillDetail";
+import WaybillPrint from "@/pages/inventory/WaybillPrint";
 import {
   InventoryDistributionsPage,
   InventoryExpiryPage,
@@ -55,10 +57,18 @@ import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
  */
 export default function ProtectedAppSection() {
   const [isReceiptPrintRoute] = useRoute("/app/inventory/receipts/:id/print/:copyType");
+  const [isWaybillPrintRoute] = useRoute("/app/inventory/issues/:id/print/:copyType");
   if (isReceiptPrintRoute) {
     return (
       <ProtectedRoute>
         <Route path="/app/inventory/receipts/:id/print/:copyType" component={ReceiptPrint} />
+      </ProtectedRoute>
+    );
+  }
+  if (isWaybillPrintRoute) {
+    return (
+      <ProtectedRoute>
+        <Route path="/app/inventory/issues/:id/print/:copyType" component={WaybillPrint} />
       </ProtectedRoute>
     );
   }
@@ -94,6 +104,9 @@ export default function ProtectedAppSection() {
           <Route path="/app/inventory/receipts/new" component={ReceiptDetail} />
           <Route path="/app/inventory/receipts/:id" component={ReceiptDetail} />
           <Route path="/app/inventory/receipts" component={InventoryReceiptsPage} />
+          <Route path="/app/inventory/issues/:id/print/:copyType" component={WaybillPrint} />
+          <Route path="/app/inventory/issues/new" component={WaybillDetail} />
+          <Route path="/app/inventory/issues/:id" component={WaybillDetail} />
           <Route path="/app/inventory/issues" component={InventoryIssuesPage} />
           <Route path="/app/inventory/movements" component={InventoryMovementsPage} />
           <Route path="/app/inventory/counts" component={InventoryStockCountsPage} />
