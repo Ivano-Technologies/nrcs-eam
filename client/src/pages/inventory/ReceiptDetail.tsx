@@ -13,6 +13,7 @@ import { InventorySecondaryNav } from "@/components/inventory/InventorySecondary
 import { GrnLineItemsTable, type GrnLineItem } from "@/components/wms/GrnLineItemsTable";
 import { SignatureBlock, type SignatureValue } from "@/components/wms/SignatureBlock";
 import { CtnInlineCreator } from "@/components/wms/CtnInlineCreator";
+import { applyGrnSuggestion, looksLikeGrnNumber } from "@/lib/grnNumberSuggest";
 
 const emptyLine = (): GrnLineItem => ({
   consignmentNumber: "",
@@ -67,6 +68,10 @@ export default function ReceiptDetail() {
   const { data: sites } = trpc.sites.list.useQuery();
   const warehouses = useMemo(() => (sites ?? []).filter((s) => s.facilityType === "warehouse"), [sites]);
   const ctnList = trpc.wms.ctn.list.useQuery({ limit: 200, offset: 0 });
+  const suggestNumber = trpc.inventoryV2.receipts.suggestNumber.useQuery(
+    { facilityId: form.delegationLocationId ? Number(form.delegationLocationId) : undefined },
+    { enabled: savedId == null }
+  );
   const receiptQuery = trpc.inventoryV2.receipts.get.useQuery(
     { documentId: documentId ?? 0 },
     { enabled: documentId != null }
@@ -135,6 +140,14 @@ export default function ReceiptDetail() {
     setSavedId(doc.id);
     setDirty(false);
   }, [receiptQuery.data]);
+
+  useEffect(() => {
+    if (!suggestNumber.data) return;
+    setForm((prev) => ({
+      ...prev,
+      grnNumber: applyGrnSuggestion(prev.grnNumber, suggestNumber.data!.suggested),
+    }));
+  }, [suggestNumber.data]);
 
   useEffect(() => {
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -244,6 +257,12 @@ export default function ReceiptDetail() {
               <div className="space-y-1">
                 <Label>GRN number</Label>
                 <Input value={form.grnNumber} onChange={(e) => { setForm((p) => ({ ...p, grnNumber: e.target.value })); setDirty(true); }} />
+                {!looksLikeGrnNumber(form.grnNumber) ? (
+                  <p className="text-xs text-amber-600">Expected format: NRCS-{'{FACILITY_CODE}'}-{'{YYYY}'}-{'{SEQ}'}</p>
+                ) : null}
+                {suggestNumber.data ? (
+                  <p className="text-xs text-muted-foreground">Suggested: {suggestNumber.data.suggested}</p>
+                ) : null}
               </div>
               <div className="space-y-1">
                 <Label>Country code</Label>
