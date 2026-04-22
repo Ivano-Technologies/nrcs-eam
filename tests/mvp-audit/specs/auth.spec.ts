@@ -2,7 +2,7 @@ import { execSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { test, expect } from "@playwright/test";
-import { testUser } from "../fixtures/testUser";
+import { loginViaMagicLink } from "../helpers/e2eAuth";
 import { shot } from "../helpers/shot";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -17,7 +17,7 @@ function seedE2E() {
     });
   } catch {
     throw new Error(
-      "seed-e2e failed. Ensure .env.e2e is configured and MySQL is reachable, then run:\n" +
+      "seed-e2e failed. Ensure .env.e2e is configured and PostgreSQL is reachable, then run:\n" +
         "  pnpm run db:seed:e2e\n" +
         "  pnpm run seed-e2e:local",
     );
@@ -47,11 +47,10 @@ test.describe("Authentication (2a)", () => {
     }
 
     seedE2E();
-    await page.goto(`/auth/verify?token=${testUser.magicToken}`);
-    await page.waitForURL(/\/app(\/|$)/, { timeout: 30_000 });
+    await loginViaMagicLink(page);
   });
 
-  test("magic-link login redirects to dashboard", async ({ page }) => {
+  test("session-auth login reaches dashboard", async ({ page }) => {
     await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible({
       timeout: 15_000,
     });

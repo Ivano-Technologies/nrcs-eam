@@ -2,7 +2,6 @@ import { execSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Page } from "@playwright/test";
-import { testUser } from "../fixtures/testUser";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 
@@ -15,14 +14,14 @@ export function runSeedE2E() {
     });
   } catch {
     throw new Error(
-      "seed-e2e failed — ensure .env.e2e exists, MySQL is running, and DATABASE_URL targets local E2E DB. Run: pnpm run seed-e2e:local",
+      "seed-e2e failed — ensure .env.e2e exists and PostgreSQL is reachable. Run: pnpm run seed-e2e:local",
     );
   }
 }
 
-/** Fresh token + magic-link login (single-use token; call before each authenticated test). */
+/** Retained name for compatibility; now validates seeded auth state from storageState. */
 export async function loginViaMagicLink(page: Page) {
   runSeedE2E();
-  await page.goto(`/auth/verify?token=${testUser.magicToken}`);
+  await page.goto("/app");
   await page.waitForURL(/\/app(\/|$)/, { timeout: 30_000 });
 }

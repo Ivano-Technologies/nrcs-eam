@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { test, expect } from "@playwright/test";
 import { SIDEBAR_NAV_ADMIN } from "../fixtures/sidebarNav";
-import { testUser } from "../fixtures/testUser";
+import { loginViaMagicLink } from "../helpers/e2eAuth";
 import {
   attachGuards,
   createGuardState,
@@ -36,17 +36,12 @@ test.describe.configure({ mode: "serial" });
 test.describe("Dashboard (2b)", () => {
   let guard!: GuardState;
 
-  /**
-   * Fresh magic-link token + login each test: Playwright uses an isolated browser
-   * context per test, and tokens are single-use.
-   */
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
     guard = createGuardState();
     attachGuards(page, guard);
     seedE2E();
-    await page.goto(`/auth/verify?token=${testUser.magicToken}`);
-    await page.waitForURL(/\/app(\/|$)/, { timeout: 30_000 });
+    await loginViaMagicLink(page);
     await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible({
       timeout: 20_000,
     });
