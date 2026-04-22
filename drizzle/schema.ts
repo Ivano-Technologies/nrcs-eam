@@ -735,7 +735,9 @@ export const waybills = pgTable(
     warehouseId: integer("warehouse_id")
       .notNull()
       .references(() => sites.id),
+    destinationType: varchar("destination_type", { length: 50 }).default("other").notNull(),
     destinationBeneficiary: text("destination_beneficiary").notNull(),
+    destinationLocation: text("destination_location"),
     transportContractRef: varchar("transport_contract_ref", { length: 255 }),
     vehicle1: varchar("vehicle_1", { length: 255 }),
     vehicle2: varchar("vehicle_2", { length: 255 }),
@@ -775,6 +777,9 @@ export const waybillLines = pgTable("waybill_lines", {
   waybillId: integer("waybill_id")
     .notNull()
     .references(() => waybills.id, { onDelete: "cascade" }),
+  itemId: integer("item_id")
+    .notNull()
+    .references(() => inventoryCatalogue.id),
   itemDescription: text("item_description").notNull(),
   ctnId: integer("ctn_id")
     .notNull()
@@ -787,6 +792,29 @@ export const waybillLines = pgTable("waybill_lines", {
   remarks: text("remarks"),
   lineOrder: integer("line_order").default(0).notNull(),
 });
+
+export const waybillLineCtnSources = pgTable(
+  "waybill_line_ctn_sources",
+  {
+    id: serial("id").primaryKey(),
+    waybillLineId: integer("waybill_line_id")
+      .notNull()
+      .references(() => waybillLines.id, { onDelete: "cascade" }),
+    ctnId: integer("ctn_id")
+      .notNull()
+      .references(() => commodityTrackingNumbers.id),
+    quantity: doublePrecision("quantity").notNull(),
+    overrideByUserId: integer("override_by_user_id").references(() => users.id),
+    overrideAt: timestamp("override_at", { mode: "date" }),
+    overrideReason: text("override_reason"),
+    sourceOrder: integer("source_order").default(0).notNull(),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  },
+  (table) => ({
+    lineSourceIdx: index("waybill_line_ctn_sources_line_idx").on(table.waybillLineId),
+    ctnSourceIdx: index("waybill_line_ctn_sources_ctn_idx").on(table.ctnId),
+  })
+);
 
 /**
  * WMS — one stock card per CTN per stock location (facility).
@@ -1112,6 +1140,7 @@ export type GoodsReceivedNote = typeof goodsReceivedNotes.$inferSelect;
 export type GoodsReceivedNoteLine = typeof goodsReceivedNoteLines.$inferSelect;
 export type Waybill = typeof waybills.$inferSelect;
 export type WaybillLine = typeof waybillLines.$inferSelect;
+export type WaybillLineCtnSource = typeof waybillLineCtnSources.$inferSelect;
 export type StockCard = typeof stockCards.$inferSelect;
 export type BinCard = typeof binCards.$inferSelect;
 export type StockMovement = typeof stockMovements.$inferSelect;
