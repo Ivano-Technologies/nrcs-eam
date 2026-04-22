@@ -178,6 +178,7 @@ export default function ReceiptDetail() {
     if (lines.some((l) => !l.ctnId || Number(l.nbOfUnits) <= 0)) return false;
     return true;
   }, [deliveredBy.name, form.dateOfArrival, form.delegationLocationId, form.grnNumber, form.receivedFrom, lines, receivedBy.name]);
+  const isFinalized = receiptQuery.data?.status === "completed";
 
   const payload = useMemo(
     () => ({
@@ -360,10 +361,21 @@ export default function ReceiptDetail() {
               <Button variant="outline" onClick={() => setLocation("/app/inventory/receipts")}>Cancel</Button>
               <Button variant="outline" onClick={() => void saveDraft()}>Save as Draft</Button>
               <Button onClick={() => void finalize()} disabled={!isFinalizable}>Finalize</Button>
-              {savedId ? (
-                <Button variant="outline" onClick={() => setLocation(`/app/inventory/receipts/${savedId}/print/white`)}>
-                  Print
-                </Button>
+              {savedId && isFinalized ? (
+                <>
+                  <Button variant="outline" onClick={() => setLocation(`/app/inventory/receipts/${savedId}/print/white`)}>
+                    White copy
+                  </Button>
+                  <Button variant="outline" onClick={() => setLocation(`/app/inventory/receipts/${savedId}/print/green`)}>
+                    Green copy
+                  </Button>
+                  <Button variant="outline" onClick={() => setLocation(`/app/inventory/receipts/${savedId}/print/blue`)}>
+                    Blue copy
+                  </Button>
+                  <Button variant="outline" onClick={() => setLocation(`/app/inventory/receipts/${savedId}/print/yellow`)}>
+                    Yellow copy
+                  </Button>
+                </>
               ) : null}
             </div>
           </CardContent>

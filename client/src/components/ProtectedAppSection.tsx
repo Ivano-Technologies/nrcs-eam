@@ -19,6 +19,7 @@ import InventoryRequisitionsPage from "@/pages/inventory/InventoryRequisitionsPa
 import InventoryTransfersRoute from "@/pages/inventory/InventoryTransfersRoute";
 import InventoryTrackingPage from "@/pages/inventory/InventoryTrackingPage";
 import ReceiptDetail from "@/pages/inventory/ReceiptDetail";
+import ReceiptPrint from "@/pages/inventory/ReceiptPrint";
 import {
   InventoryDistributionsPage,
   InventoryExpiryPage,
@@ -80,6 +81,7 @@ export default function ProtectedAppSection() {
           <Route path="/app/inventory/tracking" component={InventoryTrackingPage} />
           <Route path="/app/inventory/requisitions" component={InventoryRequisitionsPage} />
           <Route path="/app/inventory/transfers" component={InventoryTransfersRoute} />
+          <Route path="/app/inventory/receipts/:id/print/:copyType" component={ReceiptPrint} />
           <Route path="/app/inventory/receipts/new" component={ReceiptDetail} />
           <Route path="/app/inventory/receipts/:id" component={ReceiptDetail} />
           <Route path="/app/inventory/receipts" component={InventoryReceiptsPage} />
