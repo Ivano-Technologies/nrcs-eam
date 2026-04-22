@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MapPin, Navigation } from "lucide-react";
+import { DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM_COUNTRY } from "@/lib/mapDefaults";
 import { appPath } from "@/lib/routes";
 
 export default function AssetMap() {
@@ -33,8 +34,12 @@ export default function AssetMap() {
     if (sites) {
       sites.forEach(site => {
         // Use default Nigeria coordinates if site doesn't have specific location
-        const lat = site.latitude ? parseFloat(site.latitude) : 9.0820 + (Math.random() - 0.5) * 2;
-        const lng = site.longitude ? parseFloat(site.longitude) : 8.6753 + (Math.random() - 0.5) * 2;
+        const lat = site.latitude
+          ? parseFloat(site.latitude)
+          : DEFAULT_MAP_CENTER.lat + (Math.random() - 0.5) * 2;
+        const lng = site.longitude
+          ? parseFloat(site.longitude)
+          : DEFAULT_MAP_CENTER.lng + (Math.random() - 0.5) * 2;
         const position = { lat, lng };
 
         const siteMarker = new google.maps.Marker({
@@ -95,8 +100,8 @@ export default function AssetMap() {
 
     if (filteredAssets.length === 0) {
       // Center on Nigeria if no assets with coordinates
-      googleMap.setCenter({ lat: 9.0820, lng: 8.6753 });
-      googleMap.setZoom(6);
+      googleMap.setCenter({ ...DEFAULT_MAP_CENTER });
+      googleMap.setZoom(DEFAULT_MAP_ZOOM_COUNTRY);
       return;
     }
 
@@ -170,9 +175,8 @@ export default function AssetMap() {
         googleMap.setZoom(15);
       }
     } else {
-      // Center on Nigeria if no markers
-      googleMap.setCenter({ lat: 9.0820, lng: 8.6753 });
-      googleMap.setZoom(6);
+      googleMap.setCenter({ ...DEFAULT_MAP_CENTER });
+      googleMap.setZoom(DEFAULT_MAP_ZOOM_COUNTRY);
     }
   };
 
@@ -298,8 +302,8 @@ export default function AssetMap() {
             data-testid="asset-map-panel"
           >
             <MapView
-              initialCenter={{ lat: 9.0820, lng: 8.6753 }}
-              initialZoom={6}
+              initialCenter={{ ...DEFAULT_MAP_CENTER }}
+              initialZoom={DEFAULT_MAP_ZOOM_COUNTRY}
               onMapReady={handleMapReady}
             />
           </div>
