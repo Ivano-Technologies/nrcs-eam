@@ -21,6 +21,7 @@ Operational and deployment docs live here so the **repository root** stays limit
 
 | Document | Description |
 |----------|-------------|
+| [components.md](components.md) | Shared UI conventions (e.g. `ModuleFiltersCard`) |
 | [BULK_IMPORT_GUIDE.md](BULK_IMPORT_GUIDE.md) | Bulk asset/site import (Excel) |
 | [BULK_IMPORT_GUIDE.pdf](BULK_IMPORT_GUIDE.pdf) | PDF copy of the bulk import guide |
 | [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) | General deployment checklist |
