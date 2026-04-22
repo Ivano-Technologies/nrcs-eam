@@ -66,20 +66,18 @@ export default function InventoryTrackingPage() {
         </p>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {LINKS.map((item) => (
-            <Link key={item.title} href={item.href}>
-              <a className="block h-full rounded-lg border bg-card transition-colors hover:bg-muted/50">
-                <Card className="h-full border-0 shadow-none">
-                  <CardHeader className="pb-2">
-                    <div className="flex items-start gap-3">
-                      <item.icon className="h-5 w-5 shrink-0 text-primary" />
-                      <div className="min-w-0 space-y-1">
-                        <CardTitle className="text-base leading-tight">{item.title}</CardTitle>
-                        <CardDescription className="text-xs">{item.description}</CardDescription>
-                      </div>
+            <Link key={item.title} href={item.href} className="block h-full rounded-lg border bg-card transition-colors hover:bg-muted/50">
+              <Card className="h-full border-0 shadow-none">
+                <CardHeader className="pb-2">
+                  <div className="flex items-start gap-3">
+                    <item.icon className="h-5 w-5 shrink-0 text-primary" />
+                    <div className="min-w-0 space-y-1">
+                      <CardTitle className="text-base leading-tight">{item.title}</CardTitle>
+                      <CardDescription className="text-xs">{item.description}</CardDescription>
                     </div>
-                  </CardHeader>
-                </Card>
-              </a>
+                  </div>
+                </CardHeader>
+              </Card>
             </Link>
           ))}
         </div>
