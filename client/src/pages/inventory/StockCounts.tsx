@@ -10,7 +10,7 @@ import { usePermissions } from "@/_core/hooks/usePermissions";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 
-export default function StockCounts() {
+export default function StockCounts({ embedInShell = false }: { embedInShell?: boolean } = {}) {
   const { isManagerOrAdmin, isStaffOrAbove } = usePermissions();
   const [status, setStatus] = useState("all");
   const [warehouseId, setWarehouseId] = useState("all");
@@ -54,8 +54,12 @@ export default function StockCounts() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-3xl font-bold">Stock Counts</h1>
-      <InventorySecondaryNav />
+      {!embedInShell ? (
+        <>
+          <h1 className="text-3xl font-bold">Stock Counts</h1>
+          <InventorySecondaryNav />
+        </>
+      ) : null}
       <Card>
         <CardContent className="flex flex-wrap items-center gap-2 pt-4">
           <Select value={status} onValueChange={setStatus}>

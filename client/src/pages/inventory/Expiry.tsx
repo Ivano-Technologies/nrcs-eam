@@ -14,7 +14,7 @@ function daysRemaining(date: string | Date | null | undefined) {
   return Math.ceil((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 }
 
-export default function Expiry() {
+export default function Expiry({ embedInShell = false }: { embedInShell?: boolean } = {}) {
   const { isManagerOrAdmin } = usePermissions();
   const [selectedExpired, setSelectedExpired] = useState<number[]>([]);
   const soon = trpc.inventoryV2.expiry.upcoming.useQuery({ days: 90 });
@@ -40,8 +40,12 @@ export default function Expiry() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-3xl font-bold">Expiry Tracking</h1>
-      <InventorySecondaryNav />
+      {!embedInShell ? (
+        <>
+          <h1 className="text-3xl font-bold">Expiry Tracking</h1>
+          <InventorySecondaryNav />
+        </>
+      ) : null}
       <Tabs defaultValue="soon">
         <TabsList>
           <TabsTrigger value="soon" data-testid="expiry-tab-soon">Expiring Soon (&lt;90d)</TabsTrigger>

@@ -3,7 +3,7 @@ import Transfers from "@/pages/inventory/Transfers";
 
 export default function InventoryTransfersRoute() {
   return (
-    <InventoryShell activeTab="transfers">
+    <InventoryShell activeTab="tracking">
       <Transfers embedInShell />
     </InventoryShell>
   );

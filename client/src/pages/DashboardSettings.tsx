@@ -2,6 +2,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { DashboardWidgetSettings } from "@/components/DashboardWidgetSettings";
 import { OpenRegistrationSettings } from "@/components/OpenRegistrationSettings";
 import { InstallPWAButton } from "@/components/InstallPWAButton";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -15,16 +16,24 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { trpc } from "@/lib/trpc";
-import { Monitor, Moon, Sun } from "lucide-react";
+import { Camera, Loader2, Monitor, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 export default function DashboardSettings() {
   const { user } = useAuth();
+  const utils = trpc.useUtils();
   const isAdmin = user?.role === "admin";
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+
+  const [profileName, setProfileName] = useState("");
+  /** `undefined` = not edited; `null` = cleared; string = new URL */
+  const [avatarOverride, setAvatarOverride] = useState<string | null | undefined>(undefined);
+  const [photoUrlField, setPhotoUrlField] = useState("");
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const avatarFileRef = useRef<HTMLInputElement>(null);
 
   const [pwdOpen, setPwdOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
@@ -46,6 +55,13 @@ export default function DashboardSettings() {
   useEffect(() => setMounted(true), []);
 
   useEffect(() => {
+    if (!user) return;
+    setProfileName(user.name ?? "");
+    setAvatarOverride(undefined);
+    setPhotoUrlField("");
+  }, [user?.id, user?.name, user?.avatarUrl]);
+
+  useEffect(() => {
     if (emailSettings) {
       setNotif({
         newUserRequests: emailSettings.newUserRequests,
@@ -63,6 +79,101 @@ export default function DashboardSettings() {
     },
     onError: (e) => toast.error(e.message),
   });
+
+  const updateProfileMutation = trpc.auth.updateProfile.useMutation({
+    onSuccess: async () => {
+      toast.success("Profile saved");
+      setAvatarOverride(undefined);
+      await utils.auth.me.invalidate();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const displayAvatar =
+    avatarOverride !== undefined ? avatarOverride : (user?.avatarUrl ?? null);
+
+  const profileDirty = useMemo(() => {
+    if (!user) return false;
+    const nameChanged = profileName.trim() !== (user.name ?? "").trim();
+    const avatarChanged =
+      avatarOverride !== undefined &&
+      (avatarOverride ?? null) !== (user.avatarUrl ?? null);
+    return nameChanged || avatarChanged;
+  }, [user, profileName, avatarOverride]);
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be 5MB or smaller");
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file");
+      return;
+    }
+    setUploadingAvatar(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const response = await fetch("/api/upload", { method: "POST", body: formData });
+      if (!response.ok) throw new Error("Upload failed");
+      const data = (await response.json()) as { url: string };
+      setAvatarOverride(data.url);
+      toast.success("Photo uploaded — save to apply");
+    } catch {
+      toast.error("Upload failed");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  const applyPhotoUrl = () => {
+    const raw = photoUrlField.trim();
+    if (!raw) {
+      toast.error("Paste an image URL first");
+      return;
+    }
+    let parsed: URL;
+    try {
+      parsed = new URL(raw);
+    } catch {
+      toast.error("Enter a valid URL");
+      return;
+    }
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      toast.error("URL must use http:// or https://");
+      return;
+    }
+    setAvatarOverride(raw);
+    toast.success("Photo URL applied — save to confirm");
+  };
+
+  const saveProfile = () => {
+    if (!user) return;
+    const name = profileName.trim();
+    if (!name) {
+      toast.error("Name cannot be empty");
+      return;
+    }
+    const payload: { name?: string; avatarUrl?: string } = {};
+    if (name !== (user.name ?? "").trim()) {
+      payload.name = name;
+    }
+    if (avatarOverride !== undefined) {
+      const next = avatarOverride ?? null;
+      const cur = user.avatarUrl ?? null;
+      if (next !== cur) {
+        payload.avatarUrl = next === null ? "" : next;
+      }
+    }
+    if (Object.keys(payload).length === 0) {
+      toast.info("No changes to save");
+      return;
+    }
+    updateProfileMutation.mutate(payload);
+  };
 
   const changePasswordMutation = trpc.auth.changePassword.useMutation({
     onSuccess: () => {
@@ -119,6 +230,122 @@ export default function DashboardSettings() {
         <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
         <p className="text-muted-foreground mt-2">Account, appearance, and preferences</p>
       </div>
+
+      <Card id="profile-settings" className="scroll-mt-24">
+        <CardHeader>
+          <CardTitle>Profile</CardTitle>
+          <CardDescription>
+            Your display name and photo appear in the sidebar. Email is managed by your sign-in provider.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
+            <div className="flex flex-col items-center gap-3 sm:items-start">
+              <Avatar className="h-24 w-24 border-2 border-border">
+                {displayAvatar ? (
+                  <AvatarImage src={displayAvatar} alt="" className="object-cover" />
+                ) : null}
+                <AvatarFallback className="text-2xl font-medium">
+                  {(profileName.trim().charAt(0) || user?.name?.charAt(0) || "?").toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+                <input
+                  ref={avatarFileRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="sr-only"
+                  onChange={handleAvatarUpload}
+                  disabled={uploadingAvatar}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  disabled={uploadingAvatar}
+                  onClick={() => avatarFileRef.current?.click()}
+                >
+                  {uploadingAvatar ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Camera className="h-4 w-4" />
+                  )}
+                  {uploadingAvatar ? "Uploading…" : "Upload photo"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  disabled={!displayAvatar && avatarOverride === undefined}
+                  onClick={() => setAvatarOverride(null)}
+                >
+                  Remove photo
+                </Button>
+              </div>
+            </div>
+            <div className="flex-1 space-y-4 min-w-0">
+              <div className="space-y-2">
+                <Label htmlFor="profile-name">Display name</Label>
+                <Input
+                  id="profile-name"
+                  autoComplete="name"
+                  value={profileName}
+                  onChange={(e) => setProfileName(e.target.value)}
+                  maxLength={200}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="profile-photo-url">Photo URL (optional)</Label>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Input
+                    id="profile-photo-url"
+                    placeholder="https://…"
+                    value={photoUrlField}
+                    onChange={(e) => setPhotoUrlField(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Button type="button" variant="secondary" onClick={applyPhotoUrl}>
+                    Use URL
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Use upload above, or paste a direct link to an image. Save to apply changes.
+                </p>
+              </div>
+              <div className="grid gap-1 text-sm border-t pt-4">
+                <div>
+                  <span className="text-muted-foreground">Email: </span>
+                  <span className="font-medium">{user?.email ?? "—"}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Role: </span>
+                  <span className="font-medium capitalize">{user?.role ?? "—"}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              onClick={saveProfile}
+              disabled={!profileDirty || updateProfileMutation.isPending}
+            >
+              {updateProfileMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving…
+                </>
+              ) : (
+                "Save profile"
+              )}
+            </Button>
+            <Button type="button" variant="outline" onClick={() => setPwdOpen(true)}>
+              Change password
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -181,32 +408,6 @@ export default function DashboardSettings() {
               <li>Offline access (coming soon)</li>
             </ul>
           </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Account</CardTitle>
-          <CardDescription>Your profile and sign-in</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-1 text-sm">
-            <div>
-              <span className="text-muted-foreground">Name: </span>
-              <span className="font-medium">{user?.name ?? "—"}</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Email: </span>
-              <span className="font-medium">{user?.email ?? "—"}</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Role: </span>
-              <span className="font-medium">{user?.role ?? "—"}</span>
-            </div>
-          </div>
-          <Button type="button" variant="outline" onClick={() => setPwdOpen(true)}>
-            Change Password
-          </Button>
         </CardContent>
       </Card>
 

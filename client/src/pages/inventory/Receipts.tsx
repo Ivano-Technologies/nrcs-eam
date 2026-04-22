@@ -25,7 +25,7 @@ function downloadBase64File(data: string, filename: string, mimeType: string) {
 
 type Line = { catalogueId: string; quantity: string; batchNumber: string; expiryDate: string; notes: string };
 
-export default function Receipts() {
+export default function Receipts({ embedInShell = false }: { embedInShell?: boolean } = {}) {
   const { isManagerOrAdmin, isStaffOrAbove } = usePermissions();
   const [status, setStatus] = useState("all");
   const [warehouseId, setWarehouseId] = useState("all");
@@ -63,8 +63,12 @@ export default function Receipts() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-3xl font-bold">Receipts (GRN)</h1>
-      <InventorySecondaryNav />
+      {!embedInShell ? (
+        <>
+          <h1 className="text-3xl font-bold">Receipts (GRN)</h1>
+          <InventorySecondaryNav />
+        </>
+      ) : null}
       <Card>
         <CardContent className="flex flex-wrap items-center gap-2 pt-4">
           <Select value={status} onValueChange={setStatus}>
@@ -77,9 +81,9 @@ export default function Receipts() {
             </SelectContent>
           </Select>
           <Select value={warehouseId} onValueChange={setWarehouseId}>
-            <SelectTrigger className="w-[220px]"><SelectValue placeholder="Warehouse" /></SelectTrigger>
+            <SelectTrigger className="w-[220px]"><SelectValue placeholder="Location" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All warehouses</SelectItem>
+              <SelectItem value="all">All locations</SelectItem>
               {wh.map((w) => (
                 <SelectItem key={w.id} value={String(w.id)}>{w.name}</SelectItem>
               ))}

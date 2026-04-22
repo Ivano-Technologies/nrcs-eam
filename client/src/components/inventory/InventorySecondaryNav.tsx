@@ -3,15 +3,16 @@ import { appPath } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
 const LINKS = [
-  { label: "Overview", path: appPath("/inventory/stock-overview") },
+  { label: "Stock overview", path: appPath("/inventory/stock-overview") },
   { label: "Catalogue", path: appPath("/inventory/stock-overview?tab=catalogue") },
-  { label: "Receipts", path: appPath("/inventory/receipts") },
-  { label: "Issues", path: appPath("/inventory/issues") },
-  { label: "Transfers", path: appPath("/inventory/transfers") },
+  { label: "Inventory tracking", path: appPath("/inventory/tracking") },
+  { label: "Order fulfillment", path: appPath("/inventory/requisitions") },
+  { label: "Receiving", path: appPath("/inventory/receipts") },
+  { label: "Shipping / Tracking", path: appPath("/inventory/issues") },
   { label: "Movements", path: appPath("/inventory/movements") },
-  { label: "Stock Counts", path: appPath("/inventory/counts") },
+  { label: "Transfers", path: appPath("/inventory/transfers") },
+  { label: "Stock counts", path: appPath("/inventory/counts") },
   { label: "Expiry", path: appPath("/inventory/expiry") },
-  { label: "Requisitions", path: appPath("/inventory/requisitions") },
   { label: "Distributions", path: appPath("/inventory/distributions") },
   { label: "Kits", path: appPath("/inventory/kits") },
 ];
@@ -29,7 +30,7 @@ export function InventorySecondaryNav() {
         const basePath = (link.path.split("?")[0] || "/").replace(/\/$/, "") || "/";
         let active = pathOnly === basePath || pathOnly.startsWith(`${basePath}/`);
         if (basePath === stockBase) {
-          if (link.label === "Overview") {
+          if (link.label === "Stock overview") {
             active = pathOnly === stockBase && tab !== "catalogue" && tab !== "settings";
           }
           if (link.label === "Catalogue") {
