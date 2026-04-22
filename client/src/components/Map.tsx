@@ -7,8 +7,8 @@
  * const mapRef = useRef<google.maps.Map | null>(null);
  *
  * <MapView
- *   initialCenter={{ lat: 40.7128, lng: -74.0060 }}
- *   initialZoom={15}
+ *   initialCenter={{ lat: 9.082, lng: 8.6753 }}
+ *   initialZoom={6}
  *   onMapReady={(map) => {
  *     mapRef.current = map; // Store to control map from parent anytime, google map itself is in charge of the re-rendering, not react state.
  * </MapView>
@@ -20,8 +20,8 @@
  * - Attaches to map using { map, position }
  * new google.maps.marker.AdvancedMarkerElement({
  *   map,
- *   position: { lat: 37.7749, lng: -122.4194 },
- *   title: "San Francisco",
+ *   position: { lat: 9.082, lng: 8.6753 },
+ *   title: "Example",
  * });
  *
  * -------------------------------
@@ -78,6 +78,7 @@
 
 import { useEffect, useRef } from "react";
 import { usePersistFn } from "@/hooks/usePersistFn";
+import { DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM_COUNTRY } from "@/lib/mapDefaults";
 import { cn } from "@/lib/utils";
 
 declare global {
@@ -133,8 +134,8 @@ interface MapViewProps {
 
 export function MapView({
   className,
-  initialCenter = { lat: 37.7749, lng: -122.4194 },
-  initialZoom = 12,
+  initialCenter = { ...DEFAULT_MAP_CENTER },
+  initialZoom = DEFAULT_MAP_ZOOM_COUNTRY,
   onMapReady,
 }: MapViewProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
