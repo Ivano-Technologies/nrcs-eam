@@ -4,7 +4,5 @@ export const testUser = {
   email: "nrcs.eam.qa@gmail.com",
   name: "E2E Admin",
   role: "admin" as const,
-  /** Magic-link token (64 chars) — must match DB row */
-  magicToken:
-    "e2e000000000000000000000000000000000000000000000000000000000000",
+  /** Legacy `magicToken` fixture removed: E2E auth now uses Supabase session bootstrap. */
 };
