@@ -1,6 +1,3 @@
-import { execSync } from "node:child_process";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { test, expect } from "@playwright/test";
 import { loginViaMagicLink } from "../helpers/e2eAuth";
 import {
@@ -10,25 +7,6 @@ import {
   type GuardState,
 } from "../helpers/guards";
 import { shot } from "../helpers/shot";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PROJECT_ROOT = path.join(__dirname, "..", "..", "..");
-
-function seedE2E() {
-  try {
-    execSync("pnpm run seed-e2e:local", {
-      cwd: PROJECT_ROOT,
-      stdio: "pipe",
-      encoding: "utf-8",
-    });
-  } catch {
-    throw new Error(
-      "seed-e2e failed. Ensure .env.e2e is configured and PostgreSQL is reachable, then run:\n" +
-        "  pnpm run db:seed:e2e\n" +
-        "  pnpm run seed-e2e:local",
-    );
-  }
-}
 
 const TRACKING_SUB_ROUTES = [
   "/app/inventory/movements",
@@ -49,7 +27,6 @@ test.describe("Inventory deep links — tracking tab + sidebar", () => {
     await page.setViewportSize({ width: 1280, height: 720 });
     guard = createGuardState();
     attachGuards(page, guard);
-    seedE2E();
     await loginViaMagicLink(page);
     await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible({
       timeout: 20_000,

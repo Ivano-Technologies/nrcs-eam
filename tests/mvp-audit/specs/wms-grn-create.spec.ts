@@ -1,24 +1,9 @@
-import { execSync } from "node:child_process";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
 import { loginViaMagicLink } from "../helpers/e2eAuth";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PROJECT_ROOT = path.join(__dirname, "..", "..", "..");
-
-function seedE2E() {
-  execSync("pnpm run seed-e2e:local", {
-    cwd: PROJECT_ROOT,
-    stdio: "pipe",
-    encoding: "utf-8",
-  });
-}
 
 test.describe.configure({ mode: "serial" });
 
 test("WMS GRN create -> draft -> finalize -> print", async ({ page }) => {
-  seedE2E();
   await loginViaMagicLink(page);
 
   await page.goto("/app/inventory/receipts");

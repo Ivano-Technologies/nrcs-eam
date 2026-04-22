@@ -1,28 +1,6 @@
-import { execSync } from "node:child_process";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { test, expect } from "@playwright/test";
 import { loginViaMagicLink } from "../helpers/e2eAuth";
 import { shot } from "../helpers/shot";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PROJECT_ROOT = path.join(__dirname, "..", "..", "..");
-
-function seedE2E() {
-  try {
-    execSync("pnpm run seed-e2e:local", {
-      cwd: PROJECT_ROOT,
-      stdio: "pipe",
-      encoding: "utf-8",
-    });
-  } catch {
-    throw new Error(
-      "seed-e2e failed. Ensure .env.e2e is configured and PostgreSQL is reachable, then run:\n" +
-        "  pnpm run db:seed:e2e\n" +
-        "  pnpm run seed-e2e:local",
-    );
-  }
-}
 
 test.describe.configure({ mode: "serial" });
 
@@ -46,7 +24,6 @@ test.describe("Authentication (2a)", () => {
       return;
     }
 
-    seedE2E();
     await loginViaMagicLink(page);
   });
 
