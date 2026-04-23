@@ -26,7 +26,8 @@ function exportExcel(filename: string, rows: Array<Record<string, unknown>>) {
   XLSX.writeFile(wb, filename);
 }
 
-export default function WmsReportSuite() {
+export default function WmsReportSuite(props: any) {
+  const initialTab = props.initialTab ?? "movements";
   const [warehouseId, setWarehouseId] = useState<string>("all");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -87,7 +88,7 @@ export default function WmsReportSuite() {
         </div>
       </div>
 
-      <Tabs defaultValue="movements">
+      <Tabs defaultValue={initialTab}>
         <TabsList>
           <TabsTrigger value="movements">Stock Movement Report</TabsTrigger>
           <TabsTrigger value="aging">CTN Aging Report</TabsTrigger>
