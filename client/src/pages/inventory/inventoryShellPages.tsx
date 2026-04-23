@@ -7,6 +7,7 @@ import Movements from "@/pages/inventory/Movements";
 import Receipts from "@/pages/inventory/Receipts";
 import StockCounts from "@/pages/inventory/StockCounts";
 import StockCards from "@/pages/inventory/StockCards";
+import BinCards from "@/pages/inventory/BinCards";
 
 export function InventoryReceiptsPage() {
   return (
@@ -68,6 +69,14 @@ export function InventoryStockCardsPage() {
   return (
     <InventoryShell activeTab="tracking">
       <StockCards embedInShell />
+    </InventoryShell>
+  );
+}
+
+export function InventoryBinCardsPage() {
+  return (
+    <InventoryShell activeTab="tracking">
+      <BinCards embedInShell />
     </InventoryShell>
   );
 }
