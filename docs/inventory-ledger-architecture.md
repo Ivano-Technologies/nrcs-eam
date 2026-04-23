@@ -159,11 +159,10 @@ If assembly consumes a mix where **at least one** component CTN is already **BLE
 
 ## Transitional dual-writes
 
-During Phase 2, GRN finalize/approve writes to **`stock_movements`** as the source-of-truth ledger, but still updates aggregate **`inventory_stock`** for compatibility with existing UI reads.
+Dual-write is **removed in Phase 5** for all WMS finalize paths. WMS quantity-changing operations now write only to **`stock_movements`**.
 
-- **Why this exists:** current inventory pages still read warehouse balances from `inventory_stock`, so removing writes immediately would create stale UI state before read-path migration is complete.
-- **Removal timing:** remove the dual-write in **Phase 5** when reporting and UI reads are migrated to `stock_movements` aggregates.
-- **Verification on removal:** after Phase 5, `inventory_stock` should be read-only compatibility data (or dropped entirely if all reads migrate). Validation should compare key screens/reports against `stock_movements` aggregate totals and ensure no finalize path mutates `inventory_stock`.
+- **Remaining `inventory_stock` writers:** non-WMS transfer paths only (Phase 6 migration target).
+- **Read-path compatibility:** some non-WMS and legacy analytics surfaces still read `inventory_stock` during transition; these do not alter WMS ledger authority.
 
 ---
 
