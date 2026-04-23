@@ -15,6 +15,7 @@ import {
   inventoryBatches,
   inventoryCatalogue,
   inventoryDocuments,
+  inventoryImportDrafts,
   inventoryMovements,
   inventoryStock,
   stockCards,
@@ -55,6 +56,9 @@ import {
   requiresSupervisorForRetroactiveEntry,
 } from "../wms/stockCard";
 import { assertBinCardLifecycleTransition, getBinCardDetail, listBinCards } from "../wms/binCard";
+import { buildTemplateWorkbook, parseExcelRows, parseTypedPdfText, type ImportDocumentType } from "../wms/importPipeline";
+import { PDFParse } from "pdf-parse";
+import * as XLSX from "xlsx";
 import {
   buildMonthlyWarehouseReport,
   monthlyReportColumns,
@@ -113,6 +117,35 @@ function toMonthKey(value: Date | string | null | undefined): string {
 function safeNumber(value: unknown): number {
   const n = Number(value);
   return Number.isFinite(n) ? n : 0;
+}
+
+async function validateImportRows(
+  db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
+  rows: Array<{ rowIndex: number; status: "valid" | "warning" | "error"; errors: string[]; data: Record<string, string | number | null> }>
+) {
+  const facilityCodes = new Set(
+    (
+      await db
+        .select({ code: sites.code })
+        .from(sites)
+        .where(eq(sites.isActive, true))
+    )
+      .map((r) => String(r.code ?? "").trim().toUpperCase())
+      .filter(Boolean)
+  );
+  const itemCodes = new Set((await db.select({ code: inventoryCatalogue.itemCode }).from(inventoryCatalogue)).map((r) => String(r.code ?? "").trim().toUpperCase()));
+  const donorCodes = new Set((await db.select({ code: donors.code }).from(donors)).map((r) => String(r.code ?? "").trim().toUpperCase()));
+
+  return rows.map((row) => {
+    const errors = [...row.errors];
+    const fCode = String(row.data.facility_code ?? "").trim().toUpperCase();
+    const iCode = String(row.data.item_code ?? "").trim().toUpperCase();
+    const dCode = String(row.data.donor_code ?? "").trim().toUpperCase();
+    if (fCode && !facilityCodes.has(fCode)) errors.push(`Unknown facility code: ${fCode}`);
+    if (iCode && !itemCodes.has(iCode)) errors.push(`Unknown item code: ${iCode}`);
+    if (dCode && !donorCodes.has(dCode)) errors.push(`Unknown donor code: ${dCode}`);
+    return { ...row, status: errors.length ? "error" : row.status, errors };
+  });
 }
 
 const inventoryMovementTypeEnum = z.enum([
@@ -1922,7 +1955,14 @@ export const inventoryV2Router = router({
         for (const line of lines) {
           const source = await getOrCreateStock(line.catalogueId, Number(doc.fromWarehouseId));
           const dest = await getOrCreateStock(line.catalogueId, Number(doc.toWarehouseId));
-          if (Number(source.quantityOnHand) < Number(line.quantity)) {
+          const sourceStockCardId = await ensureCountStockCardForItemLocation({
+            itemId: line.catalogueId,
+            locationId: Number(doc.fromWarehouseId),
+            expectedBalance: Number(source.quantityOnHand),
+            createdBy: ctx.user.id,
+          });
+          const sourceBalance = await stockCardNet(sourceStockCardId);
+          if (sourceBalance < Number(line.quantity)) {
             throw new TRPCError({ code: "BAD_REQUEST", message: `Insufficient stock for item ${line.catalogueId}.` });
           }
           await db
@@ -1934,20 +1974,17 @@ export const inventoryV2Router = router({
             .update(inventoryStock)
             .set({ quantityInTransit: Number(dest.quantityInTransit ?? 0) + Number(line.quantity), updatedAt: new Date() })
             .where(eq(inventoryStock.id, dest.id));
-          await db.insert(inventoryMovements).values({
-            movementType: "transfer_out",
-            catalogueId: line.catalogueId,
-            stockId: source.id,
-            fromWarehouseId: doc.fromWarehouseId,
-            toWarehouseId: doc.toWarehouseId,
-            quantityChange: -Math.abs(line.quantity),
-            balanceAfter: Number(source.quantityOnHand) - Number(line.quantity),
-            documentType: "transfer_note",
-            documentId: doc.id,
-            documentNumber: doc.documentNumber,
-            performedBy: ctx.user.id,
-            approvedBy: doc.approvedBy,
-            reason: "Transfer dispatch",
+          await db.insert(stockMovements).values({
+            stockCardId: sourceStockCardId,
+            date: new Date().toISOString().slice(0, 10),
+            documentRef: doc.documentNumber,
+            fromTo: `transfer:${doc.toWarehouseId}`,
+            quantityIn: 0,
+            quantityOut: Math.abs(Number(line.quantity)),
+            balanceAfter: sourceBalance - Number(line.quantity),
+            remarks: "Transfer dispatch",
+            sourceType: "transfer_out",
+            createdBy: ctx.user.id,
           });
         }
         await db.update(inventoryDocuments).set({ status: "dispatched" }).where(eq(inventoryDocuments.id, doc.id));
@@ -1969,6 +2006,13 @@ export const inventoryV2Router = router({
         const lines = Array.isArray(doc.items) ? (doc.items as z.infer<typeof documentItemSchema>[]) : [];
         for (const line of lines) {
           const dest = await getOrCreateStock(line.catalogueId, Number(doc.toWarehouseId));
+          const destinationStockCardId = await ensureCountStockCardForItemLocation({
+            itemId: line.catalogueId,
+            locationId: Number(doc.toWarehouseId),
+            expectedBalance: Number(dest.quantityOnHand),
+            createdBy: ctx.user.id,
+          });
+          const destBalance = await stockCardNet(destinationStockCardId);
           await db
             .update(inventoryStock)
             .set({
@@ -1979,20 +2023,17 @@ export const inventoryV2Router = router({
             })
             .where(eq(inventoryStock.id, dest.id));
           await checkStockThreshold(dest.id);
-          await db.insert(inventoryMovements).values({
-            movementType: "transfer_in",
-            catalogueId: line.catalogueId,
-            stockId: dest.id,
-            fromWarehouseId: doc.fromWarehouseId,
-            toWarehouseId: doc.toWarehouseId,
-            quantityChange: Math.abs(line.quantity),
-            balanceAfter: Number(dest.quantityOnHand) + Number(line.quantity),
-            documentType: "transfer_note",
-            documentId: doc.id,
-            documentNumber: doc.documentNumber,
-            performedBy: ctx.user.id,
-            approvedBy: doc.approvedBy,
-            reason: "Transfer receive",
+          await db.insert(stockMovements).values({
+            stockCardId: destinationStockCardId,
+            date: new Date().toISOString().slice(0, 10),
+            documentRef: doc.documentNumber,
+            fromTo: `transfer:${doc.fromWarehouseId}`,
+            quantityIn: Math.abs(Number(line.quantity)),
+            quantityOut: 0,
+            balanceAfter: destBalance + Number(line.quantity),
+            remarks: "Transfer receive",
+            sourceType: "transfer_in",
+            createdBy: ctx.user.id,
           });
         }
         await db
@@ -2037,6 +2078,207 @@ export const inventoryV2Router = router({
           .limit(1);
         return doc ?? null;
       }),
+  }),
+
+  documents: router({
+    downloadTemplate: protectedProcedure
+      .input(z.object({ type: z.enum(["grn", "waybill", "monthly_report", "stock_card"]) }))
+      .query(async ({ input }) => {
+        const wb = buildTemplateWorkbook(input.type as ImportDocumentType);
+        const data = XLSX.write(wb, { type: "base64", bookType: "xlsx" });
+        return {
+          data,
+          filename: `${input.type}-template.xlsx`,
+          mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        };
+      }),
+
+    parseExcelImport: protectedProcedure
+      .input(z.object({ type: z.enum(["grn", "waybill", "monthly_report", "stock_card"]), base64File: z.string() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        const parsed = parseExcelRows(input.type as ImportDocumentType, input.base64File);
+        return validateImportRows(db, parsed);
+      }),
+
+    parseTypedPdfImport: protectedProcedure
+      .input(z.object({ type: z.enum(["grn", "waybill"]), base64File: z.string() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        const buffer = Buffer.from(input.base64File, "base64");
+        const parser = new PDFParse({ data: buffer });
+        const parsedPdf = await parser.getText();
+        const text = String((parsedPdf as any)?.text ?? "").trim();
+        if (!text) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "This PDF appears to be a scanned image. Please enter the data manually via the Stock Card or Bin Card form.",
+          });
+        }
+        const parsed = parseTypedPdfText(text, input.type as "grn" | "waybill");
+        await parser.destroy();
+        return validateImportRows(db, parsed);
+      }),
+
+    drafts: router({
+      list: protectedProcedure.query(async () => {
+        const db = await getDb();
+        if (!db) return [];
+        return db
+          .select()
+          .from(inventoryImportDrafts)
+          .orderBy(desc(inventoryImportDrafts.uploadedAt));
+      }),
+
+      get: protectedProcedure.input(z.object({ id: z.number().int().positive() })).query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return null;
+        const [row] = await db.select().from(inventoryImportDrafts).where(eq(inventoryImportDrafts.id, input.id)).limit(1);
+        return row ?? null;
+      }),
+
+      create: protectedProcedure
+        .input(
+          z.object({
+            source: z.enum(["excel", "pdf"]),
+            documentType: z.enum(["grn", "waybill", "monthly_report", "stock_card"]),
+            fileName: z.string().optional(),
+            rows: z.array(
+              z.object({
+                rowIndex: z.number(),
+                status: z.enum(["valid", "warning", "error"]),
+                errors: z.array(z.string()),
+                data: z.record(z.string(), z.union([z.string(), z.number(), z.null()])),
+                confidence: z.record(z.string(), z.number()).optional(),
+              })
+            ),
+          })
+        )
+        .mutation(async ({ input, ctx }) => {
+          const db = await getDb();
+          if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+          const validationStatus = input.rows.some((r) => r.status === "error")
+            ? "invalid"
+            : input.rows.some((r) => r.status === "warning")
+              ? "warning"
+              : "valid";
+          const [draft] = await db
+            .insert(inventoryImportDrafts)
+            .values({
+              source: input.source,
+              documentType: input.documentType,
+              fileName: input.fileName ?? null,
+              rowCount: input.rows.length,
+              status: "draft",
+              validationStatus,
+              rowsJson: input.rows as any,
+              uploadedBy: ctx.user.id,
+            })
+            .returning();
+          return draft;
+        }),
+
+      updateRows: protectedProcedure
+        .input(
+          z.object({
+            id: z.number().int().positive(),
+            rows: z.array(
+              z.object({
+                rowIndex: z.number(),
+                status: z.enum(["valid", "warning", "error"]),
+                errors: z.array(z.string()),
+                data: z.record(z.string(), z.union([z.string(), z.number(), z.null()])),
+                confidence: z.record(z.string(), z.number()).optional(),
+              })
+            ),
+          })
+        )
+        .mutation(async ({ input }) => {
+          const db = await getDb();
+          if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+          const validated = await validateImportRows(db, input.rows as any);
+          const validationStatus = validated.some((r) => r.status === "error")
+            ? "invalid"
+            : validated.some((r) => r.status === "warning")
+              ? "warning"
+              : "valid";
+          await db
+            .update(inventoryImportDrafts)
+            .set({ rowsJson: validated as any, rowCount: validated.length, validationStatus, updatedAt: new Date() })
+            .where(eq(inventoryImportDrafts.id, input.id));
+          return { rows: validated, validationStatus };
+        }),
+
+      discard: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        await db.update(inventoryImportDrafts).set({ status: "discarded", updatedAt: new Date() }).where(eq(inventoryImportDrafts.id, input.id));
+        return { success: true as const };
+      }),
+
+      finalize: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ input, ctx }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        const [draft] = await db.select().from(inventoryImportDrafts).where(eq(inventoryImportDrafts.id, input.id)).limit(1);
+        if (!draft) throw new TRPCError({ code: "NOT_FOUND", message: "Import draft not found." });
+        const rows = Array.isArray(draft.rowsJson) ? (draft.rowsJson as any[]) : [];
+        const validated = await validateImportRows(db, rows as any);
+        const errorRows = validated.filter((r) => r.status === "error");
+        if (errorRows.length > 0) {
+          return { success: false as const, errors: errorRows };
+        }
+
+        for (const row of validated) {
+          const itemCode = String(row.data.item_code ?? "").trim();
+          const facilityCode = String(row.data.facility_code ?? "").trim();
+          const ctnCode = String(row.data.ctn_code ?? "").trim();
+          const donorCode = String(row.data.donor_code ?? "BLENDED").trim();
+          const [site] = await db.select({ id: sites.id }).from(sites).where(eq(sites.code, facilityCode)).limit(1);
+          const [item] = await db.select({ id: inventoryCatalogue.id }).from(inventoryCatalogue).where(eq(inventoryCatalogue.itemCode, itemCode)).limit(1);
+          const [donor] = await db.select({ id: donors.id }).from(donors).where(eq(donors.code, donorCode)).limit(1);
+          if (!site || !item || !donor) continue;
+
+          let [ctn] = await db.select({ id: commodityTrackingNumbers.id }).from(commodityTrackingNumbers).where(eq(commodityTrackingNumbers.ctnCode, ctnCode)).limit(1);
+          if (!ctn) {
+            [ctn] = await db
+              .insert(commodityTrackingNumbers)
+              .values({
+                ctnCode,
+                donorId: donor.id,
+                itemId: item.id,
+                unit: String(row.data.unit_type ?? "pieces"),
+                originalQuantity: Math.max(0, safeNumber(row.data.quantity_in ?? row.data.quantity_out ?? 0)),
+                status: "active",
+                notes: "Created during import draft finalization",
+              })
+              .returning({ id: commodityTrackingNumbers.id });
+          }
+          const stockCardId = await ensureStockCardForCtnAtLocation(db, { ctnId: ctn.id, locationId: site.id });
+          const prev = await stockCardNet(stockCardId);
+          const qtyIn = Math.max(0, safeNumber(row.data.quantity_in));
+          const qtyOut = Math.max(0, safeNumber(row.data.quantity_out));
+          await db.insert(stockMovements).values({
+            stockCardId,
+            date: String(row.data.date ?? new Date().toISOString().slice(0, 10)),
+            documentRef: String(row.data.document_ref ?? "IMPORT"),
+            fromTo: row.data.from_to ? String(row.data.from_to) : null,
+            quantityIn: qtyIn,
+            quantityOut: qtyOut,
+            balanceAfter: prev + qtyIn - qtyOut,
+            remarks: row.data.remarks ? String(row.data.remarks) : "Imported from draft",
+            sourceType: "import",
+            createdBy: ctx.user.id,
+          });
+        }
+        await db
+          .update(inventoryImportDrafts)
+          .set({ status: "finalized", validationStatus: "valid", updatedAt: new Date() })
+          .where(eq(inventoryImportDrafts.id, input.id));
+        return { success: true as const };
+      }),
+    }),
   }),
 
   requisitions: router({

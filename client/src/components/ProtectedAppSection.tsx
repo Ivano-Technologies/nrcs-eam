@@ -17,6 +17,7 @@ import CtnRegistryPage from "@/pages/inventory/CtnRegistryPage";
 import InventoryStockOverviewPage from "@/pages/inventory/InventoryStockOverviewPage";
 import InventoryRequisitionsPage from "@/pages/inventory/InventoryRequisitionsPage";
 import InventoryTransfersRoute from "@/pages/inventory/InventoryTransfersRoute";
+import { InventoryImportDraftsRoute, InventoryImportPageRoute } from "@/pages/inventory/InventoryImportRoutes";
 import InventoryTrackingPage from "@/pages/inventory/InventoryTrackingPage";
 import ReceiptDetail from "@/pages/inventory/ReceiptDetail";
 import ReceiptPrint from "@/pages/inventory/ReceiptPrint";
@@ -114,6 +115,8 @@ export default function ProtectedAppSection() {
           <Route path="/app/inventory/tracking" component={InventoryTrackingPage} />
           <Route path="/app/inventory/requisitions" component={InventoryRequisitionsPage} />
           <Route path="/app/inventory/transfers" component={InventoryTransfersRoute} />
+          <Route path="/app/inventory/import" component={InventoryImportPageRoute} />
+          <Route path="/app/inventory/import/drafts" component={InventoryImportDraftsRoute} />
           <Route path="/app/inventory/receipts/:id/print/:copyType" component={ReceiptPrint} />
           <Route path="/app/inventory/receipts/new" component={ReceiptDetail} />
           <Route path="/app/inventory/receipts/:id" component={ReceiptDetail} />
