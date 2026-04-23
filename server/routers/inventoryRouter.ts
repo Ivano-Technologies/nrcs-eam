@@ -45,6 +45,13 @@ import {
   insertGrnReceiptMovement,
 } from "../wms/grnStockLedger";
 import { expandKitDonorContribution } from "../wms/kitDonorContribution";
+import {
+  buildRetroactiveStockCheckRemark,
+  computeStockCheckMovement,
+  getStockCardDetail,
+  listStockCards,
+  requiresSupervisorForRetroactiveEntry,
+} from "../wms/stockCard";
 
 const vedEnum = z.enum(INVENTORY_VED_VALUES);
 const categoryEnum = z.enum(INVENTORY_CATEGORIES);
@@ -199,6 +206,15 @@ const waybillDraftSchema = z.object({
   transportedByFunction: z.string().optional(),
   comments: z.string().optional(),
   lines: z.array(waybillLineSchema).min(1),
+});
+
+const stockCheckInputSchema = z.object({
+  stockCardId: z.number().int().positive(),
+  date: z.string(),
+  countedQty: z.number().min(0),
+  storekeeperId: z.number().int().positive(),
+  notes: z.string().optional(),
+  supervisorId: z.number().int().positive().optional(),
 });
 
 const openingStockRowSchema = z.object({
@@ -2915,6 +2931,94 @@ export const inventoryV2Router = router({
         };
       });
     }),
+  }),
+
+  stockCards: router({
+    list: protectedProcedure
+      .input(
+        z
+          .object({
+            search: z.string().optional(),
+            locationId: z.number().int().positive().optional(),
+            expiryWindow: z.enum(["all", "expiring-30", "expiring-90", "expired"]).default("all").optional(),
+            lowStockOnly: z.boolean().optional(),
+          })
+          .optional()
+      )
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return [];
+        return listStockCards(db, {
+          search: input?.search,
+          locationId: input?.locationId,
+          expiryWindow: input?.expiryWindow ?? "all",
+          lowStockOnly: input?.lowStockOnly ?? false,
+        });
+      }),
+
+    get: protectedProcedure
+      .input(z.object({ id: z.number().int().positive() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return null;
+        return getStockCardDetail(db, input.id);
+      }),
+
+    addStockCheck: protectedProcedure
+      .input(stockCheckInputSchema)
+      .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["staff", "manager", "admin"]);
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+
+        const [card] = await db.select().from(stockCards).where(eq(stockCards.id, input.stockCardId)).limit(1);
+        if (!card) throw new TRPCError({ code: "NOT_FOUND", message: "Stock card not found." });
+
+        const todayIso = new Date().toISOString().slice(0, 10);
+        const isRetroactive = requiresSupervisorForRetroactiveEntry(input.date, todayIso);
+        if (isRetroactive && !input.supervisorId) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Retroactive stock checks require supervisor_id." });
+        }
+
+        const currentBalance = await stockCardNet(card.id);
+        const computed = computeStockCheckMovement(currentBalance, Number(input.countedQty));
+        if (computed.variance === 0) {
+          return { success: true as const, movementId: null, variance: 0, balanceAfter: currentBalance };
+        }
+
+        const actorName = ctx.user.name || `user#${ctx.user.id}`;
+        const remarks = isRetroactive
+          ? buildRetroactiveStockCheckRemark({
+              original: input.notes,
+              actorName,
+              todayIso,
+            })
+          : input.notes ?? null;
+
+        const [movement] = await db
+          .insert(stockMovements)
+          .values({
+            stockCardId: card.id,
+            date: input.date,
+            documentRef: "— STOCK CHECK",
+            fromTo: "STOCK CHECK",
+            quantityIn: computed.quantityIn,
+            quantityOut: computed.quantityOut,
+            balanceAfter: computed.balanceAfter,
+            remarks,
+            sourceType: "stock_check",
+            createdBy: input.storekeeperId,
+          })
+          .returning({ id: stockMovements.id });
+
+        return {
+          success: true as const,
+          movementId: movement.id,
+          variance: computed.variance,
+          balanceAfter: computed.balanceAfter,
+          retroactiveEntry: isRetroactive,
+        };
+      }),
   }),
 
   adminData: router({

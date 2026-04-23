@@ -22,6 +22,8 @@ import ReceiptDetail from "@/pages/inventory/ReceiptDetail";
 import ReceiptPrint from "@/pages/inventory/ReceiptPrint";
 import WaybillDetail from "@/pages/inventory/WaybillDetail";
 import WaybillPrint from "@/pages/inventory/WaybillPrint";
+import StockCardDetail from "@/pages/inventory/StockCardDetail";
+import StockCardPrint from "@/pages/inventory/StockCardPrint";
 import {
   InventoryDistributionsPage,
   InventoryExpiryPage,
@@ -29,6 +31,7 @@ import {
   InventoryKitsPage,
   InventoryMovementsPage,
   InventoryReceiptsPage,
+  InventoryStockCardsPage,
   InventoryStockCountsPage,
 } from "@/pages/inventory/inventoryShellPages";
 import Maintenance from "@/pages/Maintenance";
@@ -109,6 +112,9 @@ export default function ProtectedAppSection() {
           <Route path="/app/inventory/issues/:id" component={WaybillDetail} />
           <Route path="/app/inventory/issues" component={InventoryIssuesPage} />
           <Route path="/app/inventory/movements" component={InventoryMovementsPage} />
+          <Route path="/app/inventory/tracking/stock-cards/:id/print" component={StockCardPrint} />
+          <Route path="/app/inventory/tracking/stock-cards/:id" component={StockCardDetail} />
+          <Route path="/app/inventory/tracking/stock-cards" component={InventoryStockCardsPage} />
           <Route path="/app/inventory/counts" component={InventoryStockCountsPage} />
           <Route path="/app/inventory/expiry" component={InventoryExpiryPage} />
           <Route path="/app/inventory/distributions" component={InventoryDistributionsPage} />
