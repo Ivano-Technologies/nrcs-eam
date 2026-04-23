@@ -1,9 +1,91 @@
-import { and, eq, lte, gte } from "drizzle-orm";
+import { and, eq, gte, lte, sql } from "drizzle-orm";
 import { createNotification, getAllUsers, getDb } from "../db";
-import { inventoryBatches, inventoryCatalogue, inventoryMovements, inventoryStock, sites } from "../../drizzle/schema";
+import {
+  commodityTrackingNumbers,
+  donors,
+  inventoryBatches,
+  inventoryCatalogue,
+  inventoryMovements,
+  inventoryStock,
+  sites,
+  stockCards,
+  stockMovements,
+} from "../../drizzle/schema";
 
 function daysBetween(a: Date, b: Date): number {
   return Math.ceil((b.getTime() - a.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+async function stockCardBalance(stockCardId: number): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  const rows = await db
+    .select({
+      balance: sql<number>`coalesce(sum(${stockMovements.quantityIn}) - sum(${stockMovements.quantityOut}), 0)`,
+    })
+    .from(stockMovements)
+    .where(eq(stockMovements.stockCardId, stockCardId));
+  return Number(rows[0]?.balance ?? 0);
+}
+
+async function ensureExpiryStockCard(params: { catalogueId: number; warehouseId: number; expectedBalance: number }) {
+  const db = await getDb();
+  if (!db) return null;
+  const existing = await db
+    .select({ id: stockCards.id })
+    .from(stockCards)
+    .innerJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
+    .where(and(eq(stockCards.locationId, params.warehouseId), eq(commodityTrackingNumbers.itemId, params.catalogueId)))
+    .limit(1);
+  if (existing[0]) return existing[0].id;
+
+  const [donor] = await db.select({ id: donors.id }).from(donors).where(eq(donors.code, "BLENDED")).limit(1);
+  const donorId = donor?.id ?? (await db.select({ id: donors.id }).from(donors).limit(1))[0]?.id;
+  if (!donorId) return null;
+
+  const code = `CTN-EXP-${params.warehouseId}-${params.catalogueId}-${Date.now()}`;
+  const [ctn] = await db
+    .insert(commodityTrackingNumbers)
+    .values({
+      ctnCode: code,
+      donorId,
+      itemId: params.catalogueId,
+      unit: "pieces",
+      originalQuantity: Math.max(0, params.expectedBalance),
+      status: "active",
+      notes: "Auto-generated for inventory alert expiry migration",
+    })
+    .returning({ id: commodityTrackingNumbers.id });
+  const [card] = await db
+    .insert(stockCards)
+    .values({ ctnId: ctn.id, locationId: params.warehouseId })
+    .returning({ id: stockCards.id });
+  if (params.expectedBalance > 0) {
+    await db.insert(stockMovements).values({
+      stockCardId: card.id,
+      date: new Date().toISOString().slice(0, 10),
+      documentRef: "AUTO-EXPIRY-BOOTSTRAP",
+      fromTo: null,
+      quantityIn: params.expectedBalance,
+      quantityOut: 0,
+      balanceAfter: params.expectedBalance,
+      remarks: "Bootstrap stock card for expiry automation",
+      sourceType: "import",
+      createdBy: null,
+    });
+  }
+  return card.id;
+}
+
+export function buildInventoryAlertExpiryMovement(params: { previousBalance: number; expiryQty: number }) {
+  const quantityOut = Math.min(Math.max(0, params.expiryQty), Math.max(0, params.previousBalance));
+  return {
+    quantityIn: 0,
+    quantityOut,
+    balanceAfter: Math.max(0, params.previousBalance - quantityOut),
+    sourceType: "expiry" as const,
+    legacyInventoryMovementsWrite: false as const,
+  };
 }
 
 export async function checkStockThreshold(stockId: number) {
@@ -85,16 +167,30 @@ export async function runDailyChecks() {
         .update(inventoryStock)
         .set({ quantityOnHand: next, updatedAt: new Date(), lastMovementAt: new Date() })
         .where(eq(inventoryStock.id, b.stockId));
-      await db.insert(inventoryMovements).values({
-        movementType: "loss",
+      const stockCardId = await ensureExpiryStockCard({
         catalogueId: b.catalogueId,
-        stockId: b.stockId,
-        fromWarehouseId: b.warehouseId,
-        quantityChange: -Math.abs(Number(b.quantity)),
-        balanceAfter: next,
-        reason: "expired",
-        notes: "Auto-marked expired by daily check",
+        warehouseId: b.warehouseId,
+        expectedBalance: Number(stock.quantityOnHand),
       });
+      if (stockCardId) {
+        const previous = await stockCardBalance(stockCardId);
+        const mapped = buildInventoryAlertExpiryMovement({
+          previousBalance: previous > 0 ? previous : Number(stock.quantityOnHand),
+          expiryQty: Number(b.quantity),
+        });
+        await db.insert(stockMovements).values({
+          stockCardId,
+          date: new Date().toISOString().slice(0, 10),
+          documentRef: "AUTO-EXPIRY",
+          fromTo: null,
+          quantityIn: mapped.quantityIn,
+          quantityOut: mapped.quantityOut,
+          balanceAfter: mapped.balanceAfter,
+          remarks: "Auto-marked expired by daily check",
+          sourceType: "expiry",
+          createdBy: null,
+        });
+      }
       expiredMarked += 1;
     }
   }

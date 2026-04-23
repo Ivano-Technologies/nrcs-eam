@@ -57,6 +57,7 @@ import {
 } from "../wms/stockCard";
 import { assertBinCardLifecycleTransition, getBinCardDetail, listBinCards } from "../wms/binCard";
 import { buildTemplateWorkbook, parseExcelRows, parseTypedPdfText, type ImportDocumentType } from "../wms/importPipeline";
+import { buildHistoricalStockMovement } from "../wms/historicalImport";
 import { PDFParse } from "pdf-parse";
 import * as XLSX from "xlsx";
 import {
@@ -1754,70 +1755,6 @@ export const inventoryV2Router = router({
           .update(inventoryDocuments)
           .set({ status: "approved", approvedBy: ctx.user.id, approvedAt: new Date() })
           .where(and(eq(inventoryDocuments.id, input.documentId), eq(inventoryDocuments.documentType, "waybill")));
-        return { success: true as const };
-      }),
-
-    dispatch: protectedProcedure
-      .input(z.object({ documentId: z.number() }))
-      .mutation(async ({ input, ctx }) => {
-        requireRole(ctx, ["staff", "manager", "admin"]);
-        const db = await getDb();
-        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
-        const [doc] = await db
-          .select()
-          .from(inventoryDocuments)
-          .where(and(eq(inventoryDocuments.id, input.documentId), eq(inventoryDocuments.documentType, "waybill")))
-          .limit(1);
-        if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "Waybill not found." });
-        const lines = Array.isArray(doc.items) ? (doc.items as z.infer<typeof documentItemSchema>[]) : [];
-        for (const line of lines) {
-          const stock = await getOrCreateStock(line.catalogueId, Number(doc.fromWarehouseId));
-          if (Number(stock.quantityOnHand) < Number(line.quantity)) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: `Insufficient stock for catalogue item ${line.catalogueId}.`,
-            });
-          }
-          const nextOnHand = Number(stock.quantityOnHand) - Number(line.quantity);
-          await db
-            .update(inventoryStock)
-            .set({ quantityOnHand: nextOnHand, lastMovementAt: new Date(), updatedAt: new Date() })
-            .where(eq(inventoryStock.id, stock.id));
-          const batches = await db
-            .select()
-            .from(inventoryBatches)
-            .where(and(eq(inventoryBatches.stockId, stock.id), eq(inventoryBatches.status, "active")))
-            .orderBy(asc(inventoryBatches.expiryDate), asc(inventoryBatches.receivedDate));
-          let remaining = Number(line.quantity);
-          for (const batch of batches) {
-            if (remaining <= 0) break;
-            const consume = Math.min(remaining, Number(batch.quantity));
-            remaining -= consume;
-            await db
-              .update(inventoryBatches)
-              .set({ quantity: Number(batch.quantity) - consume, status: Number(batch.quantity) - consume <= 0 ? "disposed" : "active" })
-              .where(eq(inventoryBatches.id, batch.id));
-          }
-          await db.insert(inventoryMovements).values({
-            movementType: "issue",
-            catalogueId: line.catalogueId,
-            stockId: stock.id,
-            fromWarehouseId: doc.fromWarehouseId,
-            quantityChange: -Math.abs(line.quantity),
-            balanceAfter: nextOnHand,
-            documentType: "waybill",
-            documentId: doc.id,
-            documentNumber: doc.documentNumber,
-            performedBy: ctx.user.id,
-            approvedBy: doc.approvedBy,
-            reason: "Waybill dispatch",
-            notes: line.notes ?? null,
-          });
-        }
-        await db
-          .update(inventoryDocuments)
-          .set({ status: "dispatched", completedAt: new Date() })
-          .where(eq(inventoryDocuments.id, doc.id));
         return { success: true as const };
       }),
 
@@ -3920,23 +3857,28 @@ export const inventoryV2Router = router({
             continue;
           }
           const stock = await getOrCreateStock(row.catalogueId, row.warehouseId);
-          const nextBalance =
-            row.movementType === "issue" || row.movementType === "transfer_out" || row.movementType === "loss"
-              ? Number(stock.quantityOnHand) - row.quantity
-              : Number(stock.quantityOnHand) + row.quantity;
-          await db.insert(inventoryMovements).values({
-            movementType: row.movementType,
-            catalogueId: row.catalogueId,
-            stockId: stock.id,
-            fromWarehouseId: row.warehouseId,
-            quantityChange: ["issue", "transfer_out", "loss"].includes(row.movementType) ? -Math.abs(row.quantity) : Math.abs(row.quantity),
-            balanceAfter: nextBalance,
-            documentNumber: row.documentNumber ?? null,
-            notes: row.notes ?? null,
-            createdAt: new Date(row.date),
-            performedBy: ctx.user.id,
+          const stockCardId = await ensureCountStockCardForItemLocation({
+            itemId: row.catalogueId,
+            locationId: row.warehouseId,
+            expectedBalance: Number(stock.quantityOnHand),
+            createdBy: ctx.user.id,
           });
-          await db.update(inventoryStock).set({ quantityOnHand: nextBalance, updatedAt: new Date() }).where(eq(inventoryStock.id, stock.id));
+          const previousBalance = await stockCardNet(stockCardId);
+          const movement = buildHistoricalStockMovement({
+            movementType: row.movementType,
+            quantity: row.quantity,
+            previousBalance,
+            documentRef: row.documentNumber ?? null,
+            date: row.date,
+            notes: row.notes ?? null,
+            createdBy: ctx.user.id,
+            stockCardId,
+          });
+          await db.insert(stockMovements).values(movement.row);
+          await db
+            .update(inventoryStock)
+            .set({ quantityOnHand: movement.balanceAfter, updatedAt: new Date() })
+            .where(eq(inventoryStock.id, stock.id));
           imported += 1;
         }
         return { imported, skipped, errors };

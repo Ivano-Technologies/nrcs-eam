@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { computeExpiryQuantityOut, shouldExpireCtn } from "./expiry";
+import { buildInventoryAlertExpiryMovement } from "../_core/inventoryAlerts";
 
 describe("expiry migration helpers", () => {
   it("runExpiryJob with one expired CTN writes quantity_out semantics", () => {
@@ -24,6 +25,20 @@ describe("expiry migration helpers", () => {
     const out = computeExpiryQuantityOut(12, 3);
     expect(out.sourceType).toBe("expiry");
     expect(out.quantityOut).toBe(3);
+  });
+
+  it("inventoryAlerts expiry event maps to stock_movements source_type expiry", () => {
+    const mapped = buildInventoryAlertExpiryMovement({ previousBalance: 20, expiryQty: 7 });
+    expect(mapped.sourceType).toBe("expiry");
+    expect(mapped.quantityOut).toBe(7);
+    expect(mapped.balanceAfter).toBe(13);
+  });
+
+  it("inventoryAlerts expiry event does not write inventoryMovements", () => {
+    const mapped = buildInventoryAlertExpiryMovement({ previousBalance: 5, expiryQty: 9 });
+    expect(mapped.legacyInventoryMovementsWrite).toBe(false);
+    expect(mapped.quantityOut).toBe(5);
+    expect(mapped.balanceAfter).toBe(0);
   });
 });
 
