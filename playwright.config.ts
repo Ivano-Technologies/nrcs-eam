@@ -9,19 +9,23 @@ const MVP_AUDIT_AUTH_FILE = path.join(__dirname, "playwright", ".auth", "mvp-aud
 
 const LIVE_AUTH_BASE = "https://nrcseam.techivano.com";
 
-/** Skip local dev server when running live auth specs (see projects below). */
+const argvJoined = process.argv.join(" ");
+const wantsMvpAuditProject = argvJoined.includes("mvp-audit");
+
+/** Skip local dev server when running live-auth-only (see projects below). */
 const runLiveAuthOnly =
-  process.env.PLAYWRIGHT_LIVE_AUTH === "1" ||
-  process.argv.some(
-    (arg) =>
-      arg.includes("tests/auth") ||
-      arg.includes("password-login") ||
-      arg.includes("live-auth")
-  );
+  (process.env.PLAYWRIGHT_LIVE_AUTH === "1" ||
+    process.argv.some(
+      (arg) =>
+        arg.includes("tests/auth") ||
+        arg.includes("password-login") ||
+        arg.includes("live-auth")
+    )) &&
+  !wantsMvpAuditProject;
 
 /**
- * - `live-auth`: production login smoke (`tests/auth/`) — no webServer.
- * - `mvp-audit`: local E2E (`tests/mvp-audit/`) — starts dev server when not in live-auth-only mode.
+ * - `live-auth`: production login smoke — no webServer when run alone.
+ * - `mvp-audit`: local E2E — starts dev server. Combined `mvp-audit` + `live-auth` (e.g. check:full) keeps webServer enabled.
  */
 export default defineConfig({
   testDir: "./tests",
