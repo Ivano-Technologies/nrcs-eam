@@ -47,8 +47,13 @@ import QuickBooksSettings from "@/pages/QuickBooksSettings";
 import ReportScheduling from "@/pages/ReportScheduling";
 import Reports from "@/pages/Reports";
 import MonthlyWarehouseReport from "@/pages/reports/MonthlyWarehouseReport";
+import WmsCtnAgingReport from "@/pages/reports/WmsCtnAgingReport";
+import WmsDonorContributionReport from "@/pages/reports/WmsDonorContributionReport";
 import WmsExpiryReport from "@/pages/reports/WmsExpiryReport";
+import WmsKitAssemblyReport from "@/pages/reports/WmsKitAssemblyReport";
+import WmsLossDamageReport from "@/pages/reports/WmsLossDamageReport";
 import WmsReportSuite from "@/pages/reports/WmsReportSuite";
+import WmsStockMovementsReport from "@/pages/reports/WmsStockMovementsReport";
 import FacilitiesNew from "@/pages/FacilitiesNew";
 import { FacilitiesTabRoute } from "@/pages/facilities/FacilitiesTabRoutes";
 import Users from "@/pages/Users";
@@ -179,6 +184,11 @@ export default function ProtectedAppSection() {
           <Route path="/app/reports" component={Reports} />
           <Route path="/app/reports/wms" component={WmsReportSuite} />
           <Route path="/app/reports/wms/monthly-warehouse-report" component={MonthlyWarehouseReport} />
+          <Route path="/app/reports/wms/stock-movements" component={WmsStockMovementsReport} />
+          <Route path="/app/reports/wms/ctn-aging" component={WmsCtnAgingReport} />
+          <Route path="/app/reports/wms/donor-contribution" component={WmsDonorContributionReport} />
+          <Route path="/app/reports/wms/loss-damage" component={WmsLossDamageReport} />
+          <Route path="/app/reports/wms/kit-assembly" component={WmsKitAssemblyReport} />
           <Route path="/app/reports/wms/expiry" component={WmsExpiryReport} />
           <Route path="/app/report-scheduling" component={ReportScheduling} />
           <Route path="/app/quickbooks" component={QuickBooksSettings} />
