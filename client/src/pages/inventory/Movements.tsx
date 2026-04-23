@@ -52,12 +52,14 @@ export default function Movements({ embedInShell = false }: { embedInShell?: boo
 
   return (
     <div className="space-y-4">
-      {!embedInShell ? (
+      {embedInShell ? (
+        <h2 className="text-2xl font-bold">Inventory Movements</h2>
+      ) : (
         <>
           <h1 className="text-3xl font-bold">Inventory Movements</h1>
           <InventorySecondaryNav />
         </>
-      ) : null}
+      )}
       <Card>
         <CardContent className="flex flex-wrap items-center gap-2 pt-4">
           <Select value={warehouseId} onValueChange={setWarehouseId}>
