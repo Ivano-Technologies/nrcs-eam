@@ -63,6 +63,8 @@ export async function loadSecrets(): Promise<void> {
   for (const key of Object.keys(secrets)) {
     const value = secrets[key];
     if (value !== undefined && value !== null) {
+      // Preserve process-level mode flags (e.g. NODE_ENV=development for local/e2e commands).
+      if (key === "NODE_ENV" && process.env.NODE_ENV) continue;
       process.env[key] = String(value);
     }
   }
