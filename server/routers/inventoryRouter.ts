@@ -372,6 +372,63 @@ async function stockCardNet(stockCardId: number) {
   return Number(agg?.net ?? 0);
 }
 
+async function ensureCountStockCardForItemLocation(params: {
+  itemId: number;
+  locationId: number;
+  expectedBalance: number;
+  createdBy: number;
+}): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+
+  const existing = await db
+    .select({
+      stockCardId: stockCards.id,
+    })
+    .from(stockCards)
+    .innerJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
+    .where(and(eq(stockCards.locationId, params.locationId), eq(commodityTrackingNumbers.itemId, params.itemId)))
+    .orderBy(asc(stockCards.id))
+    .limit(1);
+  if (existing.length > 0) return existing[0]!.stockCardId;
+
+  const [blendedDonor] = await db.select({ id: donors.id }).from(donors).where(eq(donors.code, "BLENDED")).limit(1);
+  if (!blendedDonor) throw new TRPCError({ code: "BAD_REQUEST", message: "BLENDED donor is missing." });
+  const [cat] = await db.select().from(inventoryCatalogue).where(eq(inventoryCatalogue.id, params.itemId)).limit(1);
+  if (!cat) throw new TRPCError({ code: "NOT_FOUND", message: "Catalogue item not found." });
+
+  const syntheticCtnCode = `LEGACY-${params.itemId}-${params.locationId}-${Date.now().toString().slice(-6)}`;
+  const [ctn] = await db
+    .insert(commodityTrackingNumbers)
+    .values({
+      ctnCode: syntheticCtnCode,
+      donorId: blendedDonor.id,
+      itemId: params.itemId,
+      unit: cat.unitOfMeasure || "units",
+      originalQuantity: Math.max(0, Number(params.expectedBalance)),
+      status: "active",
+      notes: "Synthetic opening CTN for stock-count migration",
+    })
+    .returning();
+
+  const stockCardId = await ensureStockCardForCtnAtLocation(db, { ctnId: ctn.id, locationId: params.locationId });
+  if (Number(params.expectedBalance) > 0) {
+    await db.insert(stockMovements).values({
+      stockCardId,
+      date: new Date().toISOString().slice(0, 10),
+      documentRef: "— OPENING BALANCE",
+      fromTo: "MIGRATION",
+      quantityIn: Number(params.expectedBalance),
+      quantityOut: 0,
+      balanceAfter: Number(params.expectedBalance),
+      remarks: "Auto-created from inventory_stock during count migration",
+      sourceType: "import",
+      createdBy: params.createdBy,
+    });
+  }
+  return stockCardId;
+}
+
 async function importCatalogueRows(rows: InventoryCatalogueSeedItem[]) {
   const db = await getDb();
   if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
@@ -2515,6 +2572,47 @@ export const inventoryV2Router = router({
         return Array.from(totals.entries()).map(([donorId, totalUnits]) => ({ donorId, totalUnits }));
       }),
 
+    expiryWms: protectedProcedure
+      .input(z.object({ days: z.number().default(365) }).optional())
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return [];
+        const today = new Date();
+        const until = new Date(today.getTime() + (input?.days ?? 365) * 86400000);
+        const rows = await db
+          .select({
+            item: inventoryCatalogue.name,
+            ctnCode: commodityTrackingNumbers.ctnCode,
+            donor: donors.code,
+            location: sites.name,
+            balance: sql<number>`coalesce(sum(${stockMovements.quantityIn} - ${stockMovements.quantityOut}), 0)`.mapWith(Number),
+            expiryDate: stockCards.expiryDate,
+          })
+          .from(stockCards)
+          .innerJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
+          .innerJoin(inventoryCatalogue, eq(commodityTrackingNumbers.itemId, inventoryCatalogue.id))
+          .innerJoin(donors, eq(commodityTrackingNumbers.donorId, donors.id))
+          .innerJoin(sites, eq(stockCards.locationId, sites.id))
+          .leftJoin(stockMovements, eq(stockMovements.stockCardId, stockCards.id))
+          .where(
+            lte(stockCards.expiryDate, until.toISOString().slice(0, 10))
+          )
+          .groupBy(
+            inventoryCatalogue.name,
+            commodityTrackingNumbers.ctnCode,
+            donors.code,
+            sites.name,
+            stockCards.expiryDate
+          )
+          .orderBy(asc(stockCards.expiryDate));
+        return rows.map((row) => {
+          const daysUntilExpiry = row.expiryDate
+            ? Math.ceil((new Date(row.expiryDate).getTime() - today.getTime()) / 86400000)
+            : null;
+          return { ...row, daysUntilExpiry };
+        });
+      }),
+
     stockStatus: protectedProcedure
       .input(
         z
@@ -3401,16 +3499,25 @@ export const inventoryV2Router = router({
           const actual = Number(line.actualQuantity);
           if (actual !== expected) {
             varianceCount += 1;
-            await db.insert(inventoryMovements).values({
-              movementType: "adjustment",
-              catalogueId: stock.catalogueId,
-              stockId: stock.id,
-              fromWarehouseId: stock.warehouseId,
-              quantityChange: actual - expected,
-              balanceAfter: actual,
-              reason: line.varianceReason ?? "count_variance",
-              notes: line.varianceNotes ?? null,
-              approvedBy: ctx.user.id,
+            const stockCardId = await ensureCountStockCardForItemLocation({
+              itemId: stock.catalogueId,
+              locationId: stock.warehouseId,
+              expectedBalance: expected,
+              createdBy: ctx.user.id,
+            });
+            const cardBalance = await stockCardNet(stockCardId);
+            const variance = actual - expected;
+            await db.insert(stockMovements).values({
+              stockCardId,
+              date: new Date().toISOString().slice(0, 10),
+              documentRef: "— STOCK CHECK",
+              fromTo: "STOCK CHECK",
+              quantityIn: variance > 0 ? Math.abs(variance) : 0,
+              quantityOut: variance < 0 ? Math.abs(variance) : 0,
+              balanceAfter: cardBalance + variance,
+              remarks: line.varianceNotes ?? line.varianceReason ?? "Count variance adjustment",
+              sourceType: "stock_check",
+              createdBy: ctx.user.id,
             });
           }
           await db
@@ -3537,20 +3644,70 @@ export const inventoryV2Router = router({
         if (!stock) throw new TRPCError({ code: "NOT_FOUND", message: "Stock not found." });
         const next = Math.max(0, Number(stock.quantityOnHand) - Number(batch.quantity));
         await db.update(inventoryBatches).set({ status: "expired" }).where(eq(inventoryBatches.id, batch.id));
-        await db.update(inventoryStock).set({ quantityOnHand: next, updatedAt: new Date() }).where(eq(inventoryStock.id, stock.id));
-        await db.insert(inventoryMovements).values({
-          movementType: "loss",
-          catalogueId: stock.catalogueId,
-          stockId: stock.id,
-          fromWarehouseId: stock.warehouseId,
-          batchId: batch.id,
-          quantityChange: -Math.abs(Number(batch.quantity)),
-          balanceAfter: next,
-          reason: "expired",
-          approvedBy: ctx.user.id,
+        await db.update(inventoryStock).set({ quantityOnHand: next, updatedAt: new Date(), lastMovementAt: new Date() }).where(eq(inventoryStock.id, stock.id));
+        const stockCardId = await ensureCountStockCardForItemLocation({
+          itemId: stock.catalogueId,
+          locationId: stock.warehouseId,
+          expectedBalance: Number(stock.quantityOnHand),
+          createdBy: ctx.user.id,
+        });
+        const cardBalance = await stockCardNet(stockCardId);
+        await db.insert(stockMovements).values({
+          stockCardId,
+          date: new Date().toISOString().slice(0, 10),
+          documentRef: `EXP-${batch.id}`,
+          fromTo: "EXPIRY",
+          quantityIn: 0,
+          quantityOut: Math.abs(Number(batch.quantity)),
+          balanceAfter: Math.max(0, cardBalance - Math.abs(Number(batch.quantity))),
+          remarks: `Expired batch ${batch.batchNumber ?? batch.id}`,
+          sourceType: "expiry",
+          createdBy: ctx.user.id,
         });
         await checkStockThreshold(stock.id);
         return { success: true as const };
+      }),
+
+    runJob: protectedProcedure
+      .input(z.object({ date: z.string().optional() }).optional())
+      .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["manager", "admin"]);
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        const today = input?.date ?? new Date().toISOString().slice(0, 10);
+        const expiredBatches = await db
+          .select()
+          .from(inventoryBatches)
+          .where(and(eq(inventoryBatches.status, "active"), lte(inventoryBatches.expiryDate, today)));
+        let processed = 0;
+        for (const batch of expiredBatches) {
+          const [stock] = await db.select().from(inventoryStock).where(eq(inventoryStock.id, batch.stockId)).limit(1);
+          if (!stock) continue;
+          const next = Math.max(0, Number(stock.quantityOnHand) - Number(batch.quantity));
+          await db.update(inventoryBatches).set({ status: "expired" }).where(eq(inventoryBatches.id, batch.id));
+          await db.update(inventoryStock).set({ quantityOnHand: next, updatedAt: new Date(), lastMovementAt: new Date() }).where(eq(inventoryStock.id, stock.id));
+          const stockCardId = await ensureCountStockCardForItemLocation({
+            itemId: stock.catalogueId,
+            locationId: stock.warehouseId,
+            expectedBalance: Number(stock.quantityOnHand),
+            createdBy: ctx.user.id,
+          });
+          const cardBalance = await stockCardNet(stockCardId);
+          await db.insert(stockMovements).values({
+            stockCardId,
+            date: today,
+            documentRef: `EXP-JOB-${batch.id}`,
+            fromTo: "EXPIRY JOB",
+            quantityIn: 0,
+            quantityOut: Math.abs(Number(batch.quantity)),
+            balanceAfter: Math.max(0, cardBalance - Math.abs(Number(batch.quantity))),
+            remarks: `Automated expiry for batch ${batch.batchNumber ?? batch.id}`,
+            sourceType: "expiry",
+            createdBy: ctx.user.id,
+          });
+          processed += 1;
+        }
+        return { processed };
       }),
 
     disposeExpired: protectedProcedure
