@@ -26,12 +26,27 @@
       ]
     },
     "live-auth": {
-      "environmental": [
-        "users-management.spec.ts",
-        "inventory-counts.spec.ts",
-        "inventory-movements.spec.ts"
-      ],
-      "flaky-pending-cleanup": []
+      "environmental": [],
+      "flaky-pending-cleanup": [
+        {
+          "file": "users-management.spec.ts",
+          "reason": "Live-auth runs against production (nrcseam.techivano.com). Baseline on origin/main (2026-04-23): the second card's role combobox stayed disabled (Radix Select trigger data-disabled), so the test timed out waiting for an enabled click. This matches production user/RBAC data, not a Phase 3 regression; kit assembly UI does not touch Users.tsx.",
+          "addedAt": "2026-04-23",
+          "plannedFixPhase": "Live-auth data — use a mutable non-admin target user or gate the assertion on enabled state"
+        },
+        {
+          "file": "inventory-movements.spec.ts",
+          "reason": "Live-auth production baseline (origin/main, 2026-04-23): movements and GRN flows failed because /app/inventory/movements used Movements embedInShell, which previously omitted any 'Inventory Movements' heading (shell only exposes h1 'Inventory'). Repo now renders an h2 page title when embedInShell; production may still lag until deploy. GRN dialog combobox timeout is environmental flakiness on prod.",
+          "addedAt": "2026-04-23",
+          "plannedFixPhase": "Deploy shell title fix; then re-evaluate GRN live-auth stability"
+        },
+        {
+          "file": "inventory-counts.spec.ts",
+          "reason": "Same production movements route as inventory-movements: heading assertion after count flow. Addressed in repo by h2 title when embedInShell; suppressed until prod matches or live-auth remains flaky.",
+          "addedAt": "2026-04-23",
+          "plannedFixPhase": "Deploy shell title fix; re-evaluate"
+        }
+      ]
     }
   }
 }
