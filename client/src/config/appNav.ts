@@ -167,6 +167,8 @@ export const SIDEBAR_GROUPS: AppNavGroup[] = [
     icon: FileBarChart,
     items: [
       { label: "Reports", path: appPath("/reports"), icon: FileBarChart },
+      { label: "WMS Report Suite", path: appPath("/reports/wms"), icon: FileBarChart },
+      { label: "Monthly Warehouse Report", path: appPath("/reports/wms/monthly-warehouse-report"), icon: FileBarChart },
       { label: "Report Scheduling", path: appPath("/report-scheduling"), icon: FileBarChart },
     ],
   },

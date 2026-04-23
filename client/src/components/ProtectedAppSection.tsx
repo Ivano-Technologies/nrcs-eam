@@ -46,7 +46,9 @@ import PendingUsers from "@/pages/PendingUsers";
 import QuickBooksSettings from "@/pages/QuickBooksSettings";
 import ReportScheduling from "@/pages/ReportScheduling";
 import Reports from "@/pages/Reports";
+import MonthlyWarehouseReport from "@/pages/reports/MonthlyWarehouseReport";
 import WmsExpiryReport from "@/pages/reports/WmsExpiryReport";
+import WmsReportSuite from "@/pages/reports/WmsReportSuite";
 import FacilitiesNew from "@/pages/FacilitiesNew";
 import { FacilitiesTabRoute } from "@/pages/facilities/FacilitiesTabRoutes";
 import Users from "@/pages/Users";
@@ -175,6 +177,8 @@ export default function ProtectedAppSection() {
           <Route path="/app/pending-users" component={PendingUsers} />
           <Route path="/app/notification-preferences" component={NotificationPreferences} />
           <Route path="/app/reports" component={Reports} />
+          <Route path="/app/reports/wms" component={WmsReportSuite} />
+          <Route path="/app/reports/wms/monthly-warehouse-report" component={MonthlyWarehouseReport} />
           <Route path="/app/reports/wms/expiry" component={WmsExpiryReport} />
           <Route path="/app/report-scheduling" component={ReportScheduling} />
           <Route path="/app/quickbooks" component={QuickBooksSettings} />

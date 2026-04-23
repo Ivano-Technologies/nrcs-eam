@@ -1,0 +1,159 @@
+import { useMemo, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { trpc } from "@/lib/trpc";
+
+function downloadBase64File(base64Data: string, filename: string, mimeType: string) {
+  const binary = atob(base64Data);
+  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+  const blob = new Blob([bytes], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export default function MonthlyWarehouseReport() {
+  const now = new Date();
+  const [warehouseId, setWarehouseId] = useState<string>("");
+  const [month, setMonth] = useState(String(now.getMonth() + 1));
+  const [year, setYear] = useState(String(now.getFullYear()));
+
+  const warehousesQuery = trpc.sites.list.useQuery();
+  const canQuery = warehouseId.length > 0;
+  const reportQuery = trpc.inventoryV2.reports.monthlyWarehouseReport.useQuery(
+    { warehouseId: Number(warehouseId), month: Number(month), year: Number(year) },
+    { enabled: canQuery }
+  );
+
+  const pdfMutation = trpc.inventoryV2.reports.monthlyWarehouseReportPdf.useMutation();
+  const excelMutation = trpc.inventoryV2.reports.monthlyWarehouseReportExcel.useMutation();
+  const emailMutation = trpc.inventoryV2.reports.monthlyWarehouseReportEmail.useMutation();
+
+  const warehouseOptions = useMemo(
+    () => (warehousesQuery.data ?? []).filter((site) => site.facilityType === "warehouse"),
+    [warehousesQuery.data]
+  );
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-1">
+        <h1 className="text-3xl font-bold">Warehouse - Monthly Report</h1>
+        <p className="text-sm text-muted-foreground">NIGERIAN RED CROSS SOCIETY</p>
+      </div>
+
+      <div className="rounded-md border p-4">
+        <div className="grid gap-3 md:grid-cols-4">
+          <div className="space-y-1">
+            <Label>Warehouse</Label>
+            <Select value={warehouseId} onValueChange={setWarehouseId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select warehouse" />
+              </SelectTrigger>
+              <SelectContent>
+                {warehouseOptions.map((site) => (
+                  <SelectItem key={site.id} value={String(site.id)}>
+                    {site.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label>Month</Label>
+            <Input type="number" min={1} max={12} value={month} onChange={(e) => setMonth(e.target.value)} />
+          </div>
+          <div className="space-y-1">
+            <Label>Year</Label>
+            <Input type="number" min={2020} max={2100} value={year} onChange={(e) => setYear(e.target.value)} />
+          </div>
+          <div className="flex items-end gap-2">
+            <Button onClick={() => reportQuery.refetch()} disabled={!canQuery}>
+              Generate Report
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <Button
+          variant="outline"
+          disabled={!canQuery || pdfMutation.isPending}
+          onClick={async () => {
+            const file = await pdfMutation.mutateAsync({ warehouseId: Number(warehouseId), month: Number(month), year: Number(year) });
+            downloadBase64File(file.data, file.filename, file.mimeType);
+          }}
+        >
+          Export PDF
+        </Button>
+        <Button
+          variant="outline"
+          disabled={!canQuery || excelMutation.isPending}
+          onClick={async () => {
+            const file = await excelMutation.mutateAsync({ warehouseId: Number(warehouseId), month: Number(month), year: Number(year) });
+            downloadBase64File(file.data, file.filename, file.mimeType);
+          }}
+        >
+          Export Excel
+        </Button>
+        <Button
+          variant="outline"
+          disabled={!canQuery || emailMutation.isPending}
+          onClick={async () => {
+            await emailMutation.mutateAsync({
+              warehouseId: Number(warehouseId),
+              month: Number(month),
+              year: Number(year),
+              recipients: ["facility-admin@nrcs.local", "nhq-logistics@nrcs.local"],
+            });
+          }}
+        >
+          Resend
+        </Button>
+      </div>
+
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>SN</TableHead>
+              <TableHead>Product</TableHead>
+              <TableHead>Unit & weight</TableHead>
+              <TableHead>Opening Balance (a)</TableHead>
+              <TableHead>IN (b)</TableHead>
+              <TableHead>OUT TO: Distributions (c)</TableHead>
+              <TableHead>OUT TO: Branches store (d)</TableHead>
+              <TableHead>OUT TO: Others (e)</TableHead>
+              <TableHead>Loss/Damaged (f)</TableHead>
+              <TableHead>Closing Balance</TableHead>
+              <TableHead>Comments</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {(reportQuery.data ?? []).map((row) => (
+              <TableRow key={row.sn}>
+                <TableCell>{row.sn}</TableCell>
+                <TableCell>{row.product}</TableCell>
+                <TableCell>{row.unitAndWeight}</TableCell>
+                <TableCell>{row.openingBalance}</TableCell>
+                <TableCell>{row.inbound}</TableCell>
+                <TableCell>{row.outDistributions}</TableCell>
+                <TableCell>{row.outBranches}</TableCell>
+                <TableCell>{row.outOthers}</TableCell>
+                <TableCell>{row.lossAndDamaged}</TableCell>
+                <TableCell>{row.closingBalance}</TableCell>
+                <TableCell>{row.comments}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}
+
