@@ -91,6 +91,12 @@ function runPlaywrightWithKnownFailures() {
   const report = JSON.parse(fs.readFileSync(reportPath, "utf8"));
   fs.unlinkSync(reportPath);
 
+  const topLevelErrors = Array.isArray(report.errors) ? report.errors : [];
+  if (topLevelErrors.length > 0) {
+    console.error(`Playwright run reported infrastructure errors: ${topLevelErrors.join(" | ")}`);
+    process.exit(result.status ?? 1);
+  }
+
   const knownFailuresByProject =
     JSON.parse(fs.readFileSync(knownFailuresPath, "utf8")).playwrightKnownFailuresByProject ?? {};
 
@@ -108,6 +114,13 @@ function runPlaywrightWithKnownFailures() {
     }
   }
   const passed = report.stats?.expected ?? 0;
+
+  if ((result.status ?? 0) !== 0 && failedByProject.size === 0) {
+    console.error(
+      "Playwright exited non-zero without mapped test failures. Failing check:full to avoid masking infrastructure issues."
+    );
+    process.exit(result.status ?? 1);
+  }
 
   if (unexpectedFailures.length > 0) {
     console.error(`Unexpected Playwright failures detected: ${unexpectedFailures.join(", ")}`);
