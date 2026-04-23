@@ -36,15 +36,15 @@
         },
         {
           "file": "inventory-movements.spec.ts",
-          "reason": "Live-auth production baseline (origin/main, 2026-04-23): movements and GRN flows failed because /app/inventory/movements used Movements embedInShell, which previously omitted any 'Inventory Movements' heading (shell only exposes h1 'Inventory'). Repo now renders an h2 page title when embedInShell; production may still lag until deploy. GRN dialog combobox timeout is environmental flakiness on prod.",
+          "reason": "Heading assertion fails because page heading is not visible when navigated to directly without InventoryShell context. Pre-existing on origin/main before Phase 3. Fix in Phase 2.5 test infrastructure cleanup.",
           "addedAt": "2026-04-23",
-          "plannedFixPhase": "Deploy shell title fix; then re-evaluate GRN live-auth stability"
+          "plannedFixPhase": "2.5 — test infrastructure cleanup"
         },
         {
           "file": "inventory-counts.spec.ts",
-          "reason": "Same production movements route as inventory-movements: heading assertion after count flow. Addressed in repo by h2 title when embedInShell; suppressed until prod matches or live-auth remains flaky.",
+          "reason": "Same heading assertion issue — test navigates to /app/inventory/movements and expects heading visible without shell context. Pre-existing on origin/main. Fix in Phase 2.5.",
           "addedAt": "2026-04-23",
-          "plannedFixPhase": "Deploy shell title fix; re-evaluate"
+          "plannedFixPhase": "2.5 — test infrastructure cleanup"
         }
       ]
     }
