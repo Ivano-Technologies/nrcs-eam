@@ -11,6 +11,7 @@ const LINKS = [
   { label: "Shipping / Tracking", path: appPath("/inventory/issues") },
   { label: "Movements", path: appPath("/inventory/movements") },
   { label: "Stock cards", path: appPath("/inventory/tracking/stock-cards") },
+  { label: "Bin cards", path: appPath("/inventory/tracking/bin-cards") },
   { label: "Transfers", path: appPath("/inventory/transfers") },
   { label: "Stock counts", path: appPath("/inventory/counts") },
   { label: "Expiry", path: appPath("/inventory/expiry") },

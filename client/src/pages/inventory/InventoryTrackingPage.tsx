@@ -20,6 +20,12 @@ const LINKS: { title: string; description: string; href: string; icon: typeof Pa
     icon: BookText,
   },
   {
+    title: "Bin cards",
+    description: "Bin-card ledger and lifecycle actions.",
+    href: appPath("/inventory/tracking/bin-cards"),
+    icon: BookText,
+  },
+  {
     title: "Movements",
     description: "Audit trail of receipts, issues, transfers, and adjustments.",
     href: appPath("/inventory/movements"),

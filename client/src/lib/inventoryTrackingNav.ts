@@ -3,6 +3,7 @@ import { appPath } from "@/lib/routes";
 const TRACKING_SEGMENTS = [
   "tracking",
   "tracking/stock-cards",
+  "tracking/bin-cards",
   "movements",
   "transfers",
   "counts",

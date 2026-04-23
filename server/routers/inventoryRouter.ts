@@ -4,6 +4,7 @@ import { z } from "zod";
 import {
   commodityTrackingNumbers,
   donors,
+  binCards,
   distributions,
   inventoryKits,
   kitAssemblies,
@@ -52,6 +53,7 @@ import {
   listStockCards,
   requiresSupervisorForRetroactiveEntry,
 } from "../wms/stockCard";
+import { assertBinCardLifecycleTransition, getBinCardDetail, listBinCards } from "../wms/binCard";
 
 const vedEnum = z.enum(INVENTORY_VED_VALUES);
 const categoryEnum = z.enum(INVENTORY_CATEGORIES);
@@ -3018,6 +3020,72 @@ export const inventoryV2Router = router({
           balanceAfter: computed.balanceAfter,
           retroactiveEntry: isRetroactive,
         };
+      }),
+  }),
+
+  binCards: router({
+    list: protectedProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return [];
+      return listBinCards(db);
+    }),
+
+    get: protectedProcedure
+      .input(z.object({ id: z.number().int().positive() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return null;
+        return getBinCardDetail(db, input.id);
+      }),
+
+    close: protectedProcedure
+      .input(z.object({ id: z.number().int().positive(), closedById: z.number().int().positive(), notes: z.string().optional() }))
+      .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["manager", "admin"]);
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        const [card] = await db.select().from(binCards).where(eq(binCards.id, input.id)).limit(1);
+        if (!card) throw new TRPCError({ code: "NOT_FOUND", message: "Bin card not found." });
+        try {
+          assertBinCardLifecycleTransition(card.status, "close");
+        } catch (error) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: error instanceof Error ? error.message : "Invalid lifecycle transition." });
+        }
+        const [updated] = await db
+          .update(binCards)
+          .set({
+            status: "closed",
+            closedAt: new Date(),
+            stockLocation: input.notes ? `${card.stockLocation ?? ""} [closed by ${input.closedById}: ${input.notes}]` : card.stockLocation,
+          })
+          .where(eq(binCards.id, input.id))
+          .returning();
+        return updated;
+      }),
+
+    reopen: protectedProcedure
+      .input(z.object({ id: z.number().int().positive(), reopenedById: z.number().int().positive(), reason: z.string().min(3) }))
+      .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["manager", "admin"]);
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        const [card] = await db.select().from(binCards).where(eq(binCards.id, input.id)).limit(1);
+        if (!card) throw new TRPCError({ code: "NOT_FOUND", message: "Bin card not found." });
+        try {
+          assertBinCardLifecycleTransition(card.status, "reopen");
+        } catch (error) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: error instanceof Error ? error.message : "Invalid lifecycle transition." });
+        }
+        const [updated] = await db
+          .update(binCards)
+          .set({
+            status: "open",
+            closedAt: null,
+            stockLocation: `${card.stockLocation ?? ""} [reopened by ${input.reopenedById}: ${input.reason}]`,
+          })
+          .where(eq(binCards.id, input.id))
+          .returning();
+        return updated;
       }),
   }),
 

@@ -10,6 +10,7 @@ import {
   stockCards,
   stockMovements,
 } from "../../drizzle/schema";
+import { ensureOpenBinCardForStockCard } from "./binCard";
 type Db = NonNullable<Awaited<ReturnType<typeof import("../db").getDb>>>;
 
 export async function assertCtnMatchesCatalogue(db: Db, ctnId: number, catalogueId: number): Promise<void> {
@@ -107,8 +108,10 @@ export async function insertGrnReceiptMovement(
   const prev = await netOnStockCard(db, params.stockCardId);
   const balanceAfter = prev + params.quantityIn;
   const today = new Date().toISOString().slice(0, 10);
+  const binCardId = await ensureOpenBinCardForStockCard(db, params.stockCardId);
   await db.insert(stockMovements).values({
     stockCardId: params.stockCardId,
+    binCardId,
     date: today,
     documentRef: params.documentNumber,
     fromTo: params.fromTo,

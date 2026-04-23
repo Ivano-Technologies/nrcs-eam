@@ -24,7 +24,10 @@ import WaybillDetail from "@/pages/inventory/WaybillDetail";
 import WaybillPrint from "@/pages/inventory/WaybillPrint";
 import StockCardDetail from "@/pages/inventory/StockCardDetail";
 import StockCardPrint from "@/pages/inventory/StockCardPrint";
+import BinCardDetail from "@/pages/inventory/BinCardDetail";
+import BinCardPrint from "@/pages/inventory/BinCardPrint";
 import {
+  InventoryBinCardsPage,
   InventoryDistributionsPage,
   InventoryExpiryPage,
   InventoryIssuesPage,
@@ -115,6 +118,9 @@ export default function ProtectedAppSection() {
           <Route path="/app/inventory/tracking/stock-cards/:id/print" component={StockCardPrint} />
           <Route path="/app/inventory/tracking/stock-cards/:id" component={StockCardDetail} />
           <Route path="/app/inventory/tracking/stock-cards" component={InventoryStockCardsPage} />
+          <Route path="/app/inventory/tracking/bin-cards/:id/print" component={BinCardPrint} />
+          <Route path="/app/inventory/tracking/bin-cards/:id" component={BinCardDetail} />
+          <Route path="/app/inventory/tracking/bin-cards" component={InventoryBinCardsPage} />
           <Route path="/app/inventory/counts" component={InventoryStockCountsPage} />
           <Route path="/app/inventory/expiry" component={InventoryExpiryPage} />
           <Route path="/app/inventory/distributions" component={InventoryDistributionsPage} />
