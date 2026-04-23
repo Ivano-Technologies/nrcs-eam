@@ -3,6 +3,7 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { appPath } from "@/lib/routes";
 import {
   ArrowRightLeft,
+  BookText,
   ClipboardList,
   Layers,
   Package,
@@ -12,6 +13,12 @@ import {
 import { Link } from "wouter";
 
 const LINKS: { title: string; description: string; href: string; icon: typeof Package }[] = [
+  {
+    title: "Stock cards",
+    description: "Per-CTN stock card ledger and stock checks.",
+    href: appPath("/inventory/tracking/stock-cards"),
+    icon: BookText,
+  },
   {
     title: "Movements",
     description: "Audit trail of receipts, issues, transfers, and adjustments.",
