@@ -17,6 +17,8 @@ const LINKS = [
   { label: "Expiry", path: appPath("/inventory/expiry") },
   { label: "Distributions", path: appPath("/inventory/distributions") },
   { label: "Kits", path: appPath("/inventory/kits") },
+  { label: "Import", path: appPath("/inventory/import") },
+  { label: "Import drafts", path: appPath("/inventory/import/drafts") },
 ];
 
 export function InventorySecondaryNav() {

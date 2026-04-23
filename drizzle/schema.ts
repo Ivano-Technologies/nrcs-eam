@@ -12,11 +12,13 @@ import {
   uuid,
   doublePrecision,
   json,
+  jsonb,
   unique,
   date,
   index,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { FACILITY_TYPE_VALUES } from "../shared/facilities";
 import { ITEM_CATEGORY_VALUES } from "../shared/itemCategory";
 
@@ -532,6 +534,26 @@ export const inventoryMovements = pgTable(
   (table) => ({
     catalogueCreatedIdx: index("inv_mov_catalogue_created_idx").on(table.catalogueId, table.createdAt),
     warehouseCreatedIdx: index("inv_mov_warehouse_created_idx").on(table.fromWarehouseId, table.createdAt),
+  })
+);
+
+export const inventoryImportDrafts = pgTable(
+  "inventory_import_drafts",
+  {
+    id: serial("id").primaryKey(),
+    source: varchar("source", { length: 20 }).notNull(),
+    documentType: varchar("document_type", { length: 50 }).notNull(),
+    fileName: varchar("file_name", { length: 255 }),
+    rowCount: integer("row_count").notNull().default(0),
+    status: varchar("status", { length: 30 }).notNull().default("draft"),
+    validationStatus: varchar("validation_status", { length: 30 }).notNull().default("pending"),
+    rowsJson: jsonb("rows_json").notNull().default(sql`'[]'::jsonb`),
+    uploadedBy: integer("uploaded_by").references(() => users.id),
+    uploadedAt: timestamp("uploaded_at", { mode: "date" }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+  },
+  (table) => ({
+    statusIdx: index("inv_import_drafts_status_idx").on(table.status, table.validationStatus, table.uploadedAt),
   })
 );
 
@@ -1126,6 +1148,8 @@ export type InventoryMovement = typeof inventoryMovements.$inferSelect;
 export type InsertInventoryMovement = typeof inventoryMovements.$inferInsert;
 export type InventoryDocument = typeof inventoryDocuments.$inferSelect;
 export type InsertInventoryDocument = typeof inventoryDocuments.$inferInsert;
+export type InventoryImportDraft = typeof inventoryImportDrafts.$inferSelect;
+export type InsertInventoryImportDraft = typeof inventoryImportDrafts.$inferInsert;
 export type InventoryCount = typeof inventoryCounts.$inferSelect;
 export type InsertInventoryCount = typeof inventoryCounts.$inferInsert;
 export type InventoryCountLine = typeof inventoryCountLines.$inferSelect;

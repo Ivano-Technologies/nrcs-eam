@@ -12,6 +12,8 @@ const TRACKING_SEGMENTS = [
   "expiry",
   "kits",
   "distributions",
+  "import",
+  "import/drafts",
 ] as const;
 
 /** Full path prefixes (under /app) for Inventory tracking hub + operational screens. */

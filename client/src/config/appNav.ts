@@ -129,6 +129,11 @@ export const SIDEBAR_GROUPS: AppNavGroup[] = [
         icon: Truck,
         navCountBadge: "inventory.issues",
       },
+      {
+        label: "Import",
+        path: appPath("/inventory/import"),
+        icon: FileText,
+      },
     ],
   },
   {
