@@ -24,7 +24,6 @@ import {
   inventoryCatalogue,
   inventoryCountLines,
   inventoryKits,
-  inventoryMovements,
   inventoryStock,
   kitCtnContributors,
   sites,
@@ -59,11 +58,6 @@ async function deleteCatalogueCascadeForAsset(catalogueId: number, tx: any): Pro
 
   if (stockIds.length > 0) {
     await db.delete(inventoryCountLines).where(inArray(inventoryCountLines.stockId, stockIds));
-  }
-
-  await db.delete(inventoryMovements).where(eq(inventoryMovements.catalogueId, catalogueId));
-  if (stockIds.length > 0) {
-    await db.delete(inventoryMovements).where(inArray(inventoryMovements.stockId, stockIds));
   }
 
   if (stockIds.length > 0) {

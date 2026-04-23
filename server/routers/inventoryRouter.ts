@@ -16,7 +16,6 @@ import {
   inventoryCatalogue,
   inventoryDocuments,
   inventoryImportDrafts,
-  inventoryMovements,
   inventoryStock,
   stockCards,
   stockMovements,
@@ -172,7 +171,7 @@ const inventoryDocumentStatusEnum = z.enum([
 const documentItemSchema = z.object({
   catalogueId: z.number(),
   quantity: z.number().positive(),
-  /** When set, GRN approval writes `stock_movements` (WMS Phase 2) instead of `inventory_movements`. */
+  /** When set, GRN approval writes only `stock_movements` (WMS Phase 2+). */
   ctnId: z.number().int().positive().optional(),
   batchNumber: z.string().optional(),
   expiryDate: z.string().optional(),
@@ -956,32 +955,32 @@ export const inventoryV2Router = router({
         if (!db) return [];
         const filters = [];
         if (input?.warehouseId) {
-          filters.push(
-            or(eq(inventoryMovements.fromWarehouseId, input.warehouseId), eq(inventoryMovements.toWarehouseId, input.warehouseId))!
-          );
+          filters.push(eq(stockCards.locationId, input.warehouseId));
         }
-        if (input?.itemId) filters.push(eq(inventoryMovements.catalogueId, input.itemId));
-        if (input?.type) filters.push(eq(inventoryMovements.movementType, input.type));
-        if (input?.dateFrom) filters.push(gte(inventoryMovements.createdAt, input.dateFrom));
-        if (input?.dateTo) filters.push(lte(inventoryMovements.createdAt, input.dateTo));
+        if (input?.itemId) filters.push(eq(commodityTrackingNumbers.itemId, input.itemId));
+        if (input?.type) filters.push(eq(stockMovements.sourceType, input.type as any));
+        if (input?.dateFrom) filters.push(gte(stockMovements.createdAt, input.dateFrom));
+        if (input?.dateTo) filters.push(lte(stockMovements.createdAt, input.dateTo));
         return db
           .select({
-            id: inventoryMovements.id,
-            createdAt: inventoryMovements.createdAt,
-            movementType: inventoryMovements.movementType,
-            quantityChange: inventoryMovements.quantityChange,
-            balanceAfter: inventoryMovements.balanceAfter,
-            documentNumber: inventoryMovements.documentNumber,
-            documentType: inventoryMovements.documentType,
-            fromWarehouseId: inventoryMovements.fromWarehouseId,
-            toWarehouseId: inventoryMovements.toWarehouseId,
+            id: stockMovements.id,
+            createdAt: stockMovements.createdAt,
+            movementType: stockMovements.sourceType,
+            quantityChange: sql<number>`${stockMovements.quantityIn} - ${stockMovements.quantityOut}`,
+            balanceAfter: stockMovements.balanceAfter,
+            documentNumber: stockMovements.documentRef,
+            documentType: stockMovements.sourceType,
+            fromWarehouseId: stockCards.locationId,
+            toWarehouseId: sql<number | null>`null`,
             itemCode: inventoryCatalogue.itemCode,
             itemName: inventoryCatalogue.name,
           })
-          .from(inventoryMovements)
-          .innerJoin(inventoryCatalogue, eq(inventoryMovements.catalogueId, inventoryCatalogue.id))
+          .from(stockMovements)
+          .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
+          .innerJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
+          .innerJoin(inventoryCatalogue, eq(commodityTrackingNumbers.itemId, inventoryCatalogue.id))
           .where(filters.length ? and(...filters) : undefined)
-          .orderBy(desc(inventoryMovements.createdAt));
+          .orderBy(desc(stockMovements.createdAt));
       }),
 
     byDocument: protectedProcedure
@@ -990,10 +989,22 @@ export const inventoryV2Router = router({
         const db = await getDb();
         if (!db) return [];
         return db
-          .select()
-          .from(inventoryMovements)
-          .where(eq(inventoryMovements.documentNumber, input.documentNumber))
-          .orderBy(asc(inventoryMovements.id));
+          .select({
+            id: stockMovements.id,
+            createdAt: stockMovements.createdAt,
+            sourceType: stockMovements.sourceType,
+            quantityIn: stockMovements.quantityIn,
+            quantityOut: stockMovements.quantityOut,
+            balanceAfter: stockMovements.balanceAfter,
+            documentRef: stockMovements.documentRef,
+            locationId: stockCards.locationId,
+            itemId: commodityTrackingNumbers.itemId,
+          })
+          .from(stockMovements)
+          .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
+          .innerJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
+          .where(eq(stockMovements.documentRef, input.documentNumber))
+          .orderBy(asc(stockMovements.id));
       }),
 
     byItem: protectedProcedure
@@ -1001,17 +1012,27 @@ export const inventoryV2Router = router({
       .query(async ({ input }) => {
         const db = await getDb();
         if (!db) return [];
-        const filters = [eq(inventoryMovements.catalogueId, input.catalogueId)];
+        const filters = [eq(commodityTrackingNumbers.itemId, input.catalogueId)];
         if (input.warehouseId) {
-          filters.push(
-            or(eq(inventoryMovements.fromWarehouseId, input.warehouseId), eq(inventoryMovements.toWarehouseId, input.warehouseId))!
-          );
+          filters.push(eq(stockCards.locationId, input.warehouseId));
         }
         return db
-          .select()
-          .from(inventoryMovements)
+          .select({
+            id: stockMovements.id,
+            createdAt: stockMovements.createdAt,
+            sourceType: stockMovements.sourceType,
+            quantityIn: stockMovements.quantityIn,
+            quantityOut: stockMovements.quantityOut,
+            balanceAfter: stockMovements.balanceAfter,
+            documentRef: stockMovements.documentRef,
+            locationId: stockCards.locationId,
+            itemId: commodityTrackingNumbers.itemId,
+          })
+          .from(stockMovements)
+          .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
+          .innerJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
           .where(and(...filters))
-          .orderBy(desc(inventoryMovements.createdAt));
+          .orderBy(desc(stockMovements.createdAt));
       }),
   }),
 
@@ -1707,124 +1728,6 @@ export const inventoryV2Router = router({
           await db.update(waybills).set({ status: "claim_raised", updatedAt: new Date() }).where(eq(waybills.id, input.waybillId));
         }
         return { discrepancies, claimRaised: discrepancies.length > 0 };
-      }),
-  }),
-
-  issues: router({
-    create: protectedProcedure
-      .input(
-        z.object({
-          fromWarehouseId: z.number(),
-          destinationName: z.string().optional(),
-          issueType: z.enum(["distribution", "transfer_out", "return", "loss"]),
-          referenceDocument: z.string().optional(),
-          transportDetails: z.any().optional(),
-          items: z.array(documentItemSchema).min(1),
-          notes: z.string().optional(),
-        })
-      )
-      .mutation(async ({ input, ctx }) => {
-        requireRole(ctx, ["staff", "manager", "admin"]);
-        const db = await getDb();
-        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
-        const documentNumber = await nextDocumentNumber("WB");
-        const [doc] = await db
-          .insert(inventoryDocuments)
-          .values({
-            documentType: "waybill",
-            documentNumber,
-            status: "pending_approval",
-            fromWarehouseId: input.fromWarehouseId,
-            items: input.items,
-            referenceDocument: input.referenceDocument ?? input.destinationName ?? null,
-            transportDetails: input.transportDetails ?? null,
-            notes: input.notes ?? null,
-            createdBy: ctx.user.id,
-          })
-          .returning();
-        return doc;
-      }),
-
-    approve: protectedProcedure
-      .input(z.object({ documentId: z.number() }))
-      .mutation(async ({ input, ctx }) => {
-        requireRole(ctx, ["manager", "admin"]);
-        const db = await getDb();
-        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
-        await db
-          .update(inventoryDocuments)
-          .set({ status: "approved", approvedBy: ctx.user.id, approvedAt: new Date() })
-          .where(and(eq(inventoryDocuments.id, input.documentId), eq(inventoryDocuments.documentType, "waybill")));
-        return { success: true as const };
-      }),
-
-    complete: protectedProcedure
-      .input(z.object({ documentId: z.number() }))
-      .mutation(async ({ input, ctx }) => {
-        requireRole(ctx, ["staff", "manager", "admin"]);
-        const db = await getDb();
-        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
-        await db
-          .update(inventoryDocuments)
-          .set({ status: "completed", completedAt: new Date(), approvedBy: ctx.user.id })
-          .where(and(eq(inventoryDocuments.id, input.documentId), eq(inventoryDocuments.documentType, "waybill")));
-        return { success: true as const };
-      }),
-
-    list: protectedProcedure
-      .input(z.object({ warehouseId: z.number().optional(), status: z.string().optional() }).optional())
-      .query(async ({ input }) => {
-        const db = await getDb();
-        if (!db) return [];
-        return db
-          .select()
-          .from(inventoryDocuments)
-          .where(
-            and(
-              eq(inventoryDocuments.documentType, "waybill"),
-              input?.warehouseId ? eq(inventoryDocuments.fromWarehouseId, input.warehouseId) : undefined,
-              input?.status ? eq(inventoryDocuments.status, input.status) : undefined
-            )
-          )
-          .orderBy(desc(inventoryDocuments.createdAt));
-      }),
-
-    get: protectedProcedure
-      .input(z.object({ documentId: z.number() }))
-      .query(async ({ input }) => {
-        const db = await getDb();
-        if (!db) return null;
-        const [doc] = await db
-          .select()
-          .from(inventoryDocuments)
-          .where(and(eq(inventoryDocuments.id, input.documentId), eq(inventoryDocuments.documentType, "waybill")))
-          .limit(1);
-        return doc ?? null;
-      }),
-    downloadPdf: protectedProcedure
-      .input(z.object({ documentId: z.number() }))
-      .mutation(async ({ input }) => {
-        const db = await getDb();
-        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
-        const [doc] = await db
-          .select()
-          .from(inventoryDocuments)
-          .where(and(eq(inventoryDocuments.id, input.documentId), eq(inventoryDocuments.documentType, "waybill")))
-          .limit(1);
-        if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "Waybill not found." });
-        const rows = [
-          { label: "Document Number", value: doc.documentNumber },
-          { label: "Status", value: doc.status ?? "draft" },
-          { label: "From Warehouse", value: doc.fromWarehouseId ?? "—" },
-          { label: "Created At", value: doc.createdAt ? new Date(doc.createdAt).toISOString() : "—" },
-          { label: "Notes", value: doc.notes ?? "—" },
-        ];
-        const buffer = await generateWaybillPdf({ rows });
-        return {
-          data: buffer.toString("base64"),
-          filename: `${doc.documentNumber}.pdf`,
-          mimeType: "application/pdf",
-        };
       }),
   }),
 
@@ -3182,106 +3085,23 @@ export const inventoryV2Router = router({
       )
       .query(async ({ input, ctx }) => {
         requireRole(ctx, ["manager", "admin"]);
-        const db = await getDb();
-        if (!db) return null;
-        const rows = await db
-          .select({
-            movementType: inventoryMovements.movementType,
-            quantityChange: inventoryMovements.quantityChange,
-            createdAt: inventoryMovements.createdAt,
-            fromWarehouseId: inventoryMovements.fromWarehouseId,
-            toWarehouseId: inventoryMovements.toWarehouseId,
-            category: inventoryCatalogue.category,
-            itemCode: inventoryCatalogue.itemCode,
-          })
-          .from(inventoryMovements)
-          .innerJoin(inventoryCatalogue, eq(inventoryMovements.catalogueId, inventoryCatalogue.id))
-          .where(and(gte(inventoryMovements.createdAt, input.startDate), lte(inventoryMovements.createdAt, input.endDate)));
-
-        let receiptsVolume = 0;
-        let issuesVolume = 0;
-        const byCategory = new Map<string, number>();
-        const byWarehouse = new Map<string, number>();
-        const byType = new Map<string, number>();
-        const itemMovements = new Map<string, number>();
-        for (const row of rows) {
-          const qty = Math.abs(safeNumber(row.quantityChange));
-          if (["receipt", "transfer_in"].includes(String(row.movementType))) receiptsVolume += qty;
-          if (["issue", "transfer_out", "distribution", "loss"].includes(String(row.movementType))) issuesVolume += qty;
-          byCategory.set(String(row.category), (byCategory.get(String(row.category)) ?? 0) + qty);
-          const wh = String(row.fromWarehouseId ?? row.toWarehouseId ?? "unknown");
-          byWarehouse.set(wh, (byWarehouse.get(wh) ?? 0) + qty);
-          byType.set(String(row.movementType), (byType.get(String(row.movementType)) ?? 0) + qty);
-          itemMovements.set(row.itemCode, (itemMovements.get(row.itemCode) ?? 0) + qty);
-        }
-        const turnoverRows = Array.from(itemMovements.entries()).map(([itemCode, volume]) => ({
-          itemCode,
-          turnoverRatio: volume / Math.max(1, (rows.length || 1)),
-          volume,
-        }));
-        turnoverRows.sort((a, b) => b.volume - a.volume);
         return {
-          totalReceipts: { volume: receiptsVolume, value: receiptsVolume },
-          totalIssues: { volume: issuesVolume, value: issuesVolume },
-          byCategory: Array.from(byCategory.entries()).map(([category, volume]) => ({ category, volume })),
-          byWarehouse: Array.from(byWarehouse.entries()).map(([warehouseId, volume]) => ({ warehouseId, volume })),
-          byMovementType: Array.from(byType.entries()).map(([movementType, volume]) => ({ movementType, volume })),
-          turnoverRatio: turnoverRows,
-          fastMovingItems: turnoverRows.slice(0, 10),
-          slowMovingItems: turnoverRows.slice(-10).reverse(),
+          // TODO: Rewire to stock_movements in analytics
+          // workstream after Phase 7. See docs/planning/tech-debt.md
+          data: [],
+          message: "This report is being migrated to the WMS ledger and will be available in a future update.",
+          migrationPending: true,
         };
       }),
 
     expiryForecast: protectedProcedure.query(async ({ ctx }) => {
       requireRole(ctx, ["manager", "admin"]);
-      const db = await getDb();
-      if (!db) return null;
-      const days = [30, 60, 90, 180];
-      const today = new Date();
-      const upcomingByWindow: Record<string, number> = {};
-      for (const d of days) {
-        const until = new Date(today.getTime() + d * 86400000).toISOString().slice(0, 10);
-        const rows = await db
-          .select({ qty: inventoryBatches.quantity })
-          .from(inventoryBatches)
-          .where(
-            and(
-              eq(inventoryBatches.status, "active"),
-              gte(inventoryBatches.expiryDate, today.toISOString().slice(0, 10)),
-              lte(inventoryBatches.expiryDate, until)
-            )
-          );
-        upcomingByWindow[`${d}d`] = rows.reduce((acc, r) => acc + safeNumber(r.qty), 0);
-      }
-      const pastYear = new Date(today.getTime() - 365 * 86400000);
-      const losses = await db
-        .select({
-          month: inventoryMovements.createdAt,
-          qty: inventoryMovements.quantityChange,
-        })
-        .from(inventoryMovements)
-        .where(and(eq(inventoryMovements.reason, "expired"), gte(inventoryMovements.createdAt, pastYear)));
-      const historicalLosses = losses.reduce<Record<string, number>>((acc, row) => {
-        const key = toMonthKey(row.month);
-        acc[key] = (acc[key] ?? 0) + Math.abs(safeNumber(row.qty));
-        return acc;
-      }, {});
-      const riskRows = await db
-        .select({
-          itemCode: inventoryCatalogue.itemCode,
-          itemName: inventoryCatalogue.name,
-          qty: inventoryBatches.quantity,
-          expiryDate: inventoryBatches.expiryDate,
-        })
-        .from(inventoryBatches)
-        .innerJoin(inventoryStock, eq(inventoryBatches.stockId, inventoryStock.id))
-        .innerJoin(inventoryCatalogue, eq(inventoryStock.catalogueId, inventoryCatalogue.id))
-        .where(eq(inventoryBatches.status, "active"))
-        .orderBy(asc(inventoryBatches.expiryDate));
       return {
-        upcomingByWindow,
-        historicalLosses,
-        highestRiskItems: riskRows.slice(0, 20),
+        // TODO: Rewire to stock_movements in analytics
+        // workstream after Phase 7. See docs/planning/tech-debt.md
+        data: [],
+        message: "This report is being migrated to the WMS ledger and will be available in a future update.",
+        migrationPending: true,
       };
     }),
 
@@ -3377,156 +3197,46 @@ export const inventoryV2Router = router({
 
     abcAnalysis: protectedProcedure.query(async ({ ctx }) => {
       requireRole(ctx, ["manager", "admin"]);
-      const db = await getDb();
-      if (!db) return [];
-      const rows = await db
-        .select({
-          itemCode: inventoryCatalogue.itemCode,
-          itemName: inventoryCatalogue.name,
-          qty: inventoryMovements.quantityChange,
-        })
-        .from(inventoryMovements)
-        .innerJoin(inventoryCatalogue, eq(inventoryMovements.catalogueId, inventoryCatalogue.id))
-        .where(inArray(inventoryMovements.movementType, ["issue", "distribution"] as any));
-      const byItem = new Map<string, { itemCode: string; itemName: string; consumptionValue: number }>();
-      for (const row of rows) {
-        const prev = byItem.get(row.itemCode) ?? { itemCode: row.itemCode, itemName: row.itemName, consumptionValue: 0 };
-        prev.consumptionValue += Math.abs(safeNumber(row.qty));
-        byItem.set(row.itemCode, prev);
-      }
-      const sorted = Array.from(byItem.values()).sort((a, b) => b.consumptionValue - a.consumptionValue);
-      const total = sorted.reduce((a, b) => a + b.consumptionValue, 0) || 1;
-      let cum = 0;
-      return sorted.map((row) => {
-        cum += row.consumptionValue;
-        const pct = (cum / total) * 100;
-        const abcClass = pct <= 80 ? "A" : pct <= 95 ? "B" : "C";
-        return { ...row, cumulativePercent: pct, abcClass };
-      });
+      return {
+        // TODO: Rewire to stock_movements in analytics
+        // workstream after Phase 7. See docs/planning/tech-debt.md
+        data: [],
+        message: "This report is being migrated to the WMS ledger and will be available in a future update.",
+        migrationPending: true,
+      };
     }),
 
     fnsAnalysis: protectedProcedure.query(async ({ ctx }) => {
       requireRole(ctx, ["manager", "admin"]);
-      const db = await getDb();
-      if (!db) return [];
-      const sixMonthsAgo = new Date(Date.now() - 180 * 86400000);
-      const rows = await db
-        .select({
-          catalogueId: inventoryMovements.catalogueId,
-          itemCode: inventoryCatalogue.itemCode,
-          itemName: inventoryCatalogue.name,
-          createdAt: inventoryMovements.createdAt,
-        })
-        .from(inventoryMovements)
-        .innerJoin(inventoryCatalogue, eq(inventoryMovements.catalogueId, inventoryCatalogue.id))
-        .where(inArray(inventoryMovements.movementType, ["issue", "distribution"] as any));
-      const frequencyMap = new Map<number, { itemCode: string; itemName: string; count: number; lastMovementAt: Date | null }>();
-      for (const row of rows) {
-        const prev = frequencyMap.get(row.catalogueId) ?? { itemCode: row.itemCode, itemName: row.itemName, count: 0, lastMovementAt: null };
-        prev.count += 1;
-        const d = row.createdAt ? new Date(row.createdAt as any) : null;
-        if (!prev.lastMovementAt || (d && d > prev.lastMovementAt)) prev.lastMovementAt = d;
-        frequencyMap.set(row.catalogueId, prev);
-      }
-      return Array.from(frequencyMap.values()).map((row) => {
-        const fnsClass = row.count >= 20 ? "fast" : row.count >= 8 ? "normal" : "slow";
-        const deadStock = !row.lastMovementAt || row.lastMovementAt < sixMonthsAgo;
-        return { ...row, fnsClass, deadStock };
-      });
+      return {
+        // TODO: Rewire to stock_movements in analytics
+        // workstream after Phase 7. See docs/planning/tech-debt.md
+        data: [],
+        message: "This report is being migrated to the WMS ledger and will be available in a future update.",
+        migrationPending: true,
+      };
     }),
 
     warehouseUtilization: protectedProcedure.query(async ({ ctx }) => {
       requireRole(ctx, ["manager", "admin"]);
-      const db = await getDb();
-      if (!db) return [];
-      const warehouses = await db.select().from(sites).where(eq(sites.facilityType, "warehouse"));
-      const out = [];
-      for (const wh of warehouses) {
-        const stocks = await db.select().from(inventoryStock).where(eq(inventoryStock.warehouseId, wh.id));
-        const stockIds = stocks.map((s) => s.id);
-        const movements = stockIds.length
-          ? await db.select().from(inventoryMovements).where(inArray(inventoryMovements.stockId, stockIds))
-          : [];
-        const totalValue = stocks.reduce((a, s) => a + safeNumber(s.quantityOnHand), 0);
-        const counts = stockIds.length
-          ? await db
-              .select()
-              .from(inventoryCountLines)
-              .where(inArray(inventoryCountLines.stockId, stockIds))
-          : [];
-        const accuracy =
-          counts.length > 0
-            ? (counts.filter((c) => safeNumber(c.varianceQuantity) === 0).length / counts.length) * 100
-            : 100;
-        out.push({
-          warehouseId: wh.id,
-          warehouseName: wh.name,
-          itemCount: stocks.length,
-          totalValue,
-          movementCount: movements.length,
-          stockAccuracy: accuracy,
-        });
-      }
-      return out;
+      return {
+        // TODO: Rewire to stock_movements in analytics
+        // workstream after Phase 7. See docs/planning/tech-debt.md
+        data: [],
+        message: "This report is being migrated to the WMS ledger and will be available in a future update.",
+        migrationPending: true,
+      };
     }),
 
     forecastDemand: protectedProcedure.query(async ({ ctx }) => {
       requireRole(ctx, ["manager", "admin"]);
-      const db = await getDb();
-      if (!db) return [];
-      const rows = await db
-        .select({
-          warehouseId: inventoryMovements.fromWarehouseId,
-          catalogueId: inventoryMovements.catalogueId,
-          itemCode: inventoryCatalogue.itemCode,
-          itemName: inventoryCatalogue.name,
-          qty: inventoryMovements.quantityChange,
-          createdAt: inventoryMovements.createdAt,
-        })
-        .from(inventoryMovements)
-        .innerJoin(inventoryCatalogue, eq(inventoryMovements.catalogueId, inventoryCatalogue.id))
-        .where(inArray(inventoryMovements.movementType, ["issue", "distribution"] as any));
-      const monthMap = new Map<string, number>();
-      for (const row of rows) {
-        const key = `${row.catalogueId}:${row.warehouseId ?? 0}:${toMonthKey(row.createdAt as any)}`;
-        monthMap.set(key, (monthMap.get(key) ?? 0) + Math.abs(safeNumber(row.qty)));
-      }
-      const grouped = new Map<string, { catalogueId: number; warehouseId: number; itemCode: string; itemName: string; monthly: number[] }>();
-      for (const row of rows) {
-        const gk = `${row.catalogueId}:${row.warehouseId ?? 0}`;
-        const current =
-          grouped.get(gk) ?? {
-            catalogueId: row.catalogueId,
-            warehouseId: row.warehouseId ?? 0,
-            itemCode: row.itemCode,
-            itemName: row.itemName,
-            monthly: [],
-          };
-        grouped.set(gk, current);
-      }
-      for (const [gk, g] of Array.from(grouped.entries())) {
-        const months = Array.from(monthMap.entries())
-          .filter(([k]) => k.startsWith(`${g.catalogueId}:${g.warehouseId}:`))
-          .map(([, v]) => v)
-          .sort((a, b) => a - b);
-        g.monthly = months;
-        grouped.set(gk, g);
-      }
-      return Array.from(grouped.values()).map((g) => {
-        const avg = g.monthly.length ? g.monthly.reduce((a, b) => a + b, 0) / g.monthly.length : 0;
-        const rolling3 = g.monthly.slice(-3);
-        const rollingAvg = rolling3.length ? rolling3.reduce((a, b) => a + b, 0) / rolling3.length : avg;
-        const seasonalAdjustment = g.monthly.length >= 12 ? 1.05 : 1;
-        const forecast = rollingAvg * seasonalAdjustment;
-        return {
-          ...g,
-          monthlyAverageConsumption: avg,
-          rolling3MonthAverage: rollingAvg,
-          seasonalAdjustment,
-          recommendedReorderQty: Math.ceil(forecast * 1.5),
-          recommendedReorderTimingDays: Math.max(7, Math.round(30 - Math.min(20, forecast))),
-        };
-      });
+      return {
+        // TODO: Rewire to stock_movements in analytics
+        // workstream after Phase 7. See docs/planning/tech-debt.md
+        data: [],
+        message: "This report is being migrated to the WMS ledger and will be available in a future update.",
+        migrationPending: true,
+      };
     }),
   }),
 
@@ -3695,9 +3405,21 @@ export const inventoryV2Router = router({
         db.select().from(inventoryCatalogue),
         db.select().from(inventoryStock),
         db
-          .select()
-          .from(inventoryMovements)
-          .where(gte(inventoryMovements.createdAt, new Date(Date.now() - 365 * 86400000))),
+          .select({
+            id: stockMovements.id,
+            createdAt: stockMovements.createdAt,
+            sourceType: stockMovements.sourceType,
+            quantityIn: stockMovements.quantityIn,
+            quantityOut: stockMovements.quantityOut,
+            balanceAfter: stockMovements.balanceAfter,
+            documentRef: stockMovements.documentRef,
+            locationId: stockCards.locationId,
+            itemId: commodityTrackingNumbers.itemId,
+          })
+          .from(stockMovements)
+          .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
+          .innerJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
+          .where(gte(stockMovements.createdAt, new Date(Date.now() - 365 * 86400000))),
         db.select().from(distributions),
         db.select().from(inventoryKits),
         db.select().from(requisitions),

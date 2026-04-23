@@ -127,6 +127,20 @@
       "when": 1776879800000,
       "tag": "0017_waybill_sources_and_overrides",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1776879900000,
+      "tag": "0018_import_drafts",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1776880000000,
+      "tag": "0019_drop_inventory_movements",
+      "breakpoints": true
     }
   ]
 }

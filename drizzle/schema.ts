@@ -177,10 +177,7 @@ export const waybillStatusEnum = pgEnum("waybill_status", [
   "claim_raised",
 ]);
 
-/**
- * WMS ledger source — sole quantity ledger per Decision 1 (inventory-ledger-architecture.md).
- * Legacy `inventory_movements` writers migrate through Phases 2–6; enum extended in migration 0014.
- */
+/** WMS ledger source — sole quantity ledger per Decision 1 (inventory-ledger-architecture.md). */
 export const wmsStockMovementSourceEnum = pgEnum("wms_stock_movement_source", [
   "grn",
   "waybill",
@@ -507,35 +504,6 @@ export const inventoryDocuments = pgTable("inventory_documents", {
   approvedAt: timestamp("approved_at", { mode: "date" }),
   completedAt: timestamp("completed_at", { mode: "date" }),
 });
-
-export const inventoryMovements = pgTable(
-  "inventory_movements",
-  {
-    id: serial("id").primaryKey(),
-    movementType: varchar("movement_type", { length: 50 }).notNull(),
-    catalogueId: integer("catalogue_id")
-      .notNull()
-      .references(() => inventoryCatalogue.id),
-    stockId: integer("stock_id").references(() => inventoryStock.id),
-    batchId: integer("batch_id").references(() => inventoryBatches.id),
-    fromWarehouseId: integer("from_warehouse_id").references(() => sites.id),
-    toWarehouseId: integer("to_warehouse_id").references(() => sites.id),
-    quantityChange: doublePrecision("quantity_change").notNull(),
-    balanceAfter: doublePrecision("balance_after").notNull(),
-    documentType: varchar("document_type", { length: 50 }),
-    documentId: integer("document_id"),
-    documentNumber: varchar("document_number", { length: 100 }),
-    performedBy: integer("performed_by").references(() => users.id),
-    approvedBy: integer("approved_by").references(() => users.id),
-    reason: varchar("reason", { length: 255 }),
-    notes: text("notes"),
-    createdAt: timestamp("created_at", { mode: "date" }).defaultNow(),
-  },
-  (table) => ({
-    catalogueCreatedIdx: index("inv_mov_catalogue_created_idx").on(table.catalogueId, table.createdAt),
-    warehouseCreatedIdx: index("inv_mov_warehouse_created_idx").on(table.fromWarehouseId, table.createdAt),
-  })
-);
 
 export const inventoryImportDrafts = pgTable(
   "inventory_import_drafts",
@@ -890,9 +858,7 @@ export const binCards = pgTable(
   })
 );
 
-/**
- * WMS physical ledger rows. See module comment: separate from `inventory_movements`.
- */
+/** WMS physical ledger rows. */
 export const stockMovements = pgTable(
   "stock_movements",
   {
@@ -1144,8 +1110,6 @@ export type InventoryStock = typeof inventoryStock.$inferSelect;
 export type InsertInventoryStock = typeof inventoryStock.$inferInsert;
 export type InventoryBatch = typeof inventoryBatches.$inferSelect;
 export type InsertInventoryBatch = typeof inventoryBatches.$inferInsert;
-export type InventoryMovement = typeof inventoryMovements.$inferSelect;
-export type InsertInventoryMovement = typeof inventoryMovements.$inferInsert;
 export type InventoryDocument = typeof inventoryDocuments.$inferSelect;
 export type InsertInventoryDocument = typeof inventoryDocuments.$inferInsert;
 export type InventoryImportDraft = typeof inventoryImportDrafts.$inferSelect;
