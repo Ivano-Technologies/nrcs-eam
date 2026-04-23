@@ -9,8 +9,7 @@ import { useDashboardRolePreview } from "@/components/dashboard/rolePreviewConte
 import type { DashboardPeriod, UserRole } from "@/components/dashboard/types";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
-import { formatNaira } from "@/lib/format";
-import { AlertTriangle, Clock, FileText, MapPin, Package } from "lucide-react";
+import { AlertTriangle, Clock, MapPin, ShieldCheck, Truck } from "lucide-react";
 import { useMemo, useState } from "react";
 
 export default function Home() {
@@ -40,11 +39,18 @@ export default function Home() {
       </div>
     );
   }
-  const stockDeltaNaira = metrics?.stockValue.deltaNaira;
-  const stockDeltaFormatted =
-    stockDeltaNaira != null && stockDeltaNaira !== 0
-      ? `${stockDeltaNaira > 0 ? "+" : "−"}${formatNaira(Math.abs(stockDeltaNaira), { compact: true })}`
+  const periodLabel = period.toLowerCase();
+  const readinessDelta = Number(metrics?.stockReadiness?.delta ?? 0);
+  const readinessDeltaFormatted =
+    readinessDelta === 0 ? "0 this period" : `${readinessDelta > 0 ? "+" : ""}${readinessDelta} this ${periodLabel}`;
+  const distributionDelta =
+    metrics?.distributionVelocity?.hasData
+      ? `${Number(metrics?.distributionVelocity?.deltaPercent ?? 0) > 0 ? "+" : ""}${Number(metrics?.distributionVelocity?.deltaPercent ?? 0)}%`
       : undefined;
+  const readinessTone: "green" | "orange" | "red" =
+    (metrics?.stockReadiness?.tone ?? "red") === "amber"
+      ? "orange"
+      : (metrics?.stockReadiness?.tone as "green" | "red" | undefined) ?? "red";
 
   const allKpis = [
     {
@@ -71,25 +77,28 @@ export default function Home() {
     },
     {
       key: "stock" as const,
-      label: "Stock Value",
-      value: formatNaira(metrics?.stockValue.value ?? 0, { compact: true }),
-      sub: undefined,
-      icon: Package,
-      tone: "purple" as const,
-      delta: stockDeltaFormatted,
-      deltaDirection: normalizeDirection(metrics?.stockValue.direction),
-      goodWhen: (metrics?.stockValue.goodWhen ?? "up") as "up" | "down",
+      label: "Stock Readiness",
+      value: `${metrics?.stockReadiness?.adequate ?? 0} of ${metrics?.stockReadiness?.total ?? 0}`,
+      sub: `${metrics?.stockReadiness?.adequate ?? 0} facilities adequately stocked`,
+      icon: ShieldCheck,
+      tone: readinessTone,
+      delta: readinessDeltaFormatted,
+      deltaDirection: normalizeDirection(metrics?.stockReadiness?.direction),
+      goodWhen: (metrics?.stockReadiness?.goodWhen ?? "up") as "up" | "down",
     },
     {
       key: "approvals" as const,
-      label: "Pending Approvals",
-      value: metrics?.pendingApprovals.value ?? 0,
-      sub: `${metrics?.pendingApprovals.urgent ?? 0} urgent · oldest ${metrics?.pendingApprovals.oldestDays ?? 0}d`,
-      icon: FileText,
-      tone: "orange" as const,
-      delta: metrics?.pendingApprovals.delta,
-      deltaDirection: normalizeDirection(metrics?.pendingApprovals.direction),
-      goodWhen: (metrics?.pendingApprovals.goodWhen ?? "down") as "up" | "down",
+      label: "Units Distributed",
+      value: Number(metrics?.distributionVelocity?.value ?? 0).toLocaleString(),
+      sub:
+        metrics?.distributionVelocity?.hasData
+          ? `units distributed this ${periodLabel}`
+          : "No distributions recorded yet",
+      icon: Truck,
+      tone: "blue" as const,
+      delta: distributionDelta,
+      deltaDirection: normalizeDirection(metrics?.distributionVelocity?.direction),
+      goodWhen: (metrics?.distributionVelocity?.goodWhen ?? "up") as "up" | "down",
     },
     {
       key: "response" as const,

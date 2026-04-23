@@ -1,5 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+import { and, eq, gte, lte, sql } from "drizzle-orm";
 import { toPublicUser, toPublicUsers } from "./_core/sanitizeUser";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
@@ -16,6 +17,8 @@ import {
 import { inventoryV2Router } from "./routers/inventoryRouter";
 import { wmsRouter } from "./routers/wmsRouter";
 import { requireRole } from "./_core/trpc";
+import { commodityTrackingNumbers, inventoryStock, sites, stockCards, stockMovements, waybills } from "../drizzle/schema";
+import { buildDistributionVelocity, buildStockReadiness, getPeriodWindow } from "./wms/dashboard";
 import {
   legacyStatusFromRegister,
   registerStatusZodEnum,
@@ -1307,6 +1310,7 @@ export const appRouter = router({
       )
       .query(async ({ input }) => {
         const stats = await db.getDashboardStats();
+        const database = await db.getDb();
         const periodDeltaMap = {
           Today: { stock: 4.2, response: -0.1 },
           Week: { stock: 8.4, response: -0.3 },
@@ -1315,17 +1319,112 @@ export const appRouter = router({
           Year: { stock: 43, response: -2.1 },
         } as const;
         const d = periodDeltaMap[input.period];
-        const stockDeltaNaira = 18_000_000 + Math.round((d.stock - 18) * 1_000_000);
-        const stockDirection =
-          stockDeltaNaira > 0 ? ("up" as const) : stockDeltaNaira < 0 ? ("down" as const) : ("flat" as const);
-        const pendingDeltaByPeriod = { Today: -1, Week: -2, Month: -3, Quarter: -4, Year: -5 } as const;
-        const pendingDelta = pendingDeltaByPeriod[input.period];
         const lowStockDeltaByPeriod = { Today: -1, Week: -2, Month: -3, Quarter: -5, Year: -8 } as const;
         const lowStockDelta = lowStockDeltaByPeriod[input.period];
         const lowStockDirection =
           lowStockDelta < 0 ? ("down" as const) : lowStockDelta > 0 ? ("up" as const) : ("flat" as const);
         const responseDir =
           d.response < 0 ? ("down" as const) : d.response > 0 ? ("up" as const) : ("flat" as const);
+
+        let stockReadiness: {
+          adequate: number;
+          total: number;
+          delta: number;
+          direction: "up" | "down" | "flat";
+          tone: "green" | "amber" | "red";
+          goodWhen: "up";
+        } = {
+          adequate: 0,
+          total: 0,
+          delta: 0,
+          direction: "flat" as const,
+          tone: "red" as const,
+          goodWhen: "up" as const,
+        };
+        let distributionVelocity: {
+          value: number;
+          deltaPercent: number;
+          direction: "up" | "down" | "flat";
+          hasData: boolean;
+          goodWhen: "up";
+        } = {
+          value: 0,
+          deltaPercent: 0,
+          direction: "flat" as const,
+          hasData: false,
+          goodWhen: "up" as const,
+        };
+
+        if (database) {
+          const window = getPeriodWindow(input.period);
+          const [activeFacilities, currentAdequateRows, previousAdequateRows, currentDist, previousDist, historicalDist] =
+            await Promise.all([
+              database
+                .select({ id: sites.id })
+                .from(sites)
+                .where(eq(sites.isActive, true)),
+              database
+                .selectDistinct({ locationId: inventoryStock.warehouseId })
+                .from(inventoryStock)
+                .innerJoin(sites, eq(inventoryStock.warehouseId, sites.id))
+                .where(and(eq(sites.isActive, true), sql`${inventoryStock.quantityOnHand} > ${inventoryStock.minLevel}`)),
+              database
+                .selectDistinct({ locationId: stockCards.locationId })
+                .from(stockMovements)
+                .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
+                .innerJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
+                .innerJoin(inventoryStock, and(eq(inventoryStock.warehouseId, stockCards.locationId), eq(inventoryStock.catalogueId, commodityTrackingNumbers.itemId)))
+                .where(
+                  and(
+                    lte(stockMovements.date, window.previousEndIso),
+                    sql`(${stockMovements.quantityIn} - ${stockMovements.quantityOut}) > ${inventoryStock.minLevel}`
+                  )
+                ),
+              database
+                .select({ total: sql<number>`coalesce(sum(${stockMovements.quantityOut}),0)`.mapWith(Number) })
+                .from(stockMovements)
+                .innerJoin(waybills, eq(stockMovements.documentRef, waybills.wbNumber))
+                .where(
+                  and(
+                    eq(stockMovements.sourceType, "waybill"),
+                    eq(waybills.destinationType, "distribution_point"),
+                    gte(stockMovements.date, window.currentStartIso),
+                    lte(stockMovements.date, window.currentEndIso)
+                  )
+                ),
+              database
+                .select({ total: sql<number>`coalesce(sum(${stockMovements.quantityOut}),0)`.mapWith(Number) })
+                .from(stockMovements)
+                .innerJoin(waybills, eq(stockMovements.documentRef, waybills.wbNumber))
+                .where(
+                  and(
+                    eq(stockMovements.sourceType, "waybill"),
+                    eq(waybills.destinationType, "distribution_point"),
+                    gte(stockMovements.date, window.previousStartIso),
+                    lte(stockMovements.date, window.previousEndIso)
+                  )
+                ),
+              database
+                .select({ total: sql<number>`coalesce(sum(${stockMovements.quantityOut}),0)`.mapWith(Number) })
+                .from(stockMovements)
+                .innerJoin(waybills, eq(stockMovements.documentRef, waybills.wbNumber))
+                .where(and(eq(stockMovements.sourceType, "waybill"), eq(waybills.destinationType, "distribution_point"))),
+            ]);
+
+          const adequate = currentAdequateRows.length;
+          const previousAdequate = previousAdequateRows.length;
+          const total = activeFacilities.length;
+          stockReadiness = buildStockReadiness({ adequate, total, previousAdequate });
+
+          const currentValue = Number(currentDist[0]?.total ?? 0);
+          const previousValue = Number(previousDist[0]?.total ?? 0);
+          const historicalValue = Number(historicalDist[0]?.total ?? 0);
+          distributionVelocity = buildDistributionVelocity({
+            current: currentValue,
+            previous: previousValue,
+            historicalTotal: historicalValue,
+          });
+        }
         return {
           lowStockItems: {
             value: Number(stats?.lowStockItems ?? 0),
@@ -1334,20 +1433,8 @@ export const appRouter = router({
             goodWhen: "down" as const,
           },
           activeFacilities: { value: 37, total: 42, offline: 5, goodWhen: "up" as const },
-          stockValue: {
-            value: 284_500_000,
-            deltaNaira: stockDeltaNaira,
-            direction: stockDirection,
-            goodWhen: "up" as const,
-          },
-          pendingApprovals: {
-            value: 12,
-            urgent: 3,
-            oldestDays: 1,
-            delta: String(pendingDelta),
-            direction: "down" as const,
-            goodWhen: "down" as const,
-          },
+          stockReadiness,
+          distributionVelocity,
           avgResponseHours: {
             value: 4.2,
             delta: `${d.response > 0 ? "+" : ""}${d.response} hrs`,
