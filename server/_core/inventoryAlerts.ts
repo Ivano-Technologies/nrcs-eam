@@ -5,7 +5,6 @@ import {
   donors,
   inventoryBatches,
   inventoryCatalogue,
-  inventoryMovements,
   inventoryStock,
   sites,
   stockCards,
@@ -84,7 +83,6 @@ export function buildInventoryAlertExpiryMovement(params: { previousBalance: num
     quantityOut,
     balanceAfter: Math.max(0, params.previousBalance - quantityOut),
     sourceType: "expiry" as const,
-    legacyInventoryMovementsWrite: false as const,
   };
 }
 
@@ -234,9 +232,11 @@ export async function runMonthlyChecks() {
     .from(inventoryCatalogue)
     .where(gte(inventoryCatalogue.updatedAt, new Date(Date.now() - 365 * 86400000)));
   const movementRows = await db
-    .select({ catalogueId: inventoryMovements.catalogueId })
-    .from(inventoryMovements)
-    .where(gte(inventoryMovements.createdAt, new Date(Date.now() - 90 * 86400000)));
+    .select({ catalogueId: commodityTrackingNumbers.itemId })
+    .from(stockMovements)
+    .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
+    .innerJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
+    .where(gte(stockMovements.createdAt, new Date(Date.now() - 90 * 86400000)));
   const forecastedItems = new Set(movementRows.map((m) => m.catalogueId)).size;
   const warehouses = await db.select().from(sites).where(eq(sites.facilityType, "warehouse"));
   const users = await getAllUsers();

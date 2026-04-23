@@ -101,26 +101,39 @@ export default function Reports() {
   const { data: forecastDemand } = trpc.inventoryV2.reports.forecastDemand.useQuery();
   const { data: warehouseUtilization } = trpc.inventoryV2.reports.warehouseUtilization.useQuery();
 
+  const asRows = (value: unknown): any[] => {
+    if (Array.isArray(value)) return value;
+    if (value && typeof value === "object" && Array.isArray((value as { data?: unknown[] }).data)) {
+      return (value as { data: unknown[] }).data as any[];
+    }
+    return [];
+  };
+
+  const abcRows = asRows(abcAnalysis);
+  const fnsRows = asRows(fnsAnalysis);
+  const forecastRows = asRows(forecastDemand);
+  const warehouseRows = asRows(warehouseUtilization);
+
   const tableRows = useMemo(() => {
     switch (selectedReport) {
       case "stockStatus":
         return stockStatus ?? [];
       case "stockMovement":
-        return stockMovement?.fastMovingItems ?? [];
+        return asRows((stockMovement as any)?.fastMovingItems ?? stockMovement);
       case "expiryForecast":
-        return expiryForecast?.highestRiskItems ?? [];
+        return asRows((expiryForecast as any)?.highestRiskItems ?? expiryForecast);
       case "distributionSummary":
         return distributionSummary?.distributionsByLocation ?? [];
       case "vedAnalysis":
         return vedAnalysis ?? [];
       case "abcAnalysis":
-        return abcAnalysis ?? [];
+        return abcRows;
       case "fnsAnalysis":
-        return fnsAnalysis ?? [];
+        return fnsRows;
       case "warehouseUtilization":
-        return warehouseUtilization ?? [];
+        return warehouseRows;
       case "forecastDemand":
-        return forecastDemand ?? [];
+        return forecastRows;
       default:
         return [];
     }
@@ -263,7 +276,7 @@ export default function Reports() {
           {selectedReport === "abcAnalysis" && (
             <div data-testid="abc-chart" className="h-[320px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={abcAnalysis ?? []}>
+                <LineChart data={abcRows}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="itemCode" hide />
                   <YAxis />
@@ -276,7 +289,7 @@ export default function Reports() {
           {selectedReport === "fnsAnalysis" && (
             <div data-testid="fns-chart" className="h-[320px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={fnsAnalysis ?? []}>
+                <BarChart data={fnsRows}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="itemCode" hide />
                   <YAxis />
@@ -289,7 +302,7 @@ export default function Reports() {
           {selectedReport === "forecastDemand" && (
             <div className="h-[320px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={forecastDemand ?? []}>
+                <LineChart data={forecastRows}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="itemCode" hide />
                   <YAxis />
@@ -302,7 +315,7 @@ export default function Reports() {
           {selectedReport === "warehouseUtilization" && (
             <div className="h-[320px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <RadarChart data={warehouseUtilization ?? []}>
+                <RadarChart data={warehouseRows}>
                   <PolarGrid />
                   <PolarAngleAxis dataKey="warehouseName" />
                   <PolarRadiusAxis />

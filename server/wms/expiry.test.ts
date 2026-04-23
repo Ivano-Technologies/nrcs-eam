@@ -34,9 +34,10 @@ describe("expiry migration helpers", () => {
     expect(mapped.balanceAfter).toBe(13);
   });
 
-  it("inventoryAlerts expiry event does not write inventoryMovements", () => {
+  it("inventoryAlerts expiry event keeps stock_movements expiry shape", () => {
     const mapped = buildInventoryAlertExpiryMovement({ previousBalance: 5, expiryQty: 9 });
-    expect(mapped.legacyInventoryMovementsWrite).toBe(false);
+    expect(mapped.sourceType).toBe("expiry");
+    expect(mapped.quantityIn).toBe(0);
     expect(mapped.quantityOut).toBe(5);
     expect(mapped.balanceAfter).toBe(0);
   });

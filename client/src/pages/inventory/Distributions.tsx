@@ -45,7 +45,7 @@ export default function Distributions({ embedInShell = false }: { embedInShell?:
 
   useEffect(() => localStorage.setItem("viewMode_inventory_distributions", viewMode), [viewMode]);
 
-  const waybills = trpc.inventoryV2.issues.list.useQuery({ status: "dispatched" });
+  const waybills = trpc.inventoryV2.waybills.list.useQuery({ status: "dispatched" });
   const list = trpc.inventoryV2.distributions.list.useQuery({ incidentReference: incident || undefined, location: location || undefined });
   const createMutation = trpc.inventoryV2.distributions.create.useMutation({
     onSuccess: () => {
@@ -144,7 +144,7 @@ export default function Distributions({ embedInShell = false }: { embedInShell?:
             <Label>Waybill</Label>
             <Select value={waybillId} onValueChange={setWaybillId}>
               <SelectTrigger><SelectValue placeholder="Select dispatched waybill" /></SelectTrigger>
-              <SelectContent>{(waybills.data ?? []).map((w) => <SelectItem key={w.id} value={String(w.id)}>{w.documentNumber}</SelectItem>)}</SelectContent>
+              <SelectContent>{(waybills.data ?? []).map((w) => <SelectItem key={w.id} value={String(w.id)}>{w.wbNumber}</SelectItem>)}</SelectContent>
             </Select>
             <Label>Distribution Date</Label>
             <Input type="date" value={distributionDate} onChange={(e) => setDistributionDate(e.target.value)} />
