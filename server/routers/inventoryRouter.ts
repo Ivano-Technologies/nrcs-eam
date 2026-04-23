@@ -39,6 +39,8 @@ import { generateGrnPdf } from "../_core/pdfTemplates/grnPdf";
 import { generateWaybillPdf } from "../_core/pdfTemplates/waybillPdf";
 import { generateRequisitionPdf } from "../_core/pdfTemplates/requisitionPdf";
 import { generateDistributionReportPdf } from "../_core/pdfTemplates/distributionReport";
+import { createEmailService } from "../_core/createEmailService";
+import { generateExcelReport, generatePDFReport } from "../reportGenerator";
 import {
   applyTransitionalInventoryStockReceipt,
   assertCtnMatchesCatalogue,
@@ -54,6 +56,11 @@ import {
   requiresSupervisorForRetroactiveEntry,
 } from "../wms/stockCard";
 import { assertBinCardLifecycleTransition, getBinCardDetail, listBinCards } from "../wms/binCard";
+import {
+  buildMonthlyWarehouseReport,
+  monthlyReportColumns,
+  monthlyReportHeader,
+} from "../wms/monthlyWarehouseReport";
 
 const vedEnum = z.enum(INVENTORY_VED_VALUES);
 const categoryEnum = z.enum(INVENTORY_CATEGORIES);
@@ -2562,6 +2569,208 @@ export const inventoryV2Router = router({
   }),
 
   reports: router({
+    monthlyWarehouseReport: protectedProcedure
+      .input(z.object({ warehouseId: z.number().int().positive(), year: z.number().int(), month: z.number().int().min(1).max(12) }))
+      .query(async ({ input, ctx }) => {
+        requireRole(ctx, ["manager", "admin"]);
+        const db = await getDb();
+        if (!db) return [];
+        return buildMonthlyWarehouseReport(db, input);
+      }),
+
+    monthlyWarehouseReportPdf: protectedProcedure
+      .input(z.object({ warehouseId: z.number().int().positive(), year: z.number().int(), month: z.number().int().min(1).max(12) }))
+      .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["manager", "admin"]);
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        const [header, rows] = await Promise.all([
+          monthlyReportHeader(db, input.warehouseId, input.year, input.month),
+          buildMonthlyWarehouseReport(db, input),
+        ]);
+        const buffer = await generatePDFReport(
+          "WAREHOUSE - MONTHLY REPORT",
+          rows,
+          monthlyReportColumns(),
+          { subtitle: `${header.warehouseName} | MONTH: ${header.monthLabel}` }
+        );
+        return {
+          data: buffer.toString("base64"),
+          filename: `monthly-warehouse-report-${input.year}-${String(input.month).padStart(2, "0")}.pdf`,
+          mimeType: "application/pdf",
+        };
+      }),
+
+    monthlyWarehouseReportExcel: protectedProcedure
+      .input(z.object({ warehouseId: z.number().int().positive(), year: z.number().int(), month: z.number().int().min(1).max(12) }))
+      .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["manager", "admin"]);
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        const [header, rows] = await Promise.all([
+          monthlyReportHeader(db, input.warehouseId, input.year, input.month),
+          buildMonthlyWarehouseReport(db, input),
+        ]);
+        const buffer = await generateExcelReport(
+          `WAREHOUSE - MONTHLY REPORT (${header.monthLabel})`,
+          rows,
+          monthlyReportColumns(),
+          { sheetName: "Monthly Warehouse Report" }
+        );
+        return {
+          data: buffer.toString("base64"),
+          filename: `monthly-warehouse-report-${input.year}-${String(input.month).padStart(2, "0")}.xlsx`,
+          mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        };
+      }),
+
+    monthlyWarehouseReportEmail: protectedProcedure
+      .input(
+        z.object({
+          warehouseId: z.number().int().positive(),
+          year: z.number().int(),
+          month: z.number().int().min(1).max(12),
+          recipients: z.array(z.string().email()).min(1),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["manager", "admin"]);
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        const [header] = await Promise.all([monthlyReportHeader(db, input.warehouseId, input.year, input.month)]);
+        const emailService = createEmailService();
+        const html = `
+          <h2>NIGERIAN RED CROSS SOCIETY</h2>
+          <p><strong>WAREHOUSE - MONTHLY REPORT</strong></p>
+          <p>Warehouse: ${header.warehouseName}</p>
+          <p>Month: ${header.monthLabel}</p>
+          <p>The monthly warehouse report is ready in the system export actions.</p>
+        `;
+        let sent = 0;
+        for (const to of input.recipients) {
+          const ok = await emailService.send({
+            to,
+            subject: `NRCS Warehouse Monthly Report - ${header.monthLabel}`,
+            html,
+          });
+          if (ok) sent += 1;
+        }
+        return { sent, failed: input.recipients.length - sent };
+      }),
+
+    wmsStockMovements: protectedProcedure
+      .input(
+        z.object({
+          warehouseId: z.number().int().positive().optional(),
+          startDate: z.string().optional(),
+          endDate: z.string().optional(),
+          search: z.string().optional(),
+          sourceType: z.string().optional(),
+          direction: z.enum(["in", "out", "all"]).default("all").optional(),
+        }).optional()
+      )
+      .query(async ({ input, ctx }) => {
+        requireRole(ctx, ["manager", "admin"]);
+        const db = await getDb();
+        if (!db) return [];
+        return db
+          .select({
+            date: stockMovements.date,
+            documentRef: stockMovements.documentRef,
+            item: inventoryCatalogue.name,
+            ctn: commodityTrackingNumbers.ctnCode,
+            donor: donors.code,
+            warehouse: sites.name,
+            fromTo: stockMovements.fromTo,
+            qtyIn: stockMovements.quantityIn,
+            qtyOut: stockMovements.quantityOut,
+            balanceAfter: stockMovements.balanceAfter,
+            sourceType: stockMovements.sourceType,
+          })
+          .from(stockMovements)
+          .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
+          .innerJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
+          .innerJoin(inventoryCatalogue, eq(commodityTrackingNumbers.itemId, inventoryCatalogue.id))
+          .innerJoin(donors, eq(commodityTrackingNumbers.donorId, donors.id))
+          .innerJoin(sites, eq(stockCards.locationId, sites.id))
+          .where(
+            and(
+              input?.warehouseId ? eq(stockCards.locationId, input.warehouseId) : undefined,
+              input?.startDate ? gte(stockMovements.date, input.startDate) : undefined,
+              input?.endDate ? lte(stockMovements.date, input.endDate) : undefined,
+              input?.sourceType ? eq(stockMovements.sourceType, input.sourceType as any) : undefined,
+              input?.search ? or(ilike(inventoryCatalogue.name, `%${input.search}%`), ilike(commodityTrackingNumbers.ctnCode, `%${input.search}%`)) : undefined,
+              input?.direction === "in" ? sql`${stockMovements.quantityIn} > 0` : undefined,
+              input?.direction === "out" ? sql`${stockMovements.quantityOut} > 0` : undefined
+            )
+          )
+          .orderBy(desc(stockMovements.date), desc(stockMovements.id));
+      }),
+
+    ctnAging: protectedProcedure
+      .query(async ({ ctx }) => {
+        requireRole(ctx, ["manager", "admin"]);
+        const db = await getDb();
+        if (!db) return [];
+        const today = new Date();
+        const rows = await db
+          .select({
+            ctnCode: commodityTrackingNumbers.ctnCode,
+            item: inventoryCatalogue.name,
+            donor: donors.code,
+            warehouse: sites.name,
+            expiryDate: stockCards.expiryDate,
+            balance: sql<number>`coalesce(sum(${stockMovements.quantityIn} - ${stockMovements.quantityOut}), 0)`.mapWith(Number),
+          })
+          .from(stockCards)
+          .innerJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
+          .innerJoin(inventoryCatalogue, eq(commodityTrackingNumbers.itemId, inventoryCatalogue.id))
+          .innerJoin(donors, eq(commodityTrackingNumbers.donorId, donors.id))
+          .innerJoin(sites, eq(stockCards.locationId, sites.id))
+          .leftJoin(stockMovements, eq(stockMovements.stockCardId, stockCards.id))
+          .groupBy(commodityTrackingNumbers.ctnCode, inventoryCatalogue.name, donors.code, sites.name, stockCards.expiryDate);
+        return rows.map((row) => {
+          const daysUntilExpiry = row.expiryDate ? Math.ceil((new Date(row.expiryDate).getTime() - today.getTime()) / 86400000) : null;
+          const color = daysUntilExpiry == null ? "green" : daysUntilExpiry > 90 ? "green" : daysUntilExpiry >= 30 ? "amber" : "red";
+          return { ...row, daysUntilExpiry, color };
+        });
+      }),
+
+    lossDamage: protectedProcedure
+      .input(z.object({ startDate: z.string().optional(), endDate: z.string().optional() }).optional())
+      .query(async ({ input, ctx }) => {
+        requireRole(ctx, ["manager", "admin"]);
+        const db = await getDb();
+        if (!db) return [];
+        return db
+          .select({
+            date: stockMovements.date,
+            item: inventoryCatalogue.name,
+            ctn: commodityTrackingNumbers.ctnCode,
+            donor: donors.code,
+            warehouse: sites.name,
+            qty: stockMovements.quantityOut,
+            sourceType: stockMovements.sourceType,
+            documentRef: stockMovements.documentRef,
+            reason: stockMovements.remarks,
+          })
+          .from(stockMovements)
+          .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
+          .innerJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
+          .innerJoin(inventoryCatalogue, eq(commodityTrackingNumbers.itemId, inventoryCatalogue.id))
+          .innerJoin(donors, eq(commodityTrackingNumbers.donorId, donors.id))
+          .innerJoin(sites, eq(stockCards.locationId, sites.id))
+          .where(
+            and(
+              input?.startDate ? gte(stockMovements.date, input.startDate) : undefined,
+              input?.endDate ? lte(stockMovements.date, input.endDate) : undefined,
+              sql`(${stockMovements.sourceType} = 'expiry' or ${stockMovements.sourceType} = 'adjustment')`,
+              sql`${stockMovements.quantityOut} > 0`
+            )
+          )
+          .orderBy(desc(stockMovements.date), desc(stockMovements.id));
+      }),
+
     donorContributionPreview: protectedProcedure
       .input(z.object({ kitCtnId: z.number().int().positive() }))
       .query(async ({ input }) => {
@@ -2569,6 +2778,108 @@ export const inventoryV2Router = router({
         if (!db) return [];
         const totals = await expandKitDonorContribution(db, input.kitCtnId);
         return Array.from(totals.entries()).map(([donorId, totalUnits]) => ({ donorId, totalUnits }));
+      }),
+
+    donorContribution: protectedProcedure
+      .input(z.object({ startDate: z.string().optional(), endDate: z.string().optional() }).optional())
+      .query(async ({ input, ctx }) => {
+        requireRole(ctx, ["manager", "admin"]);
+        const db = await getDb();
+        if (!db) return [];
+
+        const donorMap = new Map<string, { donor: string; item: string; received: number; distributed: number; inStock: number }>();
+        const movementRows = await db
+          .select({
+            stockCardId: stockMovements.stockCardId,
+            sourceType: stockMovements.sourceType,
+            quantityIn: stockMovements.quantityIn,
+            quantityOut: stockMovements.quantityOut,
+            date: stockMovements.date,
+            ctnId: stockCards.ctnId,
+            item: inventoryCatalogue.name,
+            donorCode: donors.code,
+          })
+          .from(stockMovements)
+          .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
+          .innerJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
+          .innerJoin(inventoryCatalogue, eq(commodityTrackingNumbers.itemId, inventoryCatalogue.id))
+          .innerJoin(donors, eq(commodityTrackingNumbers.donorId, donors.id))
+          .where(
+            and(
+              input?.startDate ? gte(stockMovements.date, input.startDate) : undefined,
+              input?.endDate ? lte(stockMovements.date, input.endDate) : undefined
+            )
+          );
+
+        for (const row of movementRows) {
+          const donorsExpanded = row.donorCode === "BLENDED"
+            ? await expandKitDonorContribution(db, row.ctnId)
+            : new Map<number, number>();
+
+          if (donorsExpanded.size > 0) {
+            for (const [donorId, units] of Array.from(donorsExpanded.entries())) {
+              const [donor] = await db.select({ code: donors.code }).from(donors).where(eq(donors.id, donorId)).limit(1);
+              const key = `${donor?.code ?? "UNKNOWN"}:${row.item}`;
+              const entry = donorMap.get(key) ?? { donor: donor?.code ?? "UNKNOWN", item: row.item, received: 0, distributed: 0, inStock: 0 };
+              if (row.sourceType === "grn") entry.received += Number(units);
+              if (row.sourceType === "waybill") entry.distributed += Number(units);
+              entry.inStock = Math.max(0, entry.received - entry.distributed);
+              donorMap.set(key, entry);
+            }
+            continue;
+          }
+
+          const key = `${row.donorCode}:${row.item}`;
+          const entry = donorMap.get(key) ?? { donor: row.donorCode, item: row.item, received: 0, distributed: 0, inStock: 0 };
+          if (row.sourceType === "grn") entry.received += Number(row.quantityIn);
+          if (row.sourceType === "waybill") entry.distributed += Number(row.quantityOut);
+          entry.inStock = Math.max(0, entry.received - entry.distributed);
+          donorMap.set(key, entry);
+        }
+
+        return Array.from(donorMap.values()).map((row) => ({
+          ...row,
+          percentDistributed: row.received > 0 ? (row.distributed / row.received) * 100 : 0,
+        }));
+      }),
+
+    kitAssemblyAudit: protectedProcedure
+      .query(async ({ ctx }) => {
+        requireRole(ctx, ["manager", "admin"]);
+        const db = await getDb();
+        if (!db) return [];
+        const rows = await db
+          .select({
+            date: stockMovements.date,
+            kitCtnCode: commodityTrackingNumbers.ctnCode,
+            kitItem: inventoryCatalogue.name,
+            qtyAssembled: stockMovements.quantityIn,
+            componentCtnId: kitCtnContributors.componentCtnId,
+            componentDonorId: kitCtnContributors.componentDonorId,
+            createdBy: stockMovements.createdBy,
+          })
+          .from(kitCtnContributors)
+          .innerJoin(commodityTrackingNumbers, eq(kitCtnContributors.kitCtnId, commodityTrackingNumbers.id))
+          .innerJoin(inventoryCatalogue, eq(commodityTrackingNumbers.itemId, inventoryCatalogue.id))
+          .innerJoin(stockCards, eq(stockCards.ctnId, commodityTrackingNumbers.id))
+          .innerJoin(stockMovements, eq(stockMovements.stockCardId, stockCards.id))
+          .where(eq(stockMovements.sourceType, "kit_assembly"))
+          .orderBy(desc(stockMovements.date));
+
+        const donorIds = Array.from(new Set(rows.map((row) => row.componentDonorId).filter((x): x is number => typeof x === "number")));
+        const donorRows = donorIds.length
+          ? await db.select({ id: donors.id, code: donors.code }).from(donors).where(inArray(donors.id, donorIds))
+          : [];
+        const donorById = new Map<number, string>(donorRows.map((d) => [d.id, d.code]));
+
+        return rows.map((row) => ({
+          date: row.date,
+          kitItem: row.kitItem,
+          kitCtn: row.kitCtnCode,
+          qtyAssembled: Number(row.qtyAssembled),
+          contributingCtnAndDonor: `${row.componentCtnId ?? "—"} / ${donorById.get(row.componentDonorId ?? -1) ?? "—"}`,
+          assemblerName: row.createdBy,
+        }));
       }),
 
     expiryWms: protectedProcedure
