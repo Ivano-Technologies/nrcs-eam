@@ -412,20 +412,19 @@ async function ensureCountStockCardForItemLocation(params: {
     .returning();
 
   const stockCardId = await ensureStockCardForCtnAtLocation(db, { ctnId: ctn.id, locationId: params.locationId });
-  if (Number(params.expectedBalance) > 0) {
-    await db.insert(stockMovements).values({
-      stockCardId,
-      date: new Date().toISOString().slice(0, 10),
-      documentRef: "— OPENING BALANCE",
-      fromTo: "MIGRATION",
-      quantityIn: Number(params.expectedBalance),
-      quantityOut: 0,
-      balanceAfter: Number(params.expectedBalance),
-      remarks: "Auto-created from inventory_stock during count migration",
-      sourceType: "import",
-      createdBy: params.createdBy,
-    });
-  }
+  const openingBalance = Math.max(0, Number(params.expectedBalance));
+  await db.insert(stockMovements).values({
+    stockCardId,
+    date: new Date().toISOString().slice(0, 10),
+    documentRef: "— OPENING BALANCE",
+    fromTo: "MIGRATION",
+    quantityIn: openingBalance,
+    quantityOut: 0,
+    balanceAfter: openingBalance,
+    remarks: "Auto-created from inventory_stock during count migration (bootstrap)",
+    sourceType: "import",
+    createdBy: params.createdBy,
+  });
   return stockCardId;
 }
 
