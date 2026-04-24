@@ -1,6 +1,5 @@
-import PDFDocument from "pdfkit";
-
-export function renderSimplePdf(title: string, subtitle: string, rows: Array<{ label: string; value: string | number }>) {
+export async function renderSimplePdf(title: string, subtitle: string, rows: Array<{ label: string; value: string | number }>) {
+  const PDFDocument = (await import("pdfkit")).default;
   const doc = new PDFDocument({ margin: 40 });
   const chunks: Buffer[] = [];
   return new Promise<Buffer>((resolve, reject) => {
