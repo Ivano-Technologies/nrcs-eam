@@ -16,7 +16,7 @@ export function PrintableStockCard({ data }: PrintableStockCardProps) {
 
   const card = data?.card;
   return (
-    <PrintableShell title="STOCK CARD" subtitle="NRCS Stock Card / Fiche de Stock">
+    <PrintableShell title="STOCK CARD" subtitle="Carte de stock" subtitleClassName="text-sm italic">
       <div className="grid grid-cols-2 gap-2 text-sm">
         <div>Description: {card?.description || card?.itemName}</div>
         <div>Item Code: {card?.itemCode || "—"}</div>

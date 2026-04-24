@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,6 +20,7 @@ function downloadBase64File(base64Data: string, filename: string, mimeType: stri
 }
 
 export default function MonthlyWarehouseReport() {
+  const [, setLocation] = useLocation();
   const now = new Date();
   const [warehouseId, setWarehouseId] = useState<string>("");
   const [month, setMonth] = useState(String(now.getMonth() + 1));
@@ -114,6 +116,17 @@ export default function MonthlyWarehouseReport() {
           }}
         >
           Resend
+        </Button>
+        <Button
+          variant="outline"
+          disabled={!canQuery}
+          onClick={() =>
+            setLocation(
+              `/app/reports/wms/monthly-warehouse-report/print/${Number(warehouseId)}/${Number(year)}/${Number(month)}`
+            )
+          }
+        >
+          Print view
         </Button>
       </div>
 
