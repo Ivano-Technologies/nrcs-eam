@@ -1,5 +1,4 @@
 import QRCode from "qrcode";
-import PDFDocument from "pdfkit";
 
 /**
  * Generate QR code as data URL for an asset
@@ -110,6 +109,7 @@ export async function generateBulkQRCodeLabels(
   assets: Array<{ id: number; assetTag: string; name: string; categoryName?: string }>,
   labelSize: 'avery_5160' | 'avery_5163' | 'custom' = 'avery_5160'
 ): Promise<Buffer> {
+  const PDFDocument = (await import("pdfkit")).default;
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'LETTER', margin: 0 });
     const chunks: Buffer[] = [];

@@ -1,4 +1,3 @@
-import PDFDocument from "pdfkit";
 import ExcelJS from "exceljs";
 
 // PDF Report Generator (Node-only; PDFKit is a runtime dependency)
@@ -12,6 +11,7 @@ export async function generatePDFReport(
     includeCharts?: boolean;
   }
 ): Promise<Buffer> {
+  const PDFDocument = (await import("pdfkit")).default;
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'A4', margin: 50 });
     const chunks: Buffer[] = [];

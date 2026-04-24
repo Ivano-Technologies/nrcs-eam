@@ -1,20 +1,21 @@
 import JsBarcode from 'jsbarcode';
 
-let createCanvas: any = null;
-try {
-  createCanvas = require('canvas').createCanvas;
-} catch (e) {
-  console.warn('Canvas not available - barcode generation disabled');
-}
-
 /**
  * Generate barcode image for an asset
  * Supports Code128, Code39, EAN13 formats
  */
-export function generateBarcode(
+export async function generateBarcode(
   value: string,
   format: 'CODE128' | 'CODE39' | 'EAN13' = 'CODE128'
-): string {
+): Promise<string> {
+  let createCanvas: ((width: number, height: number) => any) | null = null;
+  try {
+    const canvasModule = await import('canvas');
+    createCanvas = canvasModule.createCanvas;
+  } catch {
+    // Keep runtime fallback behavior for environments without canvas bindings.
+    console.warn('Canvas not available - barcode generation disabled');
+  }
   if (!createCanvas) {
     throw new Error('Barcode generation not available in this environment');
   }

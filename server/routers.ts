@@ -466,7 +466,7 @@ export const appRouter = router({
         if (!asset) throw new TRPCError({ code: 'NOT_FOUND', message: 'Asset not found' });
         
         const barcodeValue = generateBarcodeValue(asset.assetTag, input.format);
-        const barcodeImage = generateBarcode(barcodeValue, input.format);
+        const barcodeImage = await generateBarcode(barcodeValue, input.format);
         
         await db.updateAsset(input.id, {
           barcode: barcodeValue,
