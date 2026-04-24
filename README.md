@@ -7,6 +7,13 @@ Single-organization web application for the **Nigerian Red Cross Society** to ma
 - **Single-tenant:** one NRCS deployment—not a multi-tenant SaaS. There is no per-customer subdomain or org-isolation layer like the broader Techivano EAM platform.
 - **Stack:** Vite + React, Express + tRPC, Drizzle ORM, **PostgreSQL** (Supabase). **Supabase Auth** for sessions. Optional QuickBooks, S3, and email integrations as configured in your environment.
 
+## WMS capabilities
+
+- GRN, waybill, stock card, bin card, and monthly warehouse document flows.
+- Shared print/export infrastructure with copy tracking and print audit logging.
+- WMS ledger based on `stock_movements` (inventory movement legacy table retired).
+- Facility notification hooks for key WMS events using Resend integration.
+
 ## Repository layout
 
 | Path | Purpose |
@@ -36,6 +43,11 @@ cp .env.example .env
 pnpm exec drizzle-kit migrate
 pnpm dev
 ```
+
+WMS UI entry points:
+
+- Inventory workflows: `/app/inventory/...`
+- WMS reports: `/app/reports/wms`
 
 ## Vercel (frontend)
 

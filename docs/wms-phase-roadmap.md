@@ -20,16 +20,16 @@ This roadmap implements [inventory-ledger-architecture.md](inventory-ledger-arch
 | **6** | Import + cutover | Historical import → `import` on `stock_movements`. After verification: **drop** `inventory_movements`; drop `inventory_documents` when **no FKs** remain (fix `distributions.waybill_id` first). Dead code cleanup. |
 | **7** | Print / export infra | Shared document output. Phase 7f inventory_stock drop is **DEFERRED** — see [planning/tech-debt.md](planning/tech-debt.md). |
 
-## Phase 7 status
+## Phase 7 status (with commit refs)
 
-- `7a` Shared print/export infrastructure: complete
-- `7b` Pixel-match print documents: complete
-- `7c` Copy tracking + print audit: complete
-- `7d` Notifications integration: complete
-- `7e` AWS Secrets cleanup: complete
-- `7f` inventory_stock drop: **DEFERRED — see [planning/tech-debt.md](planning/tech-debt.md)**
-- `7g` Phase 2.5 docs update: pending
-- `7h` Final documentation pass: pending
+- `7a` Shared print/export infrastructure: complete (`82c0212`)
+- `7b` Pixel-match print documents: complete (`bfefafc`)
+- `7c` Copy tracking + print audit: complete (`a48b460`)
+- `7d` Notifications integration: complete (`7ceeb02`)
+- `7e` AWS Secrets cleanup: complete (`3f9f392`)
+- `7f` inventory_stock drop: **DEFERRED** (`5f0bf17`) — see [planning/tech-debt.md](planning/tech-debt.md)
+- `7g` Phase 2.5 docs update: complete (`d2d8297`)
+- `7h` Final documentation pass: complete (this commit)
 
 ## Definition of done (Phase 7 closeout)
 
