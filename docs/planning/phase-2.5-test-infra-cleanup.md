@@ -4,6 +4,13 @@
 
 Stabilize the Playwright test infrastructure across `mvp-audit` and `live-auth` without blocking current product delivery, then remove temporary flaky suppressions from `check:full`.
 
+## Current status (after Phase 7)
+
+- Playwright stabilization is still a deferred, dedicated workstream.
+- WMS document flows were validated manually during Phase 7 and are considered operationally correct.
+- Deferred failures remain managed via `scripts/check/known-failures.json`.
+- This workstream is scheduled post-Phase 7 and should not block go-live.
+
 ## Scope
 
 - Audit all `mvp-audit` and `live-auth` specs for per-test `seedE2E` calls.
@@ -36,4 +43,4 @@ Stabilize the Playwright test infrastructure across `mvp-audit` and `live-auth` 
 
 ## Priority
 
-Do after Phase 3 (Waybill). This should not block current product push.
+Deferred post-Phase 7. This remains non-blocking for current delivery but should be scheduled before broad donor-facing regression automation requirements.
