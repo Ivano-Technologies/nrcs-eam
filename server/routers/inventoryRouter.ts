@@ -57,7 +57,6 @@ import {
 import { assertBinCardLifecycleTransition, getBinCardDetail, listBinCards } from "../wms/binCard";
 import { buildTemplateWorkbook, parseExcelRows, parseTypedPdfText, type ImportDocumentType } from "../wms/importPipeline";
 import { buildHistoricalStockMovement } from "../wms/historicalImport";
-import { PDFParse } from "pdf-parse";
 import * as XLSX from "xlsx";
 import {
   buildMonthlyWarehouseReport,
@@ -1948,18 +1947,22 @@ export const inventoryV2Router = router({
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
         const buffer = Buffer.from(input.base64File, "base64");
+        const { PDFParse } = await import("pdf-parse");
         const parser = new PDFParse({ data: buffer });
-        const parsedPdf = await parser.getText();
-        const text = String((parsedPdf as any)?.text ?? "").trim();
-        if (!text) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "This PDF appears to be a scanned image. Please enter the data manually via the Stock Card or Bin Card form.",
-          });
+        try {
+          const parsedPdf = await parser.getText();
+          const text = String((parsedPdf as any)?.text ?? "").trim();
+          if (!text) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "This PDF appears to be a scanned image. Please enter the data manually via the Stock Card or Bin Card form.",
+            });
+          }
+          const parsed = parseTypedPdfText(text, input.type as "grn" | "waybill");
+          return validateImportRows(db, parsed);
+        } finally {
+          await parser.destroy();
         }
-        const parsed = parseTypedPdfText(text, input.type as "grn" | "waybill");
-        await parser.destroy();
-        return validateImportRows(db, parsed);
       }),
 
     drafts: router({
