@@ -34,6 +34,8 @@ const emptySignature = (): SignatureValue => ({
   signatureText: "",
 });
 
+const COPY_TYPES = ["white", "green", "blue", "yellow"] as const;
+
 export default function ReceiptDetail() {
   const [, setLocation] = useLocation();
   const [matchNew] = useRoute("/app/inventory/receipts/new");
@@ -378,6 +380,18 @@ export default function ReceiptDetail() {
                 </>
               ) : null}
             </div>
+            {savedId && isFinalized ? (
+              <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                {COPY_TYPES.map((copy) => {
+                  const timestamp = (receiptQuery.data?.copiesPrinted as Record<string, string | null> | undefined)?.[copy];
+                  return (
+                    <div key={copy} className="rounded border px-2 py-1">
+                      {timestamp ? `✔ ${copy}: ${new Date(timestamp).toLocaleString()}` : `○ ${copy}: unprinted`}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : null}
           </CardContent>
         </Card>
 
