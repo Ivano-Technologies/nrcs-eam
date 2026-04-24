@@ -4,6 +4,7 @@ import cors from "cors";
 import express, { type Express } from "express";
 import { appRouter } from "../routers";
 import setupRouter from "../routes/setup";
+import documentsRouter from "../routes/documents";
 import { createContext } from "./context";
 import {
   createDynamicCorsMiddlewareOptions,
@@ -35,6 +36,7 @@ export function createApiApp(): Express {
   app.use("/api", express.json({ limit: "50mb" }));
   app.use("/api", express.urlencoded({ limit: "50mb", extended: true }));
   app.use("/api", setupRouter);
+  app.use("/api", documentsRouter);
 
   // Legacy Manus OAuth URL — keep redirect stable.
   app.get("/api/oauth/callback", (_req, res) => {
