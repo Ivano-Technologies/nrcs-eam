@@ -1270,6 +1270,15 @@ export const inventoryV2Router = router({
           .set({ status: "completed", approvedBy: ctx.user.id, approvedAt: new Date(), completedAt: new Date() })
           .where(eq(inventoryDocuments.id, doc.id));
         await notifyManagers("GRN Approved", `GRN ${doc.documentNumber} completed.`, doc.id);
+        if (process.env.WMS_GRN_NOTIFY_TO) {
+          const emailService = createEmailService();
+          await emailService.send({
+            type: "grn_finalized",
+            to: process.env.WMS_GRN_NOTIFY_TO,
+            subject: `GRN ${doc.documentNumber} finalized - ${lines.length} items received`,
+            html: `<p>GRN <strong>${doc.documentNumber}</strong> has been finalized with ${lines.length} line item(s).</p>`,
+          });
+        }
         return { success: true as const };
       }),
 
@@ -1694,6 +1703,15 @@ export const inventoryV2Router = router({
           }
         }
         await db.update(waybills).set({ status: "dispatched", updatedAt: new Date() }).where(eq(waybills.id, wb.id));
+        if (process.env.WMS_WAYBILL_NOTIFY_TO) {
+          const emailService = createEmailService();
+          await emailService.send({
+            type: "waybill_dispatched",
+            to: process.env.WMS_WAYBILL_NOTIFY_TO,
+            subject: `Shipment en route - WB ${wb.wbNumber} from warehouse ${wb.warehouseId}`,
+            html: `<p>Waybill <strong>${wb.wbNumber}</strong> has been dispatched to ${wb.destinationBeneficiary}.</p>`,
+          });
+        }
         return { success: true as const };
       }),
 
@@ -2742,6 +2760,7 @@ export const inventoryV2Router = router({
         let sent = 0;
         for (const to of input.recipients) {
           const ok = await emailService.send({
+            type: "monthly_report_generated",
             to,
             subject: `NRCS Warehouse Monthly Report - ${header.monthLabel}`,
             html,

@@ -1,14 +1,6 @@
-import { sendEmail } from "../emailService";
+import { createEmailService as createService } from "../services/emailService";
 
 export function createEmailService() {
-  return {
-    async send(params: { to: string; subject: string; html: string }) {
-      return sendEmail({
-        to: params.to,
-        subject: params.subject,
-        html: params.html,
-      });
-    },
-  };
+  return createService();
 }
 

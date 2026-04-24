@@ -1381,5 +1381,32 @@ export const emailNotifications = pgTable("email_notifications", {
   recipientCount: integer("recipientCount").default(0),
 });
 
+export const notificationsLog = pgTable("notifications_log", {
+  id: serial("id").primaryKey(),
+  type: varchar("type", { length: 80 }).notNull(),
+  recipient: varchar("recipient", { length: 255 }).notNull(),
+  subject: varchar("subject", { length: 255 }).notNull(),
+  status: varchar("status", { length: 32 }).notNull(),
+  error: text("error"),
+  sentAt: timestamp("sent_at", { mode: "date" }).defaultNow().notNull(),
+});
+
+export const facilityNotificationSettings = pgTable(
+  "facility_notification_settings",
+  {
+    id: serial("id").primaryKey(),
+    facilityId: integer("facility_id").notNull().references(() => sites.id, { onDelete: "cascade" }),
+    notificationType: varchar("notification_type", { length: 80 }).notNull(),
+    enabled: boolean("enabled").notNull().default(false),
+    updatedBy: integer("updated_by").references(() => users.id),
+    updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+  },
+  (table) => ({
+    facilityNotificationTypeIdx: index("facility_notification_settings_type_idx").on(table.facilityId, table.notificationType),
+  })
+);
+
 export type EmailNotification = typeof emailNotifications.$inferSelect;
 export type InsertEmailNotification = typeof emailNotifications.$inferInsert;
+export type NotificationLog = typeof notificationsLog.$inferSelect;
+export type FacilityNotificationSetting = typeof facilityNotificationSettings.$inferSelect;
