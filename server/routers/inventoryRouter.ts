@@ -1844,15 +1844,6 @@ export const inventoryV2Router = router({
           if (sourceBalance < Number(line.quantity)) {
             throw new TRPCError({ code: "BAD_REQUEST", message: `Insufficient stock for item ${line.catalogueId}.` });
           }
-          await db
-            .update(inventoryStock)
-            .set({ quantityOnHand: Number(source.quantityOnHand) - Number(line.quantity), updatedAt: new Date() })
-            .where(eq(inventoryStock.id, source.id));
-          await checkStockThreshold(source.id);
-          await db
-            .update(inventoryStock)
-            .set({ quantityInTransit: Number(dest.quantityInTransit ?? 0) + Number(line.quantity), updatedAt: new Date() })
-            .where(eq(inventoryStock.id, dest.id));
           await db.insert(stockMovements).values({
             stockCardId: sourceStockCardId,
             date: new Date().toISOString().slice(0, 10),
@@ -1892,16 +1883,6 @@ export const inventoryV2Router = router({
             createdBy: ctx.user.id,
           });
           const destBalance = await stockCardNet(destinationStockCardId);
-          await db
-            .update(inventoryStock)
-            .set({
-              quantityInTransit: Math.max(0, Number(dest.quantityInTransit ?? 0) - Number(line.quantity)),
-              quantityOnHand: Number(dest.quantityOnHand) + Number(line.quantity),
-              lastMovementAt: new Date(),
-              updatedAt: new Date(),
-            })
-            .where(eq(inventoryStock.id, dest.id));
-          await checkStockThreshold(dest.id);
           await db.insert(stockMovements).values({
             stockCardId: destinationStockCardId,
             date: new Date().toISOString().slice(0, 10),
@@ -3556,16 +3537,30 @@ export const inventoryV2Router = router({
             continue;
           }
           const stock = await getOrCreateStock(row.catalogueId, row.warehouseId);
-          await db
-            .update(inventoryStock)
-            .set({
-              quantityOnHand: row.quantityOnHand,
-              minLevel: row.minLevel ?? stock.minLevel,
-              maxLevel: row.maxLevel ?? stock.maxLevel,
-              safetyStockLevel: row.safetyLevel ?? stock.safetyStockLevel,
-              updatedAt: new Date(),
-            })
-            .where(eq(inventoryStock.id, stock.id));
+          const [settings] = await db
+            .select()
+            .from(stockSettings)
+            .where(and(eq(stockSettings.catalogueId, row.catalogueId), eq(stockSettings.warehouseId, row.warehouseId)))
+            .limit(1);
+          if (settings) {
+            await db
+              .update(stockSettings)
+              .set({
+                minLevel: row.minLevel ?? settings.minLevel,
+                maxLevel: row.maxLevel ?? settings.maxLevel,
+                safetyStockLevel: row.safetyLevel ?? settings.safetyStockLevel,
+                updatedAt: new Date(),
+              })
+              .where(eq(stockSettings.id, settings.id));
+          } else {
+            await db.insert(stockSettings).values({
+              catalogueId: row.catalogueId,
+              warehouseId: row.warehouseId,
+              minLevel: row.minLevel ?? 0,
+              maxLevel: row.maxLevel ?? null,
+              safetyStockLevel: row.safetyLevel ?? null,
+            });
+          }
           if (row.batchNumber || row.expiryDate) {
             await db.insert(inventoryBatches).values({
               stockId: stock.id,
@@ -3641,10 +3636,6 @@ export const inventoryV2Router = router({
             stockCardId,
           });
           await db.insert(stockMovements).values(movement.row);
-          await db
-            .update(inventoryStock)
-            .set({ quantityOnHand: movement.balanceAfter, updatedAt: new Date() })
-            .where(eq(inventoryStock.id, stock.id));
           imported += 1;
         }
         return { imported, skipped, errors };

@@ -159,12 +159,7 @@ export async function runDailyChecks() {
     if (days < 0 && b.status !== "expired") {
       const [stock] = await db.select().from(inventoryStock).where(eq(inventoryStock.id, b.stockId)).limit(1);
       if (!stock) continue;
-      const next = Math.max(0, Number(stock.quantityOnHand) - Number(b.quantity));
       await db.update(inventoryBatches).set({ status: "expired" }).where(eq(inventoryBatches.id, b.batchId));
-      await db
-        .update(inventoryStock)
-        .set({ quantityOnHand: next, updatedAt: new Date(), lastMovementAt: new Date() })
-        .where(eq(inventoryStock.id, b.stockId));
       const stockCardId = await ensureExpiryStockCard({
         catalogueId: b.catalogueId,
         warehouseId: b.warehouseId,
