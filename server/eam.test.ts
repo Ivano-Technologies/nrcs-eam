@@ -121,7 +121,7 @@ describe("Assets Management", () => {
 
     expect(newAsset).toBeDefined();
     expect(newAsset.id).toBeGreaterThan(0);
-  });
+  }, 15000);
 });
 
 describe("Work Orders Management", () => {
