@@ -17,7 +17,7 @@ import {
 import { inventoryV2Router } from "./routers/inventoryRouter";
 import { wmsRouter } from "./routers/wmsRouter";
 import { requireRole } from "./_core/trpc";
-import { commodityTrackingNumbers, inventoryStock, sites, stockCards, stockMovements, waybills } from "../drizzle/schema";
+import { commodityTrackingNumbers, inventoryStock, sites, stockCards, stockMovements, stockSettings, waybills } from "../drizzle/schema";
 import { buildDistributionVelocity, buildStockReadiness, getPeriodWindow } from "./wms/dashboard";
 import {
   legacyStatusFromRegister,
@@ -1366,18 +1366,28 @@ export const appRouter = router({
               database
                 .selectDistinct({ locationId: inventoryStock.warehouseId })
                 .from(inventoryStock)
+                .leftJoin(
+                  stockSettings,
+                  and(
+                    eq(stockSettings.catalogueId, inventoryStock.catalogueId),
+                    eq(stockSettings.warehouseId, inventoryStock.warehouseId)
+                  )
+                )
                 .innerJoin(sites, eq(inventoryStock.warehouseId, sites.id))
-                .where(and(eq(sites.isActive, true), sql`${inventoryStock.quantityOnHand} > ${inventoryStock.minLevel}`)),
+                .where(and(eq(sites.isActive, true), sql`${inventoryStock.quantityOnHand} > coalesce(${stockSettings.minLevel}, 0)`)),
               database
                 .selectDistinct({ locationId: stockCards.locationId })
                 .from(stockMovements)
                 .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
                 .innerJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
-                .innerJoin(inventoryStock, and(eq(inventoryStock.warehouseId, stockCards.locationId), eq(inventoryStock.catalogueId, commodityTrackingNumbers.itemId)))
+                .leftJoin(
+                  stockSettings,
+                  and(eq(stockSettings.warehouseId, stockCards.locationId), eq(stockSettings.catalogueId, commodityTrackingNumbers.itemId))
+                )
                 .where(
                   and(
                     lte(stockMovements.date, window.previousEndIso),
-                    sql`(${stockMovements.quantityIn} - ${stockMovements.quantityOut}) > ${inventoryStock.minLevel}`
+                    sql`(${stockMovements.quantityIn} - ${stockMovements.quantityOut}) > coalesce(${stockSettings.minLevel}, 0)`
                   )
                 ),
               database

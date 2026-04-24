@@ -17,6 +17,7 @@ import {
   inventoryDocuments,
   inventoryImportDrafts,
   inventoryStock,
+  stockSettings,
   stockCards,
   stockMovements,
   sites,
@@ -547,12 +548,19 @@ export const inventoryV2Router = router({
             quantityOnHand: inventoryStock.quantityOnHand,
             quantityReserved: inventoryStock.quantityReserved,
             quantityInTransit: inventoryStock.quantityInTransit,
-            minLevel: inventoryStock.minLevel,
-            maxLevel: inventoryStock.maxLevel,
-            safetyStockLevel: inventoryStock.safetyStockLevel,
-            zoneLocation: inventoryStock.zoneLocation,
+            minLevel: stockSettings.minLevel,
+            maxLevel: stockSettings.maxLevel,
+            safetyStockLevel: stockSettings.safetyStockLevel,
+            zoneLocation: stockSettings.zoneLocation,
           })
           .from(inventoryStock)
+          .leftJoin(
+            stockSettings,
+            and(
+              eq(stockSettings.catalogueId, inventoryStock.catalogueId),
+              eq(stockSettings.warehouseId, inventoryStock.warehouseId)
+            )
+          )
           .innerJoin(sites, eq(inventoryStock.warehouseId, sites.id))
           .where(eq(inventoryStock.catalogueId, input.id))
           .orderBy(asc(sites.name));
@@ -812,12 +820,19 @@ export const inventoryV2Router = router({
             vedClassification: inventoryCatalogue.vedClassification,
             unitOfMeasure: inventoryCatalogue.unitOfMeasure,
             quantityOnHand: inventoryStock.quantityOnHand,
-            minLevel: inventoryStock.minLevel,
-            maxLevel: inventoryStock.maxLevel,
-            safetyStockLevel: inventoryStock.safetyStockLevel,
-            zoneLocation: inventoryStock.zoneLocation,
+            minLevel: stockSettings.minLevel,
+            maxLevel: stockSettings.maxLevel,
+            safetyStockLevel: stockSettings.safetyStockLevel,
+            zoneLocation: stockSettings.zoneLocation,
           })
           .from(inventoryStock)
+          .leftJoin(
+            stockSettings,
+            and(
+              eq(stockSettings.catalogueId, inventoryStock.catalogueId),
+              eq(stockSettings.warehouseId, inventoryStock.warehouseId)
+            )
+          )
           .innerJoin(inventoryCatalogue, eq(inventoryStock.catalogueId, inventoryCatalogue.id))
           .where(eq(inventoryStock.warehouseId, input.warehouseId))
           .orderBy(asc(inventoryCatalogue.name));
@@ -833,13 +848,20 @@ export const inventoryV2Router = router({
             stockId: inventoryStock.id,
             warehouseId: sites.id,
             warehouseName: sites.name,
-            zoneLocation: inventoryStock.zoneLocation,
+            zoneLocation: stockSettings.zoneLocation,
             quantityOnHand: inventoryStock.quantityOnHand,
-            minLevel: inventoryStock.minLevel,
-            maxLevel: inventoryStock.maxLevel,
-            safetyStockLevel: inventoryStock.safetyStockLevel,
+            minLevel: stockSettings.minLevel,
+            maxLevel: stockSettings.maxLevel,
+            safetyStockLevel: stockSettings.safetyStockLevel,
           })
           .from(inventoryStock)
+          .leftJoin(
+            stockSettings,
+            and(
+              eq(stockSettings.catalogueId, inventoryStock.catalogueId),
+              eq(stockSettings.warehouseId, inventoryStock.warehouseId)
+            )
+          )
           .innerJoin(sites, eq(inventoryStock.warehouseId, sites.id))
           .where(eq(inventoryStock.catalogueId, input.catalogueId))
           .orderBy(asc(sites.name));
@@ -876,24 +898,24 @@ export const inventoryV2Router = router({
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
         const existing = await db
           .select()
-          .from(inventoryStock)
-          .where(and(eq(inventoryStock.catalogueId, input.catalogueId), eq(inventoryStock.warehouseId, input.warehouseId)))
+          .from(stockSettings)
+          .where(and(eq(stockSettings.catalogueId, input.catalogueId), eq(stockSettings.warehouseId, input.warehouseId)))
           .limit(1);
         if (existing.length) {
           const [updated] = await db
-            .update(inventoryStock)
+            .update(stockSettings)
             .set({
               minLevel: input.minLevel,
               maxLevel: input.maxLevel ?? null,
               safetyStockLevel: input.safetyStockLevel ?? null,
               updatedAt: new Date(),
             })
-            .where(eq(inventoryStock.id, existing[0].id))
+            .where(eq(stockSettings.id, existing[0].id))
             .returning();
           return updated;
         }
         const [created] = await db
-          .insert(inventoryStock)
+          .insert(stockSettings)
           .values({
             catalogueId: input.catalogueId,
             warehouseId: input.warehouseId,
@@ -913,19 +935,19 @@ export const inventoryV2Router = router({
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
         const existing = await db
           .select()
-          .from(inventoryStock)
-          .where(and(eq(inventoryStock.catalogueId, input.catalogueId), eq(inventoryStock.warehouseId, input.warehouseId)))
+          .from(stockSettings)
+          .where(and(eq(stockSettings.catalogueId, input.catalogueId), eq(stockSettings.warehouseId, input.warehouseId)))
           .limit(1);
         if (existing.length) {
           const [updated] = await db
-            .update(inventoryStock)
+            .update(stockSettings)
             .set({ zoneLocation: input.zoneLocation, updatedAt: new Date() })
-            .where(eq(inventoryStock.id, existing[0].id))
+            .where(eq(stockSettings.id, existing[0].id))
             .returning();
           return updated;
         }
         const [created] = await db
-          .insert(inventoryStock)
+          .insert(stockSettings)
           .values({
             catalogueId: input.catalogueId,
             warehouseId: input.warehouseId,

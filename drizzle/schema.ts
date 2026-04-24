@@ -468,6 +468,32 @@ export const inventoryStock = pgTable(
   })
 );
 
+export const stockSettings = pgTable(
+  "stock_settings",
+  {
+    id: serial("id").primaryKey(),
+    catalogueId: integer("catalogue_id")
+      .notNull()
+      .references(() => inventoryCatalogue.id),
+    warehouseId: integer("warehouse_id")
+      .notNull()
+      .references(() => sites.id),
+    minLevel: doublePrecision("min_level").default(0),
+    maxLevel: doublePrecision("max_level"),
+    safetyStockLevel: doublePrecision("safety_stock_level"),
+    zoneLocation: varchar("zone_location", { length: 100 }),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow(),
+    updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow(),
+  },
+  (table) => ({
+    stockSettingsCatalogueWarehouseUnique: unique("stock_settings_catalogue_warehouse_unique").on(
+      table.catalogueId,
+      table.warehouseId
+    ),
+    stockSettingsWarehouseItemIdx: index("stock_settings_warehouse_item_idx").on(table.catalogueId, table.warehouseId),
+  })
+);
+
 export const inventoryBatches = pgTable(
   "inventory_batches",
   {
@@ -1130,6 +1156,8 @@ export type InventoryCatalogue = typeof inventoryCatalogue.$inferSelect;
 export type InsertInventoryCatalogue = typeof inventoryCatalogue.$inferInsert;
 export type InventoryStock = typeof inventoryStock.$inferSelect;
 export type InsertInventoryStock = typeof inventoryStock.$inferInsert;
+export type StockSettings = typeof stockSettings.$inferSelect;
+export type InsertStockSettings = typeof stockSettings.$inferInsert;
 export type InventoryBatch = typeof inventoryBatches.$inferSelect;
 export type InsertInventoryBatch = typeof inventoryBatches.$inferInsert;
 export type InventoryDocument = typeof inventoryDocuments.$inferSelect;
