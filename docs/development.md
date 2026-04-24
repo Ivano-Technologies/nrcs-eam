@@ -32,3 +32,7 @@ Required in `.env.e2e`:
 - `SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `TEST_USER_PASSWORD`
+
+Optional for WMS notifications in local/prod `.env`:
+
+- `RESEND_API_KEY`

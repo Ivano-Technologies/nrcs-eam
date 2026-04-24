@@ -1,12 +1,7 @@
-import {
-  SecretsManagerClient,
-  GetSecretValueCommand,
-} from "@aws-sdk/client-secrets-manager";
-
-let secretsSource: "aws" | "env" = "env";
+let secretsSource: "env" = "env";
 
 /** Where DATABASE_URL / Supabase keys etc. were merged from (after loadSecrets). */
-export function getSecretsSource(): "aws" | "env" {
+export function getSecretsSource(): "env" {
   return secretsSource;
 }
 
@@ -22,53 +17,11 @@ function isLocalPostgresDatabaseUrl(url: string | undefined): boolean {
   }
 }
 
-/**
- * Merge JSON key/value pairs from AWS Secrets Manager into `process.env`.
- * Gated: skips unless `AWS_SECRETS_SECRET_ID` is set (local dev uses `.env` only).
- * Skips AWS when `DATABASE_URL` targets local Postgres (avoids `.env` merging `AWS_*` into E2E runs).
- */
 export async function loadSecrets(): Promise<void> {
+  secretsSource = "env";
   if (isLocalPostgresDatabaseUrl(process.env.DATABASE_URL)) {
-    secretsSource = "env";
-    console.log(
-      "[secrets] Skipping AWS Secrets Manager (local DATABASE_URL host)"
-    );
+    console.log("[secrets] Using environment variables (local DATABASE_URL host)");
     return;
   }
-
-  const secretId = process.env.AWS_SECRETS_SECRET_ID;
-
-  if (!secretId) {
-    secretsSource = "env";
-    console.log(
-      "[secrets] Skipping AWS Secrets Manager (AWS_SECRETS_SECRET_ID not set)"
-    );
-    return;
-  }
-
-  const client = new SecretsManagerClient({
-    region: process.env.AWS_REGION || "eu-west-1",
-  });
-
-  const response = await client.send(
-    new GetSecretValueCommand({ SecretId: secretId })
-  );
-
-  if (!response.SecretString) {
-    throw new Error("Secrets Manager returned no SecretString for this secret");
-  }
-
-  const secrets = JSON.parse(response.SecretString) as Record<string, string>;
-
-  for (const key of Object.keys(secrets)) {
-    const value = secrets[key];
-    if (value !== undefined && value !== null) {
-      // Preserve process-level mode flags (e.g. NODE_ENV=development for local/e2e commands).
-      if (key === "NODE_ENV" && process.env.NODE_ENV) continue;
-      process.env[key] = String(value);
-    }
-  }
-
-  secretsSource = "aws";
-  console.log("[secrets] Secrets loaded from AWS:", secretId);
+  console.log("[secrets] Using environment variables (AWS Secrets Manager disabled)");
 }
