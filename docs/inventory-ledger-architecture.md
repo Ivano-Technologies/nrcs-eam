@@ -157,12 +157,17 @@ If assembly consumes a mix where **at least one** component CTN is already **BLE
 
 ---
 
-## Transitional dual-writes
+## inventory_stock retirement status
 
-Dual-write is **removed in Phase 5** for all WMS finalize paths. WMS quantity-changing operations now write only to **`stock_movements`**.
+`stock_movements` remains the sole quantity ledger authority for WMS document flows.  
+`inventory_stock` retirement is **deferred from Phase 7f** due remaining coupled operational and analytics paths discovered during final audit.
 
-- **Remaining `inventory_stock` writers:** non-WMS transfer paths only (Phase 6 migration target).
-- **Read-path compatibility:** some non-WMS and legacy analytics surfaces still read `inventory_stock` during transition; these do not alter WMS ledger authority.
+- Do not add any new reads/writes to `inventory_stock`.
+- Retirement plan and exact remaining write/read paths live in [planning/tech-debt.md](planning/tech-debt.md).
+- Planned end-state:
+  - Quantity reads from `stock_movements` aggregates only
+  - Settings moved to dedicated `stock_settings` table (`min_level`, `max_level`, `safety_stock_level`, `zone_location`)
+  - `inventory_stock` dropped after migration validation
 
 ---
 

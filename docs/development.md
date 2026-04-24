@@ -1,5 +1,24 @@
 # Development Workflow
 
+## Local setup (final)
+
+1. `pnpm install`
+2. `cp .env.example .env`
+3. Set required env vars:
+   - `DATABASE_URL`
+   - `SUPABASE_URL`
+   - `SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+4. Optional integrations:
+   - `RESEND_API_KEY` (WMS notifications)
+5. Apply migrations: `pnpm exec drizzle-kit migrate`
+6. Start app: `pnpm dev`
+
+Notes:
+
+- AWS Secrets Manager integration has been removed from runtime bootstrap.
+- WMS quantity source of truth is `stock_movements`; avoid adding new `inventory_stock` usage.
+
 ## Pre-push Verification
 
 Use `pnpm check:full` before pushing. It runs the full pre-push verification pipeline in order and fails fast on the first error:
