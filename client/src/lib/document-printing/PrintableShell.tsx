@@ -25,13 +25,10 @@ export function PrintableShell({ title, subtitle, showWatermark = false, copyTyp
         {showWatermark ? (
           <div className="pointer-events-none absolute right-3 top-2 text-xs font-semibold text-gray-500">{watermark}</div>
         ) : null}
-        <div className="mb-2 flex items-start justify-between gap-4">
-          <img src="/nrcs-logo-source.png" alt="NRCS logo" className="h-14 w-14 object-contain" />
-          <div className="flex-1 text-center">
-            <div className="text-lg font-bold">{title}</div>
-            <div className="text-xs">{subtitle}</div>
-          </div>
-          <div className="h-14 w-14" />
+        <div className="mb-3 text-center">
+          <img src="/nrcs-logo-source.png" alt="NRCS logo" className="mx-auto mb-1 h-20 w-auto object-contain" />
+          <div className="text-lg font-bold">{title}</div>
+          <div className="text-xs">{subtitle}</div>
         </div>
         {children}
       </div>
