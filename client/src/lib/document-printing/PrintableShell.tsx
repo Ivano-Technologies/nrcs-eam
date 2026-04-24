@@ -5,12 +5,20 @@ import { printStyles, type CopyType, COPY_WATERMARK } from "./printShared";
 type PrintableShellProps = {
   title: string;
   subtitle: string;
+  subtitleClassName?: string;
   showWatermark?: boolean;
   copyType?: string;
   children: ReactNode;
 };
 
-export function PrintableShell({ title, subtitle, showWatermark = false, copyType = "white", children }: PrintableShellProps) {
+export function PrintableShell({
+  title,
+  subtitle,
+  subtitleClassName,
+  showWatermark = false,
+  copyType = "white",
+  children,
+}: PrintableShellProps) {
   const watermark = COPY_WATERMARK[(copyType as CopyType) ?? "white"] ?? COPY_WATERMARK.white;
 
   return (
@@ -28,7 +36,7 @@ export function PrintableShell({ title, subtitle, showWatermark = false, copyTyp
         <div className="mb-3 text-center">
           <img src="/nrcs-logo-source.png" alt="NRCS logo" className="mx-auto mb-1 h-20 w-auto object-contain" />
           <div className="text-lg font-bold">{title}</div>
-          <div className="text-xs">{subtitle}</div>
+          <div className={subtitleClassName ?? "text-xs"}>{subtitle}</div>
         </div>
         {children}
       </div>

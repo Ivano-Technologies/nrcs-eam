@@ -48,6 +48,7 @@ import QuickBooksSettings from "@/pages/QuickBooksSettings";
 import ReportScheduling from "@/pages/ReportScheduling";
 import Reports from "@/pages/Reports";
 import MonthlyWarehouseReport from "@/pages/reports/MonthlyWarehouseReport";
+import MonthlyWarehouseReportPrint from "@/pages/reports/MonthlyWarehouseReportPrint";
 import WmsCtnAgingReport from "@/pages/reports/WmsCtnAgingReport";
 import WmsDonorContributionReport from "@/pages/reports/WmsDonorContributionReport";
 import WmsExpiryReport from "@/pages/reports/WmsExpiryReport";
@@ -73,6 +74,9 @@ import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 export default function ProtectedAppSection() {
   const [isReceiptPrintRoute] = useRoute("/app/inventory/receipts/:id/print/:copyType");
   const [isWaybillPrintRoute] = useRoute("/app/inventory/issues/:id/print/:copyType");
+  const [isStockCardPrintRoute] = useRoute("/app/inventory/tracking/stock-cards/:id/print");
+  const [isBinCardPrintRoute] = useRoute("/app/inventory/tracking/bin-cards/:id/print");
+  const [isMonthlyReportPrintRoute] = useRoute("/app/reports/wms/monthly-warehouse-report/print/:warehouseId/:year/:month");
   if (isReceiptPrintRoute) {
     return (
       <ProtectedRoute>
@@ -84,6 +88,30 @@ export default function ProtectedAppSection() {
     return (
       <ProtectedRoute>
         <Route path="/app/inventory/issues/:id/print/:copyType" component={WaybillPrint} />
+      </ProtectedRoute>
+    );
+  }
+  if (isStockCardPrintRoute) {
+    return (
+      <ProtectedRoute>
+        <Route path="/app/inventory/tracking/stock-cards/:id/print" component={StockCardPrint} />
+      </ProtectedRoute>
+    );
+  }
+  if (isBinCardPrintRoute) {
+    return (
+      <ProtectedRoute>
+        <Route path="/app/inventory/tracking/bin-cards/:id/print" component={BinCardPrint} />
+      </ProtectedRoute>
+    );
+  }
+  if (isMonthlyReportPrintRoute) {
+    return (
+      <ProtectedRoute>
+        <Route
+          path="/app/reports/wms/monthly-warehouse-report/print/:warehouseId/:year/:month"
+          component={MonthlyWarehouseReportPrint}
+        />
       </ProtectedRoute>
     );
   }
@@ -126,10 +154,8 @@ export default function ProtectedAppSection() {
           <Route path="/app/inventory/issues/:id" component={WaybillDetail} />
           <Route path="/app/inventory/issues" component={InventoryIssuesPage} />
           <Route path="/app/inventory/movements" component={InventoryMovementsPage} />
-          <Route path="/app/inventory/tracking/stock-cards/:id/print" component={StockCardPrint} />
           <Route path="/app/inventory/tracking/stock-cards/:id" component={StockCardDetail} />
           <Route path="/app/inventory/tracking/stock-cards" component={InventoryStockCardsPage} />
-          <Route path="/app/inventory/tracking/bin-cards/:id/print" component={BinCardPrint} />
           <Route path="/app/inventory/tracking/bin-cards/:id" component={BinCardDetail} />
           <Route path="/app/inventory/tracking/bin-cards" component={InventoryBinCardsPage} />
           <Route path="/app/inventory/counts" component={InventoryStockCountsPage} />
