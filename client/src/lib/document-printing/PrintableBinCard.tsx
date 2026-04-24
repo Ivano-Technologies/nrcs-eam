@@ -8,7 +8,7 @@ export function PrintableBinCard({ data }: PrintableBinCardProps) {
   const card = data?.card;
   const ledger = data?.ledger ?? [];
   return (
-    <PrintableShell title="NIGERIAN RED CROSS SOCIETY NATIONAL HEADQUARTERS" subtitle="BIN CARD / Fiche de Bac">
+    <PrintableShell title="NIGERIAN RED CROSS SOCIETY NATIONAL HEADQUARTERS" subtitle="BIN CARD">
       <div className="grid grid-cols-2 gap-2 text-sm">
         <div>Stock Location: {card?.stockLocation || "—"}</div>
         <div>CTN/Donor: {card?.commodityTrackingNumber || "—"} / {card?.donorCode || "—"}</div>

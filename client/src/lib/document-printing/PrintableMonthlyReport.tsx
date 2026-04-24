@@ -9,7 +9,7 @@ type PrintableMonthlyReportProps = {
 
 export function PrintableMonthlyReport({ rows, warehouseName, month, year }: PrintableMonthlyReportProps) {
   return (
-    <PrintableShell title="WAREHOUSE - MONTHLY REPORT" subtitle="Rapport Mensuel Entrepot / Monthly Report">
+    <PrintableShell title="WAREHOUSE - MONTHLY REPORT" subtitle="NIGERIAN RED CROSS SOCIETY">
       <div className="mb-3 grid grid-cols-2 gap-2 text-xs">
         <div><strong>Warehouse (Entrepot):</strong> {warehouseName ?? "—"}</div>
         <div><strong>MONTH (MOIS):</strong> {String(month).padStart(2, "0")}/{year}</div>

@@ -19,9 +19,9 @@ export function PrintableWaybill({ waybill, copyType = "white" }: PrintableWaybi
         <div><strong>Number (Numero):</strong> {waybill?.wbNumber ?? "—"}</div>
         <div><strong>Date:</strong> {waybill?.date ?? "—"}</div>
         <div><strong>Warehouse (Entrepot):</strong> {waybill?.warehouseId ?? "—"}</div>
-        <div><strong>Type:</strong> {waybill?.destinationType ?? "—"}</div>
+        <div><strong>Type:</strong> WAYBILL / DELIVERY NOTE</div>
         <div><strong>Destination / Beneficiary:</strong> {waybill?.destinationBeneficiary ?? "—"}</div>
-        <div><strong>Transport (Transport):</strong> {waybill?.meansOfTransport ?? "—"}</div>
+        <div><strong>Transport Data:</strong> {waybill?.meansOfTransport ?? "—"}</div>
       </div>
 
       <table className="mt-4 w-full border-collapse text-[11px]">
@@ -67,6 +67,14 @@ export function PrintableWaybill({ waybill, copyType = "white" }: PrintableWaybi
 
       <div className="mt-3 text-xs">
         <strong>Comments (Commentaires):</strong> {waybill?.comments ?? "—"}
+      </div>
+      <div className="mt-3 border border-black p-2 text-xs">
+        <div className="font-semibold">Reception at destination (Reception a destination)</div>
+        <div>Name: ____________________ Function: ____________________ Date: ____________________</div>
+        <div>Signature/Stamp: ________________________________________</div>
+      </div>
+      <div className="mt-2 text-[10px]">
+        <strong>COPIES:</strong> White - Original | Green - Reporting Copy | Blue - Logistics File | Yellow - Warehouse Copy
       </div>
     </PrintableShell>
   );
