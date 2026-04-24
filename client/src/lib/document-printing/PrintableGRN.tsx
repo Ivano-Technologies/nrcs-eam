@@ -9,6 +9,8 @@ type PrintableGRNProps = {
 export function PrintableGRN({ document, copyType = "white" }: PrintableGRNProps) {
   const td = (document?.transportDetails ?? {}) as Record<string, unknown>;
   const lines = useMemo(() => (Array.isArray(document?.items) ? document.items : []), [document?.items]);
+  const transport = String(td.meansOfTransport ?? "road").toLowerCase();
+  const transportChecked = (name: string) => (transport === name ? "X" : " ");
 
   return (
     <PrintableShell
@@ -23,7 +25,14 @@ export function PrintableGRN({ document, copyType = "white" }: PrintableGRNProps
         <div><strong>Delegation / Consignee Location (Lieu):</strong> {document?.toWarehouseId ?? "—"}</div>
         <div><strong>Date of arrival (Date d'arrivee):</strong> {String(td.dateOfArrival ?? "—")}</div>
         <div><strong>Received from (Recu de):</strong> {document?.referenceDocument ?? "—"}</div>
-        <div><strong>Means of transport (Moyen transport):</strong> {String(td.meansOfTransport ?? "road")}</div>
+        <div><strong>Document well received (Bien recu):</strong> {td.documentWellReceived === false ? "No / Non" : "Yes / Oui"}</div>
+      </div>
+      <div className="mt-2 grid grid-cols-5 gap-1 text-xs">
+        <div><strong>Transport:</strong></div>
+        <div>[{transportChecked("road")}] Road</div>
+        <div>[{transportChecked("rail")}] Rail</div>
+        <div>[{transportChecked("air")}] Air</div>
+        <div>[{transportChecked("sea")}] Sea / [{transportChecked("handcarried")}] Handcarried</div>
       </div>
 
       <table className="mt-4 w-full border-collapse text-[11px]">
