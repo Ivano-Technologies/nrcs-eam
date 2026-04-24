@@ -1,6 +1,5 @@
 import "dotenv/config";
 import { sql } from "drizzle-orm";
-import { loadSecrets } from "../../shared/loadSecrets";
 import {
   logStartupSummary,
   validateAwsProductionTls,
@@ -116,7 +115,6 @@ async function startServer() {
 }
 
 async function main() {
-  await loadSecrets();
   validateProductionSecrets();
   validateAwsProductionTls();
   if (process.env.NODE_ENV === "production") {

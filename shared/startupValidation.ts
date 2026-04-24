@@ -93,9 +93,7 @@ export function logStartupSummary(): void {
   }
 
   console.log(`[startup] Environment: ${env}`);
-  console.log(
-    `[startup] Secrets source: ${secrets === "aws" ? "AWS Secrets Manager" : ".env / process env"}`
-  );
+  console.log(`[startup] Secrets source: ${secrets === "env" ? ".env / process env" : "unknown"}`);
   console.log(`[startup] TLS: ${tlsLine}`);
   console.log(
     "[startup] Email provider:",
