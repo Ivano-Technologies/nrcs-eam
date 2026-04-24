@@ -141,6 +141,41 @@
       "when": 1776880000000,
       "tag": "0019_drop_inventory_movements",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1776990000000,
+      "tag": "0020_document_copy_tracking",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1776990100000,
+      "tag": "0021_notifications_log_and_facility_settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1777080000000,
+      "tag": "0022_stock_settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1777080100000,
+      "tag": "0023_detach_counts_batches_from_inventory_stock",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1777090000000,
+      "tag": "0024_drop_inventory_stock",
+      "breakpoints": true
     }
   ]
 }
