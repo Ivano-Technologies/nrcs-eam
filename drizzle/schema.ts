@@ -497,6 +497,7 @@ export const inventoryDocuments = pgTable("inventory_documents", {
   referenceDocument: varchar("reference_document", { length: 255 }),
   transportDetails: json("transport_details"),
   attachments: json("attachments"),
+  copiesPrinted: jsonb("copies_printed").$type<Record<string, string | null>>().notNull().default({}),
   notes: text("notes"),
   createdBy: integer("created_by").references(() => users.id),
   approvedBy: integer("approved_by").references(() => users.id),
@@ -641,6 +642,7 @@ export const goodsReceivedNotes = pgTable(
     receivedByDate: date("received_by_date"),
     receivedBySignatureUrl: text("received_by_signature_url"),
     comments: text("comments"),
+    copiesPrinted: jsonb("copies_printed").$type<Record<string, string | null>>().notNull().default({}),
     status: grnStatusEnum("status").notNull().default("draft"),
     createdBy: integer("created_by").references(() => users.id),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
@@ -751,6 +753,7 @@ export const waybills = pgTable(
     receivedCondition: text("received_condition"),
     comments: text("comments"),
     commentsFromReceiver: text("comments_from_receiver"),
+    copiesPrinted: jsonb("copies_printed").$type<Record<string, string | null>>().notNull().default({}),
     requisitionId: integer("requisition_id").references(() => requisitions.id),
     status: waybillStatusEnum("status").notNull().default("draft"),
     createdBy: integer("created_by").references(() => users.id),
@@ -759,6 +762,22 @@ export const waybills = pgTable(
   },
   (table) => ({
     waybillWarehouseDateIdx: index("waybill_warehouse_date_idx").on(table.warehouseId, table.date),
+  })
+);
+
+export const documentPrintLog = pgTable(
+  "document_print_log",
+  {
+    id: serial("id").primaryKey(),
+    documentType: varchar("document_type", { length: 50 }).notNull(),
+    documentId: integer("document_id").notNull(),
+    copyType: varchar("copy_type", { length: 20 }),
+    printedBy: integer("printed_by").references(() => users.id),
+    printedAt: timestamp("printed_at", { mode: "date" }).defaultNow().notNull(),
+    isReprint: boolean("is_reprint").notNull().default(false),
+  },
+  (table) => ({
+    documentLookupIdx: index("document_print_log_doc_idx").on(table.documentType, table.documentId),
   })
 );
 
@@ -1129,6 +1148,7 @@ export type GoodsReceivedNoteLine = typeof goodsReceivedNoteLines.$inferSelect;
 export type Waybill = typeof waybills.$inferSelect;
 export type WaybillLine = typeof waybillLines.$inferSelect;
 export type WaybillLineCtnSource = typeof waybillLineCtnSources.$inferSelect;
+export type DocumentPrintLog = typeof documentPrintLog.$inferSelect;
 export type StockCard = typeof stockCards.$inferSelect;
 export type BinCard = typeof binCards.$inferSelect;
 export type StockMovement = typeof stockMovements.$inferSelect;

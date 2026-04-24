@@ -1,7 +1,7 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { Router } from "express";
 import * as XLSX from "xlsx";
-import { inventoryDocuments, waybills, waybillLines, waybillLineCtnSources } from "../../drizzle/schema";
+import { documentPrintLog, goodsReceivedNotes, inventoryDocuments, waybills, waybillLines, waybillLineCtnSources } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { generateGrnPdf } from "../_core/pdfTemplates/grnPdf";
 import { generateWaybillPdf } from "../_core/pdfTemplates/waybillPdf";
@@ -30,6 +30,7 @@ router.get("/documents/:type/:id/export", async (req, res) => {
   const type = String(req.params.type) as ExportType;
   const id = Number(req.params.id);
   const format = String(req.query.format ?? "pdf") as ExportFormat;
+  const copyType = req.query.copy ? String(req.query.copy) : null;
 
   if (!["grn", "waybill", "stock-card", "bin-card", "monthly-report"].includes(type)) {
     return res.status(400).json({ error: "Unsupported document type" });
@@ -68,6 +69,29 @@ router.get("/documents/:type/:id/export", async (req, res) => {
       } else {
         buffer = toSheetBuffer([doc], "GRN");
       }
+      if (copyType && ["white", "green", "blue", "yellow"].includes(copyType)) {
+        const priorInventory = (doc.copiesPrinted ?? {}) as Record<string, string | null>;
+        const printedAtIso = new Date().toISOString();
+        await db
+          .update(inventoryDocuments)
+          .set({ copiesPrinted: { ...priorInventory, [copyType]: printedAtIso } })
+          .where(eq(inventoryDocuments.id, doc.id));
+        const [grn] = await db.select().from(goodsReceivedNotes).where(eq(goodsReceivedNotes.grnNumber, doc.documentNumber)).limit(1);
+        const prior = (grn?.copiesPrinted ?? {}) as Record<string, string | null>;
+        if (grn) {
+          await db
+            .update(goodsReceivedNotes)
+            .set({ copiesPrinted: { ...prior, [copyType]: printedAtIso }, updatedAt: new Date() })
+            .where(eq(goodsReceivedNotes.id, grn.id));
+        }
+        await db.insert(documentPrintLog).values({
+          documentType: "grn",
+          documentId: id,
+          copyType,
+          printedBy: null,
+          isReprint: Boolean(priorInventory[copyType] ?? prior[copyType]),
+        });
+      }
     } else if (type === "waybill") {
       const [wb] = await db.select().from(waybills).where(eq(waybills.id, id)).limit(1);
       if (!wb) return res.status(404).json({ error: "Document not found" });
@@ -99,6 +123,21 @@ router.get("/documents/:type/:id/export", async (req, res) => {
             .join(", "),
         }));
         buffer = toSheetBuffer(sheetRows, "Waybill");
+      }
+      if (copyType && ["white", "green", "blue", "yellow"].includes(copyType)) {
+        const prior = (wb.copiesPrinted ?? {}) as Record<string, string | null>;
+        const printedAtIso = new Date().toISOString();
+        await db
+          .update(waybills)
+          .set({ copiesPrinted: { ...prior, [copyType]: printedAtIso }, updatedAt: new Date() })
+          .where(eq(waybills.id, wb.id));
+        await db.insert(documentPrintLog).values({
+          documentType: "waybill",
+          documentId: id,
+          copyType,
+          printedBy: null,
+          isReprint: Boolean(prior[copyType]),
+        });
       }
     } else if (type === "stock-card") {
       const detail = await getStockCardDetail(db, id);

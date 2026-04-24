@@ -48,6 +48,8 @@ const emptyLine = (): WaybillLine => ({
   ctnSources: [{ ctnId: "", quantity: "", overrideReason: "" }],
 });
 
+const COPY_TYPES = ["white", "green", "blue", "yellow"] as const;
+
 export default function WaybillDetail() {
   const [, setLocation] = useLocation();
   const [matchNew] = useRoute("/app/inventory/issues/new");
@@ -503,6 +505,18 @@ export default function WaybillDetail() {
               </>
             ) : null}
           </div>
+          {waybillId && details.data?.status === "dispatched" ? (
+            <div className="mt-2 flex flex-wrap gap-2 text-xs">
+              {COPY_TYPES.map((copy) => {
+                const timestamp = (details.data?.copiesPrinted as Record<string, string | null> | undefined)?.[copy];
+                return (
+                  <div key={copy} className="rounded border px-2 py-1">
+                    {timestamp ? `✔ ${copy}: ${new Date(timestamp).toLocaleString()}` : `○ ${copy}: unprinted`}
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
 
           <div className="text-sm text-muted-foreground">Estimated dispatch value preview: {formatNaira(0)}</div>
         </CardContent>
