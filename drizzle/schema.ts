@@ -434,6 +434,9 @@ export const inventoryCatalogue = pgTable("inventory_catalogue", {
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow(),
 });
 
+// DEPRECATED: quantity_on_hand column is no longer the source of truth. WMS reads from stock_movements.
+// 14 paths still write/read this table — see docs/planning/tech-debt.md for retirement plan.
+// Do NOT add new reads or writes to this table.
 export const inventoryStock = pgTable(
   "inventory_stock",
   {
