@@ -16,7 +16,6 @@ import {
   inventoryCatalogue,
   inventoryDocuments,
   inventoryImportDrafts,
-  inventoryStock,
   stockSettings,
   stockCards,
   stockMovements,
@@ -279,16 +278,16 @@ const historicalMovementRowSchema = z.object({
   notes: z.string().optional(),
 });
 
-async function getOrCreateStock(catalogueId: number, warehouseId: number) {
+async function ensureStockSettingsRecord(catalogueId: number, warehouseId: number) {
   const db = await getDb();
   if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
   const [existing] = await db
     .select()
-    .from(inventoryStock)
-    .where(and(eq(inventoryStock.catalogueId, catalogueId), eq(inventoryStock.warehouseId, warehouseId)))
+    .from(stockSettings)
+    .where(and(eq(stockSettings.catalogueId, catalogueId), eq(stockSettings.warehouseId, warehouseId)))
     .limit(1);
   if (existing) return existing;
-  const [created] = await db.insert(inventoryStock).values({ catalogueId, warehouseId }).returning();
+  const [created] = await db.insert(stockSettings).values({ catalogueId, warehouseId, minLevel: 0 }).returning();
   return created;
 }
 
@@ -408,6 +407,20 @@ async function stockCardNet(stockCardId: number) {
     })
     .from(stockMovements)
     .where(eq(stockMovements.stockCardId, stockCardId));
+  return Number(agg?.net ?? 0);
+}
+
+async function itemWarehouseNet(itemId: number, warehouseId: number) {
+  const db = await getDb();
+  if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+  const [agg] = await db
+    .select({
+      net: sql<number>`coalesce(sum(${stockMovements.quantityIn} - ${stockMovements.quantityOut}), 0)`.mapWith(Number),
+    })
+    .from(stockMovements)
+    .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
+    .innerJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
+    .where(and(eq(commodityTrackingNumbers.itemId, itemId), eq(stockCards.locationId, warehouseId)));
   return Number(agg?.net ?? 0);
 }
 
@@ -542,29 +555,39 @@ export const inventoryV2Router = router({
         if (!item) return null;
         const stockRows = await db
           .select({
-            stockId: inventoryStock.id,
-            warehouseId: inventoryStock.warehouseId,
+            stockId: sql<number | null>`null`.mapWith((v) => (v == null ? null : Number(v))),
+            warehouseId: stockSettings.warehouseId,
             warehouseName: sites.name,
-            quantityOnHand: inventoryStock.quantityOnHand,
-            quantityReserved: inventoryStock.quantityReserved,
-            quantityInTransit: inventoryStock.quantityInTransit,
+            catalogueId: stockSettings.catalogueId,
+            quantityReserved: sql<number>`0`.mapWith(Number),
+            quantityInTransit: sql<number>`0`.mapWith(Number),
             minLevel: stockSettings.minLevel,
             maxLevel: stockSettings.maxLevel,
             safetyStockLevel: stockSettings.safetyStockLevel,
             zoneLocation: stockSettings.zoneLocation,
           })
-          .from(inventoryStock)
-          .leftJoin(
-            stockSettings,
-            and(
-              eq(stockSettings.catalogueId, inventoryStock.catalogueId),
-              eq(stockSettings.warehouseId, inventoryStock.warehouseId)
-            )
-          )
-          .innerJoin(sites, eq(inventoryStock.warehouseId, sites.id))
-          .where(eq(inventoryStock.catalogueId, input.id))
+          .from(stockSettings)
+          .innerJoin(sites, eq(stockSettings.warehouseId, sites.id))
+          .where(eq(stockSettings.catalogueId, input.id))
           .orderBy(asc(sites.name));
-        return { ...item, stock: stockRows };
+        const ledgerRows = await db
+          .select({
+            warehouseId: stockCards.locationId,
+            quantityOnHand: sql<number>`coalesce(sum(${stockMovements.quantityIn} - ${stockMovements.quantityOut}), 0)`.mapWith(Number),
+          })
+          .from(stockMovements)
+          .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
+          .innerJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
+          .where(eq(commodityTrackingNumbers.itemId, input.id))
+          .groupBy(stockCards.locationId);
+        const ledgerByWarehouse = new Map(ledgerRows.map((row) => [row.warehouseId, Number(row.quantityOnHand ?? 0)]));
+        return {
+          ...item,
+          stock: stockRows.map((row) => ({
+            ...row,
+            quantityOnHand: Number(ledgerByWarehouse.get(row.warehouseId) ?? 0),
+          })),
+        };
       }),
 
     create: protectedProcedure
@@ -740,11 +763,11 @@ export const inventoryV2Router = router({
 
         const stockRows = await db
           .select()
-          .from(inventoryStock)
+          .from(stockSettings)
           .where(
             and(
-              inArray(inventoryStock.catalogueId, catalogueRows.map((c) => c.id)),
-              inArray(inventoryStock.warehouseId, warehouses.map((w) => w.id))
+              inArray(stockSettings.catalogueId, catalogueRows.map((c) => c.id)),
+              inArray(stockSettings.warehouseId, warehouses.map((w) => w.id))
             )
           );
         const ledgerRows = await db
@@ -771,7 +794,7 @@ export const inventoryV2Router = router({
           for (const warehouse of warehouses) {
             const stock = stockMap.get(`${item.id}:${warehouse.id}`);
             const ledgerOnHand = ledgerMap.get(`${item.id}:${warehouse.id}`);
-            const quantityOnHand = Number(ledgerOnHand ?? stock?.quantityOnHand ?? 0);
+            const quantityOnHand = Number(ledgerOnHand ?? 0);
             const row = {
               catalogueId: item.id,
               itemCode: item.itemCode,
@@ -788,8 +811,8 @@ export const inventoryV2Router = router({
               minLevel: stock?.minLevel ?? 0,
               maxLevel: stock?.maxLevel ?? null,
               safetyStockLevel: stock?.safetyStockLevel ?? null,
-              quantityReserved: stock?.quantityReserved ?? 0,
-              quantityInTransit: stock?.quantityInTransit ?? 0,
+              quantityReserved: 0,
+              quantityInTransit: 0,
               zoneLocation: stock?.zoneLocation ?? null,
               status: deriveStockStatus({
                 quantityOnHand,
@@ -809,9 +832,9 @@ export const inventoryV2Router = router({
       .query(async ({ input }) => {
         const db = await getDb();
         if (!db) return [];
-        return db
+        const rows = await db
           .select({
-            stockId: inventoryStock.id,
+            stockId: sql<number | null>`null`.mapWith((v) => (v == null ? null : Number(v))),
             catalogueId: inventoryCatalogue.id,
             itemCode: inventoryCatalogue.itemCode,
             itemName: inventoryCatalogue.name,
@@ -819,23 +842,30 @@ export const inventoryV2Router = router({
             itemCategory: inventoryCatalogue.itemCategory,
             vedClassification: inventoryCatalogue.vedClassification,
             unitOfMeasure: inventoryCatalogue.unitOfMeasure,
-            quantityOnHand: inventoryStock.quantityOnHand,
             minLevel: stockSettings.minLevel,
             maxLevel: stockSettings.maxLevel,
             safetyStockLevel: stockSettings.safetyStockLevel,
             zoneLocation: stockSettings.zoneLocation,
           })
-          .from(inventoryStock)
-          .leftJoin(
-            stockSettings,
-            and(
-              eq(stockSettings.catalogueId, inventoryStock.catalogueId),
-              eq(stockSettings.warehouseId, inventoryStock.warehouseId)
-            )
-          )
-          .innerJoin(inventoryCatalogue, eq(inventoryStock.catalogueId, inventoryCatalogue.id))
-          .where(eq(inventoryStock.warehouseId, input.warehouseId))
+          .from(stockSettings)
+          .innerJoin(inventoryCatalogue, eq(stockSettings.catalogueId, inventoryCatalogue.id))
+          .where(eq(stockSettings.warehouseId, input.warehouseId))
           .orderBy(asc(inventoryCatalogue.name));
+        const ledgerRows = await db
+          .select({
+            catalogueId: commodityTrackingNumbers.itemId,
+            quantityOnHand: sql<number>`coalesce(sum(${stockMovements.quantityIn} - ${stockMovements.quantityOut}), 0)`.mapWith(Number),
+          })
+          .from(stockMovements)
+          .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
+          .innerJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
+          .where(eq(stockCards.locationId, input.warehouseId))
+          .groupBy(commodityTrackingNumbers.itemId);
+        const ledgerByCatalogue = new Map(ledgerRows.map((row) => [row.catalogueId, Number(row.quantityOnHand ?? 0)]));
+        return rows.map((row) => ({
+          ...row,
+          quantityOnHand: Number(ledgerByCatalogue.get(row.catalogueId) ?? 0),
+        }));
       }),
 
     byItem: protectedProcedure
@@ -845,25 +875,17 @@ export const inventoryV2Router = router({
         if (!db) return [];
         const cfgRows = await db
           .select({
-            stockId: inventoryStock.id,
+            stockId: sql<number | null>`null`.mapWith((v) => (v == null ? null : Number(v))),
             warehouseId: sites.id,
             warehouseName: sites.name,
             zoneLocation: stockSettings.zoneLocation,
-            quantityOnHand: inventoryStock.quantityOnHand,
             minLevel: stockSettings.minLevel,
             maxLevel: stockSettings.maxLevel,
             safetyStockLevel: stockSettings.safetyStockLevel,
           })
-          .from(inventoryStock)
-          .leftJoin(
-            stockSettings,
-            and(
-              eq(stockSettings.catalogueId, inventoryStock.catalogueId),
-              eq(stockSettings.warehouseId, inventoryStock.warehouseId)
-            )
-          )
-          .innerJoin(sites, eq(inventoryStock.warehouseId, sites.id))
-          .where(eq(inventoryStock.catalogueId, input.catalogueId))
+          .from(stockSettings)
+          .innerJoin(sites, eq(stockSettings.warehouseId, sites.id))
+          .where(eq(stockSettings.catalogueId, input.catalogueId))
           .orderBy(asc(sites.name));
         const ledgerRows = await db
           .select({
@@ -878,7 +900,7 @@ export const inventoryV2Router = router({
         const ledgerByWarehouse = new Map(ledgerRows.map((row) => [row.warehouseId, Number(row.quantityOnHand ?? 0)]));
         return cfgRows.map((row) => ({
           ...row,
-          quantityOnHand: Number(ledgerByWarehouse.get(row.warehouseId) ?? row.quantityOnHand ?? 0),
+          quantityOnHand: Number(ledgerByWarehouse.get(row.warehouseId) ?? 0),
         }));
       }),
 
@@ -1832,12 +1854,13 @@ export const inventoryV2Router = router({
         if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "Transfer note not found." });
         const lines = Array.isArray(doc.items) ? (doc.items as z.infer<typeof documentItemSchema>[]) : [];
         for (const line of lines) {
-          const source = await getOrCreateStock(line.catalogueId, Number(doc.fromWarehouseId));
-          const dest = await getOrCreateStock(line.catalogueId, Number(doc.toWarehouseId));
+          await ensureStockSettingsRecord(line.catalogueId, Number(doc.fromWarehouseId));
+          await ensureStockSettingsRecord(line.catalogueId, Number(doc.toWarehouseId));
+          const sourceOnHand = await itemWarehouseNet(line.catalogueId, Number(doc.fromWarehouseId));
           const sourceStockCardId = await ensureCountStockCardForItemLocation({
             itemId: line.catalogueId,
             locationId: Number(doc.fromWarehouseId),
-            expectedBalance: Number(source.quantityOnHand),
+            expectedBalance: Number(sourceOnHand),
             createdBy: ctx.user.id,
           });
           const sourceBalance = await stockCardNet(sourceStockCardId);
@@ -1875,11 +1898,12 @@ export const inventoryV2Router = router({
         if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "Transfer note not found." });
         const lines = Array.isArray(doc.items) ? (doc.items as z.infer<typeof documentItemSchema>[]) : [];
         for (const line of lines) {
-          const dest = await getOrCreateStock(line.catalogueId, Number(doc.toWarehouseId));
+          await ensureStockSettingsRecord(line.catalogueId, Number(doc.toWarehouseId));
+          const destOnHand = await itemWarehouseNet(line.catalogueId, Number(doc.toWarehouseId));
           const destinationStockCardId = await ensureCountStockCardForItemLocation({
             itemId: line.catalogueId,
             locationId: Number(doc.toWarehouseId),
-            expectedBalance: Number(dest.quantityOnHand),
+            expectedBalance: Number(destOnHand),
             createdBy: ctx.user.id,
           });
           const destBalance = await stockCardNet(destinationStockCardId);
@@ -2299,12 +2323,8 @@ export const inventoryV2Router = router({
       for (const wh of warehouses) {
         let ok = true;
         for (const item of items) {
-          const [stock] = await db
-            .select()
-            .from(inventoryStock)
-            .where(and(eq(inventoryStock.catalogueId, item.catalogueId), eq(inventoryStock.warehouseId, wh.id)))
-            .limit(1);
-          if (!stock || Number(stock.quantityOnHand) < Number(item.quantity)) {
+          const onHand = await itemWarehouseNet(item.catalogueId, wh.id);
+          if (Number(onHand) < Number(item.quantity)) {
             ok = false;
             break;
           }
@@ -3053,23 +3073,34 @@ export const inventoryV2Router = router({
         if (!db) return [];
         const rows = await db
           .select({
-            warehouseId: inventoryStock.warehouseId,
+            catalogueId: stockSettings.catalogueId,
+            warehouseId: stockSettings.warehouseId,
             warehouseName: sites.name,
             category: inventoryCatalogue.category,
-            quantityOnHand: inventoryStock.quantityOnHand,
-            minLevel: inventoryStock.minLevel,
-            maxLevel: inventoryStock.maxLevel,
-            safetyStockLevel: inventoryStock.safetyStockLevel,
+            minLevel: stockSettings.minLevel,
+            maxLevel: stockSettings.maxLevel,
+            safetyStockLevel: stockSettings.safetyStockLevel,
           })
-          .from(inventoryStock)
-          .innerJoin(inventoryCatalogue, eq(inventoryStock.catalogueId, inventoryCatalogue.id))
-          .innerJoin(sites, eq(inventoryStock.warehouseId, sites.id))
+          .from(stockSettings)
+          .innerJoin(inventoryCatalogue, eq(stockSettings.catalogueId, inventoryCatalogue.id))
+          .innerJoin(sites, eq(stockSettings.warehouseId, sites.id))
           .where(
             and(
-              input?.warehouseId ? eq(inventoryStock.warehouseId, input.warehouseId) : undefined,
+              input?.warehouseId ? eq(stockSettings.warehouseId, input.warehouseId) : undefined,
               input?.category ? eq(inventoryCatalogue.category, input.category) : undefined
             )
           );
+        const ledgerRows = await db
+          .select({
+            catalogueId: commodityTrackingNumbers.itemId,
+            warehouseId: stockCards.locationId,
+            quantityOnHand: sql<number>`coalesce(sum(${stockMovements.quantityIn} - ${stockMovements.quantityOut}), 0)`.mapWith(Number),
+          })
+          .from(stockMovements)
+          .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
+          .innerJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
+          .groupBy(commodityTrackingNumbers.itemId, stockCards.locationId);
+        const ledgerMap = new Map(ledgerRows.map((row) => [`${row.catalogueId}:${row.warehouseId}`, Number(row.quantityOnHand ?? 0)]));
 
         const grouped = new Map<string, any>();
         for (const row of rows) {
@@ -3086,7 +3117,7 @@ export const inventoryV2Router = router({
               outOfStockCount: 0,
               totalInventoryValue: 0,
             };
-          const qty = safeNumber(row.quantityOnHand);
+          const qty = safeNumber(ledgerMap.get(`${row.catalogueId}:${row.warehouseId}`) ?? 0);
           const min = safeNumber(row.minLevel);
           const max = row.maxLevel == null ? null : safeNumber(row.maxLevel);
           const safety = row.safetyStockLevel == null ? null : safeNumber(row.safetyStockLevel);
@@ -3192,20 +3223,33 @@ export const inventoryV2Router = router({
       const rows = await db
         .select({
           ved: inventoryCatalogue.vedClassification,
-          qty: inventoryStock.quantityOnHand,
-          minLevel: inventoryStock.minLevel,
-          safety: inventoryStock.safetyStockLevel,
+          catalogueId: stockSettings.catalogueId,
+          warehouseId: stockSettings.warehouseId,
+          minLevel: stockSettings.minLevel,
+          safety: stockSettings.safetyStockLevel,
         })
-        .from(inventoryStock)
-        .innerJoin(inventoryCatalogue, eq(inventoryStock.catalogueId, inventoryCatalogue.id));
+        .from(stockSettings)
+        .innerJoin(inventoryCatalogue, eq(stockSettings.catalogueId, inventoryCatalogue.id));
+      const ledgerRows = await db
+        .select({
+          catalogueId: commodityTrackingNumbers.itemId,
+          warehouseId: stockCards.locationId,
+          quantityOnHand: sql<number>`coalesce(sum(${stockMovements.quantityIn} - ${stockMovements.quantityOut}), 0)`.mapWith(Number),
+        })
+        .from(stockMovements)
+        .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
+        .innerJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
+        .groupBy(commodityTrackingNumbers.itemId, stockCards.locationId);
+      const ledgerMap = new Map(ledgerRows.map((row) => [`${row.catalogueId}:${row.warehouseId}`, Number(row.quantityOnHand ?? 0)]));
       const grouped = new Map<string, { ved: string; count: number; value: number; serviceLevel: number }>();
       for (const row of rows) {
         const key = row.ved ?? "unknown";
         const prev = grouped.get(key) ?? { ved: key, count: 0, value: 0, serviceLevel: 0 };
+        const qty = Number(ledgerMap.get(`${row.catalogueId}:${row.warehouseId}`) ?? 0);
         prev.count += 1;
-        prev.value += safeNumber(row.qty);
+        prev.value += safeNumber(qty);
         const threshold = row.safety == null ? safeNumber(row.minLevel) : safeNumber(row.safety);
-        if (safeNumber(row.qty) >= threshold) prev.serviceLevel += 1;
+        if (safeNumber(qty) >= threshold) prev.serviceLevel += 1;
         grouped.set(key, prev);
       }
       return Array.from(grouped.values()).map((g) => ({
@@ -3428,7 +3472,31 @@ export const inventoryV2Router = router({
       const zip = new JSZip();
       const [catalogue, stocks, moves, dists, kits, reqs] = await Promise.all([
         db.select().from(inventoryCatalogue),
-        db.select().from(inventoryStock),
+        db
+          .select({
+            catalogueId: stockSettings.catalogueId,
+            warehouseId: stockSettings.warehouseId,
+            minLevel: stockSettings.minLevel,
+            maxLevel: stockSettings.maxLevel,
+            safetyStockLevel: stockSettings.safetyStockLevel,
+            zoneLocation: stockSettings.zoneLocation,
+            quantityOnHand: sql<number>`coalesce(sum(${stockMovements.quantityIn} - ${stockMovements.quantityOut}), 0)`.mapWith(Number),
+          })
+          .from(stockSettings)
+          .leftJoin(stockCards, eq(stockCards.locationId, stockSettings.warehouseId))
+          .leftJoin(
+            commodityTrackingNumbers,
+            and(eq(stockCards.ctnId, commodityTrackingNumbers.id), eq(commodityTrackingNumbers.itemId, stockSettings.catalogueId))
+          )
+          .leftJoin(stockMovements, eq(stockMovements.stockCardId, stockCards.id))
+          .groupBy(
+            stockSettings.catalogueId,
+            stockSettings.warehouseId,
+            stockSettings.minLevel,
+            stockSettings.maxLevel,
+            stockSettings.safetyStockLevel,
+            stockSettings.zoneLocation
+          ),
         db
           .select({
             id: stockMovements.id,
@@ -3536,7 +3604,7 @@ export const inventoryV2Router = router({
             errors.push(`Row ${row.rowNumber}: ${row.messages.join(", ")}`);
             continue;
           }
-          const stock = await getOrCreateStock(row.catalogueId, row.warehouseId);
+          await ensureStockSettingsRecord(row.catalogueId, row.warehouseId);
           const [settings] = await db
             .select()
             .from(stockSettings)
@@ -3562,8 +3630,15 @@ export const inventoryV2Router = router({
             });
           }
           if (row.batchNumber || row.expiryDate) {
+            const stockCardId = await ensureCountStockCardForItemLocation({
+              itemId: row.catalogueId,
+              locationId: row.warehouseId,
+              expectedBalance: row.quantityOnHand,
+              createdBy: ctx.user.id,
+            });
             await db.insert(inventoryBatches).values({
-              stockId: stock.id,
+              stockId: null,
+              stockCardId,
               batchNumber: row.batchNumber ?? null,
               expiryDate: row.expiryDate ?? null,
               quantity: row.quantityOnHand,
@@ -3617,11 +3692,12 @@ export const inventoryV2Router = router({
             errors.push(`Row ${row.rowNumber}: ${row.messages.join(", ")}`);
             continue;
           }
-          const stock = await getOrCreateStock(row.catalogueId, row.warehouseId);
+          await ensureStockSettingsRecord(row.catalogueId, row.warehouseId);
+          const onHand = await itemWarehouseNet(row.catalogueId, row.warehouseId);
           const stockCardId = await ensureCountStockCardForItemLocation({
             itemId: row.catalogueId,
             locationId: row.warehouseId,
-            expectedBalance: Number(stock.quantityOnHand),
+            expectedBalance: Number(onHand),
             createdBy: ctx.user.id,
           });
           const previousBalance = await stockCardNet(stockCardId);
@@ -3682,18 +3758,21 @@ export const inventoryV2Router = router({
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
         const [count] = await db.select().from(inventoryCounts).where(eq(inventoryCounts.id, input.countId)).limit(1);
         if (!count) throw new TRPCError({ code: "NOT_FOUND", message: "Count session not found." });
-        const filters = [eq(inventoryStock.warehouseId, count.warehouseId)];
-        if (input.catalogueIds?.length) filters.push(inArray(inventoryStock.catalogueId, input.catalogueIds));
-        const stocks = await db.select().from(inventoryStock).where(and(...filters));
-        for (const stock of stocks) {
+        const filters = [eq(stockSettings.warehouseId, count.warehouseId)];
+        if (input.catalogueIds?.length) filters.push(inArray(stockSettings.catalogueId, input.catalogueIds));
+        const settingsRows = await db.select().from(stockSettings).where(and(...filters));
+        for (const settings of settingsRows) {
+          const expectedQuantity = await itemWarehouseNet(settings.catalogueId, settings.warehouseId);
           await db.insert(inventoryCountLines).values({
             countId: count.id,
-            stockId: stock.id,
-            expectedQuantity: stock.quantityOnHand,
+            stockId: null,
+            catalogueId: settings.catalogueId,
+            warehouseId: settings.warehouseId,
+            expectedQuantity,
           });
         }
         await db.update(inventoryCounts).set({ status: "in_progress", actualStartedAt: new Date() }).where(eq(inventoryCounts.id, count.id));
-        return { lines: stocks.length };
+        return { lines: settingsRows.length };
       }),
 
     enterCount: protectedProcedure
@@ -3752,15 +3831,14 @@ export const inventoryV2Router = router({
         let varianceCount = 0;
         for (const line of lines) {
           if (line.actualQuantity == null) continue;
-          const [stock] = await db.select().from(inventoryStock).where(eq(inventoryStock.id, line.stockId)).limit(1);
-          if (!stock) continue;
-          const expected = Number(stock.quantityOnHand);
+          if (!line.catalogueId || !line.warehouseId) continue;
+          const expected = await itemWarehouseNet(line.catalogueId, line.warehouseId);
           const actual = Number(line.actualQuantity);
           if (actual !== expected) {
             varianceCount += 1;
             const stockCardId = await ensureCountStockCardForItemLocation({
-              itemId: stock.catalogueId,
-              locationId: stock.warehouseId,
+              itemId: line.catalogueId,
+              locationId: line.warehouseId,
               expectedBalance: expected,
               createdBy: ctx.user.id,
             });
@@ -3779,7 +3857,6 @@ export const inventoryV2Router = router({
               createdBy: ctx.user.id,
             });
           }
-          await checkStockThreshold(stock.id);
         }
         await db
           .update(inventoryCounts)
@@ -3822,6 +3899,8 @@ export const inventoryV2Router = router({
             lineId: inventoryCountLines.id,
             countId: inventoryCountLines.countId,
             stockId: inventoryCountLines.stockId,
+            catalogueId: inventoryCountLines.catalogueId,
+            warehouseId: inventoryCountLines.warehouseId,
             expectedQuantity: inventoryCountLines.expectedQuantity,
             actualQuantity: inventoryCountLines.actualQuantity,
             varianceQuantity: inventoryCountLines.varianceQuantity,
@@ -3830,15 +3909,36 @@ export const inventoryV2Router = router({
             varianceNotes: inventoryCountLines.varianceNotes,
             countedBy: inventoryCountLines.countedBy,
             countedAt: inventoryCountLines.countedAt,
-            warehouseId: inventoryStock.warehouseId,
-            quantityOnHand: inventoryStock.quantityOnHand,
+            quantityOnHand: sql<number>`coalesce(sum(${stockMovements.quantityIn} - ${stockMovements.quantityOut}), 0)`.mapWith(Number),
             itemCode: inventoryCatalogue.itemCode,
             itemName: inventoryCatalogue.name,
           })
           .from(inventoryCountLines)
-          .innerJoin(inventoryStock, eq(inventoryCountLines.stockId, inventoryStock.id))
-          .innerJoin(inventoryCatalogue, eq(inventoryStock.catalogueId, inventoryCatalogue.id))
-          .where(eq(inventoryCountLines.countId, count.id));
+          .innerJoin(inventoryCatalogue, eq(inventoryCountLines.catalogueId, inventoryCatalogue.id))
+          .leftJoin(commodityTrackingNumbers, eq(commodityTrackingNumbers.itemId, inventoryCountLines.catalogueId))
+          .leftJoin(
+            stockCards,
+            and(eq(stockCards.locationId, inventoryCountLines.warehouseId), eq(stockCards.ctnId, commodityTrackingNumbers.id))
+          )
+          .leftJoin(stockMovements, eq(stockMovements.stockCardId, stockCards.id))
+          .where(eq(inventoryCountLines.countId, count.id))
+          .groupBy(
+            inventoryCountLines.id,
+            inventoryCountLines.countId,
+            inventoryCountLines.stockId,
+            inventoryCountLines.catalogueId,
+            inventoryCountLines.warehouseId,
+            inventoryCountLines.expectedQuantity,
+            inventoryCountLines.actualQuantity,
+            inventoryCountLines.varianceQuantity,
+            inventoryCountLines.variancePercent,
+            inventoryCountLines.varianceReason,
+            inventoryCountLines.varianceNotes,
+            inventoryCountLines.countedBy,
+            inventoryCountLines.countedAt,
+            inventoryCatalogue.itemCode,
+            inventoryCatalogue.name
+          );
         return { ...count, lines };
       }),
   }),
@@ -3858,15 +3958,16 @@ export const inventoryV2Router = router({
             expiryDate: inventoryBatches.expiryDate,
             quantity: inventoryBatches.quantity,
             status: inventoryBatches.status,
-            stockId: inventoryStock.id,
+            stockCardId: inventoryBatches.stockCardId,
             warehouseName: sites.name,
             itemCode: inventoryCatalogue.itemCode,
             itemName: inventoryCatalogue.name,
           })
           .from(inventoryBatches)
-          .innerJoin(inventoryStock, eq(inventoryBatches.stockId, inventoryStock.id))
-          .innerJoin(inventoryCatalogue, eq(inventoryStock.catalogueId, inventoryCatalogue.id))
-          .innerJoin(sites, eq(inventoryStock.warehouseId, sites.id))
+          .innerJoin(stockCards, eq(inventoryBatches.stockCardId, stockCards.id))
+          .innerJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
+          .innerJoin(inventoryCatalogue, eq(commodityTrackingNumbers.itemId, inventoryCatalogue.id))
+          .innerJoin(sites, eq(stockCards.locationId, sites.id))
           .where(
             and(
               eq(inventoryBatches.status, "active"),
@@ -3895,18 +3996,11 @@ export const inventoryV2Router = router({
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
         const [batch] = await db.select().from(inventoryBatches).where(eq(inventoryBatches.id, input.batchId)).limit(1);
         if (!batch) throw new TRPCError({ code: "NOT_FOUND", message: "Batch not found." });
-        const [stock] = await db.select().from(inventoryStock).where(eq(inventoryStock.id, batch.stockId)).limit(1);
-        if (!stock) throw new TRPCError({ code: "NOT_FOUND", message: "Stock not found." });
+        if (!batch.stockCardId) throw new TRPCError({ code: "BAD_REQUEST", message: "Batch is not linked to a stock card." });
         await db.update(inventoryBatches).set({ status: "expired" }).where(eq(inventoryBatches.id, batch.id));
-        const stockCardId = await ensureCountStockCardForItemLocation({
-          itemId: stock.catalogueId,
-          locationId: stock.warehouseId,
-          expectedBalance: Number(stock.quantityOnHand),
-          createdBy: ctx.user.id,
-        });
-        const cardBalance = await stockCardNet(stockCardId);
+        const cardBalance = await stockCardNet(batch.stockCardId);
         await db.insert(stockMovements).values({
-          stockCardId,
+          stockCardId: batch.stockCardId,
           date: new Date().toISOString().slice(0, 10),
           documentRef: `EXP-${batch.id}`,
           fromTo: "EXPIRY",
@@ -3917,7 +4011,6 @@ export const inventoryV2Router = router({
           sourceType: "expiry",
           createdBy: ctx.user.id,
         });
-        await checkStockThreshold(stock.id);
         return { success: true as const };
       }),
 
@@ -3934,18 +4027,11 @@ export const inventoryV2Router = router({
           .where(and(eq(inventoryBatches.status, "active"), lte(inventoryBatches.expiryDate, today)));
         let processed = 0;
         for (const batch of expiredBatches) {
-          const [stock] = await db.select().from(inventoryStock).where(eq(inventoryStock.id, batch.stockId)).limit(1);
-          if (!stock) continue;
+          if (!batch.stockCardId) continue;
           await db.update(inventoryBatches).set({ status: "expired" }).where(eq(inventoryBatches.id, batch.id));
-          const stockCardId = await ensureCountStockCardForItemLocation({
-            itemId: stock.catalogueId,
-            locationId: stock.warehouseId,
-            expectedBalance: Number(stock.quantityOnHand),
-            createdBy: ctx.user.id,
-          });
-          const cardBalance = await stockCardNet(stockCardId);
+          const cardBalance = await stockCardNet(batch.stockCardId);
           await db.insert(stockMovements).values({
-            stockCardId,
+            stockCardId: batch.stockCardId,
             date: today,
             documentRef: `EXP-JOB-${batch.id}`,
             fromTo: "EXPIRY JOB",

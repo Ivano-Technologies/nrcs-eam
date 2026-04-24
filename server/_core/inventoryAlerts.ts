@@ -5,7 +5,7 @@ import {
   donors,
   inventoryBatches,
   inventoryCatalogue,
-  inventoryStock,
+  stockSettings,
   sites,
   stockCards,
   stockMovements,
@@ -24,6 +24,20 @@ async function stockCardBalance(stockCardId: number): Promise<number> {
     })
     .from(stockMovements)
     .where(eq(stockMovements.stockCardId, stockCardId));
+  return Number(rows[0]?.balance ?? 0);
+}
+
+async function itemWarehouseNet(catalogueId: number, warehouseId: number): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  const rows = await db
+    .select({
+      balance: sql<number>`coalesce(sum(${stockMovements.quantityIn}) - sum(${stockMovements.quantityOut}), 0)`,
+    })
+    .from(stockMovements)
+    .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
+    .innerJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
+    .where(and(eq(commodityTrackingNumbers.itemId, catalogueId), eq(stockCards.locationId, warehouseId)));
   return Number(rows[0]?.balance ?? 0);
 }
 
@@ -86,32 +100,38 @@ export function buildInventoryAlertExpiryMovement(params: { previousBalance: num
   };
 }
 
-export async function checkStockThreshold(stockId: number) {
+export async function checkStockThreshold(params: { catalogueId: number; warehouseId: number; relatedEntityId?: number }) {
   const db = await getDb();
   if (!db) return;
-  const [stock] = await db.select().from(inventoryStock).where(eq(inventoryStock.id, stockId)).limit(1);
-  if (!stock) return;
-  const [warehouse] = await db.select().from(sites).where(eq(sites.id, stock.warehouseId)).limit(1);
+  const [settings] = await db
+    .select()
+    .from(stockSettings)
+    .where(and(eq(stockSettings.catalogueId, params.catalogueId), eq(stockSettings.warehouseId, params.warehouseId)))
+    .limit(1);
+  const quantityOnHand = await itemWarehouseNet(params.catalogueId, params.warehouseId);
+  const minLevel = Number(settings?.minLevel ?? 0);
+  const safetyStockLevel = settings?.safetyStockLevel == null ? null : Number(settings.safetyStockLevel);
+  const [warehouse] = await db.select().from(sites).where(eq(sites.id, params.warehouseId)).limit(1);
   const users = await getAllUsers();
   for (const user of users) {
     if (!["manager", "admin"].includes(user.role)) continue;
-    if ((stock.safetyStockLevel ?? 0) > 0 && stock.quantityOnHand < (stock.safetyStockLevel ?? 0)) {
+    if ((safetyStockLevel ?? 0) > 0 && quantityOnHand < (safetyStockLevel ?? 0)) {
       await createNotification({
         userId: user.id,
         type: "critical_stock",
         title: "Critical Stock Alert",
         message: `${warehouse?.name ?? "Warehouse"} stock is below safety level.`,
         relatedEntityType: "inventory",
-        relatedEntityId: stock.id,
+        relatedEntityId: params.relatedEntityId ?? null,
       });
-    } else if (stock.quantityOnHand < (stock.minLevel ?? 0)) {
+    } else if (quantityOnHand < minLevel) {
       await createNotification({
         userId: user.id,
         type: "low_stock",
         title: "Low Stock Alert",
         message: `${warehouse?.name ?? "Warehouse"} stock is below minimum level.`,
         relatedEntityType: "inventory",
-        relatedEntityId: stock.id,
+        relatedEntityId: params.relatedEntityId ?? null,
       });
     }
   }
@@ -129,14 +149,15 @@ export async function runDailyChecks() {
       expiryDate: inventoryBatches.expiryDate,
       quantity: inventoryBatches.quantity,
       status: inventoryBatches.status,
-      stockId: inventoryBatches.stockId,
-      warehouseId: inventoryStock.warehouseId,
-      catalogueId: inventoryStock.catalogueId,
+      stockCardId: inventoryBatches.stockCardId,
+      warehouseId: stockCards.locationId,
+      catalogueId: commodityTrackingNumbers.itemId,
       itemName: inventoryCatalogue.name,
     })
     .from(inventoryBatches)
-    .innerJoin(inventoryStock, eq(inventoryBatches.stockId, inventoryStock.id))
-    .innerJoin(inventoryCatalogue, eq(inventoryStock.catalogueId, inventoryCatalogue.id))
+    .innerJoin(stockCards, eq(inventoryBatches.stockCardId, stockCards.id))
+    .innerJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
+    .innerJoin(inventoryCatalogue, eq(commodityTrackingNumbers.itemId, inventoryCatalogue.id))
     .where(and(eq(inventoryBatches.status, "active"), lte(inventoryBatches.expiryDate, in90Iso)));
 
   let expiredMarked = 0;
@@ -153,22 +174,20 @@ export async function runDailyChecks() {
         title: "Expiry warning",
         message: `${b.itemName} batch expires in ${Math.max(days, 0)} day(s).`,
         relatedEntityType: "inventory",
-        relatedEntityId: b.stockId,
+        relatedEntityId: b.stockCardId,
       });
     }
     if (days < 0 && b.status !== "expired") {
-      const [stock] = await db.select().from(inventoryStock).where(eq(inventoryStock.id, b.stockId)).limit(1);
-      if (!stock) continue;
       await db.update(inventoryBatches).set({ status: "expired" }).where(eq(inventoryBatches.id, b.batchId));
       const stockCardId = await ensureExpiryStockCard({
         catalogueId: b.catalogueId,
         warehouseId: b.warehouseId,
-        expectedBalance: Number(stock.quantityOnHand),
+        expectedBalance: Number(b.quantity),
       });
       if (stockCardId) {
         const previous = await stockCardBalance(stockCardId);
         const mapped = buildInventoryAlertExpiryMovement({
-          previousBalance: previous > 0 ? previous : Number(stock.quantityOnHand),
+          previousBalance: previous > 0 ? previous : Number(b.quantity),
           expiryQty: Number(b.quantity),
         });
         await db.insert(stockMovements).values({
@@ -193,13 +212,14 @@ export async function runDailyChecks() {
 export async function runWeeklyChecks() {
   const db = await getDb();
   if (!db) return { lowStockItems: 0, criticalStockItems: 0, reorderCandidates: 0 };
-  const stocks = await db.select().from(inventoryStock);
+  const settingsRows = await db.select().from(stockSettings);
   let lowStockItems = 0;
   let criticalStockItems = 0;
-  for (const s of stocks) {
-    if ((s.safetyStockLevel ?? 0) > 0 && Number(s.quantityOnHand) < Number(s.safetyStockLevel ?? 0)) {
+  for (const s of settingsRows) {
+    const quantityOnHand = await itemWarehouseNet(s.catalogueId, s.warehouseId);
+    if ((s.safetyStockLevel ?? 0) > 0 && Number(quantityOnHand) < Number(s.safetyStockLevel ?? 0)) {
       criticalStockItems += 1;
-    } else if (Number(s.quantityOnHand) < Number(s.minLevel ?? 0)) {
+    } else if (Number(quantityOnHand) < Number(s.minLevel ?? 0)) {
       lowStockItems += 1;
     }
   }

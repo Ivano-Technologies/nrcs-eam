@@ -17,7 +17,7 @@ import {
 import { inventoryV2Router } from "./routers/inventoryRouter";
 import { wmsRouter } from "./routers/wmsRouter";
 import { requireRole } from "./_core/trpc";
-import { commodityTrackingNumbers, inventoryStock, sites, stockCards, stockMovements, stockSettings, waybills } from "../drizzle/schema";
+import { commodityTrackingNumbers, sites, stockCards, stockMovements, stockSettings, waybills } from "../drizzle/schema";
 import { buildDistributionVelocity, buildStockReadiness, getPeriodWindow } from "./wms/dashboard";
 import {
   legacyStatusFromRegister,
@@ -1364,17 +1364,19 @@ export const appRouter = router({
                 .from(sites)
                 .where(eq(sites.isActive, true)),
               database
-                .selectDistinct({ locationId: inventoryStock.warehouseId })
-                .from(inventoryStock)
+                .selectDistinct({ locationId: stockCards.locationId })
+                .from(stockMovements)
+                .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
+                .innerJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
                 .leftJoin(
                   stockSettings,
                   and(
-                    eq(stockSettings.catalogueId, inventoryStock.catalogueId),
-                    eq(stockSettings.warehouseId, inventoryStock.warehouseId)
+                    eq(stockSettings.catalogueId, commodityTrackingNumbers.itemId),
+                    eq(stockSettings.warehouseId, stockCards.locationId)
                   )
                 )
-                .innerJoin(sites, eq(inventoryStock.warehouseId, sites.id))
-                .where(and(eq(sites.isActive, true), sql`${inventoryStock.quantityOnHand} > coalesce(${stockSettings.minLevel}, 0)`)),
+                .innerJoin(sites, eq(stockCards.locationId, sites.id))
+                .where(and(eq(sites.isActive, true), sql`(${stockMovements.quantityIn} - ${stockMovements.quantityOut}) > coalesce(${stockSettings.minLevel}, 0)`)),
               database
                 .selectDistinct({ locationId: stockCards.locationId })
                 .from(stockMovements)

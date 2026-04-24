@@ -434,40 +434,6 @@ export const inventoryCatalogue = pgTable("inventory_catalogue", {
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow(),
 });
 
-// DEPRECATED: quantity_on_hand column is no longer the source of truth. WMS reads from stock_movements.
-// 14 paths still write/read this table — see docs/planning/tech-debt.md for retirement plan.
-// Do NOT add new reads or writes to this table.
-export const inventoryStock = pgTable(
-  "inventory_stock",
-  {
-    id: serial("id").primaryKey(),
-    catalogueId: integer("catalogue_id")
-      .notNull()
-      .references(() => inventoryCatalogue.id),
-    warehouseId: integer("warehouse_id")
-      .notNull()
-      .references(() => sites.id),
-    zoneLocation: varchar("zone_location", { length: 100 }),
-    quantityOnHand: doublePrecision("quantity_on_hand").default(0).notNull(),
-    quantityReserved: doublePrecision("quantity_reserved").default(0),
-    quantityInTransit: doublePrecision("quantity_in_transit").default(0),
-    minLevel: doublePrecision("min_level").default(0),
-    maxLevel: doublePrecision("max_level"),
-    safetyStockLevel: doublePrecision("safety_stock_level"),
-    lastCountedAt: timestamp("last_counted_at", { mode: "date" }),
-    lastMovementAt: timestamp("last_movement_at", { mode: "date" }),
-    createdAt: timestamp("created_at", { mode: "date" }).defaultNow(),
-    updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow(),
-  },
-  (table) => ({
-    inventoryStockCatalogueWarehouseUnique: unique("inventory_stock_catalogue_warehouse_unique").on(
-      table.catalogueId,
-      table.warehouseId
-    ),
-    warehouseItemIdx: index("inv_stock_warehouse_item_idx").on(table.catalogueId, table.warehouseId),
-  })
-);
-
 export const stockSettings = pgTable(
   "stock_settings",
   {
@@ -498,9 +464,8 @@ export const inventoryBatches = pgTable(
   "inventory_batches",
   {
     id: serial("id").primaryKey(),
-    stockId: integer("stock_id")
-      .notNull()
-      .references(() => inventoryStock.id),
+    stockId: integer("stock_id"),
+    stockCardId: integer("stock_card_id").references(() => stockCards.id),
     batchNumber: varchar("batch_number", { length: 100 }),
     expiryDate: date("expiry_date"),
     manufactureDate: date("manufacture_date"),
@@ -580,9 +545,9 @@ export const inventoryCountLines = pgTable("inventory_count_lines", {
   countId: integer("count_id")
     .notNull()
     .references(() => inventoryCounts.id),
-  stockId: integer("stock_id")
-    .notNull()
-    .references(() => inventoryStock.id),
+  stockId: integer("stock_id"),
+  catalogueId: integer("catalogue_id").references(() => inventoryCatalogue.id),
+  warehouseId: integer("warehouse_id").references(() => sites.id),
   expectedQuantity: doublePrecision("expected_quantity"),
   actualQuantity: doublePrecision("actual_quantity"),
   varianceQuantity: doublePrecision("variance_quantity"),
@@ -1154,8 +1119,6 @@ export type InsertInventoryItem = typeof inventoryItems.$inferInsert;
 export type InventoryTransaction = typeof inventoryTransactions.$inferSelect;
 export type InventoryCatalogue = typeof inventoryCatalogue.$inferSelect;
 export type InsertInventoryCatalogue = typeof inventoryCatalogue.$inferInsert;
-export type InventoryStock = typeof inventoryStock.$inferSelect;
-export type InsertInventoryStock = typeof inventoryStock.$inferInsert;
 export type StockSettings = typeof stockSettings.$inferSelect;
 export type InsertStockSettings = typeof stockSettings.$inferInsert;
 export type InventoryBatch = typeof inventoryBatches.$inferSelect;
