@@ -473,7 +473,7 @@ async function ensureCountStockCardForItemLocation(params: {
     quantityIn: openingBalance,
     quantityOut: 0,
     balanceAfter: openingBalance,
-    remarks: "Auto-created from inventory_stock during count migration (bootstrap)",
+    remarks: "Auto-created from legacy stock table during count migration (bootstrap)",
     sourceType: "import",
     createdBy: params.createdBy,
   });
@@ -3137,28 +3137,60 @@ export const inventoryV2Router = router({
         z.object({
           startDate: z.coerce.date(),
           endDate: z.coerce.date(),
+          warehouseId: z.number().int().positive().optional(),
         })
       )
       .query(async ({ input, ctx }) => {
         requireRole(ctx, ["manager", "admin"]);
-        return {
-          // TODO: Rewire to stock_movements in analytics
-          // workstream after Phase 7. See docs/planning/tech-debt.md
-          data: [],
-          message: "This report is being migrated to the WMS ledger and will be available in a future update.",
-          migrationPending: true,
-        };
+        const db = await getDb();
+        if (!db) return [];
+        return db
+          .select({
+            id: stockMovements.id,
+            date: stockMovements.date,
+            stockCardId: stockMovements.stockCardId,
+            warehouseId: stockCards.locationId,
+            catalogueId: commodityTrackingNumbers.itemId,
+            quantityIn: stockMovements.quantityIn,
+            quantityOut: stockMovements.quantityOut,
+            balanceAfter: stockMovements.balanceAfter,
+            sourceType: stockMovements.sourceType,
+            fromTo: stockMovements.fromTo,
+            documentRef: stockMovements.documentRef,
+            remarks: stockMovements.remarks,
+            createdBy: stockMovements.createdBy,
+          })
+          .from(stockMovements)
+          .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
+          .innerJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
+          .where(
+            and(
+              gte(stockMovements.date, input.startDate.toISOString().slice(0, 10)),
+              lte(stockMovements.date, input.endDate.toISOString().slice(0, 10)),
+              input.warehouseId ? eq(stockCards.locationId, input.warehouseId) : undefined
+            )
+          )
+          .orderBy(desc(stockMovements.date), desc(stockMovements.id));
       }),
 
     expiryForecast: protectedProcedure.query(async ({ ctx }) => {
       requireRole(ctx, ["manager", "admin"]);
-      return {
-        // TODO: Rewire to stock_movements in analytics
-        // workstream after Phase 7. See docs/planning/tech-debt.md
-        data: [],
-        message: "This report is being migrated to the WMS ledger and will be available in a future update.",
-        migrationPending: true,
-      };
+      const db = await getDb();
+      if (!db) return [];
+      return db
+        .select({
+          expiryDate: stockCards.expiryDate,
+          itemId: commodityTrackingNumbers.itemId,
+          warehouseId: stockCards.locationId,
+          balance: sql<number>`coalesce(sum(${stockMovements.quantityIn} - ${stockMovements.quantityOut}), 0)`.mapWith(Number),
+        })
+        .from(stockMovements)
+        .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
+        .innerJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
+        .where(sql`${stockCards.expiryDate} is not null`)
+        .groupBy(stockCards.expiryDate, commodityTrackingNumbers.itemId, stockCards.locationId)
+        .having(sql`coalesce(sum(${stockMovements.quantityIn} - ${stockMovements.quantityOut}), 0) > 0`)
+        .orderBy(asc(stockCards.expiryDate));
     }),
 
     distributionSummary: protectedProcedure
@@ -3266,46 +3298,190 @@ export const inventoryV2Router = router({
 
     abcAnalysis: protectedProcedure.query(async ({ ctx }) => {
       requireRole(ctx, ["manager", "admin"]);
-      return {
-        // TODO: Rewire to stock_movements in analytics
-        // workstream after Phase 7. See docs/planning/tech-debt.md
-        data: [],
-        message: "This report is being migrated to the WMS ledger and will be available in a future update.",
-        migrationPending: true,
-      };
+      const db = await getDb();
+      if (!db) return [];
+      const rows = await db
+        .select({
+          itemId: inventoryCatalogue.id,
+          itemCode: inventoryCatalogue.itemCode,
+          itemName: inventoryCatalogue.name,
+          category: inventoryCatalogue.category,
+          vedClassification: inventoryCatalogue.vedClassification,
+        })
+        .from(inventoryCatalogue);
+      const outboundRows = await db
+        .select({
+          itemId: commodityTrackingNumbers.itemId,
+          consumed: sql<number>`coalesce(sum(${stockMovements.quantityOut}), 0)`.mapWith(Number),
+        })
+        .from(stockMovements)
+        .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
+        .innerJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
+        .groupBy(commodityTrackingNumbers.itemId);
+      const outboundByItem = new Map<number, number>(outboundRows.map((row) => [row.itemId, safeNumber(row.consumed)]));
+      const totals = rows
+        .map((row) => ({
+          ...row,
+          annualConsumptionValue: safeNumber(outboundByItem.get(row.itemId) ?? 0),
+        }))
+        .sort((a, b) => b.annualConsumptionValue - a.annualConsumptionValue);
+      const grandTotal = totals.reduce((sum, row) => sum + row.annualConsumptionValue, 0);
+      let running = 0;
+      return totals.map((row) => {
+        running += row.annualConsumptionValue;
+        const cumulativePercent = grandTotal > 0 ? (running / grandTotal) * 100 : 0;
+        const abcClass = cumulativePercent <= 70 ? "A" : cumulativePercent <= 90 ? "B" : "C";
+        return {
+          itemId: row.itemId,
+          itemCode: row.itemCode,
+          itemName: row.itemName,
+          annualConsumptionValue: row.annualConsumptionValue,
+          cumulativePercent,
+          abcClass,
+          vedClassification: row.vedClassification ?? "desirable",
+          category: row.category,
+        };
+      });
     }),
 
     fnsAnalysis: protectedProcedure.query(async ({ ctx }) => {
       requireRole(ctx, ["manager", "admin"]);
-      return {
-        // TODO: Rewire to stock_movements in analytics
-        // workstream after Phase 7. See docs/planning/tech-debt.md
-        data: [],
-        message: "This report is being migrated to the WMS ledger and will be available in a future update.",
-        migrationPending: true,
-      };
+      const db = await getDb();
+      if (!db) return [];
+      const movementRows = await db
+        .select({
+          itemId: commodityTrackingNumbers.itemId,
+          itemCode: inventoryCatalogue.itemCode,
+          itemName: inventoryCatalogue.name,
+          movementCount: sql<number>`count(*)`.mapWith(Number),
+          totalOut: sql<number>`coalesce(sum(${stockMovements.quantityOut}), 0)`.mapWith(Number),
+        })
+        .from(stockMovements)
+        .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
+        .innerJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
+        .innerJoin(inventoryCatalogue, eq(commodityTrackingNumbers.itemId, inventoryCatalogue.id))
+        .where(sql`${stockMovements.quantityOut} > 0`)
+        .groupBy(commodityTrackingNumbers.itemId, inventoryCatalogue.itemCode, inventoryCatalogue.name);
+      return movementRows.map((row) => {
+        const movementCount = safeNumber(row.movementCount);
+        const classification = movementCount >= 12 ? "Fast" : movementCount >= 4 ? "Normal" : "Slow";
+        return {
+          itemId: row.itemId,
+          itemCode: row.itemCode,
+          itemName: row.itemName,
+          count: movementCount,
+          quantityOut: safeNumber(row.totalOut),
+          classification,
+        };
+      });
     }),
 
     warehouseUtilization: protectedProcedure.query(async ({ ctx }) => {
       requireRole(ctx, ["manager", "admin"]);
-      return {
-        // TODO: Rewire to stock_movements in analytics
-        // workstream after Phase 7. See docs/planning/tech-debt.md
-        data: [],
-        message: "This report is being migrated to the WMS ledger and will be available in a future update.",
-        migrationPending: true,
-      };
+      const db = await getDb();
+      if (!db) return [];
+      const settingsRows = await db
+        .select({
+          warehouseId: stockSettings.warehouseId,
+          warehouseName: sites.name,
+          configuredItems: sql<number>`count(*)`.mapWith(Number),
+        })
+        .from(stockSettings)
+        .innerJoin(sites, eq(stockSettings.warehouseId, sites.id))
+        .groupBy(stockSettings.warehouseId, sites.name);
+      const activeCardRows = await db
+        .select({
+          warehouseId: stockCards.locationId,
+          activeStockCards: sql<number>`count(*)`.mapWith(Number),
+        })
+        .from(stockCards)
+        .groupBy(stockCards.locationId);
+      const activeCardsByWarehouse = new Map<number, number>(activeCardRows.map((row) => [row.warehouseId, safeNumber(row.activeStockCards)]));
+      return settingsRows.map((row) => {
+        const configuredItems = safeNumber(row.configuredItems);
+        const activeStockCards = safeNumber(activeCardsByWarehouse.get(row.warehouseId) ?? 0);
+        const stockAccuracy = configuredItems > 0 ? Math.min(100, (activeStockCards / configuredItems) * 100) : 0;
+        return {
+          warehouseId: row.warehouseId,
+          warehouseName: row.warehouseName,
+          configuredItems,
+          activeStockCards,
+          stockAccuracy,
+        };
+      });
     }),
 
     forecastDemand: protectedProcedure.query(async ({ ctx }) => {
       requireRole(ctx, ["manager", "admin"]);
-      return {
-        // TODO: Rewire to stock_movements in analytics
-        // workstream after Phase 7. See docs/planning/tech-debt.md
-        data: [],
-        message: "This report is being migrated to the WMS ledger and will be available in a future update.",
-        migrationPending: true,
-      };
+      const db = await getDb();
+      if (!db) return [];
+      const outboundRows = await db
+        .select({
+          itemId: commodityTrackingNumbers.itemId,
+          itemCode: inventoryCatalogue.itemCode,
+          itemName: inventoryCatalogue.name,
+          warehouseId: stockCards.locationId,
+          date: stockMovements.date,
+          quantityOut: stockMovements.quantityOut,
+        })
+        .from(stockMovements)
+        .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
+        .innerJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
+        .innerJoin(inventoryCatalogue, eq(commodityTrackingNumbers.itemId, inventoryCatalogue.id))
+        .where(sql`${stockMovements.quantityOut} > 0`)
+        .orderBy(asc(stockMovements.date));
+      const byItemWarehouse = new Map<string, {
+        itemId: number;
+        itemCode: string;
+        itemName: string;
+        warehouseId: number;
+        monthly: Map<string, number>;
+      }>();
+      for (const row of outboundRows) {
+        const key = `${row.itemId}:${row.warehouseId}`;
+        const month = toMonthKey(row.date);
+        const current = byItemWarehouse.get(key) ?? {
+          itemId: row.itemId,
+          itemCode: row.itemCode,
+          itemName: row.itemName,
+          warehouseId: row.warehouseId,
+          monthly: new Map<string, number>(),
+        };
+        current.monthly.set(month, safeNumber(current.monthly.get(month) ?? 0) + safeNumber(row.quantityOut));
+        byItemWarehouse.set(key, current);
+      }
+      const results: Array<{
+        itemId: number;
+        itemCode: string;
+        itemName: string;
+        warehouseId: number;
+        period: string;
+        demand: number;
+        rolling3MonthAverage: number;
+      }> = [];
+      for (const value of Array.from(byItemWarehouse.values())) {
+        const months = Array.from(value.monthly.entries() as Iterable<[string, number]>).sort((a, b) => a[0].localeCompare(b[0]));
+        const demandValues = months.map(([, demand]) => safeNumber(demand));
+        const rolling3MonthAverage =
+          demandValues.length === 0
+            ? 0
+            : demandValues.slice(Math.max(0, demandValues.length - 3)).reduce((sum, demand) => sum + demand, 0) /
+              Math.min(3, demandValues.length);
+        for (const monthEntry of months) {
+          const period = monthEntry[0];
+          const demand = monthEntry[1];
+          results.push({
+            itemId: value.itemId,
+            itemCode: value.itemCode,
+            itemName: value.itemName,
+            warehouseId: value.warehouseId,
+            period,
+            demand,
+            rolling3MonthAverage,
+          });
+        }
+      }
+      return results;
     }),
   }),
 
