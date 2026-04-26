@@ -190,6 +190,30 @@ describe("Inventory Management", () => {
       } as any)
     ).rejects.toThrow();
   });
+
+  it("should return report arrays for migrated analytics endpoints", async () => {
+    const ctx = createTestContext("manager");
+    const caller = appRouter.createCaller(ctx);
+
+    const [stockMovement, expiryForecast, abcAnalysis, fnsAnalysis, warehouseUtilization, forecastDemand] = await Promise.all([
+      caller.inventoryV2.reports.stockMovement({
+        startDate: new Date(Date.now() - 30 * 86400000),
+        endDate: new Date(),
+      }),
+      caller.inventoryV2.reports.expiryForecast(),
+      caller.inventoryV2.reports.abcAnalysis(),
+      caller.inventoryV2.reports.fnsAnalysis(),
+      caller.inventoryV2.reports.warehouseUtilization(),
+      caller.inventoryV2.reports.forecastDemand(),
+    ]);
+
+    expect(Array.isArray(stockMovement)).toBe(true);
+    expect(Array.isArray(expiryForecast)).toBe(true);
+    expect(Array.isArray(abcAnalysis)).toBe(true);
+    expect(Array.isArray(fnsAnalysis)).toBe(true);
+    expect(Array.isArray(warehouseUtilization)).toBe(true);
+    expect(Array.isArray(forecastDemand)).toBe(true);
+  }, 20000);
 });
 
 describe("Vendors Management", () => {
