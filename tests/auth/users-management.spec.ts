@@ -6,6 +6,7 @@ function optionLabelForStoredRole(role: string): string {
   if (r === "admin") return "Admin";
   if (r === "manager") return "Manager";
   if (r === "staff") return "Staff";
+  if (r === "field") return "Field";
   return "User";
 }
 
@@ -14,45 +15,14 @@ function pickAlternateRoleLabel(current: string): string {
   const o = current.toLowerCase();
   if (o === "staff") return "User";
   if (o === "user") return "Staff";
+  if (o === "field") return "Staff";
   if (o === "manager") return "User";
   if (o === "admin") return "User";
   return "Staff";
 }
 
-/** Production may show a confirm dialog or apply the role and toast immediately. */
-async function confirmRoleIfNeeded(page: import("@playwright/test").Page) {
-  const dialogTitle = page.getByText("Confirm Role Change", { exact: true });
-  const alreadySuccess = await page.getByText(/Role updated/i).isVisible().catch(() => false);
-  if (alreadySuccess) return;
-
-  const dialogVisible = await dialogTitle.isVisible().catch(() => false);
-  if (!dialogVisible) return;
-
-  const confirmBtn = page.getByTestId("user-role-confirm-btn");
-  if ((await confirmBtn.count()) > 0 && (await confirmBtn.first().isVisible())) {
-    await confirmBtn.first().click();
-    return;
-  }
-  await page
-    .locator('[role="dialog"]')
-    .filter({ has: dialogTitle })
-    .getByRole("button", { name: /^Confirm$/ })
-    .click();
-}
-
-async function afterSelectingRoleOption(page: import("@playwright/test").Page) {
-  await Promise.race([
-    page.getByText("Confirm Role Change", { exact: true }).waitFor({
-      state: "visible",
-      timeout: 20_000,
-    }),
-    page.getByText(/Role updated/i).waitFor({ state: "visible", timeout: 20_000 }),
-  ]);
-  await confirmRoleIfNeeded(page);
-}
-
 test.describe("user management (live)", () => {
-  test("pending users page loads; admin can change another user's role", async ({
+  test("pending users page loads; admin can edit another user's role from User Management", async ({
     page,
   }, testInfo) => {
     await loginAsAdmin(page);
@@ -62,9 +32,9 @@ test.describe("user management (live)", () => {
     if ((await pendingHeading.count()) > 0) {
       await expect(pendingHeading).toBeVisible({ timeout: 30_000 });
     } else {
-      await expect(
-        page.getByRole("heading", { name: /User Access Requests/i })
-      ).toBeVisible({ timeout: 30_000 });
+      await expect(page.getByRole("heading", { name: /User Access Requests/i })).toBeVisible({
+        timeout: 30_000,
+      });
     }
     await expect(
       page
@@ -72,64 +42,55 @@ test.describe("user management (live)", () => {
         .first()
     ).toBeVisible();
 
-    await page.goto("/app/users");
+    await page.goto("/app/settings/users");
     await expect(page.getByRole("heading", { name: /User Management/i })).toBeVisible({
       timeout: 30_000,
     });
 
-    const userCards = page.locator("[data-testid^='user-card-']");
-    const n = await userCards.count();
-    const changeRoleLabels = page.getByText("Change Role", { exact: true });
-    const nByLabel = await changeRoleLabels.count();
-    if (n < 2 && nByLabel < 2) {
+    const userRows = page.locator("[data-testid^='user-row-']");
+    const n = await userRows.count();
+    if (n < 2) {
       testInfo.skip(true, "Need at least 2 users for role-change test");
       return;
     }
 
-    const secondCard =
-      n >= 2
-        ? userCards.nth(1)
-        : page.locator("div.space-y-6 > div.grid").first().locator("> div").nth(1);
-
-    const roleBadge = secondCard.locator('[data-slot="badge"]').first();
+    const secondRow = userRows.nth(1);
+    const roleBadge = secondRow.locator('[data-slot="badge"]').first();
     await expect(roleBadge).toBeVisible({ timeout: 15_000 });
     const rawRole = ((await roleBadge.textContent()) ?? "").trim().toLowerCase();
     const currentRole =
       rawRole === "admin" ||
       rawRole === "manager" ||
       rawRole === "staff" ||
-      rawRole === "user"
+      rawRole === "user" ||
+      rawRole === "field"
         ? rawRole
         : "user";
 
     const originalLabel = optionLabelForStoredRole(currentRole);
     const alternateLabel = pickAlternateRoleLabel(currentRole);
 
-    let roleSelect =
-      n >= 2
-        ? userCards.nth(1).locator("[data-testid^='user-role-select-']")
-        : changeRoleLabels.nth(1).locator("..").getByRole("combobox");
-    if ((await roleSelect.count()) === 0) {
-      roleSelect = secondCard.getByRole("combobox");
-    }
+    await secondRow.getByRole("button", { name: "Edit" }).click();
+    const dialog = page.getByRole("dialog", { name: "Edit user" });
+    await expect(dialog).toBeVisible({ timeout: 15_000 });
 
-    await expect(roleSelect).toBeVisible();
+    const roleSelect = dialog.getByLabel("Role");
     await roleSelect.click();
     const listbox = page.getByRole("listbox").last();
     await expect(listbox).toBeVisible({ timeout: 10_000 });
-    await listbox
-      .getByRole("option", { name: new RegExp(`^${alternateLabel}$`) })
-      .click();
-    await afterSelectingRoleOption(page);
-    await expect(page.getByText(/Role updated/i)).toBeVisible({ timeout: 30_000 });
+    await listbox.getByRole("option", { name: new RegExp(`^${alternateLabel}$`) }).click();
+    await dialog.getByRole("button", { name: /^Save$/ }).click();
+    await expect(page.getByText(/User updated/i)).toBeVisible({ timeout: 30_000 });
 
-    await roleSelect.click();
+    await secondRow.getByRole("button", { name: "Edit" }).click();
+    const dialog2 = page.getByRole("dialog", { name: "Edit user" });
+    await expect(dialog2).toBeVisible({ timeout: 15_000 });
+    const roleSelect2 = dialog2.getByLabel("Role");
+    await roleSelect2.click();
     const listbox2 = page.getByRole("listbox").last();
     await expect(listbox2).toBeVisible({ timeout: 10_000 });
-    await listbox2
-      .getByRole("option", { name: new RegExp(`^${originalLabel}$`) })
-      .click();
-    await afterSelectingRoleOption(page);
-    await expect(page.getByText(/Role updated/i)).toBeVisible({ timeout: 30_000 });
+    await listbox2.getByRole("option", { name: new RegExp(`^${originalLabel}$`) }).click();
+    await dialog2.getByRole("button", { name: /^Save$/ }).click();
+    await expect(page.getByText(/User updated/i)).toBeVisible({ timeout: 30_000 });
   });
 });

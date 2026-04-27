@@ -106,6 +106,13 @@ export const authRouter = router({
         });
       }
 
+      if (appUser.status === "inactive") {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Your account has been deactivated. Contact your administrator.",
+        });
+      }
+
       const supabase = getSupabaseAnonServer();
       const { data, error } = await supabase.auth.signInWithPassword({
         email: input.email.trim(),

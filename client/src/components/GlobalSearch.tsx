@@ -274,7 +274,7 @@ export function GlobalSearch({ className }: { className?: string }) {
               {isAdmin && data.users.length > 0 && (
                 <CommandGroup heading="Users">
                   {data.users.map((u) => {
-                    const href = appPath("/users");
+                    const href = appPath("/settings/users");
                     const entry: RecentEntry = {
                       id: `user-${u.id}`,
                       label: `${u.name ?? u.email ?? ""} (${u.role})`,

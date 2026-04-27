@@ -30,6 +30,8 @@ export type AppNavItem = {
   icon: LucideIcon;
   /** Dot path into `nav.sidebarCounts`, e.g. `facilities.branches` or `inventory.stockOverview`. */
   navCountBadge?: string;
+  /** When true, item is shown only to admins (e.g. Settings → Users). */
+  adminOnly?: boolean;
 };
 
 export type AppNavGroup = {
@@ -196,7 +198,6 @@ export const SIDEBAR_GROUPS_ADMIN: AppNavGroup[] = [
     adminOnly: true,
     items: [
       { label: "Vendors", path: appPath("/vendors"), icon: Users },
-      { label: "Users", path: appPath("/users"), icon: Users },
       { label: "Pending Users", path: appPath("/pending-users"), icon: Users },
       { label: "Notifications", path: appPath("/email-notifications"), icon: Mail },
     ],
@@ -206,6 +207,7 @@ export const SIDEBAR_GROUPS_ADMIN: AppNavGroup[] = [
 /** Standalone bottom items, exact order: Settings, then Activity Log (not in collapsible groups). */
 export const SIDEBAR_BOTTOM: AppNavItem[] = [
   { label: "Settings", path: appPath("/dashboard-settings"), icon: Settings },
+  { label: "Users", path: appPath("/settings/users"), icon: Users, adminOnly: true },
   { label: "Activity Log", path: appPath("/activity-log"), icon: History },
 ];
 
@@ -247,9 +249,10 @@ const GROUP_PREFIXES: { groupId: string; pathPrefix: string }[] = [
   { groupId: "reports", pathPrefix: appPath("/reports") },
   { groupId: "reports", pathPrefix: appPath("/report-scheduling") },
   { groupId: "administration", pathPrefix: appPath("/vendors") },
-  { groupId: "administration", pathPrefix: appPath("/users") },
   { groupId: "administration", pathPrefix: appPath("/pending-users") },
   { groupId: "administration", pathPrefix: appPath("/email-notifications") },
+  { groupId: "settings", pathPrefix: appPath("/settings") },
+  { groupId: "settings", pathPrefix: appPath("/dashboard-settings") },
 ];
 
 /** Longest-prefix match so `/app/assets/123` maps to `assets`. */
@@ -277,6 +280,9 @@ export function flattenNavItems(role: string | undefined): AppNavItem[] {
     if (g.adminOnly && !isAdmin) continue;
     items.push(...g.items);
   }
-  items.push(...SIDEBAR_BOTTOM);
+  for (const item of SIDEBAR_BOTTOM) {
+    if (item.adminOnly && !isAdmin) continue;
+    items.push(item);
+  }
   return items;
 }

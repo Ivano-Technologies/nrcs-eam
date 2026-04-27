@@ -151,7 +151,10 @@ export function SidebarGroupedNav({
   }, [q]);
 
   const topItems = useMemo(() => filterItems(SIDEBAR_TOP, searchQuery), [searchQuery]);
-  const bottomItems = useMemo(() => filterItems(SIDEBAR_BOTTOM, searchQuery), [searchQuery]);
+  const bottomItems = useMemo(() => {
+    const items = filterItems(SIDEBAR_BOTTOM, searchQuery);
+    return items.filter((i) => !i.adminOnly || isAdmin);
+  }, [searchQuery, isAdmin]);
 
   const renderItemButton = (item: AppNavItem, subsectionIndex?: number) => {
     const base = item.path.replace(/\/$/, "") || "/";
