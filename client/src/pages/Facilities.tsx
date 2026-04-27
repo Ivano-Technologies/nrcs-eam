@@ -69,6 +69,8 @@ type FacilityForm = {
   address: string;
   city: string;
   state: string;
+  latitude: string;
+  longitude: string;
   postalCode: string;
   contactPerson: string;
   contactPhone: string;
@@ -84,6 +86,8 @@ const emptyForm = (): FacilityForm => ({
   address: "",
   city: "",
   state: "",
+  latitude: "",
+  longitude: "",
   postalCode: "",
   contactPerson: "",
   contactPhone: "",
@@ -282,12 +286,32 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
     address: form.address || undefined,
     city: form.city || undefined,
     state: form.state || undefined,
+    latitude: form.latitude || undefined,
+    longitude: form.longitude || undefined,
     postalCode: form.postalCode || undefined,
     contactPerson: form.contactPerson || undefined,
     contactPhone: form.contactPhone || undefined,
     contactEmail: form.contactEmail || undefined,
     isActive: form.isActive,
   });
+
+  const validateCoordinates = (form: FacilityForm): string | null => {
+    const latRaw = form.latitude.trim();
+    const lonRaw = form.longitude.trim();
+    if (latRaw) {
+      const lat = Number(latRaw);
+      if (!Number.isFinite(lat) || lat < -90 || lat > 90) {
+        return "Latitude must be a number between -90 and 90.";
+      }
+    }
+    if (lonRaw) {
+      const lon = Number(lonRaw);
+      if (!Number.isFinite(lon) || lon < -180 || lon > 180) {
+        return "Longitude must be a number between -180 and 180.";
+      }
+    }
+    return null;
+  };
 
   const downloadBase64 = (base64: string, filename: string) => {
     const bytes = atob(base64);
@@ -446,6 +470,8 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
               <Button
                 onClick={() => {
                   if (!createForm.name.trim()) return toast.error("Facility name is required");
+                  const coordinateError = validateCoordinates(createForm);
+                  if (coordinateError) return toast.error(coordinateError);
                   createMutation.mutate(toPayload(createForm));
                 }}
               >
@@ -552,7 +578,11 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => updateMutation.mutate({ id: f.id, ...toPayload(editForm) })}
+                                onClick={() => {
+                                  const coordinateError = validateCoordinates(editForm);
+                                  if (coordinateError) return toast.error(coordinateError);
+                                  updateMutation.mutate({ id: f.id, ...toPayload(editForm) });
+                                }}
                               >
                                 <Save className="h-4 w-4" />
                               </Button>
@@ -575,6 +605,8 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
                                     address: f.address ?? "",
                                     city: f.city ?? "",
                                     state: f.state ?? "",
+                                    latitude: f.latitude ?? "",
+                                    longitude: f.longitude ?? "",
                                     postalCode: f.postalCode ?? "",
                                     contactPerson: f.contactPerson ?? "",
                                     contactPhone: f.contactPhone ?? "",
@@ -684,6 +716,22 @@ function FacilityFormFields(props: {
       <div className="md:col-span-2"><Label>Address</Label><Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></div>
       <div><Label>City</Label><Input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} /></div>
       <div><Label>State</Label><Input value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} /></div>
+      <div>
+        <Label>Latitude</Label>
+        <Input
+          value={form.latitude}
+          onChange={(e) => setForm({ ...form, latitude: e.target.value })}
+          placeholder="-90 to 90 (optional)"
+        />
+      </div>
+      <div>
+        <Label>Longitude</Label>
+        <Input
+          value={form.longitude}
+          onChange={(e) => setForm({ ...form, longitude: e.target.value })}
+          placeholder="-180 to 180 (optional)"
+        />
+      </div>
       <div><Label>Postal Code</Label><Input value={form.postalCode} onChange={(e) => setForm({ ...form, postalCode: e.target.value })} /></div>
       <div><Label>Contact</Label><Input value={form.contactPerson} onChange={(e) => setForm({ ...form, contactPerson: e.target.value })} /></div>
       <div><Label>Phone</Label><Input value={form.contactPhone} onChange={(e) => setForm({ ...form, contactPhone: e.target.value })} /></div>
