@@ -19,12 +19,6 @@ type SessionPayload = {
   user: User;
 };
 
-type MagicLinkPayload = {
-  actionLink: string;
-  hashedToken: string;
-  emailOtp: string | null;
-};
-
 function requireEnv(name: string): string {
   const value = process.env[name]?.trim();
   if (!value) {
@@ -145,28 +139,6 @@ export async function signInTestUser(page: Page): Promise<void> {
   await page.goto("/app");
   await page.waitForURL(/\/app(\/|$)/, { timeout: 30_000 });
   await page.getByRole("button", { name: /E2E Admin/i }).waitFor({ state: "visible", timeout: 20_000 });
-}
-
-export async function generateMagicLinkForTestUser(): Promise<MagicLinkPayload> {
-  await createTestUserInSupabase();
-  const admin = createAdminClient();
-  const { data, error } = await admin.auth.admin.generateLink({
-    type: "magiclink",
-    email: testUser.email,
-  });
-  if (error || !data.properties) {
-    throw new Error(`[e2e auth] generateLink failed: ${error?.message ?? "no properties"}`);
-  }
-  const actionLink = data.properties.action_link ?? "";
-  const hashedToken = data.properties.hashed_token ?? "";
-  if (!actionLink || !hashedToken) {
-    throw new Error("[e2e auth] generateLink missing action_link or hashed_token");
-  }
-  return {
-    actionLink,
-    hashedToken,
-    emailOtp: data.properties.email_otp ?? null,
-  };
 }
 
 export async function injectSessionIntoContext(

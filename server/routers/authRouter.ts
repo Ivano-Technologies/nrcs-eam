@@ -52,41 +52,24 @@ export const authRouter = router({
       });
     }),
 
-  requestMagicLink: publicProcedure
+  requestPasswordReset: publicProcedure
     .input(z.object({ email: emailSchema }))
     .mutation(async ({ input }) => {
-      const user = await db.getUserByEmailLowercase(input.email);
-      if (!user) {
-        return { success: false, message: "No account found with this email" };
-      }
-      if (!user.authUserId) {
-        return {
-          success: false,
-          message:
-            "This account is not linked to the new sign-in system yet. Please contact an administrator.",
-        };
-      }
       const frontend =
         process.env.FRONTEND_ORIGIN?.replace(/\/$/, "") ||
         process.env.VITE_APP_URL?.replace(/\/$/, "") ||
         "http://localhost:3000";
       const supabase = getSupabaseAnonServer();
-      const { error } = await supabase.auth.signInWithOtp({
-        email: input.email.trim(),
-        options: {
-          emailRedirectTo: `${frontend}/auth/verify`,
-        },
+      const { error } = await supabase.auth.resetPasswordForEmail(input.email.trim(), {
+        redirectTo: `${frontend}/reset-password`,
       });
       if (error) {
-        console.error("[requestMagicLink]", error);
-        return {
-          success: false,
-          message: error.message || "Failed to send magic link",
-        };
+        console.error("[requestPasswordReset]", error.message);
       }
+      // Never reveal account existence; always return success.
       return {
-        success: true,
-        message: "Check your email for a sign-in link from Supabase.",
+        success: true as const,
+        message: "If an account exists for that email, a password reset link has been sent.",
       };
     }),
 
@@ -189,75 +172,6 @@ export const authRouter = router({
         supabaseUserId: data.user.id,
       });
       await db.touchUserLastSignedInById(appUser.id);
-      return { success: true as const };
-    }),
-
-  verifyOtp: publicProcedure
-    .input(
-      z.object({
-        email: emailSchema,
-        token: z.string().min(1),
-        type: z.enum(["email", "magiclink", "signup", "recovery", "invite"]),
-      })
-    )
-    .mutation(async ({ input, ctx }) => {
-      const supabase = getSupabaseAnonServer();
-      const { data, error } = await supabase.auth.verifyOtp({
-        email: input.email.trim(),
-        token: input.token.trim(),
-        type: input.type,
-      });
-      if (error || !data.session) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: error?.message ?? "Invalid or expired code",
-        });
-      }
-      setSessionCookies(ctx.req, ctx.res, data.session);
-      return { success: true as const };
-    }),
-
-  /**
-   * After Supabase redirects with tokens in the URL hash, the client sends them once
-   * so we can set httpOnly cookies.
-   */
-  setSessionFromTokens: publicProcedure
-    .input(
-      z.object({
-        access_token: z.string().min(1),
-        refresh_token: z.string().min(1),
-        expires_in: z.number().optional(),
-      })
-    )
-    .mutation(async ({ input, ctx }) => {
-      const supabase = getSupabaseAnonServer();
-      const { data, error } = await supabase.auth.getUser(input.access_token);
-      if (error || !data.user) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "Invalid access token",
-        });
-      }
-      const appUser =
-        (await db.getUserByAuthUserId(data.user.id)) ??
-        (data.user.email
-          ? await db.getUserByEmailLowercase(data.user.email)
-          : undefined);
-      if (!appUser) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "No application account for this user",
-        });
-      }
-      setSessionCookies(ctx.req, ctx.res, {
-        access_token: input.access_token,
-        refresh_token: input.refresh_token,
-        expires_in: input.expires_in,
-      });
-      await db.upsertUser({
-        openId: appUser.openId,
-        lastSignedIn: new Date(),
-      });
       return { success: true as const };
     }),
 
