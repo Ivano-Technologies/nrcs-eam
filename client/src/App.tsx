@@ -4,7 +4,6 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import Signup from "./pages/Signup";
 import Login from "./pages/Login";
-import VerifyMagicLink from "@/pages/VerifyMagicLink";
 import ResetPassword from "@/pages/auth/ResetPassword";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "next-themes";
@@ -19,7 +18,6 @@ function Router() {
     <Switch>
       <Route path="/login" component={Login} />
       <Route path="/signup" component={Signup} />
-      <Route path="/auth/verify" component={VerifyMagicLink} />
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/legal/terms" component={TermsOfService} />
       <Route path="/legal/privacy" component={PrivacyPolicy} />

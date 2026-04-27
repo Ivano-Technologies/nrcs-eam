@@ -20,7 +20,7 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [magicLinkMessage, setMagicLinkMessage] = useState<string | null>(null);
+  const [resetMessage, setResetMessage] = useState<string | null>(null);
 
   const loginMutation = trpc.auth.loginWithPassword.useMutation({
     onSuccess: () => {
@@ -31,29 +31,21 @@ export default function Login() {
     },
   });
 
-  const magicLinkMutation = trpc.auth.requestMagicLink.useMutation({
+  const passwordResetMutation = trpc.auth.requestPasswordReset.useMutation({
     onSuccess: (data) => {
-      setMagicLinkMessage(
-        data.success
-          ? data.message
-          : data.message || "Could not send magic link"
-      );
-      if (!data.success) {
-        setErrorMessage(data.message);
-      } else {
-        setErrorMessage(null);
-      }
+      setResetMessage(data.message);
+      setErrorMessage(null);
     },
     onError: (error: { message?: string }) => {
-      setMagicLinkMessage(null);
-      setErrorMessage(error.message || "Failed to send magic link");
+      setResetMessage(null);
+      setErrorMessage(error.message || "Failed to send reset email");
     },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
-    setMagicLinkMessage(null);
+    setResetMessage(null);
 
     if (!email.trim()) {
       setErrorMessage("Please enter your email");
@@ -67,17 +59,17 @@ export default function Login() {
     loginMutation.mutate({ email: email.trim(), password });
   };
 
-  const handleMagicLink = (e: React.FormEvent) => {
+  const handlePasswordReset = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     setErrorMessage(null);
-    setMagicLinkMessage(null);
+    setResetMessage(null);
 
     if (!email.trim()) {
-      setErrorMessage("Please enter your email to receive a magic link");
+      setErrorMessage("Please enter your email to request a password reset");
       return;
     }
 
-    magicLinkMutation.mutate({ email: email.trim() });
+    passwordResetMutation.mutate({ email: email.trim() });
   };
 
   return (
@@ -92,9 +84,9 @@ export default function Login() {
               <AlertDescription>{errorMessage}</AlertDescription>
             </Alert>
           )}
-          {magicLinkMessage && !errorMessage && (
+          {resetMessage && !errorMessage && (
             <Alert className="text-left">
-              <AlertDescription>{magicLinkMessage}</AlertDescription>
+              <AlertDescription>{resetMessage}</AlertDescription>
             </Alert>
           )}
 
@@ -109,7 +101,7 @@ export default function Login() {
               placeholder="your@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              disabled={loginMutation.isPending || magicLinkMutation.isPending}
+              disabled={loginMutation.isPending || passwordResetMutation.isPending}
               autoComplete="email"
               required
               className={authInputClass}
@@ -135,30 +127,19 @@ export default function Login() {
             type="submit"
             data-testid="login-password-submit"
             className={authPrimaryButtonClass}
-            disabled={loginMutation.isPending || magicLinkMutation.isPending}
+            disabled={loginMutation.isPending || passwordResetMutation.isPending}
           >
             {loginMutation.isPending ? "Signing in..." : "Sign in"}
           </Button>
-
-          <div className="relative py-2">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-gray-200" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-white px-2 text-gray-500 dark:bg-gray-950">Or</span>
-            </div>
-          </div>
-
-          <Button
+          <button
             type="button"
-            variant="outline"
-            className="w-full border-[#1E3A8A] text-[#1E3A8A] hover:bg-[#1E3A8A]/5"
-            data-testid="login-magic-link-submit"
-            disabled={loginMutation.isPending || magicLinkMutation.isPending}
-            onClick={handleMagicLink}
+            data-testid="login-forgot-password"
+            className="w-full text-sm text-[#1E3A8A] underline-offset-2 hover:underline disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={loginMutation.isPending || passwordResetMutation.isPending}
+            onClick={handlePasswordReset}
           >
-            {magicLinkMutation.isPending ? "Sending link…" : "Email me a magic link"}
-          </Button>
+            {passwordResetMutation.isPending ? "Sending reset link..." : "Forgot password?"}
+          </button>
 
           <p className="pt-2 text-center text-sm text-gray-600">
             Don&apos;t have an account?{" "}
