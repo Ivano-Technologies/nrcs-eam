@@ -1,0 +1,9 @@
+{
+  "name": "nrcs-user-manual-output",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "docx": "^9.5.1",
+    "pptxgenjs": "^4.0.1"
+  }
+}

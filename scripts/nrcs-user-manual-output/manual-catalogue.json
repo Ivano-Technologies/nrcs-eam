@@ -1,0 +1,342 @@
+[
+  {
+    "itemCode": "HEBFOOD01",
+    "name": "High Energy Biscuits (HEB), 100g packet",
+    "category": "Food"
+  },
+  {
+    "itemCode": "RICFOOD02",
+    "name": "Rice, white, 50kg bag",
+    "category": "Food"
+  },
+  {
+    "itemCode": "OILFOOD03",
+    "name": "Vegetable Oil, 1L bottle",
+    "category": "Food"
+  },
+  {
+    "itemCode": "SUGFOOD04",
+    "name": "Sugar, white, 1kg bag",
+    "category": "Food"
+  },
+  {
+    "itemCode": "SALFOOD05",
+    "name": "Iodised Salt, 1kg bag",
+    "category": "Food"
+  },
+  {
+    "itemCode": "MILFOOD06",
+    "name": "Powdered Milk, 500g tin",
+    "category": "Food"
+  },
+  {
+    "itemCode": "TARPSHEL01",
+    "name": "Tarpaulin, 4m x 6m, white reinforced",
+    "category": "Shelter"
+  },
+  {
+    "itemCode": "TENTSHEL02",
+    "name": "Family Tent, 16 sqm",
+    "category": "Shelter"
+  },
+  {
+    "itemCode": "BLKTSHEL03",
+    "name": "Blanket, synthetic, 1.5m x 2m",
+    "category": "Shelter"
+  },
+  {
+    "itemCode": "MATTSHEL04",
+    "name": "Sleeping Mat, straw, 1.8m x 0.8m",
+    "category": "Shelter"
+  },
+  {
+    "itemCode": "PLASSHEL05",
+    "name": "Plastic Sheeting, 4m x 50m roll",
+    "category": "Shelter"
+  },
+  {
+    "itemCode": "ROPSHEL06",
+    "name": "Rope, polyester, 10mm, 100m",
+    "category": "Shelter"
+  },
+  {
+    "itemCode": "PEGSHEL07",
+    "name": "Tent Peg, galvanised, 30cm",
+    "category": "Shelter"
+  },
+  {
+    "itemCode": "JERWASH01",
+    "name": "Jerry Can, 20L collapsible",
+    "category": "WASH"
+  },
+  {
+    "itemCode": "BUCKWASH02",
+    "name": "Bucket with lid, 14L",
+    "category": "WASH"
+  },
+  {
+    "itemCode": "SOAPWASH03",
+    "name": "Soap, bar, 100g",
+    "category": "WASH"
+  },
+  {
+    "itemCode": "WATERWASH04",
+    "name": "Water Purification Tablets (Aquatabs), 33mg, strip of 10",
+    "category": "WASH"
+  },
+  {
+    "itemCode": "FILTEWASH05",
+    "name": "Household Water Filter, ceramic",
+    "category": "WASH"
+  },
+  {
+    "itemCode": "TOILETWASH06",
+    "name": "Emergency Toilet Kit",
+    "category": "WASH"
+  },
+  {
+    "itemCode": "FAIDHLTH01",
+    "name": "First Aid Kit, family",
+    "category": "Health"
+  },
+  {
+    "itemCode": "FAIDHLTH02",
+    "name": "First Aid Kit, community",
+    "category": "Health"
+  },
+  {
+    "itemCode": "ORSHLTH03",
+    "name": "ORS Sachets (Oral Rehydration Salts), sachet",
+    "category": "Health"
+  },
+  {
+    "itemCode": "MALHLTH04",
+    "name": "Mosquito Net, long-lasting insecticidal (LLIN)",
+    "category": "Health"
+  },
+  {
+    "itemCode": "PRCTHLTH05",
+    "name": "Paracetamol tablets, 500mg, pack of 100",
+    "category": "Health"
+  },
+  {
+    "itemCode": "KCOKNFI01",
+    "name": "Kitchen Set (family, IFRC standard)",
+    "category": "NFI"
+  },
+  {
+    "itemCode": "LANTNFI02",
+    "name": "Solar Lantern",
+    "category": "NFI"
+  },
+  {
+    "itemCode": "TORCHNFI04",
+    "name": "Flashlight, LED, rechargeable",
+    "category": "NFI"
+  },
+  {
+    "itemCode": "CLOTHNFI05",
+    "name": "Clothing Kit, adult",
+    "category": "NFI"
+  },
+  {
+    "itemCode": "CLOTHNFI06",
+    "name": "Clothing Kit, child",
+    "category": "NFI"
+  },
+  {
+    "itemCode": "GLOVPPE01",
+    "name": "Examination Gloves, nitrile, box of 100",
+    "category": "PPE"
+  },
+  {
+    "itemCode": "MASKPPE02",
+    "name": "Surgical Face Mask, 3-ply, box of 50",
+    "category": "PPE"
+  },
+  {
+    "itemCode": "N95PPE03",
+    "name": "N95 Respirator Mask, box of 20",
+    "category": "PPE"
+  },
+  {
+    "itemCode": "GOGPPE04",
+    "name": "Safety Goggles",
+    "category": "PPE"
+  },
+  {
+    "itemCode": "APRPPE05",
+    "name": "Apron, plastic disposable, pack of 50",
+    "category": "PPE"
+  },
+  {
+    "itemCode": "HANDPPE06",
+    "name": "Hand Sanitiser, 500ml bottle",
+    "category": "PPE"
+  },
+  {
+    "itemCode": "FLDLGHTEQP02",
+    "name": "Flood Light, LED, rechargeable",
+    "category": "Emergency Response Equipment"
+  },
+  {
+    "itemCode": "HYGKIT01",
+    "name": "Family Hygiene Kit (IFRC standard)",
+    "category": "Kits"
+  },
+  {
+    "itemCode": "SHLTKIT02",
+    "name": "Emergency Shelter Kit",
+    "category": "Kits"
+  },
+  {
+    "itemCode": "FAKIT03",
+    "name": "Family First Aid Kit",
+    "category": "Kits"
+  },
+  {
+    "itemCode": "KITCHEN01",
+    "name": "Kitchen Set (IFRC standard)",
+    "category": "Kits"
+  },
+  {
+    "itemCode": "SCHKIT01",
+    "name": "School Kit",
+    "category": "Kits"
+  },
+  {
+    "itemCode": "TOOTHBRUSH01",
+    "name": "Toothbrush",
+    "category": "Other"
+  },
+  {
+    "itemCode": "TOOTHPASTE01",
+    "name": "Toothpaste",
+    "category": "Other"
+  },
+  {
+    "itemCode": "SANPAD01",
+    "name": "Sanitary pads pack",
+    "category": "Other"
+  },
+  {
+    "itemCode": "WASHCLOTH01",
+    "name": "Washcloth",
+    "category": "Other"
+  },
+  {
+    "itemCode": "LAUNDRYSOAP01",
+    "name": "Laundry soap",
+    "category": "Other"
+  },
+  {
+    "itemCode": "COMB01",
+    "name": "Comb",
+    "category": "Other"
+  },
+  {
+    "itemCode": "HAMMER01",
+    "name": "Hammer",
+    "category": "Other"
+  },
+  {
+    "itemCode": "NAILS01",
+    "name": "Nails assortment",
+    "category": "Other"
+  },
+  {
+    "itemCode": "BANDAGE01",
+    "name": "Bandages",
+    "category": "Other"
+  },
+  {
+    "itemCode": "ANTISEPTIC01",
+    "name": "Antiseptic",
+    "category": "Other"
+  },
+  {
+    "itemCode": "PLASTER01",
+    "name": "Plasters pack",
+    "category": "Other"
+  },
+  {
+    "itemCode": "PAINRELIEF01",
+    "name": "Pain relief tablets",
+    "category": "Other"
+  },
+  {
+    "itemCode": "THERMO01",
+    "name": "Thermometer",
+    "category": "Other"
+  },
+  {
+    "itemCode": "SCISSORS01",
+    "name": "Scissors",
+    "category": "Other"
+  },
+  {
+    "itemCode": "COOKPOT01",
+    "name": "Cooking pot",
+    "category": "Other"
+  },
+  {
+    "itemCode": "FRYPAN01",
+    "name": "Frying pan",
+    "category": "Other"
+  },
+  {
+    "itemCode": "PLATES01",
+    "name": "Plates",
+    "category": "Other"
+  },
+  {
+    "itemCode": "CUPS01",
+    "name": "Cups",
+    "category": "Other"
+  },
+  {
+    "itemCode": "CUTLERY01",
+    "name": "Cutlery sets",
+    "category": "Other"
+  },
+  {
+    "itemCode": "KNIFE01",
+    "name": "Cooking knife",
+    "category": "Other"
+  },
+  {
+    "itemCode": "WATERCONT01",
+    "name": "Water container",
+    "category": "Other"
+  },
+  {
+    "itemCode": "EXBOOK01",
+    "name": "Exercise books",
+    "category": "Other"
+  },
+  {
+    "itemCode": "PENS01",
+    "name": "Pens",
+    "category": "Other"
+  },
+  {
+    "itemCode": "PENCILS01",
+    "name": "Pencils",
+    "category": "Other"
+  },
+  {
+    "itemCode": "ERASER01",
+    "name": "Eraser",
+    "category": "Other"
+  },
+  {
+    "itemCode": "RULER01",
+    "name": "Ruler",
+    "category": "Other"
+  },
+  {
+    "itemCode": "BACKPACK01",
+    "name": "Backpack",
+    "category": "Other"
+  }
+]
