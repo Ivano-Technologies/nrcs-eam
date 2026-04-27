@@ -359,6 +359,7 @@ export type SidebarNavCounts = {
     all: number;
     nationalHq: number;
     branches: number;
+    divisions: number;
     clinics: number;
     warehouses: number;
   };
@@ -386,9 +387,10 @@ export async function getNavSidebarCounts(): Promise<SidebarNavCounts | null> {
   const byType = new Map(typeRows.map((r) => [r.facilityType, r.c]));
   const all = typeRows.reduce((sum, r) => sum + r.c, 0);
   const branches = byType.get("branch") ?? 0;
+  const divisions = byType.get("division") ?? 0;
   const clinics = byType.get("clinic") ?? 0;
   const warehouses = byType.get("warehouse") ?? 0;
-  const nationalHq = byType.get("division") ?? 0;
+  const nationalHq = byType.get("national_headquarters") ?? 0;
 
   const [whRow] = await database
     .select({ c: sql<number>`cast(count(*) as int)` })
@@ -402,7 +404,7 @@ export async function getNavSidebarCounts(): Promise<SidebarNavCounts | null> {
   const [reqRow] = await database.select({ c: sql<number>`cast(count(*) as int)` }).from(requisitions);
 
   return {
-    facilities: { all, nationalHq, branches, clinics, warehouses },
+    facilities: { all, nationalHq, branches, divisions, clinics, warehouses },
     inventory: {
       stockOverview,
       tracking: null,
