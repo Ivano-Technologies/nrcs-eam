@@ -11,6 +11,7 @@ export interface ImportResult {
   imported: number;
   failed: number;
   errors: Array<{ row: number; error: string; data: any }>;
+  warnings?: Array<{ row: number; warning: string; data: any }>;
 }
 
 export interface ExportOptions {
@@ -281,6 +282,7 @@ export async function generateImportTemplate(entity: 'assets' | 'workOrders' | '
  */
 export async function exportSites(): Promise<Buffer> {
   const sites = await db.getAllSites();
+  const byId = new Map(sites.map((site) => [site.id, site]));
 
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet("Facilities");
@@ -300,7 +302,7 @@ export async function exportSites(): Promise<Buffer> {
     { header: "Latitude", key: "latitude", width: 15 },
     { header: "Longitude", key: "longitude", width: 15 },
     { header: "Facility type", key: "facilityType", width: 18 },
-    { header: "Parent facility ID", key: "parentFacilityId", width: 18 },
+    { header: "Parent facility code", key: "parentFacilityCode", width: 24 },
   ];
 
   sites.forEach((site) => {
@@ -319,7 +321,7 @@ export async function exportSites(): Promise<Buffer> {
       latitude: site.latitude,
       longitude: site.longitude,
       facilityType: site.facilityType,
-      parentFacilityId: site.parentFacilityId,
+      parentFacilityCode: site.parentFacilityId ? byId.get(site.parentFacilityId)?.code ?? "" : "",
     });
   });
   
@@ -364,6 +366,13 @@ export async function importSites(fileBuffer: any): Promise<ImportResult> {
   let imported = 0;
   let failed = 0;
   const errors: Array<{ row: number; error: string; data: any }> = [];
+  const warnings: Array<{ row: number; warning: string; data: any }> = [];
+  const existingSites = await db.getAllSites();
+  const sitesByCode = new Map(
+    existingSites
+      .filter((site) => site.code && site.code.trim())
+      .map((site) => [site.code!.trim().toUpperCase(), site.id])
+  );
   
   const rows: any[] = [];
   worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
@@ -374,11 +383,19 @@ export async function importSites(fileBuffer: any): Promise<ImportResult> {
   for (const { row, rowNumber } of rows) {
     try {
       const typeCell = normaliseFacilityType(row.getCell(14).value?.toString());
-      const parentCell = row.getCell(15).value;
+      const parentCodeCell = row.getCell(15).value?.toString()?.trim() ?? "";
       let parentFacilityId: number | null = null;
-      if (parentCell !== null && parentCell !== undefined && String(parentCell).trim() !== "") {
-        const n = Number.parseInt(String(parentCell), 10);
-        if (Number.isFinite(n)) parentFacilityId = n;
+      if (parentCodeCell) {
+        const parentByCode = sitesByCode.get(parentCodeCell.toUpperCase());
+        if (parentByCode != null) {
+          parentFacilityId = parentByCode;
+        } else {
+          warnings.push({
+            row: rowNumber,
+            warning: `Parent facility code "${parentCodeCell}" was not found. Imported without parent.`,
+            data: row.values,
+          });
+        }
       }
 
       const facilityType =
@@ -406,16 +423,6 @@ export async function importSites(fileBuffer: any): Promise<ImportResult> {
         throw new Error("Facility name is required");
       }
 
-      if (siteData.facilityType === "clinic" || siteData.facilityType === "warehouse") {
-        if (siteData.parentFacilityId == null) {
-          throw new Error("Parent facility ID is required for clinic and warehouse rows");
-        }
-        const p = await db.getSiteById(siteData.parentFacilityId);
-        if (!p || p.facilityType !== "branch") {
-          throw new Error("Parent must be an existing branch facility");
-        }
-      }
-
       await db.createSite(siteData);
       imported++;
       
@@ -434,6 +441,7 @@ export async function importSites(fileBuffer: any): Promise<ImportResult> {
     imported,
     failed,
     errors,
+    warnings,
   };
 }
 
@@ -459,7 +467,7 @@ export async function generateSiteTemplate(): Promise<Buffer> {
     { header: "Latitude", key: "latitude", width: 15 },
     { header: "Longitude", key: "longitude", width: 15 },
     { header: "Facility type (branch|division|clinic|warehouse|national_headquarters)", key: "facilityType", width: 48 },
-    { header: "Parent facility ID (required for clinic/warehouse)", key: "parentFacilityId", width: 36 },
+    { header: "Parent facility code (optional)", key: "parentFacilityCode", width: 36 },
   ];
   
   // Add sample rows
@@ -478,7 +486,7 @@ export async function generateSiteTemplate(): Promise<Buffer> {
     latitude: "9.0579",
     longitude: "7.4951",
     facilityType: "branch",
-    parentFacilityId: "",
+    parentFacilityCode: "",
   });
 
   worksheet.addRow({
@@ -496,7 +504,7 @@ export async function generateSiteTemplate(): Promise<Buffer> {
     latitude: "6.5244",
     longitude: "3.3792",
     facilityType: "branch",
-    parentFacilityId: "",
+    parentFacilityCode: "",
   });
   
   // Style header

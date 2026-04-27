@@ -85,7 +85,7 @@ describe("Bulk facility import", () => {
       { header: "Latitude", key: "latitude", width: 15 },
       { header: "Longitude", key: "longitude", width: 15 },
       { header: "Facility type (branch|division|clinic|warehouse|national_headquarters)", key: "facilityType", width: 48 },
-      { header: "Parent facility ID (required for clinic/warehouse)", key: "parentFacilityId", width: 36 },
+      { header: "Parent facility code (optional)", key: "parentFacilityCode", width: 36 },
     ];
 
     worksheet.addRow({
@@ -103,7 +103,7 @@ describe("Bulk facility import", () => {
       latitude: "9.0579",
       longitude: "7.4951",
       facilityType: "National Headquarters",
-      parentFacilityId: "",
+      parentFacilityCode: "",
     });
 
     worksheet.addRow({
@@ -121,7 +121,7 @@ describe("Bulk facility import", () => {
       latitude: "6.5244",
       longitude: "3.3792",
       facilityType: "branch",
-      parentFacilityId: "",
+      parentFacilityCode: "",
     });
 
     const buffer = await workbook.xlsx.writeBuffer();
@@ -159,7 +159,7 @@ describe("Bulk facility import", () => {
       { header: "Latitude", key: "latitude", width: 15 },
       { header: "Longitude", key: "longitude", width: 15 },
       { header: "Facility type (branch|division|clinic|warehouse|national_headquarters)", key: "facilityType", width: 48 },
-      { header: "Parent facility ID (required for clinic/warehouse)", key: "parentFacilityId", width: 36 },
+      { header: "Parent facility code (optional)", key: "parentFacilityCode", width: 36 },
     ];
 
     worksheet.addRow({
@@ -168,7 +168,7 @@ describe("Bulk facility import", () => {
       city: "Invalid City",
       state: "Invalid State",
       facilityType: "branch",
-      parentFacilityId: "",
+      parentFacilityCode: "",
     });
 
     const buffer = await workbook.xlsx.writeBuffer();
@@ -183,6 +183,148 @@ describe("Bulk facility import", () => {
     expect(result.errors).toBeDefined();
     expect(result.errors.length).toBeGreaterThan(0);
   });
+
+  it("should set parentFacilityId when parent code exists", async () => {
+    const ctx = createAdminContext();
+    const caller = appRouter.createCaller(ctx);
+    const seed = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const parentCode = `P${seed}`;
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Facilities");
+    worksheet.columns = [
+      { header: "Code", key: "code", width: 18 },
+      { header: "Facility name*", key: "name", width: 30 },
+      { header: "Address", key: "address", width: 40 },
+      { header: "City", key: "city", width: 20 },
+      { header: "State", key: "state", width: 20 },
+      { header: "Postal code", key: "postalCode", width: 16 },
+      { header: "Country", key: "country", width: 20 },
+      { header: "Contact person", key: "contactPerson", width: 25 },
+      { header: "Contact phone", key: "contactPhone", width: 20 },
+      { header: "Contact email", key: "contactEmail", width: 30 },
+      { header: "Status (Active/Inactive)", key: "status", width: 20 },
+      { header: "Latitude", key: "latitude", width: 15 },
+      { header: "Longitude", key: "longitude", width: 15 },
+      { header: "Facility type (branch|division|clinic|warehouse|national_headquarters)", key: "facilityType", width: 48 },
+      { header: "Parent facility code (optional)", key: "parentFacilityCode", width: 36 },
+    ];
+
+    worksheet.addRow({
+      code: parentCode,
+      name: `Parent Branch ${seed}`,
+      facilityType: "branch",
+      parentFacilityCode: "",
+    });
+    worksheet.addRow({
+      code: `C${seed}`,
+      name: `Child Clinic ${seed}`,
+      facilityType: "clinic",
+      parentFacilityCode: parentCode,
+    });
+
+    const base64Data = Buffer.from(await workbook.xlsx.writeBuffer()).toString("base64");
+    const result = await caller.bulkOperations.importSites({ fileData: base64Data });
+    expect(result.imported).toBeGreaterThanOrEqual(2);
+    expect(result.failed).toBe(0);
+    expect((result.warnings ?? []).length).toBe(0);
+
+    const created = await caller.sites.list();
+    const parent = created.find((s) => s.code === parentCode);
+    const child = created.find((s) => s.code === `C${seed}`);
+    expect(parent).toBeDefined();
+    expect(child).toBeDefined();
+    expect(child?.parentFacilityId).toBe(parent?.id ?? null);
+  }, 15000);
+
+  it("should import row and warn when parent code is unknown", async () => {
+    const ctx = createAdminContext();
+    const caller = appRouter.createCaller(ctx);
+    const seed = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const unknownParentCode = `UNKNOWN-${seed}`;
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Facilities");
+    worksheet.columns = [
+      { header: "Code", key: "code", width: 18 },
+      { header: "Facility name*", key: "name", width: 30 },
+      { header: "Address", key: "address", width: 40 },
+      { header: "City", key: "city", width: 20 },
+      { header: "State", key: "state", width: 20 },
+      { header: "Postal code", key: "postalCode", width: 16 },
+      { header: "Country", key: "country", width: 20 },
+      { header: "Contact person", key: "contactPerson", width: 25 },
+      { header: "Contact phone", key: "contactPhone", width: 20 },
+      { header: "Contact email", key: "contactEmail", width: 30 },
+      { header: "Status (Active/Inactive)", key: "status", width: 20 },
+      { header: "Latitude", key: "latitude", width: 15 },
+      { header: "Longitude", key: "longitude", width: 15 },
+      { header: "Facility type (branch|division|clinic|warehouse|national_headquarters)", key: "facilityType", width: 48 },
+      { header: "Parent facility code (optional)", key: "parentFacilityCode", width: 36 },
+    ];
+
+    worksheet.addRow({
+      code: `U${seed}`,
+      name: `Unknown Parent Clinic ${seed}`,
+      facilityType: "clinic",
+      parentFacilityCode: unknownParentCode,
+    });
+
+    const base64Data = Buffer.from(await workbook.xlsx.writeBuffer()).toString("base64");
+    const result = await caller.bulkOperations.importSites({ fileData: base64Data });
+    expect(result.failed).toBe(0);
+    expect(result.imported).toBeGreaterThanOrEqual(1);
+    expect(result.warnings?.some((w) => String(w.warning).includes(unknownParentCode))).toBe(true);
+
+    const created = await caller.sites.list();
+    const child = created.find((s) => s.code === `U${seed}`);
+    expect(child).toBeDefined();
+    expect(child?.parentFacilityId).toBeNull();
+  }, 15000);
+
+  it("should import row cleanly when parent code is empty", async () => {
+    const ctx = createAdminContext();
+    const caller = appRouter.createCaller(ctx);
+    const seed = Math.random().toString(36).substring(2, 6).toUpperCase();
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Facilities");
+    worksheet.columns = [
+      { header: "Code", key: "code", width: 18 },
+      { header: "Facility name*", key: "name", width: 30 },
+      { header: "Address", key: "address", width: 40 },
+      { header: "City", key: "city", width: 20 },
+      { header: "State", key: "state", width: 20 },
+      { header: "Postal code", key: "postalCode", width: 16 },
+      { header: "Country", key: "country", width: 20 },
+      { header: "Contact person", key: "contactPerson", width: 25 },
+      { header: "Contact phone", key: "contactPhone", width: 20 },
+      { header: "Contact email", key: "contactEmail", width: 30 },
+      { header: "Status (Active/Inactive)", key: "status", width: 20 },
+      { header: "Latitude", key: "latitude", width: 15 },
+      { header: "Longitude", key: "longitude", width: 15 },
+      { header: "Facility type (branch|division|clinic|warehouse|national_headquarters)", key: "facilityType", width: 48 },
+      { header: "Parent facility code (optional)", key: "parentFacilityCode", width: 36 },
+    ];
+
+    worksheet.addRow({
+      code: `E${seed}`,
+      name: `Empty Parent Warehouse ${seed}`,
+      facilityType: "warehouse",
+      parentFacilityCode: "",
+    });
+
+    const base64Data = Buffer.from(await workbook.xlsx.writeBuffer()).toString("base64");
+    const result = await caller.bulkOperations.importSites({ fileData: base64Data });
+    expect(result.failed).toBe(0);
+    expect(result.imported).toBeGreaterThanOrEqual(1);
+    expect(result.warnings ?? []).toEqual([]);
+
+    const created = await caller.sites.list();
+    const row = created.find((s) => s.code === `E${seed}`);
+    expect(row).toBeDefined();
+    expect(row?.parentFacilityId).toBeNull();
+  }, 15000);
 
   it("should export existing facilities to Excel", async () => {
     const ctx = createAdminContext();
