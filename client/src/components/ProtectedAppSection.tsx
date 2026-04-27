@@ -197,6 +197,9 @@ export default function ProtectedAppSection() {
           <Route path="/app/facilities/branches">
             <FacilitiesTabRoute segment="branches" />
           </Route>
+          <Route path="/app/facilities/divisions">
+            <FacilitiesTabRoute segment="divisions" />
+          </Route>
           <Route path="/app/facilities/clinics">
             <FacilitiesTabRoute segment="clinics" />
           </Route>

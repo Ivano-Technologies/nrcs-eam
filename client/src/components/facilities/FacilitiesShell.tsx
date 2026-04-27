@@ -11,6 +11,7 @@ const TABS: { segment: FacilitiesSegment; label: string; path: string }[] = [
   { segment: "all", label: "All", path: "/facilities/all" },
   { segment: "national-hq", label: "National HQ", path: "/facilities/national-hq" },
   { segment: "branches", label: "Branches", path: "/facilities/branches" },
+  { segment: "divisions", label: "Divisions", path: "/facilities/divisions" },
   { segment: "clinics", label: "Clinics", path: "/facilities/clinics" },
   { segment: "warehouses", label: "Warehouses", path: "/facilities/warehouses" },
 ];

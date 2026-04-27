@@ -5,12 +5,19 @@ import {
 } from "@shared/facilities";
 
 /** URL segment under `/app/facilities/...` (not including `all` for root redirect target). */
-export type FacilitiesSegment = "all" | "national-hq" | "branches" | "clinics" | "warehouses";
+export type FacilitiesSegment =
+  | "all"
+  | "national-hq"
+  | "branches"
+  | "divisions"
+  | "clinics"
+  | "warehouses";
 
 export function segmentToListFilter(segment: FacilitiesSegment): FacilityType | undefined {
   if (segment === "all") return undefined;
-  if (segment === "national-hq") return "division";
+  if (segment === "national-hq") return "national_headquarters";
   if (segment === "branches") return "branch";
+  if (segment === "divisions") return "division";
   if (segment === "clinics") return "clinic";
   return "warehouse";
 }
@@ -22,7 +29,7 @@ export function segmentToNewTypeQuery(segment: FacilitiesSegment): string | unde
 
 /**
  * Parse `?type=` from the create URL. Accepts enum values, labels (e.g. "Warehouse", "Clinic"),
- * and common aliases for divisions (National HQ).
+ * and common aliases for National HQ (national_headquarters).
  */
 export function parseFacilityTypeFromSearch(search: string): FacilityType | undefined {
   const raw = new URLSearchParams(search).get("type")?.trim();
@@ -35,7 +42,7 @@ export function parseFacilityTypeFromSearch(search: string): FacilityType | unde
   );
   if (byLabel) return byLabel;
   if (lower === "national hq" || lower === "national-hq" || lower === "headquarters" || lower === "hq") {
-    return "division";
+    return "national_headquarters";
   }
   return undefined;
 }

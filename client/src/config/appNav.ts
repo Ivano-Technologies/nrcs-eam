@@ -83,6 +83,12 @@ export const SIDEBAR_GROUPS: AppNavGroup[] = [
         navCountBadge: "facilities.branches",
       },
       {
+        label: "Divisions",
+        path: appPath("/facilities/divisions"),
+        icon: MapPin,
+        navCountBadge: "facilities.divisions",
+      },
+      {
         label: "Clinics",
         path: appPath("/facilities/clinics"),
         icon: MapPin,
@@ -216,6 +222,7 @@ const GROUP_PREFIXES: { groupId: string; pathPrefix: string }[] = [
   { groupId: "facilities", pathPrefix: appPath("/facilities/all") },
   { groupId: "facilities", pathPrefix: appPath("/facilities/national-hq") },
   { groupId: "facilities", pathPrefix: appPath("/facilities/branches") },
+  { groupId: "facilities", pathPrefix: appPath("/facilities/divisions") },
   { groupId: "facilities", pathPrefix: appPath("/facilities/clinics") },
   { groupId: "facilities", pathPrefix: appPath("/facilities/warehouses") },
   { groupId: "facilities", pathPrefix: appPath("/facilities/new") },
