@@ -27,6 +27,10 @@ import { nanoid } from "nanoid";
 import { FACILITY_TYPE_VALUES, type FacilityType } from "../shared/facilities";
 
 const facilityTypeZod = z.enum(FACILITY_TYPE_VALUES);
+const facilityTypeNormalizingZod = z.preprocess(
+  (value) => (typeof value === "string" ? value.toLowerCase().trim().replace(/\s+/g, "_") : value),
+  facilityTypeZod
+);
 
 async function resolveFacilityParentForSave(params: {
   facilityType: FacilityType;
@@ -38,18 +42,18 @@ async function resolveFacilityParentForSave(params: {
   const rawParent =
     params.parentFacilityId === undefined ? undefined : params.parentFacilityId;
 
-  if (t === "branch") {
+  if (t === "branch" || t === "national_headquarters") {
     if (rawParent != null) {
       throw new TRPCError({
         code: "BAD_REQUEST",
-        message: "A branch cannot have a parent facility.",
+        message: "A branch or national headquarters cannot have a parent facility.",
       });
     }
     return null;
   }
 
   const parentId = rawParent ?? null;
-  if (t !== "division" && parentId == null) {
+  if ((t === "clinic" || t === "warehouse") && parentId == null) {
     throw new TRPCError({
       code: "BAD_REQUEST",
       message: "Clinics and warehouses must belong to a parent branch.",
@@ -152,7 +156,7 @@ export const appRouter = router({
         z.object({
           code: z.string().trim().min(1).max(64).optional(),
           name: z.string().min(1),
-          facilityType: facilityTypeZod.optional().default("branch"),
+          facilityType: facilityTypeNormalizingZod.optional().default("branch"),
           parentFacilityId: z.number().nullable().optional(),
           address: z.string().optional(),
           city: z.string().optional(),
@@ -185,7 +189,7 @@ export const appRouter = router({
           id: z.number(),
           code: z.string().trim().min(1).max(64).optional(),
           name: z.string().min(1).optional(),
-          facilityType: facilityTypeZod.optional(),
+          facilityType: facilityTypeNormalizingZod.optional(),
           parentFacilityId: z.number().nullable().optional(),
           address: z.string().optional(),
           city: z.string().optional(),

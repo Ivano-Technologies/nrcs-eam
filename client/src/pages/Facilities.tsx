@@ -58,6 +58,7 @@ const TYPE_BADGE: Record<FacilityType, string> = {
   division: "bg-violet-600/15 text-violet-800 border-violet-200 dark:text-violet-200",
   clinic: "bg-emerald-600/15 text-emerald-800 border-emerald-200 dark:text-emerald-200",
   warehouse: "bg-amber-600/15 text-amber-900 border-amber-200 dark:text-amber-200",
+  national_headquarters: "bg-rose-600/15 text-rose-900 border-rose-200 dark:text-rose-200",
 };
 
 type FacilityForm = {
@@ -643,7 +644,7 @@ function FacilityFormFields(props: {
   parentOptions: Array<{ id: number; name: string; facilityType: string }>;
 }) {
   const { form, setForm, parentOptions } = props;
-  const canChooseParent = form.facilityType !== "branch";
+  const canChooseParent = form.facilityType !== "branch" && form.facilityType !== "national_headquarters";
   const showBranchParents = form.facilityType === "clinic" || form.facilityType === "warehouse";
   const filteredParents = showBranchParents
     ? parentOptions.filter((p) => p.facilityType === "branch")
