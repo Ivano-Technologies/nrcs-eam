@@ -133,6 +133,7 @@ function DashboardLayoutContent({
     if (role === "admin") return "Admin";
     if (role === "manager") return "Manager";
     if (role === "staff") return "Staff";
+    if (role === "field") return "Field";
     return "Field";
   }, [user?.role]);
   const [effectiveRole, setEffectiveRole] = useState<UserRole>(actualRole);

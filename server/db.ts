@@ -168,6 +168,10 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       values.siteId = user.siteId;
       updateSet.siteId = user.siteId;
     }
+    if (user.status !== undefined) {
+      values.status = user.status;
+      updateSet.status = user.status;
+    }
 
     if (!values.lastSignedIn) {
       values.lastSignedIn = new Date();
@@ -200,11 +204,89 @@ export async function getAllUsers() {
   return await db.select().from(users).orderBy(desc(users.createdAt));
 }
 
-export async function updateUserRole(userId: number, role: "admin" | "manager" | "staff" | "user") {
+export type AdminUserListRow = {
+  user: typeof users.$inferSelect;
+  facilityName: string | null;
+};
+
+/** Admin user directory with optional filters and joined facility name. */
+export async function listAdminUsersWithFacilities(filters?: {
+  search?: string;
+  role?: "admin" | "manager" | "staff" | "field" | "user";
+  facilityId?: number;
+  status?: "active" | "inactive" | "pending";
+}): Promise<AdminUserListRow[]> {
+  const database = await getDb();
+  if (!database) return [];
+
+  const conditions = [];
+  if (filters?.role) {
+    conditions.push(eq(users.role, filters.role));
+  }
+  if (filters?.facilityId != null) {
+    conditions.push(eq(users.siteId, filters.facilityId));
+  }
+  if (filters?.status) {
+    conditions.push(eq(users.status, filters.status));
+  }
+  const q = filters?.search?.trim();
+  if (q) {
+    const pattern = `%${q.replace(/%/g, "\\%").replace(/_/g, "\\_")}%`;
+    conditions.push(or(ilike(users.name, pattern), ilike(users.email, pattern)));
+  }
+
+  return await database
+    .select({
+      user: users,
+      facilityName: sites.name,
+    })
+    .from(users)
+    .leftJoin(sites, eq(users.siteId, sites.id))
+    .where(conditions.length ? and(...conditions) : undefined)
+    .orderBy(desc(users.createdAt));
+}
+
+export async function updateUserRole(
+  userId: number,
+  role: "admin" | "manager" | "staff" | "user" | "field"
+) {
   const db = await getDb();
   if (!db) return null;
   await db.update(users).set({ role }).where(eq(users.id, userId));
   return await db.select().from(users).where(eq(users.id, userId)).limit(1).then(r => r[0]);
+}
+
+/** Insert `public.users` row after Supabase Auth user creation (admin invite / create user). */
+export async function insertAppUserLinkedToAuth(params: {
+  authUserId: string;
+  email: string;
+  name: string;
+  role: "admin" | "manager" | "staff" | "user" | "field";
+  siteId?: number | null;
+  status?: "active" | "inactive" | "pending";
+}): Promise<number> {
+  const database = await getDb();
+  if (!database) throw new Error("Database not available");
+  const [inserted] = await database
+    .insert(users)
+    .values({
+      openId: params.authUserId,
+      authUserId: params.authUserId,
+      name: params.name,
+      email: params.email,
+      loginMethod: "supabase",
+      role: params.role,
+      siteId: params.siteId ?? null,
+      status: params.status ?? "active",
+      hasCompletedOnboarding: true,
+      lastSignedIn: new Date(),
+    })
+    .returning({ id: users.id });
+  const userId = inserted?.id;
+  if (userId == null || !Number.isFinite(userId)) {
+    throw new Error("Failed to create app user row");
+  }
+  return userId;
 }
 
 // ============= SITES MANAGEMENT =============
@@ -1705,6 +1787,7 @@ export async function getLoginUserByEmailLowercase(email: string): Promise<{
   id: number;
   email: string | null;
   authUserId: string | null;
+  status: string | null;
 } | undefined> {
   const normalized = email.trim().toLowerCase();
   const database = await getDb();
@@ -1715,6 +1798,7 @@ export async function getLoginUserByEmailLowercase(email: string): Promise<{
         id: users.id,
         email: users.email,
         authUserId: users.authUserId,
+        status: users.status,
       })
       .from(users)
       .where(sql`LOWER(${users.email}) = ${normalized}`)

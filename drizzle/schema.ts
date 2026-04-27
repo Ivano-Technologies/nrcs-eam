@@ -24,6 +24,7 @@ import { ITEM_CATEGORY_VALUES } from "../shared/itemCategory";
 
 export const userRoleEnum = pgEnum("user_role", [
   "user",
+  "field",
   "staff",
   "manager",
   "admin",
@@ -205,6 +206,7 @@ export const users = pgTable("users", {
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: userRoleEnum("role").default("user").notNull(),
+  status: varchar("status", { length: 16 }).default("active").notNull(),
   siteId: integer("siteId"),
   createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
   updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
