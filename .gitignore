@@ -142,3 +142,8 @@ tests/mvp-audit/screenshots/*
 ses-dns-records.txt
 .vercel
 screenshots/
+
+# Manual generator output binaries
+docs/manual/outputs/
+# Windows path artifact from generator
+mnt/
