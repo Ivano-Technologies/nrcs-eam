@@ -84,7 +84,7 @@ describe("Bulk facility import", () => {
       { header: "Status (Active/Inactive)", key: "status", width: 20 },
       { header: "Latitude", key: "latitude", width: 15 },
       { header: "Longitude", key: "longitude", width: 15 },
-      { header: "Facility type (branch|division|clinic|warehouse)", key: "facilityType", width: 36 },
+      { header: "Facility type (branch|division|clinic|warehouse|national_headquarters)", key: "facilityType", width: 48 },
       { header: "Parent facility ID (required for clinic/warehouse)", key: "parentFacilityId", width: 36 },
     ];
 
@@ -102,7 +102,7 @@ describe("Bulk facility import", () => {
       status: "Active",
       latitude: "9.0579",
       longitude: "7.4951",
-      facilityType: "branch",
+      facilityType: "National Headquarters",
       parentFacilityId: "",
     });
 
@@ -158,7 +158,7 @@ describe("Bulk facility import", () => {
       { header: "Status (Active/Inactive)", key: "status", width: 20 },
       { header: "Latitude", key: "latitude", width: 15 },
       { header: "Longitude", key: "longitude", width: 15 },
-      { header: "Facility type (branch|division|clinic|warehouse)", key: "facilityType", width: 36 },
+      { header: "Facility type (branch|division|clinic|warehouse|national_headquarters)", key: "facilityType", width: 48 },
       { header: "Parent facility ID (required for clinic/warehouse)", key: "parentFacilityId", width: 36 },
     ];
 

@@ -73,6 +73,25 @@ describe("Facilities management", () => {
     expect(newSite).toBeDefined();
     expect(newSite.id).toBeGreaterThan(0);
   });
+
+  it("should normalize facility type and allow hyphenated facility codes", async () => {
+    const ctx = createTestContext("admin");
+    const caller = appRouter.createCaller(ctx);
+
+    const newSite = await caller.sites.create({
+      code: `HQ-${Date.now().toString().slice(-6)}`,
+      name: "National HQ Test Site",
+      facilityType: "National Headquarters" as any,
+      address: "1 Headquarters Road",
+      city: "Abuja",
+      state: "FCT",
+      country: "Nigeria",
+    });
+
+    expect(newSite).toBeDefined();
+    expect(newSite.facilityType).toBe("national_headquarters");
+    expect(newSite.code).toContain("-");
+  });
 });
 
 describe("Asset Categories", () => {

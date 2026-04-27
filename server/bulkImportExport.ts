@@ -342,6 +342,8 @@ export async function importSites(fileBuffer: any): Promise<ImportResult> {
   const { FACILITY_TYPE_VALUES } = await import("../shared/facilities");
   const isFacilityType = (v: string): v is (typeof FACILITY_TYPE_VALUES)[number] =>
     (FACILITY_TYPE_VALUES as readonly string[]).includes(v);
+  const normaliseFacilityType = (value: string | undefined): string =>
+    (value ?? "").toLowerCase().trim().replace(/\s+/g, "_");
 
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.load(fileBuffer);
@@ -371,7 +373,7 @@ export async function importSites(fileBuffer: any): Promise<ImportResult> {
   
   for (const { row, rowNumber } of rows) {
     try {
-      const typeCell = row.getCell(14).value?.toString()?.trim().toLowerCase();
+      const typeCell = normaliseFacilityType(row.getCell(14).value?.toString());
       const parentCell = row.getCell(15).value;
       let parentFacilityId: number | null = null;
       if (parentCell !== null && parentCell !== undefined && String(parentCell).trim() !== "") {
@@ -456,7 +458,7 @@ export async function generateSiteTemplate(): Promise<Buffer> {
     { header: "Status (Active/Inactive)", key: "status", width: 20 },
     { header: "Latitude", key: "latitude", width: 15 },
     { header: "Longitude", key: "longitude", width: 15 },
-    { header: "Facility type (branch|division|clinic|warehouse)", key: "facilityType", width: 36 },
+    { header: "Facility type (branch|division|clinic|warehouse|national_headquarters)", key: "facilityType", width: 48 },
     { header: "Parent facility ID (required for clinic/warehouse)", key: "parentFacilityId", width: 36 },
   ];
   
@@ -514,7 +516,7 @@ export async function generateSiteTemplate(): Promise<Buffer> {
   worksheet.addRow(["3. Delete the sample rows before uploading"]);
   worksheet.addRow(["4. Latitude and longitude are optional but recommended for map features"]);
   worksheet.addRow([
-    "5. Facility type defaults to branch; clinics and warehouses must reference a parent branch ID in column 12",
+    "5. Facility type defaults to branch; valid types: branch, division, clinic, warehouse, national_headquarters",
   ]);
   worksheet.addRow(["6. Save the file and upload it through the Facilities page"]);
   

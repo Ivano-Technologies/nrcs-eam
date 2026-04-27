@@ -183,6 +183,13 @@
       "when": 1777296300000,
       "tag": "0025_enable_rls_all_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1777302000000,
+      "tag": "0026_relax_sites_code_hyphens",
+      "breakpoints": true
     }
   ]
 }
