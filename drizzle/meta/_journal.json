@@ -176,6 +176,13 @@
       "when": 1777090000000,
       "tag": "0024_drop_inventory_stock",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1777296300000,
+      "tag": "0025_enable_rls_all_tables",
+      "breakpoints": true
     }
   ]
 }
