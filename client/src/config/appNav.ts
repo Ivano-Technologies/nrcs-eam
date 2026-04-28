@@ -213,7 +213,6 @@ export const SIDEBAR_GROUPS_ADMIN: AppNavGroup[] = [
 /** Standalone bottom items, exact order: Settings, then Activity Log (not in collapsible groups). */
 export const SIDEBAR_BOTTOM: AppNavItem[] = [
   { label: "Settings", path: appPath("/dashboard-settings"), icon: Settings },
-  { label: "Users", path: appPath("/settings/users"), icon: Users, adminOnly: true },
 ];
 
 const GROUP_PREFIXES: { groupId: string; pathPrefix: string }[] = [
