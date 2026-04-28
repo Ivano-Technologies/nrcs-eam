@@ -61,9 +61,20 @@ describe("Facilities management", () => {
   it("should create a new facility", async () => {
     const ctx = createTestContext("admin");
     const caller = appRouter.createCaller(ctx);
+    const nhq = await caller.sites.create({
+      code: `NHQ-${Date.now().toString().slice(-6)}`,
+      name: "Test NHQ Parent",
+      facilityType: "national_headquarters",
+      address: "1 HQ Road",
+      city: "Abuja",
+      state: "FCT",
+      country: "Nigeria",
+    });
 
     const newSite = await caller.sites.create({
       name: "Test Site",
+      facilityType: "branch",
+      parentFacilityId: nhq.id,
       address: "123 Test Street",
       city: "Test City",
       state: "Test State",

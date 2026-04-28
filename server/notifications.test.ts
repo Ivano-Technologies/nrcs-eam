@@ -85,9 +85,20 @@ describe("Notification System", () => {
   it("should create work order and notify assigned user", async () => {
     const ctx = createTestContext(1, "admin");
     const caller = appRouter.createCaller(ctx);
+    const nhq = await caller.sites.create({
+      code: `NHQ${Date.now().toString().slice(-6)}`,
+      name: "Notification NHQ",
+      facilityType: "national_headquarters",
+      address: "HQ address",
+      city: "Abuja",
+      state: "FCT",
+      country: "Nigeria",
+    });
 
     const site = await caller.sites.create({
       name: "Test Site for Notifications",
+      facilityType: "branch",
+      parentFacilityId: nhq.id,
       address: "123 Test St",
       city: "Test City",
       state: "Test State",

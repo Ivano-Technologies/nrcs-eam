@@ -1,6 +1,8 @@
 import ExcelJS from 'exceljs';
 import * as db from './db';
 import { generateNRCSAssetRegisterTemplateBuffer } from './nrcsAssetExcel';
+import type { FacilityType } from "../shared/facilities";
+import { validateHierarchyRule } from "./facilityHierarchy";
 
 /**
  * Bulk Import/Export System for Assets and other entities
@@ -368,10 +370,10 @@ export async function importSites(fileBuffer: any): Promise<ImportResult> {
   const errors: Array<{ row: number; error: string; data: any }> = [];
   const warnings: Array<{ row: number; warning: string; data: any }> = [];
   const existingSites = await db.getAllSites();
-  const sitesByCode = new Map(
+  const sitesByCode = new Map<string, { id: number; facilityType: FacilityType }>(
     existingSites
       .filter((site) => site.code && site.code.trim())
-      .map((site) => [site.code!.trim().toUpperCase(), site.id])
+      .map((site) => [site.code!.trim().toUpperCase(), { id: site.id, facilityType: site.facilityType }])
   );
   
   const rows: any[] = [];
@@ -385,10 +387,13 @@ export async function importSites(fileBuffer: any): Promise<ImportResult> {
       const typeCell = normaliseFacilityType(row.getCell(14).value?.toString());
       const parentCodeCell = row.getCell(15).value?.toString()?.trim() ?? "";
       let parentFacilityId: number | null = null;
+      let resolvedParentType: FacilityType | null = null;
+      const facilityType = (typeCell && isFacilityType(typeCell) ? typeCell : "branch") as FacilityType;
       if (parentCodeCell) {
         const parentByCode = sitesByCode.get(parentCodeCell.toUpperCase());
         if (parentByCode != null) {
-          parentFacilityId = parentByCode;
+          parentFacilityId = parentByCode.id;
+          resolvedParentType = parentByCode.facilityType;
         } else {
           warnings.push({
             row: rowNumber,
@@ -398,8 +403,10 @@ export async function importSites(fileBuffer: any): Promise<ImportResult> {
         }
       }
 
-      const facilityType =
-        typeCell && isFacilityType(typeCell) ? typeCell : "branch";
+      const hierarchyError = validateHierarchyRule(facilityType, resolvedParentType);
+      if (hierarchyError) {
+        throw new Error(hierarchyError);
+      }
 
       const siteData = {
         code: row.getCell(1).value?.toString()?.trim() || undefined,
@@ -423,8 +430,14 @@ export async function importSites(fileBuffer: any): Promise<ImportResult> {
         throw new Error("Facility name is required");
       }
 
-      await db.createSite(siteData);
+      const created = await db.createSite(siteData);
       imported++;
+      if (created?.code?.trim()) {
+        sitesByCode.set(created.code.trim().toUpperCase(), {
+          id: created.id,
+          facilityType: created.facilityType as FacilityType,
+        });
+      }
       
     } catch (error: any) {
       failed++;
@@ -472,8 +485,8 @@ export async function generateSiteTemplate(): Promise<Buffer> {
   
   // Add sample rows
   worksheet.addRow({
-    code: "FCT-BRN-001",
-    name: "NRCS Abuja Headquarters",
+    code: "NHQ-001",
+    name: "NRCS National Headquarters",
     postalCode: "900001",
     address: "National Headquarters, Red Cross Road",
     city: "Abuja",
@@ -485,7 +498,7 @@ export async function generateSiteTemplate(): Promise<Buffer> {
     status: "Active",
     latitude: "9.0579",
     longitude: "7.4951",
-    facilityType: "branch",
+    facilityType: "national_headquarters",
     parentFacilityCode: "",
   });
 
@@ -504,7 +517,7 @@ export async function generateSiteTemplate(): Promise<Buffer> {
     latitude: "6.5244",
     longitude: "3.3792",
     facilityType: "branch",
-    parentFacilityCode: "",
+    parentFacilityCode: "NHQ-001",
   });
   
   // Style header
@@ -524,7 +537,7 @@ export async function generateSiteTemplate(): Promise<Buffer> {
   worksheet.addRow(["3. Delete the sample rows before uploading"]);
   worksheet.addRow(["4. Latitude and longitude are optional but recommended for map features"]);
   worksheet.addRow([
-    "5. Facility type defaults to branch; valid types: branch, division, clinic, warehouse, national_headquarters",
+    "5. Valid types: national_headquarters, branch, division, warehouse, clinic",
   ]);
   worksheet.addRow(["6. Save the file and upload it through the Facilities page"]);
   
