@@ -18,7 +18,23 @@ import { inventoryV2Router } from "./routers/inventoryRouter";
 import { wmsRouter } from "./routers/wmsRouter";
 import { requireRole } from "./_core/trpc";
 import { getSupabaseServiceRole } from "./_core/supabase";
-import { assetTransfers, assets, auditLogs, commodityTrackingNumbers, requisitions, sites, stockCards, stockMovements, stockSettings, users, waybills } from "../drizzle/schema";
+import {
+  assetTransfers,
+  assets,
+  auditLogs,
+  commodityTrackingNumbers,
+  goodsReceivedNotes,
+  inventoryCounts,
+  maintenanceSchedules,
+  pendingUsers,
+  requisitions,
+  sites,
+  stockCards,
+  stockMovements,
+  stockSettings,
+  users,
+  waybills,
+} from "../drizzle/schema";
 import { buildDistributionVelocity, buildStockReadiness, getPeriodWindow } from "./wms/dashboard";
 import {
   legacyStatusFromRegister,
@@ -1491,13 +1507,6 @@ export const appRouter = router({
           activeFacilities: activeFacilitiesKpi,
           stockReadiness,
           distributionVelocity,
-          avgResponseHours: {
-            // Placeholder removed: return neutral until real SLA/processing data is wired.
-            value: 0,
-            delta: undefined,
-            direction: "flat" as const,
-            goodWhen: "down" as const,
-          },
         };
       }),
     stockMovement: protectedProcedure
@@ -1611,6 +1620,15 @@ export const appRouter = router({
       const database = await db.getDb();
       if (!database) return [];
 
+      const movementTotals = database
+        .select({
+          stockCardId: stockMovements.stockCardId,
+          netQuantity: sql<number>`coalesce(sum(${stockMovements.quantityIn} - ${stockMovements.quantityOut}), 0)`.mapWith(Number),
+        })
+        .from(stockMovements)
+        .groupBy(stockMovements.stockCardId)
+        .as("movement_totals");
+
       const rows = await database
         .select({
           id: sites.id,
@@ -1623,13 +1641,51 @@ export const appRouter = router({
         .orderBy(sql`${sites.facilityType} asc, ${sites.name} asc`)
         .limit(10);
 
-      return rows.map((row) => ({
-        id: row.id,
-        name: row.name,
-        code: row.code,
-        type: row.type,
-        status: row.isActive ? ("active" as const) : ("offline" as const),
-      }));
+      const scoreRows = await database
+        .select({
+          locationId: stockCards.locationId,
+          total: sql<number>`count(distinct ${stockCards.id})`.mapWith(Number),
+          adequate: sql<number>`count(distinct ${stockCards.id}) filter (where coalesce(${movementTotals.netQuantity}, 0) > coalesce(${stockSettings.minLevel}, 0))`.mapWith(Number),
+        })
+        .from(stockCards)
+        .leftJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
+        .leftJoin(
+          stockSettings,
+          and(
+            eq(stockSettings.catalogueId, commodityTrackingNumbers.itemId),
+            eq(stockSettings.warehouseId, stockCards.locationId)
+          )
+        )
+        .leftJoin(movementTotals, eq(movementTotals.stockCardId, stockCards.id))
+        .groupBy(stockCards.locationId);
+
+      const scoreByLocation = new Map<number, { total: number; adequate: number }>();
+      for (const row of scoreRows) {
+        scoreByLocation.set(row.locationId, {
+          total: Number(row.total ?? 0),
+          adequate: Number(row.adequate ?? 0),
+        });
+      }
+
+      return rows
+        .map((row) => {
+          const score = scoreByLocation.get(row.id);
+          const stockScore = score && score.total > 0 ? Math.round((score.adequate / score.total) * 100) : null;
+          return {
+            id: row.id,
+            name: row.name,
+            code: row.code,
+            type: row.type,
+            status: row.isActive ? ("active" as const) : ("offline" as const),
+            stockScore,
+          };
+        })
+        .sort((a, b) => {
+          if (a.stockScore === null && b.stockScore === null) return 0;
+          if (a.stockScore === null) return 1;
+          if (b.stockScore === null) return -1;
+          return a.stockScore - b.stockScore;
+        });
     }),
     pendingRequisitions: protectedProcedure
       .input(z.object({ limit: z.number().min(1).max(12).default(4) }).optional())
@@ -1641,7 +1697,7 @@ export const appRouter = router({
           .select({
             total: sql<number>`count(*)`.mapWith(Number),
             urgent: sql<number>`count(*) filter (where lower(${requisitions.priority}) = 'urgent')`.mapWith(Number),
-            oldest: sql<Date | null>`max(${requisitions.createdAt})`,
+            oldest: sql<Date | null>`min(${requisitions.createdAt})`,
           })
           .from(requisitions)
           .where(sql`${requisitions.status} in ('submitted', 'approved')`);
@@ -1658,33 +1714,338 @@ export const appRouter = router({
     attentionItems: protectedProcedure
       .input(z.object({ role: z.enum(["Admin", "Manager", "Staff", "Field"]) }))
       .query(async ({ input }) => {
-        const byRole = {
-          Admin: [
-            { icon: "AlertTriangle", tone: "red", label: "3 failed login attempts flagged", meta: "Security" },
-            { icon: "Users", tone: "amber", label: "2 new user registrations pending", meta: "Access" },
-            { icon: "Shield", tone: "blue", label: "Quarterly compliance review due", meta: "Compliance" },
-            { icon: "CheckCircle2", tone: "green", label: "Scheduled backup completed · 04:00", meta: "System" },
-          ],
-          Manager: [
-            { icon: "ClipboardList", tone: "red", label: "12 requisitions awaiting approval", meta: "3 urgent" },
-            { icon: "Package", tone: "amber", label: "Family Tents below reorder level", meta: "Lagos WH" },
-            { icon: "Wrench", tone: "orange", label: "Generator maintenance overdue", meta: "Kano · 3d" },
-            { icon: "Users", tone: "blue", label: "New officer onboarding: A. Ibrahim", meta: "HR" },
-          ],
-          Staff: [
-            { icon: "ClipboardList", tone: "red", label: "4 items queued for scanning", meta: "Receiving" },
-            { icon: "Truck", tone: "blue", label: "Distribution prep · 250 kits", meta: "Ondo run" },
-            { icon: "FileText", tone: "purple", label: "Daily stock reconciliation", meta: "Due 17:00" },
-            { icon: "CheckCircle2", tone: "green", label: "Issue note IN-0882 ready to print", meta: "Ready" },
-          ],
-          Field: [
-            { icon: "MapPin", tone: "red", label: "Active distribution · Akure", meta: "320 beneficiaries" },
-            { icon: "Package", tone: "amber", label: "Offline sync pending (6 records)", meta: "Queued" },
-            { icon: "Clock", tone: "blue", label: "Next check-in: 15:30", meta: "Ops" },
-            { icon: "FileText", tone: "purple", label: "Field report template ready", meta: "Weekly" },
-          ],
-        } as const;
-        return byRole[input.role];
+        const database = await db.getDb();
+        const allClear = { icon: "CheckCircle2", tone: "green", label: "No action items right now", meta: "All clear" };
+        if (!database) return [allClear];
+
+        const safe = async <T>(label: string, query: () => Promise<T>): Promise<T | null> => {
+          try {
+            return await query();
+          } catch (error) {
+            console.error(`[dashboard.attentionItems] ${label} query failed`, error);
+            return null;
+          }
+        };
+
+        const requisitionSummary = () =>
+          safe("requisitionSummary", async () => {
+            const rows = await database
+              .select({
+                total: sql<number>`count(*)`.mapWith(Number),
+                urgent: sql<number>`count(*) filter (where lower(${requisitions.priority}) = 'urgent')`.mapWith(Number),
+              })
+              .from(requisitions)
+              .where(eq(requisitions.status, "submitted"));
+            return {
+              total: Number(rows[0]?.total ?? 0),
+              urgent: Number(rows[0]?.urgent ?? 0),
+            };
+          });
+
+        const lowStockItems = () =>
+          safe("lowStockItems", async () => {
+            const stats = await db.getDashboardStats();
+            return Number(stats?.lowStockItems ?? 0);
+          });
+
+        const lowStockFacilities = () =>
+          safe("lowStockFacilities", async () => {
+            const movementTotals = database
+              .select({
+                stockCardId: stockMovements.stockCardId,
+                netQuantity: sql<number>`coalesce(sum(${stockMovements.quantityIn} - ${stockMovements.quantityOut}), 0)`.mapWith(Number),
+              })
+              .from(stockMovements)
+              .groupBy(stockMovements.stockCardId)
+              .as("movement_totals_attention");
+
+            const rows = await database
+              .select({
+                count: sql<number>`count(distinct ${stockCards.locationId}) filter (where coalesce(${movementTotals.netQuantity}, 0) < coalesce(${stockSettings.minLevel}, 0) and coalesce(${stockSettings.minLevel}, 0) > 0)`.mapWith(Number),
+              })
+              .from(stockCards)
+              .leftJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
+              .leftJoin(
+                stockSettings,
+                and(
+                  eq(stockSettings.warehouseId, stockCards.locationId),
+                  eq(stockSettings.catalogueId, commodityTrackingNumbers.itemId)
+                )
+              )
+              .leftJoin(movementTotals, eq(movementTotals.stockCardId, stockCards.id));
+
+            return Number(rows[0]?.count ?? 0);
+          });
+
+        if (input.role === "Admin") {
+          const [pendingUserCount, failedLoginsCount, reqSummary, inactiveFacilities, grnDrafts] = await Promise.all([
+            safe("pendingUsers", async () => {
+              const rows = await database
+                .select({ count: sql<number>`count(*)`.mapWith(Number) })
+                .from(pendingUsers)
+                .where(eq(pendingUsers.status, "pending"));
+              return Number(rows[0]?.count ?? 0);
+            }),
+            safe("failedLogins24h", async () => {
+              const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+              const rows = await database
+                .select({ count: sql<number>`count(*)`.mapWith(Number) })
+                .from(auditLogs)
+                .where(and(ilike(auditLogs.action, "%fail%"), gte(auditLogs.timestamp, since)));
+              return Number(rows[0]?.count ?? 0);
+            }),
+            requisitionSummary(),
+            safe("inactiveFacilities", async () => {
+              const rows = await database
+                .select({ count: sql<number>`count(*)`.mapWith(Number) })
+                .from(sites)
+                .where(eq(sites.isActive, false));
+              return Number(rows[0]?.count ?? 0);
+            }),
+            safe("grnDrafts", async () => {
+              const rows = await database
+                .select({ count: sql<number>`count(*)`.mapWith(Number) })
+                .from(goodsReceivedNotes)
+                .where(eq(goodsReceivedNotes.status, "draft"));
+              return Number(rows[0]?.count ?? 0);
+            }),
+          ]);
+
+          const items: Array<{ icon: string; tone: string; label: string; meta: string }> = [];
+          if ((pendingUserCount ?? 0) > 0) {
+            items.push({
+              icon: "Users",
+              tone: "amber",
+              label: `${pendingUserCount} user ${pendingUserCount === 1 ? "registration" : "registrations"} pending`,
+              meta: "Access",
+            });
+          }
+          if ((failedLoginsCount ?? 0) > 0) {
+            items.push({
+              icon: "AlertTriangle",
+              tone: "red",
+              label: `${failedLoginsCount} failed login attempt${failedLoginsCount === 1 ? "" : "s"} in last 24h`,
+              meta: "Security",
+            });
+          }
+          if (reqSummary) {
+            items.push({
+              icon: "ClipboardList",
+              tone: reqSummary.total > 0 ? "red" : "green",
+              label:
+                reqSummary.total > 0
+                  ? `${reqSummary.total} requisition${reqSummary.total === 1 ? "" : "s"} awaiting approval`
+                  : "No pending requisitions",
+              meta: reqSummary.urgent > 0 ? `${reqSummary.urgent} urgent` : "Up to date",
+            });
+          }
+          if ((inactiveFacilities ?? 0) > 0) {
+            items.push({
+              icon: "MapPin",
+              tone: "amber",
+              label: `${inactiveFacilities} facilit${inactiveFacilities === 1 ? "y" : "ies"} marked offline`,
+              meta: "Facilities",
+            });
+          }
+          if ((grnDrafts ?? 0) > 0) {
+            items.push({
+              icon: "FileText",
+              tone: "blue",
+              label: `${grnDrafts} GRN draft${grnDrafts === 1 ? "" : "s"} not finalised`,
+              meta: "Inventory",
+            });
+          }
+          return (items.length > 0 ? items : [allClear]).slice(0, 4);
+        }
+
+        if (input.role === "Manager") {
+          const [reqSummary, lowStockCount, overdueMaintenanceCount, waybillDrafts, grnDrafts] = await Promise.all([
+            requisitionSummary(),
+            lowStockItems(),
+            safe("overdueMaintenance", async () => {
+              const rows = await database
+                .select({ count: sql<number>`count(*)`.mapWith(Number) })
+                .from(maintenanceSchedules)
+                .where(and(eq(maintenanceSchedules.isActive, true), sql`${maintenanceSchedules.nextDue} < now()`));
+              return Number(rows[0]?.count ?? 0);
+            }),
+            safe("waybillDrafts", async () => {
+              const rows = await database
+                .select({ count: sql<number>`count(*)`.mapWith(Number) })
+                .from(waybills)
+                .where(eq(waybills.status, "draft"));
+              return Number(rows[0]?.count ?? 0);
+            }),
+            safe("grnDrafts", async () => {
+              const rows = await database
+                .select({ count: sql<number>`count(*)`.mapWith(Number) })
+                .from(goodsReceivedNotes)
+                .where(eq(goodsReceivedNotes.status, "draft"));
+              return Number(rows[0]?.count ?? 0);
+            }),
+          ]);
+
+          const items: Array<{ icon: string; tone: string; label: string; meta: string }> = [];
+          if (reqSummary) {
+            items.push({
+              icon: "ClipboardList",
+              tone: reqSummary.total > 0 ? "red" : "green",
+              label:
+                reqSummary.total > 0
+                  ? `${reqSummary.total} requisition${reqSummary.total === 1 ? "" : "s"} awaiting approval`
+                  : "No pending requisitions",
+              meta: reqSummary.urgent > 0 ? `${reqSummary.urgent} urgent` : "Up to date",
+            });
+          }
+          if ((lowStockCount ?? 0) > 0) {
+            items.push({
+              icon: "Package",
+              tone: "amber",
+              label: `${lowStockCount} item${lowStockCount === 1 ? "" : "s"} below reorder level`,
+              meta: "Low stock",
+            });
+          }
+          if ((overdueMaintenanceCount ?? 0) > 0) {
+            items.push({
+              icon: "Wrench",
+              tone: "orange",
+              label: `${overdueMaintenanceCount} maintenance task${overdueMaintenanceCount === 1 ? "" : "s"} overdue`,
+              meta: "Maintenance",
+            });
+          }
+          if ((waybillDrafts ?? 0) > 0) {
+            items.push({
+              icon: "Truck",
+              tone: "blue",
+              label: `${waybillDrafts} waybill${waybillDrafts === 1 ? "" : "s"} not yet dispatched`,
+              meta: "Outgoing",
+            });
+          }
+          if ((grnDrafts ?? 0) > 0) {
+            items.push({
+              icon: "FileText",
+              tone: "blue",
+              label: `${grnDrafts} GRN draft${grnDrafts === 1 ? "" : "s"} not finalised`,
+              meta: "Inventory",
+            });
+          }
+          return (items.length > 0 ? items : [allClear]).slice(0, 4);
+        }
+
+        if (input.role === "Staff") {
+          const [grnDrafts, waybillDrafts, stockCountsInProgress, pendingReqCount] = await Promise.all([
+            safe("grnDrafts", async () => {
+              const rows = await database
+                .select({ count: sql<number>`count(*)`.mapWith(Number) })
+                .from(goodsReceivedNotes)
+                .where(eq(goodsReceivedNotes.status, "draft"));
+              return Number(rows[0]?.count ?? 0);
+            }),
+            safe("waybillDrafts", async () => {
+              const rows = await database
+                .select({ count: sql<number>`count(*)`.mapWith(Number) })
+                .from(waybills)
+                .where(eq(waybills.status, "draft"));
+              return Number(rows[0]?.count ?? 0);
+            }),
+            safe("stockCountsInProgress", async () => {
+              const rows = await database
+                .select({ count: sql<number>`count(*)`.mapWith(Number) })
+                .from(inventoryCounts)
+                .where(sql`${inventoryCounts.status} in ('pending', 'in_progress')`);
+              return Number(rows[0]?.count ?? 0);
+            }),
+            safe("submittedReqs", async () => {
+              const rows = await database
+                .select({ count: sql<number>`count(*)`.mapWith(Number) })
+                .from(requisitions)
+                .where(eq(requisitions.status, "submitted"));
+              return Number(rows[0]?.count ?? 0);
+            }),
+          ]);
+
+          const items: Array<{ icon: string; tone: string; label: string; meta: string }> = [];
+          if ((grnDrafts ?? 0) > 0) {
+            items.push({
+              icon: "FileText",
+              tone: "red",
+              label: `${grnDrafts} GRN draft${grnDrafts === 1 ? "" : "s"} awaiting finalisation`,
+              meta: "Receiving",
+            });
+          }
+          if ((waybillDrafts ?? 0) > 0) {
+            items.push({
+              icon: "Truck",
+              tone: "amber",
+              label: `${waybillDrafts} waybill${waybillDrafts === 1 ? "" : "s"} ready to dispatch`,
+              meta: "Outgoing",
+            });
+          }
+          if ((stockCountsInProgress ?? 0) > 0) {
+            items.push({
+              icon: "ClipboardList",
+              tone: "blue",
+              label: `${stockCountsInProgress} stock count${stockCountsInProgress === 1 ? "" : "s"} in progress`,
+              meta: "Stock takes",
+            });
+          }
+          if ((pendingReqCount ?? 0) > 0) {
+            items.push({
+              icon: "Package",
+              tone: "blue",
+              label: `${pendingReqCount} requisition${pendingReqCount === 1 ? "" : "s"} submitted, awaiting approval`,
+              meta: "Requisitions",
+            });
+          }
+          return (items.length > 0 ? items : [allClear]).slice(0, 4);
+        }
+
+        const [activeWaybills, pendingReqCount, lowStockFacilityCount] = await Promise.all([
+          safe("activeWaybills", async () => {
+            const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+            const rows = await database
+              .select({ count: sql<number>`count(*)`.mapWith(Number) })
+              .from(waybills)
+              .where(and(eq(waybills.status, "dispatched"), gte(waybills.createdAt, since)));
+            return Number(rows[0]?.count ?? 0);
+          }),
+          safe("fieldPendingReqs", async () => {
+            const rows = await database
+              .select({ count: sql<number>`count(*)`.mapWith(Number) })
+              .from(requisitions)
+              .where(sql`${requisitions.status} in ('submitted', 'draft')`);
+            return Number(rows[0]?.count ?? 0);
+          }),
+          lowStockFacilities(),
+        ]);
+
+        const items: Array<{ icon: string; tone: string; label: string; meta: string }> = [];
+        if ((activeWaybills ?? 0) > 0) {
+          items.push({
+            icon: "Truck",
+            tone: "red",
+            label: `${activeWaybills} active distribution${activeWaybills === 1 ? "" : "s"} this week`,
+            meta: "In progress",
+          });
+        }
+        if ((pendingReqCount ?? 0) > 0) {
+          items.push({
+            icon: "ClipboardList",
+            tone: "amber",
+            label: `${pendingReqCount} requisition${pendingReqCount === 1 ? "" : "s"} pending`,
+            meta: "Submitted",
+          });
+        }
+        if ((lowStockFacilityCount ?? 0) > 0) {
+          items.push({
+            icon: "AlertTriangle",
+            tone: "amber",
+            label: `${lowStockFacilityCount} facilit${lowStockFacilityCount === 1 ? "y" : "ies"} have low stock`,
+            meta: "Low stock",
+          });
+        }
+        items.push({ icon: "CheckCircle2", tone: "green", label: "System operational", meta: "NRCS EAM" });
+        return items.slice(0, 4);
       }),
   }),
 

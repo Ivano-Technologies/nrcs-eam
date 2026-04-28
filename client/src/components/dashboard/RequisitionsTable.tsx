@@ -32,6 +32,18 @@ export function RequisitionsTable() {
             </p>
           </div>
         </div>
+        <div className="mt-4 rounded-xl border">
+          {(data?.total ?? 0) === 0 ? (
+            <div className="px-4 py-8 text-center">
+              <p className="text-sm font-medium">No pending requisitions</p>
+              <p className="mt-1 text-xs text-muted-foreground">Requisitions submitted by staff will appear here for approval</p>
+            </div>
+          ) : (
+            <div className="px-4 py-3 text-sm text-muted-foreground">
+              Pending requisitions are reflected in the summary above and can be reviewed in the requisitions queue.
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   );

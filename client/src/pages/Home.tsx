@@ -9,7 +9,7 @@ import { useDashboardRolePreview } from "@/components/dashboard/rolePreviewConte
 import type { DashboardPeriod, UserRole } from "@/components/dashboard/types";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
-import { AlertTriangle, Clock, MapPin, ShieldCheck, Truck } from "lucide-react";
+import { AlertTriangle, ClipboardList, MapPin, ShieldCheck, Truck } from "lucide-react";
 import { useMemo, useState } from "react";
 
 export default function Home() {
@@ -29,6 +29,7 @@ export default function Home() {
   const effectiveRole = rolePreview?.effectiveRole ?? actualRole;
 
   const { data: metrics, isLoading } = trpc.dashboard.metrics.useQuery({ period });
+  const { data: pendingReqs } = trpc.dashboard.pendingRequisitions.useQuery();
   const { data: movement } = trpc.dashboard.stockMovement.useQuery({ weeks: period === "Today" ? 4 : 12 });
   const normalizeDirection = (direction?: string): "up" | "down" | "flat" =>
     direction === "up" || direction === "down" ? direction : "flat";
@@ -102,18 +103,27 @@ export default function Home() {
       goodWhen: (metrics?.distributionVelocity?.goodWhen ?? "up") as "up" | "down",
     },
     {
-      key: "response" as const,
-      label: "Avg Response Time",
-      value: `${metrics?.avgResponseHours.value ?? 0} hrs`,
-      sub: undefined,
-      icon: Clock,
-      tone: "green" as const,
-      delta: metrics?.avgResponseHours.delta,
-      deltaDirection: normalizeDirection(metrics?.avgResponseHours.direction),
-      goodWhen: (metrics?.avgResponseHours.goodWhen ?? "down") as "up" | "down",
+      key: "requisitions" as const,
+      label: "Pending Requisitions",
+      value: pendingReqs?.total ?? 0,
+      sub: (() => {
+        const u = pendingReqs?.urgent ?? 0;
+        const d = pendingReqs?.oldestDaysAgo;
+        if ((pendingReqs?.total ?? 0) === 0) return "No pending requisitions";
+        const parts: string[] = [];
+        if (u > 0) parts.push(`${u} urgent`);
+        if (d !== null && d !== undefined) parts.push(`oldest ${d}d`);
+        return parts.join(" · ") || "Pending review";
+      })(),
+      icon: ClipboardList,
+      tone: (pendingReqs?.urgent ?? 0) > 0 ? ("red" as const) : ("blue" as const),
+      delta: undefined,
+      deltaDirection: "flat" as const,
+      goodWhen: "down" as const,
     },
   ];
-  const kpis = effectiveRole === "Field" ? allKpis.filter((k) => ["lowStock", "facilities", "response"].includes(k.key)) : allKpis;
+  const kpis =
+    effectiveRole === "Field" ? allKpis.filter((k) => ["lowStock", "facilities", "stock"].includes(k.key)) : allKpis;
 
   return (
     <div className="space-y-6">
