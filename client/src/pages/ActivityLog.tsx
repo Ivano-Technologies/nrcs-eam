@@ -3,40 +3,41 @@ import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Search, Activity, User, Clock } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Search, Activity } from "lucide-react";
 import { useAuth } from "@/_core/hooks/useAuth";
 
 export default function ActivityLog() {
   const { user } = useAuth();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [entityFilter, setEntityFilter] = useState<string>("all");
+  const [userQuery, setUserQuery] = useState("");
+  const [actionFilter, setActionFilter] = useState<string>("all");
+  const [facilityFilter, setFacilityFilter] = useState<string>("all");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [page, setPage] = useState(1);
 
-  const { data: logs, isLoading } = trpc.auditLogs.list.useQuery({
-    entityType: entityFilter !== "all" ? entityFilter : undefined,
+  const { data, isLoading } = trpc.auditLogs.list.useQuery({
+    actionType: actionFilter !== "all" ? actionFilter : undefined,
+    userQuery: userQuery.trim() ? userQuery.trim() : undefined,
+    facilityId: facilityFilter !== "all" ? Number(facilityFilter) : undefined,
+    startDate: startDate ? new Date(`${startDate}T00:00:00.000Z`) : undefined,
+    endDate: endDate ? new Date(`${endDate}T23:59:59.999Z`) : undefined,
+    page,
+    pageSize: 25,
   });
 
-  if (user?.role !== "admin" && user?.role !== "manager") {
+  if (user?.role !== "admin") {
     return (
       <div className="flex flex-col items-center justify-center h-96">
-        <p className="text-xl text-muted-foreground">Manager or Admin access required</p>
+        <p className="text-xl text-muted-foreground">Admin access required</p>
       </div>
     );
   }
 
-  const filteredLogs = logs?.filter((log) =>
-    searchTerm === "" ||
-    log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (log.entityType?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
-    (log.changes?.toLowerCase() || "").includes(searchTerm.toLowerCase())
-  );
-
-  const getActionBadgeColor = (action: string) => {
-    if (action.includes("create")) return "bg-green-100 text-green-800";
-    if (action.includes("update")) return "bg-blue-100 text-blue-800";
-    if (action.includes("delete")) return "bg-red-100 text-red-800";
-    return "bg-gray-100 text-gray-800";
-  };
+  const rows = data?.rows ?? [];
+  const facilities = data?.facilities ?? [];
+  const actionTypes = data?.actionTypes ?? [];
+  const totalPages = Math.max(1, Math.ceil((data?.total ?? 0) / 25));
 
   return (
     <div className="space-y-6">
@@ -54,83 +55,142 @@ export default function ActivityLog() {
       <Card>
         <CardHeader>
           <CardTitle>Filters</CardTitle>
-          <CardDescription>Filter activity by type or search</CardDescription>
+          <CardDescription>Filter by date range, user, action type, and facility</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-5">
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search actions, entities, or details..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="User name/email..."
+                value={userQuery}
+                onChange={(e) => {
+                  setUserQuery(e.target.value);
+                  setPage(1);
+                }}
                 className="pl-10"
               />
             </div>
-            <Select value={entityFilter} onValueChange={setEntityFilter}>
+            <Select
+              value={actionFilter}
+              onValueChange={(value) => {
+                setActionFilter(value);
+                setPage(1);
+              }}
+            >
               <SelectTrigger>
-                <SelectValue placeholder="Filter by entity type" />
+                <SelectValue placeholder="Action type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="asset">Assets</SelectItem>
-                <SelectItem value="work_order">Work Orders</SelectItem>
-                <SelectItem value="site">Facilities</SelectItem>
-                <SelectItem value="user">Users</SelectItem>
-                <SelectItem value="vendor">Vendors</SelectItem>
-                <SelectItem value="financial">Financial</SelectItem>
+                <SelectItem value="all">All actions</SelectItem>
+                {actionTypes.map((action) => (
+                  <SelectItem key={action} value={action}>
+                    {action}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
+            <Select
+              value={facilityFilter}
+              onValueChange={(value) => {
+                setFacilityFilter(value);
+                setPage(1);
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Facility" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All facilities</SelectItem>
+                {facilities.map((facility) => (
+                  <SelectItem key={facility.id} value={String(facility.id)}>
+                    {facility.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(e) => {
+                setStartDate(e.target.value);
+                setPage(1);
+              }}
+            />
+            <Input
+              type="date"
+              value={endDate}
+              onChange={(e) => {
+                setEndDate(e.target.value);
+                setPage(1);
+              }}
+            />
           </div>
         </CardContent>
       </Card>
 
-      {/* Activity Timeline */}
+      {/* Activity Table */}
       {isLoading ? (
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
-      ) : filteredLogs && filteredLogs.length > 0 ? (
-        <div className="space-y-4">
-          {filteredLogs.map((log) => (
-            <Card key={log.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="pt-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Badge className={getActionBadgeColor(log.action)}>
-                        {log.action}
-                      </Badge>
-                      <Badge variant="outline">{log.entityType}</Badge>
-                    </div>
-                    
-                    {log.changes && (
-                      <p className="text-sm text-muted-foreground">
-                        {log.changes}
-                      </p>
-                    )}
-                    
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <User className="h-3 w-3" />
-                        <span>User ID: {log.userId}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        <span>{new Date(log.timestamp).toLocaleString()}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+      ) : rows.length > 0 ? (
+        <Card>
+          <CardContent className="pt-6">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Timestamp</TableHead>
+                  <TableHead>User</TableHead>
+                  <TableHead>Action</TableHead>
+                  <TableHead>Resource</TableHead>
+                  <TableHead>Details</TableHead>
+                  <TableHead>Facility</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.map((log) => (
+                  <TableRow key={log.id}>
+                    <TableCell>{new Date(log.timestamp).toLocaleString()}</TableCell>
+                    <TableCell>{log.userLabel}</TableCell>
+                    <TableCell>{log.action}</TableCell>
+                    <TableCell>{log.resource}</TableCell>
+                    <TableCell>{log.details ?? "-"}</TableCell>
+                    <TableCell>{log.facilityName ?? "-"}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
+              <span>
+                Page {page} of {totalPages} · {data?.total ?? 0} records
+              </span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className="rounded border px-3 py-1 disabled:opacity-50"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  className="rounded border px-3 py-1 disabled:opacity-50"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       ) : (
         <Card>
           <CardContent className="flex flex-col items-center justify-center h-64">
             <Activity className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">No activity found</p>
+            <p className="text-muted-foreground">No activity recorded yet.</p>
           </CardContent>
         </Card>
       )}

@@ -133,6 +133,7 @@ export default function ProtectedAppSection() {
           <Route path="/app/cost-analytics" component={CostAnalytics} />
           <Route path="/app/audit-trail" component={AuditTrail} />
           <Route path="/app/activity-log" component={ActivityLog} />
+          <Route path="/app/administration/activity-log" component={ActivityLog} />
           <Route path="/app/work-orders/:id" component={WorkOrderDetail} />
           <Route path="/app/work-orders" component={WorkOrders} />
           <Route path="/app/mobile-work-orders" component={MobileWorkOrders} />
