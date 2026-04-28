@@ -18,7 +18,7 @@ import { inventoryV2Router } from "./routers/inventoryRouter";
 import { wmsRouter } from "./routers/wmsRouter";
 import { requireRole } from "./_core/trpc";
 import { getSupabaseServiceRole } from "./_core/supabase";
-import { commodityTrackingNumbers, sites, stockCards, stockMovements, stockSettings, waybills } from "../drizzle/schema";
+import { assetTransfers, assets, commodityTrackingNumbers, requisitions, sites, stockCards, stockMovements, stockSettings, waybills } from "../drizzle/schema";
 import { buildDistributionVelocity, buildStockReadiness, getPeriodWindow } from "./wms/dashboard";
 import {
   legacyStatusFromRegister,
@@ -1531,32 +1531,129 @@ export const appRouter = router({
     recentActivity: protectedProcedure
       .input(z.object({ limit: z.number().min(1).max(20).default(5) }).optional())
       .query(async ({ input }) => {
-        const rows = [
-          { timestamp: "09:42", label: "Stock received · Family kits", location: "Lagos WH", kind: "in" as const },
-          { timestamp: "09:10", label: "Issue note posted · IN-0882", location: "Abuja", kind: "out" as const },
-          { timestamp: "08:54", label: "Requisition submitted · RQ-2301", location: "Ondo", kind: "req" as const },
-          { timestamp: "08:22", label: "Generator preventive check", location: "Kano", kind: "maint" as const },
-          { timestamp: "07:50", label: "Fuel variance logged", location: "Port Harcourt", kind: "fuel" as const },
-        ];
-        return rows.slice(0, input?.limit ?? 5);
+        const database = await db.getDb();
+        if (!database) return [];
+
+        const limit = input?.limit ?? 5;
+        const recentMovementRows = await database
+          .select({
+            type: stockMovements.sourceType,
+            description: stockMovements.documentRef,
+            timestamp: stockMovements.createdAt,
+            facilityName: sites.name,
+          })
+          .from(stockMovements)
+          .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
+          .innerJoin(sites, eq(stockCards.locationId, sites.id))
+          .where(sql`${stockMovements.sourceType} in ('grn', 'waybill')`)
+          .orderBy(sql`${stockMovements.createdAt} desc`)
+          .limit(10);
+
+        const recentRequisitionRows = await database
+          .select({
+            type: sql<string>`'requisition'`,
+            description: sql<string>`case
+              when ${requisitions.status} = 'approved' then concat('Requisition approved · ', ${requisitions.reqNumber})
+              else concat('Requisition submitted · ', ${requisitions.reqNumber})
+            end`,
+            timestamp: sql<Date>`coalesce(${requisitions.approvedHqAt}, ${requisitions.approvedBranchAt}, ${requisitions.createdAt})`,
+            facilityName: sites.name,
+          })
+          .from(requisitions)
+          .innerJoin(sites, eq(requisitions.requestingFacility, sites.id))
+          .where(sql`${requisitions.status} in ('submitted', 'approved')`)
+          .orderBy(sql`coalesce(${requisitions.approvedHqAt}, ${requisitions.approvedBranchAt}, ${requisitions.createdAt}) desc`)
+          .limit(10);
+
+        const recentAssetRows = await database
+          .select({
+            type: sql<string>`'asset'`,
+            description: sql<string>`concat('Asset created · ', ${assets.assetTag})`,
+            timestamp: assets.createdAt,
+            facilityName: sites.name,
+          })
+          .from(assets)
+          .innerJoin(sites, eq(assets.siteId, sites.id))
+          .orderBy(sql`${assets.createdAt} desc`)
+          .limit(10);
+
+        const recentTransferRows = await database
+          .select({
+            type: sql<string>`'asset_transfer'`,
+            description: sql<string>`concat('Asset transferred · ', ${assets.assetTag})`,
+            timestamp: sql<Date>`coalesce(${assetTransfers.transferDate}, ${assetTransfers.createdAt})`,
+            facilityName: sites.name,
+          })
+          .from(assetTransfers)
+          .innerJoin(assets, eq(assetTransfers.assetId, assets.id))
+          .innerJoin(sites, eq(assetTransfers.toSiteId, sites.id))
+          .orderBy(sql`coalesce(${assetTransfers.transferDate}, ${assetTransfers.createdAt}) desc`)
+          .limit(10);
+
+        return [...recentMovementRows, ...recentRequisitionRows, ...recentAssetRows, ...recentTransferRows]
+          .filter((row) => row.timestamp)
+          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+          .slice(0, limit)
+          .map((row) => ({
+            type: String(row.type),
+            description: row.description
+              ? String(row.description)
+              : row.type === "grn"
+                ? "Goods received posted"
+                : row.type === "waybill"
+                  ? "Waybill posted"
+                  : "Activity recorded",
+            timestamp: new Date(row.timestamp).toISOString(),
+            facilityName: row.facilityName ?? "Unknown facility",
+          }));
       }),
-    facilityStatus: protectedProcedure.query(async () => [
-      { name: "Lagos Central", region: "South West", stockPercent: 82, status: "active" as const },
-      { name: "Abuja FCT", region: "North Central", stockPercent: 73, status: "active" as const },
-      { name: "Kano Hub", region: "North West", stockPercent: 44, status: "low" as const },
-      { name: "Akure Field Unit", region: "South West", stockPercent: 31, status: "low" as const },
-      { name: "Maiduguri Node", region: "North East", stockPercent: 0, status: "offline" as const },
-    ]),
+    facilityStatus: protectedProcedure.query(async () => {
+      const database = await db.getDb();
+      if (!database) return [];
+
+      const rows = await database
+        .select({
+          id: sites.id,
+          name: sites.name,
+          code: sites.code,
+          type: sites.facilityType,
+          isActive: sites.isActive,
+        })
+        .from(sites)
+        .orderBy(sql`${sites.facilityType} asc, ${sites.name} asc`)
+        .limit(10);
+
+      return rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        code: row.code,
+        type: row.type,
+        status: row.isActive ? ("active" as const) : ("offline" as const),
+      }));
+    }),
     pendingRequisitions: protectedProcedure
       .input(z.object({ limit: z.number().min(1).max(12).default(4) }).optional())
-      .query(async ({ input }) => {
-        const rows = [
-          { id: "RQ-2308", from: "Lagos WH", amount: 18_400_000, type: "Shelter", submittedAt: "2h ago", priority: "High" as const },
-          { id: "RQ-2307", from: "Ondo Field", amount: 6_200_000, type: "Medical", submittedAt: "4h ago", priority: "Medium" as const },
-          { id: "RQ-2305", from: "Kano Hub", amount: 3_100_000, type: "WASH", submittedAt: "7h ago", priority: "High" as const },
-          { id: "RQ-2301", from: "Abuja FCT", amount: 1_400_000, type: "Logistics", submittedAt: "1d ago", priority: "Low" as const },
-        ];
-        return rows.slice(0, input?.limit ?? 4);
+      .query(async () => {
+        const database = await db.getDb();
+        if (!database) return { total: 0, urgent: 0, oldestDaysAgo: null as number | null };
+
+        const rows = await database
+          .select({
+            total: sql<number>`count(*)`.mapWith(Number),
+            urgent: sql<number>`count(*) filter (where lower(${requisitions.priority}) = 'urgent')`.mapWith(Number),
+            oldest: sql<Date | null>`max(${requisitions.createdAt})`,
+          })
+          .from(requisitions)
+          .where(sql`${requisitions.status} in ('submitted', 'approved')`);
+
+        const summary = rows[0];
+        const total = Number(summary?.total ?? 0);
+        const urgent = Number(summary?.urgent ?? 0);
+        const oldest = summary?.oldest ? new Date(summary.oldest) : null;
+        const oldestDaysAgo =
+          oldest === null ? null : Math.max(0, Math.floor((Date.now() - oldest.getTime()) / (1000 * 60 * 60 * 24)));
+
+        return { total, urgent, oldestDaysAgo };
       }),
     attentionItems: protectedProcedure
       .input(z.object({ role: z.enum(["Admin", "Manager", "Staff", "Field"]) }))
