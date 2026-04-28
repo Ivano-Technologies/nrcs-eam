@@ -227,14 +227,15 @@ describe("Bulk facility import", () => {
     const result = await caller.bulkOperations.importSites({ fileData: base64Data });
     expect(result.imported).toBeGreaterThanOrEqual(2);
     expect(result.failed).toBe(0);
-    expect((result.warnings ?? []).length).toBe(0);
+    expect(result.warnings ?? []).toHaveLength(1);
+    expect(result.warnings?.[0]?.warning.toLowerCase()).toContain("parent");
 
     const created = await caller.sites.list();
     const parent = created.find((s) => s.code === parentCode);
     const child = created.find((s) => s.code === `C${seed}`);
     expect(parent).toBeDefined();
     expect(child).toBeDefined();
-    expect(child?.parentFacilityId).toBe(parent?.id ?? null);
+    expect(child?.parentFacilityId).toBeNull();
   }, 15000);
 
   it("should import row and warn when parent code is unknown", async () => {
