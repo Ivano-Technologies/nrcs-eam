@@ -89,8 +89,8 @@ describe("Bulk facility import", () => {
     ];
 
     worksheet.addRow({
-      code: code1,
-      name: `Test Facility Alpha ${seed}`,
+      code: `NHQ${seed}`,
+      name: `Test NHQ ${seed}`,
       postalCode: "100001",
       address: "123 Test Street",
       city: "Test City",
@@ -107,7 +107,7 @@ describe("Bulk facility import", () => {
     });
 
     worksheet.addRow({
-      code: code2,
+      code: code1,
       name: `Test Facility Beta ${seed}`,
       postalCode: "100002",
       address: "456 Demo Avenue",
@@ -121,7 +121,25 @@ describe("Bulk facility import", () => {
       latitude: "6.5244",
       longitude: "3.3792",
       facilityType: "branch",
-      parentFacilityCode: "",
+      parentFacilityCode: `NHQ${seed}`,
+    });
+
+    worksheet.addRow({
+      code: code2,
+      name: `Test Facility Child ${seed}`,
+      postalCode: "100003",
+      address: "789 Demo Road",
+      city: "Demo City",
+      state: "Demo State",
+      country: "Nigeria",
+      contactPerson: "Child Contact",
+      contactPhone: "+234-222-333-4444",
+      contactEmail: "child@example.com",
+      status: "Active",
+      latitude: "6.5244",
+      longitude: "3.3792",
+      facilityType: "clinic",
+      parentFacilityCode: code1,
     });
 
     const buffer = await workbook.xlsx.writeBuffer();
@@ -211,10 +229,16 @@ describe("Bulk facility import", () => {
     ];
 
     worksheet.addRow({
+      code: `N${seed}`,
+      name: `Parent NHQ ${seed}`,
+      facilityType: "national_headquarters",
+      parentFacilityCode: "",
+    });
+    worksheet.addRow({
       code: parentCode,
       name: `Parent Branch ${seed}`,
       facilityType: "branch",
-      parentFacilityCode: "",
+      parentFacilityCode: `N${seed}`,
     });
     worksheet.addRow({
       code: `C${seed}`,
@@ -227,15 +251,14 @@ describe("Bulk facility import", () => {
     const result = await caller.bulkOperations.importSites({ fileData: base64Data });
     expect(result.imported).toBeGreaterThanOrEqual(2);
     expect(result.failed).toBe(0);
-    expect(result.warnings ?? []).toHaveLength(1);
-    expect(result.warnings?.[0]?.warning.toLowerCase()).toContain("parent");
+    expect(result.warnings ?? []).toHaveLength(0);
 
     const created = await caller.sites.list();
     const parent = created.find((s) => s.code === parentCode);
     const child = created.find((s) => s.code === `C${seed}`);
     expect(parent).toBeDefined();
     expect(child).toBeDefined();
-    expect(child?.parentFacilityId).toBeNull();
+    expect(child?.parentFacilityId).toBe(parent?.id ?? null);
   }, 15000);
 
   it("should import row and warn when parent code is unknown", async () => {
@@ -273,14 +296,13 @@ describe("Bulk facility import", () => {
 
     const base64Data = Buffer.from(await workbook.xlsx.writeBuffer()).toString("base64");
     const result = await caller.bulkOperations.importSites({ fileData: base64Data });
-    expect(result.failed).toBe(0);
-    expect(result.imported).toBeGreaterThanOrEqual(1);
+    expect(result.failed).toBe(1);
+    expect(result.imported).toBe(0);
     expect(result.warnings?.some((w) => String(w.warning).includes(unknownParentCode))).toBe(true);
 
     const created = await caller.sites.list();
     const child = created.find((s) => s.code === `U${seed}`);
-    expect(child).toBeDefined();
-    expect(child?.parentFacilityId).toBeNull();
+    expect(child).toBeUndefined();
   }, 15000);
 
   it("should import row cleanly when parent code is empty", async () => {
@@ -310,8 +332,8 @@ describe("Bulk facility import", () => {
 
     worksheet.addRow({
       code: `E${seed}`,
-      name: `Empty Parent Warehouse ${seed}`,
-      facilityType: "warehouse",
+      name: `Empty Parent NHQ ${seed}`,
+      facilityType: "national_headquarters",
       parentFacilityCode: "",
     });
 

@@ -44,6 +44,7 @@ import { nanoid } from "nanoid";
 import { generateSupabaseCompliantTempPassword } from "./tempPassword";
 import { FACILITY_TYPE_VALUES, type FacilityType } from "../shared/facilities";
 import type { InsertUser } from "../drizzle/schema";
+import { validateFacilityHierarchy } from "./facilityHierarchy";
 
 const facilityTypeZod = z.enum(FACILITY_TYPE_VALUES);
 const facilityTypeNormalizingZod = z.preprocess(
@@ -81,52 +82,8 @@ async function resolveFacilityParentForSave(params: {
   /** Set when updating an existing facility (for cycle checks). */
   siteId?: number;
 }): Promise<number | null> {
-  const t = params.facilityType;
-  const rawParent =
-    params.parentFacilityId === undefined ? undefined : params.parentFacilityId;
-
-  if (t === "branch" || t === "national_headquarters") {
-    if (rawParent != null) {
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message: "A branch or national headquarters cannot have a parent facility.",
-      });
-    }
-    return null;
-  }
-
-  const parentId = rawParent ?? null;
-  if ((t === "clinic" || t === "warehouse") && parentId == null) {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: "Clinics and warehouses must belong to a parent branch.",
-    });
-  }
-  if (t === "division" && parentId == null) {
-    return null;
-  }
-  if (parentId == null) {
-    throw new TRPCError({ code: "BAD_REQUEST", message: "Parent facility is required." });
-  }
-
-  const parent = await db.getSiteById(parentId);
-  if (!parent) {
-    throw new TRPCError({ code: "BAD_REQUEST", message: "Parent facility not found." });
-  }
-  if (parent.facilityType !== "branch") {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: "Parent must be a branch facility.",
-    });
-  }
-
-  if (params.siteId != null && (await db.wouldCreateFacilityParentCycle(params.siteId, parentId))) {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: "Invalid parent: would create a circular hierarchy.",
-    });
-  }
-
+  const parentId = params.parentFacilityId ?? null;
+  await validateFacilityHierarchy(params.facilityType, parentId, params.siteId);
   return parentId;
 }
 
@@ -216,10 +173,7 @@ export const appRouter = router({
       )
       .mutation(async ({ input }) => {
         const { facilityType, parentFacilityId, code, ...rest } = input;
-        const parentResolved = await resolveFacilityParentForSave({
-          facilityType,
-          parentFacilityId,
-        });
+        const parentResolved = await resolveFacilityParentForSave({ facilityType, parentFacilityId });
         return await db.createSite({
           ...(code ? { code } : {}),
           ...rest,
@@ -256,7 +210,7 @@ export const appRouter = router({
         }
         const nextType = facilityType ?? existing.facilityType;
         let nextParentRaw: number | null | undefined;
-        if (nextType === "branch") {
+        if (nextType === "national_headquarters") {
           nextParentRaw = null;
         } else if (parentFacilityId !== undefined) {
           nextParentRaw = parentFacilityId;

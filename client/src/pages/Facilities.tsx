@@ -78,6 +78,14 @@ type FacilityForm = {
   isActive: boolean;
 };
 
+const validParentTypes: Record<FacilityType, FacilityType[]> = {
+  national_headquarters: [],
+  branch: ["national_headquarters"],
+  division: ["branch"],
+  warehouse: ["branch"],
+  clinic: ["branch"],
+};
+
 const emptyForm = (): FacilityForm => ({
   code: "",
   name: "",
@@ -127,10 +135,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
   const listInput =
     lockedFacilityType != null ? { facilityType: lockedFacilityType } : undefined;
   const { data: facilities, isLoading, refetch } = trpc.sites.list.useQuery(listInput);
-  const { data: branchSites = [] } = trpc.sites.list.useQuery(
-    { facilityType: "branch" },
-    { staleTime: 120_000 }
-  );
+  const { data: allFacilities = [] } = trpc.sites.list.useQuery(undefined, { staleTime: 120_000 });
   const createMutation = trpc.sites.create.useMutation({
     onSuccess: async () => {
       toast.success("Facility created successfully");
@@ -172,7 +177,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
     return Array.from(values).sort((a, b) => a.localeCompare(b));
   }, [facilities]);
 
-  const parentOptions = branchSites;
+  const parentOptions = allFacilities;
 
   const effectiveTypeFilter = lockedFacilityType ?? (typeFilter === "all" ? "all" : typeFilter);
 
@@ -278,7 +283,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
     name: form.name.trim(),
     facilityType: form.facilityType,
     parentFacilityId:
-      form.facilityType === "branch"
+      form.facilityType === "national_headquarters"
         ? null
         : form.parentFacilityId
           ? Number(form.parentFacilityId)
@@ -309,6 +314,23 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
       if (!Number.isFinite(lon) || lon < -180 || lon > 180) {
         return "Longitude must be a number between -180 and 180.";
       }
+    }
+    return null;
+  };
+
+  const validateHierarchyBeforeSubmit = (form: FacilityForm): string | null => {
+    const allowedParents = validParentTypes[form.facilityType] ?? [];
+    if (allowedParents.length === 0) return null;
+    if (!form.parentFacilityId) {
+      return `A parent facility is required for ${FACILITY_TYPE_LABELS[form.facilityType]}`;
+    }
+    const parent = allFacilities.find((x) => x.id === Number(form.parentFacilityId));
+    if (!parent) {
+      return "Invalid parent: selected parent facility does not exist";
+    }
+    if (!allowedParents.includes(parent.facilityType)) {
+      const expected = allowedParents.map((type) => FACILITY_TYPE_LABELS[type]).join(" or ");
+      return `Invalid parent: ${FACILITY_TYPE_LABELS[form.facilityType]} must have a ${expected} as parent`;
     }
     return null;
   };
@@ -470,6 +492,8 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
               <Button
                 onClick={() => {
                   if (!createForm.name.trim()) return toast.error("Facility name is required");
+                  const hierarchyError = validateHierarchyBeforeSubmit(createForm);
+                  if (hierarchyError) return toast.error(hierarchyError);
                   const coordinateError = validateCoordinates(createForm);
                   if (coordinateError) return toast.error(coordinateError);
                   createMutation.mutate(toPayload(createForm));
@@ -579,6 +603,8 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => {
+                                  const hierarchyError = validateHierarchyBeforeSubmit(editForm);
+                                  if (hierarchyError) return toast.error(hierarchyError);
                                   const coordinateError = validateCoordinates(editForm);
                                   if (coordinateError) return toast.error(coordinateError);
                                   updateMutation.mutate({ id: f.id, ...toPayload(editForm) });
@@ -676,11 +702,11 @@ function FacilityFormFields(props: {
   parentOptions: Array<{ id: number; name: string; facilityType: string }>;
 }) {
   const { form, setForm, parentOptions } = props;
-  const canChooseParent = form.facilityType !== "branch" && form.facilityType !== "national_headquarters";
-  const showBranchParents = form.facilityType === "clinic" || form.facilityType === "warehouse";
-  const filteredParents = showBranchParents
-    ? parentOptions.filter((p) => p.facilityType === "branch")
-    : parentOptions;
+  const requiredParentTypes = validParentTypes[form.facilityType] ?? [];
+  const canChooseParent = requiredParentTypes.length > 0;
+  const filteredParents = parentOptions.filter((p) =>
+    requiredParentTypes.includes(p.facilityType as FacilityType)
+  );
 
   return (
     <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -688,7 +714,7 @@ function FacilityFormFields(props: {
       <div><Label>Name *</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
       <div>
         <Label>Facility Type *</Label>
-        <Select value={form.facilityType} onValueChange={(v) => setForm({ ...form, facilityType: v as FacilityType, parentFacilityId: v === "branch" ? "" : form.parentFacilityId })}>
+        <Select value={form.facilityType} onValueChange={(v) => setForm({ ...form, facilityType: v as FacilityType, parentFacilityId: v === "national_headquarters" ? "" : form.parentFacilityId })}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
             {FACILITY_TYPE_VALUES.map((t) => (
@@ -697,16 +723,15 @@ function FacilityFormFields(props: {
           </SelectContent>
         </Select>
       </div>
-      <div>
-        <Label>Parent Facility</Label>
+      <div className={canChooseParent ? "" : "hidden"}>
+        <Label>Parent Facility *</Label>
         <Select
           disabled={!canChooseParent}
-          value={form.parentFacilityId || "none"}
-          onValueChange={(v) => setForm({ ...form, parentFacilityId: v === "none" ? "" : v })}
+          value={form.parentFacilityId || undefined}
+          onValueChange={(v) => setForm({ ...form, parentFacilityId: v })}
         >
-          <SelectTrigger><SelectValue placeholder="Optional parent" /></SelectTrigger>
+          <SelectTrigger><SelectValue placeholder="Select parent facility" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="none">None</SelectItem>
             {filteredParents.map((p) => (
               <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
             ))}
