@@ -9,6 +9,11 @@ function statusClass(status: "active" | "offline") {
 
 export function FacilityStatusList() {
   const { data } = trpc.dashboard.facilityStatus.useQuery();
+  const scoreToneClass = (score: number) => {
+    if (score >= 70) return "bg-green-500";
+    if (score >= 40) return "bg-amber-500";
+    return "bg-red-500";
+  };
 
   return (
     <Card className="rounded-2xl">
@@ -25,6 +30,16 @@ export function FacilityStatusList() {
               <p className="text-xs text-muted-foreground">
                 {row.code ?? "No code"} · {row.type}
               </p>
+              {row.stockScore !== null ? (
+                <div className="mt-2 flex items-center gap-2">
+                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+                    <div className={cn("h-full rounded-full transition-all", scoreToneClass(row.stockScore))} style={{ width: `${row.stockScore}%` }} />
+                  </div>
+                  <span className="text-xs font-medium text-muted-foreground">{row.stockScore}%</span>
+                </div>
+              ) : (
+                <p className="mt-2 text-xs text-muted-foreground">No stock data</p>
+              )}
             </div>
             <span className={cn("rounded-full px-2.5 py-1 text-xs font-medium capitalize", statusClass(row.status))}>{row.status}</span>
           </div>
