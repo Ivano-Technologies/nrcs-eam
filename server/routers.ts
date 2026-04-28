@@ -1346,20 +1346,6 @@ export const appRouter = router({
       .query(async ({ input }) => {
         const stats = await db.getDashboardStats();
         const database = await db.getDb();
-        const periodDeltaMap = {
-          Today: { stock: 4.2, response: -0.1 },
-          Week: { stock: 8.4, response: -0.3 },
-          Month: { stock: 18, response: -0.8 },
-          Quarter: { stock: 26, response: -1.3 },
-          Year: { stock: 43, response: -2.1 },
-        } as const;
-        const d = periodDeltaMap[input.period];
-        const lowStockDeltaByPeriod = { Today: -1, Week: -2, Month: -3, Quarter: -5, Year: -8 } as const;
-        const lowStockDelta = lowStockDeltaByPeriod[input.period];
-        const lowStockDirection =
-          lowStockDelta < 0 ? ("down" as const) : lowStockDelta > 0 ? ("up" as const) : ("flat" as const);
-        const responseDir =
-          d.response < 0 ? ("down" as const) : d.response > 0 ? ("up" as const) : ("flat" as const);
 
         let stockReadiness: {
           adequate: number;
@@ -1389,15 +1375,30 @@ export const appRouter = router({
           hasData: false,
           goodWhen: "up" as const,
         };
+        let activeFacilitiesKpi = { value: 0, total: 0, offline: 0, goodWhen: "up" as const };
 
         if (database) {
           const window = getPeriodWindow(input.period);
-          const [activeFacilities, currentAdequateRows, previousAdequateRows, currentDist, previousDist, historicalDist] =
+          const [
+            activeFacilities,
+            totalFacilities,
+            inactiveFacilities,
+            currentAdequateRows,
+            previousAdequateRows,
+            currentDist,
+            previousDist,
+            historicalDist,
+          ] =
             await Promise.all([
               database
                 .select({ id: sites.id })
                 .from(sites)
                 .where(eq(sites.isActive, true)),
+              database.select({ total: sql<number>`count(*)`.mapWith(Number) }).from(sites),
+              database
+                .select({ total: sql<number>`count(*)`.mapWith(Number) })
+                .from(sites)
+                .where(eq(sites.isActive, false)),
               database
                 .selectDistinct({ locationId: stockCards.locationId })
                 .from(stockMovements)
@@ -1471,21 +1472,30 @@ export const appRouter = router({
             previous: previousValue,
             historicalTotal: historicalValue,
           });
+
+          activeFacilitiesKpi = {
+            value: activeFacilities.length,
+            total: Number(totalFacilities[0]?.total ?? 0),
+            offline: Number(inactiveFacilities[0]?.total ?? 0),
+            goodWhen: "up" as const,
+          };
         }
         return {
           lowStockItems: {
             value: Number(stats?.lowStockItems ?? 0),
-            delta: `${lowStockDelta > 0 ? "+" : ""}${lowStockDelta}`,
-            direction: lowStockDirection,
+            // Hide delta until there is a validated period-over-period low-stock query.
+            delta: undefined,
+            direction: "flat" as const,
             goodWhen: "down" as const,
           },
-          activeFacilities: { value: 37, total: 42, offline: 5, goodWhen: "up" as const },
+          activeFacilities: activeFacilitiesKpi,
           stockReadiness,
           distributionVelocity,
           avgResponseHours: {
-            value: 4.2,
-            delta: `${d.response > 0 ? "+" : ""}${d.response} hrs`,
-            direction: responseDir,
+            // Placeholder removed: return neutral until real SLA/processing data is wired.
+            value: 0,
+            delta: undefined,
+            direction: "flat" as const,
             goodWhen: "down" as const,
           },
         };
@@ -1494,10 +1504,28 @@ export const appRouter = router({
       .input(z.object({ weeks: z.number().min(4).max(26).default(12) }).optional())
       .query(async ({ input }) => {
         const weeks = input?.weeks ?? 12;
-        return Array.from({ length: weeks }).map((_, idx) => ({
-          w: `W${idx + 1}`,
-          inbound: 120 + ((idx * 17) % 85),
-          outbound: 95 + ((idx * 13) % 70),
+        const database = await db.getDb();
+        if (!database) return [];
+
+        const startDate = new Date();
+        startDate.setUTCDate(startDate.getUTCDate() - (weeks * 7 - 1));
+        const startDateIso = startDate.toISOString().slice(0, 10);
+
+        const rows = await database
+          .select({
+            weekStart: sql<string>`to_char(date_trunc('week', ${stockMovements.date}::timestamp), 'YYYY-MM-DD')`,
+            inbound: sql<number>`coalesce(sum(${stockMovements.quantityIn}), 0)`.mapWith(Number),
+            outbound: sql<number>`coalesce(sum(${stockMovements.quantityOut}), 0)`.mapWith(Number),
+          })
+          .from(stockMovements)
+          .where(gte(stockMovements.date, startDateIso))
+          .groupBy(sql`date_trunc('week', ${stockMovements.date}::timestamp)`)
+          .orderBy(sql`date_trunc('week', ${stockMovements.date}::timestamp) asc`);
+
+        return rows.map((row) => ({
+          w: row.weekStart,
+          inbound: Number(row.inbound ?? 0),
+          outbound: Number(row.outbound ?? 0),
         }));
       }),
     recentActivity: protectedProcedure
