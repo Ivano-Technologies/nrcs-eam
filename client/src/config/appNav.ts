@@ -190,6 +190,16 @@ export const SIDEBAR_GROUPS: AppNavGroup[] = [
       { label: "Report Scheduling", path: appPath("/report-scheduling"), icon: FileBarChart },
     ],
   },
+  {
+    id: "settings",
+    label: "Settings",
+    icon: Settings,
+    items: [
+      { label: "Profile", path: appPath("/dashboard-settings"), icon: Settings },
+      { label: "Notifications", path: appPath("/settings/notifications"), icon: Mail },
+      { label: "System Settings", path: appPath("/email-notifications"), icon: Settings, adminOnly: true },
+    ],
+  },
 ];
 
 /** Reserved for future standalone items between Reports and Administration (currently empty). */
@@ -203,17 +213,15 @@ export const SIDEBAR_GROUPS_ADMIN: AppNavGroup[] = [
     icon: Users,
     adminOnly: true,
     items: [
-      { label: "Vendors", path: appPath("/vendors"), icon: Users },
-      { label: "Pending Users", path: appPath("/pending-users"), icon: Users },
-      { label: "Notifications", path: appPath("/email-notifications"), icon: Mail },
+      { label: "Users", path: appPath("/settings/users"), icon: Users },
+      { label: "Pending Users", path: appPath("/settings/pending-users"), icon: Users },
+      { label: "Vendors", path: appPath("/settings/vendors"), icon: Users },
     ],
   },
 ];
 
 /** Standalone bottom items, exact order: Settings, then Activity Log (not in collapsible groups). */
 export const SIDEBAR_BOTTOM: AppNavItem[] = [
-  { label: "Settings", path: appPath("/dashboard-settings"), icon: Settings },
-  { label: "Users", path: appPath("/settings/users"), icon: Users, adminOnly: true },
   { label: "Activity Log", path: appPath("/activity-log"), icon: History },
 ];
 
@@ -255,10 +263,15 @@ const GROUP_PREFIXES: { groupId: string; pathPrefix: string }[] = [
   { groupId: "compliance", pathPrefix: appPath("/audit-trail") },
   { groupId: "reports", pathPrefix: appPath("/reports") },
   { groupId: "reports", pathPrefix: appPath("/report-scheduling") },
-  { groupId: "administration", pathPrefix: appPath("/vendors") },
+  { groupId: "administration", pathPrefix: appPath("/settings/users") },
+  { groupId: "administration", pathPrefix: appPath("/settings/pending-users") },
+  { groupId: "administration", pathPrefix: appPath("/settings/vendors") },
+  // Legacy aliases still routed in app shell.
   { groupId: "administration", pathPrefix: appPath("/pending-users") },
-  { groupId: "administration", pathPrefix: appPath("/email-notifications") },
+  { groupId: "administration", pathPrefix: appPath("/vendors") },
   { groupId: "settings", pathPrefix: appPath("/settings") },
+  { groupId: "settings", pathPrefix: appPath("/settings/notifications") },
+  { groupId: "settings", pathPrefix: appPath("/email-notifications") },
   { groupId: "settings", pathPrefix: appPath("/dashboard-settings") },
 ];
 
