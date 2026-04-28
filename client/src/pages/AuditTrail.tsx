@@ -10,17 +10,18 @@ export default function AuditTrail() {
   const [entityType, setEntityType] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   
-  const { data: logs, isLoading } = trpc.auditLogs.list.useQuery({
+  const { data, isLoading } = trpc.auditLogs.list.useQuery({
     entityType: entityType === "all" ? undefined : entityType,
   });
+  const logs = data?.rows ?? [];
 
-  const filteredLogs = logs?.filter((log: any) => {
+  const filteredLogs = logs.filter((log) => {
     if (!searchQuery) return true;
     const searchLower = searchQuery.toLowerCase();
     return (
       log.action.toLowerCase().includes(searchLower) ||
-      (log.entityType && log.entityType.toLowerCase().includes(searchLower)) ||
-      (log.changes && log.changes.toLowerCase().includes(searchLower))
+      (log.resource && log.resource.toLowerCase().includes(searchLower)) ||
+      (log.details && log.details.toLowerCase().includes(searchLower))
     );
   });
 
@@ -84,11 +85,11 @@ export default function AuditTrail() {
         <CardHeader>
           <CardTitle>Activity Log</CardTitle>
           <CardDescription>
-            {filteredLogs?.length || 0} records found
+            {filteredLogs.length} records found
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {filteredLogs && filteredLogs.length > 0 ? (
+          {filteredLogs.length > 0 ? (
             <div className="space-y-4">
               {filteredLogs.map((log) => (
                 <div
@@ -102,18 +103,18 @@ export default function AuditTrail() {
                           {log.action}
                         </span>
                         <span className="text-xs px-2 py-1 bg-muted rounded">
-                          {log.entityType}
+                          {log.resource}
                         </span>
                       </div>
-                      {log.changes && (
-                        <p className="text-sm text-muted-foreground">{log.changes}</p>
+                      {log.details && (
+                        <p className="text-sm text-muted-foreground">{log.details}</p>
                       )}
                       <div className="flex items-center gap-4 text-xs text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
                           {format(new Date(log.timestamp), 'PPpp')}
                         </span>
-                        <span>User ID: {log.userId}</span>
+                        <span>{log.userLabel}</span>
                       </div>
                     </div>
                   </div>

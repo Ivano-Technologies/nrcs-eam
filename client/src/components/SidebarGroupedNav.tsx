@@ -135,13 +135,9 @@ export function SidebarGroupedNav({
 
   const q = searchQuery.trim();
   const groupsMain = useMemo(() => {
-    const base = SIDEBAR_GROUPS.map((g) => ({
-      ...g,
-      items: g.items.filter((i) => !i.adminOnly || isAdmin),
-    }));
-    if (!q) return base;
-    return base.map((g) => filterGroup(g, q)).filter(Boolean) as AppNavGroup[];
-  }, [q, isAdmin]);
+    if (!q) return SIDEBAR_GROUPS;
+    return SIDEBAR_GROUPS.map((g) => filterGroup(g, q)).filter(Boolean) as AppNavGroup[];
+  }, [q]);
 
   const groupsTail = useMemo(() => {
     const raw = SIDEBAR_GROUPS_ADMIN.filter((g) => !g.adminOnly || isAdmin);
