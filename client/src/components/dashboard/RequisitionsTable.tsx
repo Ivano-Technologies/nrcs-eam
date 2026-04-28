@@ -1,18 +1,8 @@
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { appPath } from "@/lib/routes";
 import { trpc } from "@/lib/trpc";
-import { formatNaira } from "@/lib/format";
-import { ChevronRight } from "lucide-react";
 import { Link } from "wouter";
-
-function priorityClass(priority: "High" | "Medium" | "Low") {
-  if (priority === "High") return "bg-red-100 text-red-700 border-red-200";
-  if (priority === "Medium") return "bg-amber-100 text-amber-700 border-amber-200";
-  return "bg-muted text-muted-foreground border-border";
-}
 
 export function RequisitionsTable() {
   const { data } = trpc.dashboard.pendingRequisitions.useQuery({ limit: 4 });
@@ -26,38 +16,22 @@ export function RequisitionsTable() {
         </Link>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Ref</TableHead>
-              <TableHead>From</TableHead>
-              <TableHead>Amount</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Submitted</TableHead>
-              <TableHead>Priority</TableHead>
-              <TableHead className="w-10" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {(data ?? []).map((row) => (
-              <TableRow key={row.id}>
-                <TableCell className="font-mono text-[#DC2626]">{row.id}</TableCell>
-                <TableCell>{row.from}</TableCell>
-                <TableCell className="font-semibold">{formatNaira(row.amount)}</TableCell>
-                <TableCell>{row.type}</TableCell>
-                <TableCell>{row.submittedAt}</TableCell>
-                <TableCell>
-                  <Badge variant="outline" className={priorityClass(row.priority)}>
-                    {row.priority}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="rounded-xl border p-4">
+            <p className="text-sm text-muted-foreground">Open requisitions</p>
+            <p className="mt-2 text-2xl font-semibold">{data?.total ?? 0}</p>
+          </div>
+          <div className="rounded-xl border p-4">
+            <p className="text-sm text-muted-foreground">Urgent</p>
+            <p className="mt-2 text-2xl font-semibold text-[#DC2626]">{data?.urgent ?? 0}</p>
+          </div>
+          <div className="rounded-xl border p-4">
+            <p className="text-sm text-muted-foreground">Oldest pending</p>
+            <p className="mt-2 text-2xl font-semibold">
+              {data?.oldestDaysAgo === null || data?.oldestDaysAgo === undefined ? "None" : `${data.oldestDaysAgo}d`}
+            </p>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );

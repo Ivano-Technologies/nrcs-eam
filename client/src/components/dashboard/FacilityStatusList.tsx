@@ -1,12 +1,10 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 
-function progressColor(percent: number) {
-  if (percent >= 70) return "[&>div]:bg-green-500";
-  if (percent >= 45) return "[&>div]:bg-amber-500";
-  return "[&>div]:bg-red-500";
+function statusClass(status: "active" | "offline") {
+  if (status === "active") return "bg-green-100 text-green-700";
+  return "bg-slate-100 text-slate-700";
 }
 
 export function FacilityStatusList() {
@@ -16,22 +14,19 @@ export function FacilityStatusList() {
     <Card className="rounded-2xl">
       <CardHeader>
         <CardTitle>Facility status</CardTitle>
-        <CardDescription>Current stock readiness by location</CardDescription>
+        <CardDescription>Facility records from the live sites table</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
+        {(data ?? []).length === 0 ? <p className="text-sm text-muted-foreground">No facilities found.</p> : null}
         {(data ?? []).map((row) => (
-          <div key={row.name} className="flex items-center gap-4">
+          <div key={row.id} className="flex items-center gap-4 rounded-xl border p-3">
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold truncate">{row.name}</p>
-              <p className="text-xs text-muted-foreground">{row.region}</p>
+              <p className="text-xs text-muted-foreground">
+                {row.code ?? "No code"} · {row.type}
+              </p>
             </div>
-            <div className="w-36 shrink-0">
-              <div className="flex justify-between text-xs mb-1">
-                <span className="text-muted-foreground">Stock</span>
-                <span className="font-medium">{row.stockPercent}%</span>
-              </div>
-              <Progress value={row.stockPercent} className={cn("h-2", progressColor(row.stockPercent))} />
-            </div>
+            <span className={cn("rounded-full px-2.5 py-1 text-xs font-medium capitalize", statusClass(row.status))}>{row.status}</span>
           </div>
         ))}
       </CardContent>
