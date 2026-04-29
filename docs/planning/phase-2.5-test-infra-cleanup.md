@@ -44,3 +44,27 @@ Stabilize the Playwright test infrastructure across `mvp-audit` and `live-auth` 
 ## Priority
 
 Deferred post-Phase 7. This remains non-blocking for current delivery but should be scheduled before broad donor-facing regression automation requirements.
+
+## Step 1 inventory (2026-04-29)
+
+Searched all Playwright coverage for `mvp-audit` and `live-auth` for `seedE2E`, `runSeedE2E`, and `seed-e2e:local`.
+
+### Seed call sites and hook classification
+
+- `tests/mvp-audit/auth.setup.ts`
+  - Call: `runSeedE2E()`
+  - Classification: setup/global bootstrap file (not `beforeEach`, `beforeAll`, or test body)
+- `tests/mvp-audit/helpers/e2eAuth.ts`
+  - Call: `execSync("pnpm run seed-e2e:local", ...)` inside `runSeedE2E()`
+  - Classification: shared setup utility (not `beforeEach`, `beforeAll`, or test body)
+
+### Spec-level hook usage summary
+
+- `beforeEach`: none
+- `beforeAll`: none
+- `test body`: none
+
+### Script definition reference
+
+- `package.json`
+  - Script: `"seed-e2e:local": "dotenv -e .env.e2e -- tsx scripts/db/seed-e2e.ts"`
