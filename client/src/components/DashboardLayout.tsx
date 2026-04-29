@@ -401,15 +401,15 @@ function DashboardLayoutContent({
           </div>
         )}
         {!isMobile && (
-          <div className="sticky top-0 z-40 flex h-14 items-center justify-between gap-3 border-b border-white/20 bg-[var(--color-navy)] px-4 text-[hsl(0_0%_95%)] backdrop-blur supports-[backdrop-filter]:backdrop-blur">
+          <div className="sticky top-0 z-40 flex h-14 items-center justify-between gap-3 border-b border-[rgba(0,0,0,0.08)] bg-[rgba(255,255,255,0.72)] px-4 text-[#1a2332] [backdrop-filter:blur(12px)] [-webkit-backdrop-filter:blur(12px)] dark:border-[rgba(255,255,255,0.08)] dark:bg-[rgba(15,23,42,0.72)] dark:text-[hsl(0_0%_95%)]">
             <div className="flex-1 min-w-0" />
-            <GlobalSearch className="min-w-[220px] border-white/30 bg-white/10 text-[hsl(0_0%_95%)] hover:bg-white/15 hover:text-[hsl(0_0%_95%)] [&_kbd]:border-white/30 [&_kbd]:bg-white/10 [&_kbd]:text-[hsl(0_0%_95%)]" />
+            <GlobalSearch className="min-w-[220px] border-[rgba(0,0,0,0.12)] bg-white/70 text-[#1a2332] hover:bg-white/85 hover:text-[#1a2332] dark:border-white/20 dark:bg-white/10 dark:text-[hsl(0_0%_95%)] dark:hover:bg-white/15 dark:hover:text-[hsl(0_0%_95%)] [&_kbd]:border-[rgba(0,0,0,0.15)] [&_kbd]:bg-white/80 [&_kbd]:text-[#1a2332] dark:[&_kbd]:border-white/30 dark:[&_kbd]:bg-white/10 dark:[&_kbd]:text-[hsl(0_0%_95%)]" />
             <div className="flex items-center gap-2 shrink-0">
-              <div className="[&_[data-slot='select-trigger']]:border-white/30 [&_[data-slot='select-trigger']]:bg-white/10 [&_[data-slot='select-trigger']]:text-[hsl(0_0%_95%)] [&_[data-slot='select-trigger']]:hover:bg-white/15 [&_[data-slot='select-trigger']_[data-slot='select-value']]:text-[hsl(0_0%_95%)] [&_[data-slot='select-trigger']_svg]:text-[hsl(0_0%_95%)] [&_.text-muted-foreground]:text-[hsl(0_0%_95%)]">
+              <div className="[&_[data-slot='select-trigger']]:border-[rgba(0,0,0,0.15)] [&_[data-slot='select-trigger']]:bg-white/70 [&_[data-slot='select-trigger']]:text-[#1a2332] [&_[data-slot='select-trigger']]:hover:bg-white/85 [&_[data-slot='select-trigger']_[data-slot='select-value']]:text-[#1a2332] [&_[data-slot='select-trigger']_svg]:text-[#1a2332] dark:[&_[data-slot='select-trigger']]:border-white/20 dark:[&_[data-slot='select-trigger']]:bg-white/10 dark:[&_[data-slot='select-trigger']]:text-[hsl(0_0%_95%)] dark:[&_[data-slot='select-trigger']]:hover:bg-white/15 dark:[&_[data-slot='select-trigger']_[data-slot='select-value']]:text-[hsl(0_0%_95%)] dark:[&_[data-slot='select-trigger']_svg]:text-[hsl(0_0%_95%)] [&_.text-muted-foreground]:text-[#1a2332] dark:[&_.text-muted-foreground]:text-[hsl(0_0%_95%)]">
                 <RoleSwitcher actualRole={actualRole} value={effectiveRole} onChange={setEffectiveRole} />
               </div>
-              <ThemeToggle className="text-[hsl(0_0%_95%)] hover:bg-white/10 dark:text-[hsl(0_0%_95%)] dark:hover:bg-white/10" />
-              <NotificationCenter triggerClassName="text-[hsl(0_0%_95%)] hover:bg-white/10 dark:text-[hsl(0_0%_95%)] dark:hover:bg-white/10" />
+              <ThemeToggle className="text-[#1a2332] hover:bg-black/5 dark:text-[hsl(0_0%_95%)] dark:hover:bg-white/10" />
+              <NotificationCenter triggerClassName="text-[#1a2332] hover:bg-black/5 dark:text-[hsl(0_0%_95%)] dark:hover:bg-white/10" />
             </div>
           </div>
         )}
