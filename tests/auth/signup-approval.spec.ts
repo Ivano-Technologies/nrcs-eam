@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { deleteUserByEmailViaUi, runLiveBrowserCleanup } from "../helpers/liveTestData";
+import { E2E_USER_EMAIL, E2E_USER_PASSWORD } from "./live-helpers";
 
 /**
  * Live: public signup only creates pending_users; admin approves → users + Supabase Auth.
@@ -9,11 +10,6 @@ import { deleteUserByEmailViaUi, runLiveBrowserCleanup } from "../helpers/liveTe
  * (open registration). After deploy, signup is DB-only until approval.
  */
 test.describe.configure({ timeout: 180_000 });
-
-const ADMIN_EMAIL =
-  process.env.PLAYWRIGHT_ADMIN_EMAIL ?? "ivanonigeria@gmail.com";
-const ADMIN_PASSWORD =
-  process.env.PLAYWRIGHT_ADMIN_PASSWORD ?? "@Localhost001";
 
 // Skipped: requires test data creation in production DB (pending users / approved test accounts)
 test.describe.skip("signup approval flow (live)", () => {
@@ -56,8 +52,8 @@ test.describe.skip("signup approval flow (live)", () => {
     await expect(successLocator.first()).toContainText(/administrator|review your request/i);
 
     await page.goto("/login");
-    await page.getByTestId("login-email-input").fill(ADMIN_EMAIL);
-    await page.getByTestId("login-password-input").fill(ADMIN_PASSWORD);
+    await page.getByTestId("login-email-input").fill(E2E_USER_EMAIL);
+    await page.getByTestId("login-password-input").fill(E2E_USER_PASSWORD);
     await page.getByTestId("login-password-submit").click();
     await expect(page).toHaveURL(/\/app/, { timeout: 60_000 });
 
