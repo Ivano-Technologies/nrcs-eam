@@ -49,9 +49,9 @@ export function AttentionPanel({ role }: Props) {
   const { data } = trpc.dashboard.attentionItems.useQuery({ role });
 
   return (
-    <Card className="rounded-2xl">
+    <Card className="dashboard-card">
       <CardHeader>
-        <CardTitle>Needs your attention</CardTitle>
+        <CardTitle className="dashboard-section-title">Needs your attention</CardTitle>
         <CardDescription>Personalised for {role}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-1">

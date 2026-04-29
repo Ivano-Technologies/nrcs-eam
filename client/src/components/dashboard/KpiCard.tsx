@@ -6,11 +6,19 @@ import type { ReactNode } from "react";
 type KpiTone = "red" | "blue" | "purple" | "orange" | "green";
 
 const toneClassMap: Record<KpiTone, string> = {
-  red: "bg-gradient-to-br from-red-600 to-red-700",
-  blue: "bg-gradient-to-br from-blue-500 to-blue-700",
-  purple: "bg-gradient-to-br from-purple-500 to-purple-600",
-  orange: "bg-gradient-to-br from-orange-500 to-orange-600",
-  green: "bg-gradient-to-br from-green-500 to-green-700",
+  red: "border-l-[#EE1C25]",
+  blue: "border-l-[#1a2332]",
+  purple: "border-l-[#1a2332]",
+  orange: "border-l-[#EE1C25]",
+  green: "border-l-[#1a2332]",
+};
+
+const iconToneClassMap: Record<KpiTone, string> = {
+  red: "bg-[rgba(238,28,37,0.1)] text-[#EE1C25]",
+  blue: "bg-[rgba(26,35,50,0.08)] text-[#1a2332]",
+  purple: "bg-[rgba(26,35,50,0.08)] text-[#1a2332]",
+  orange: "bg-[rgba(238,28,37,0.1)] text-[#EE1C25]",
+  green: "bg-[rgba(26,35,50,0.08)] text-[#1a2332]",
 };
 
 type DeltaDirection = "up" | "down" | "flat";
@@ -67,17 +75,22 @@ export function KpiCard({
   const showPill = Boolean(delta) && deltaDirection !== "flat";
 
   return (
-    <Card className="flex h-full min-h-[168px] flex-col border-l-4 border-l-primary/20 bg-gradient-to-br from-white to-gray-50 shadow-sm transition-all duration-200 hover:shadow-lg dark:from-card dark:to-card">
+    <Card
+      className={cn(
+        "dashboard-card flex h-full min-h-[168px] flex-col border-l-[3px] transition-shadow duration-150",
+        toneClassMap[tone]
+      )}
+    >
       <CardContent className="flex flex-1 flex-col px-5 pb-4 pt-5">
         <header className="flex items-start justify-between gap-2">
-          <span className="text-sm font-medium leading-snug text-foreground">{label}</span>
-          <div className={cn("shrink-0 rounded-xl p-2.5 shadow-sm", toneClassMap[tone])}>
-            <Icon className="h-5 w-5 text-white" />
+          <span className="text-sm font-medium leading-snug text-[#1a2332]">{label}</span>
+          <div className={cn("shrink-0 rounded-xl p-2.5", iconToneClassMap[tone])}>
+            <Icon className="h-5 w-5" />
           </div>
         </header>
 
         <div
-          className="mt-3 min-w-0 text-xl font-bold tabular-nums tracking-tight leading-snug text-foreground sm:text-2xl whitespace-nowrap"
+          className="mt-3 min-w-0 whitespace-nowrap text-[2rem] font-bold leading-snug tracking-tight tabular-nums text-[#1a2332]"
           data-testid={valueTestId}
         >
           {value}

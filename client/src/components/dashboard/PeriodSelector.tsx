@@ -10,15 +10,17 @@ type Props = {
 
 export function PeriodSelector({ value, onChange }: Props) {
   return (
-    <div className="rounded-xl border bg-card p-1 inline-flex items-center gap-1">
+    <div className="inline-flex items-center gap-1 rounded-full bg-[#f1f3f5] p-1">
       {PERIODS.map((period) => (
         <button
           key={period}
           type="button"
           onClick={() => onChange(period)}
           className={cn(
-            "rounded-lg px-3 py-1.5 text-sm transition-colors",
-            value === period ? "bg-foreground text-background" : "bg-transparent text-muted-foreground hover:text-foreground"
+            "rounded-full px-3 py-1.5 text-sm transition-all duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#EE1C25] focus-visible:outline-offset-2",
+            value === period
+              ? "bg-white font-semibold text-[#EE1C25] shadow-[0_1px_3px_rgba(0,0,0,0.12)]"
+              : "bg-transparent text-[#6b7280] hover:text-[#1a2332]"
           )}
         >
           {period}

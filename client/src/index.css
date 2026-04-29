@@ -44,6 +44,14 @@
 
 :root {
   color-scheme: light;
+  --color-primary: #EE1C25;
+  --color-primary-hover: #c8151c;
+  --color-navy: #1a2332;
+  --color-surface: #ffffff;
+  --color-border: rgba(0, 0, 0, 0.07);
+  --color-muted: #6b7280;
+  --radius-card: 12px;
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.06);
   /* NRCS Red Cross Red as primary */
   --primary: oklch(0.60 0.24 25); /* Red #DC2626 */
   --primary-foreground: oklch(0.99 0 0);
@@ -144,6 +152,35 @@ html.dark {
 }
 
 @layer components {
+  .dashboard-card {
+    border-radius: var(--radius-card);
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-card);
+  }
+
+  .dashboard-section-title {
+    color: var(--color-navy);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    padding-bottom: 8px;
+  }
+
+  .dashboard-empty-state {
+    text-align: center;
+  }
+
+  .dashboard-empty-state-icon {
+    width: 48px;
+    height: 48px;
+    color: var(--color-muted);
+  }
+
+  .dashboard-empty-state-subtitle {
+    color: var(--color-muted);
+  }
+
   /* Smooth transition for sidebar width changes */
   [data-sidebar] {
     transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);

@@ -16,9 +16,9 @@ export function FacilityStatusList() {
   };
 
   return (
-    <Card className="rounded-2xl">
+    <Card className="dashboard-card">
       <CardHeader>
-        <CardTitle>Facility status</CardTitle>
+        <CardTitle className="dashboard-section-title">Facility status</CardTitle>
         <CardDescription>Facility records from the live sites table</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
