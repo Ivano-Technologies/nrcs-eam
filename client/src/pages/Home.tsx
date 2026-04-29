@@ -12,6 +12,15 @@ import { trpc } from "@/lib/trpc";
 import { AlertTriangle, ClipboardList, MapPin, ShieldCheck, Truck } from "lucide-react";
 import { useMemo, useState } from "react";
 
+const DEFAULT_WIDGETS = {
+  kpiCards: true,
+  stockMovement: true,
+  attentionPanel: true,
+  activityFeed: true,
+  facilityStatus: true,
+  requisitionsTable: true,
+} as const;
+
 export default function Home() {
   const { user } = useAuth();
   const rolePreview = useDashboardRolePreview();
@@ -31,6 +40,16 @@ export default function Home() {
   const { data: metrics, isLoading } = trpc.dashboard.metrics.useQuery({ period });
   const { data: pendingReqs } = trpc.dashboard.pendingRequisitions.useQuery();
   const { data: movement } = trpc.dashboard.stockMovement.useQuery({ weeks: period === "Today" ? 4 : 12 });
+  const { data: userPreferences } = trpc.userPreferences.get.useQuery();
+  const widgetVisibility = useMemo(() => {
+    if (!userPreferences?.dashboardWidgets) return DEFAULT_WIDGETS;
+    try {
+      const parsed = JSON.parse(userPreferences.dashboardWidgets) as Partial<typeof DEFAULT_WIDGETS>;
+      return { ...DEFAULT_WIDGETS, ...parsed };
+    } catch {
+      return DEFAULT_WIDGETS;
+    }
+  }, [userPreferences?.dashboardWidgets]);
   const normalizeDirection = (direction?: string): "up" | "down" | "flat" =>
     direction === "up" || direction === "down" ? direction : "flat";
 
@@ -135,40 +154,46 @@ export default function Home() {
         <PeriodSelector value={period} onChange={setPeriod} />
       </div>
 
-      {effectiveRole === "Field" ? (
+      {effectiveRole === "Field" && widgetVisibility.attentionPanel ? (
         <AttentionPanel role={effectiveRole} />
       ) : null}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
-        {kpis.map((kpi) => (
-          <KpiCard
-            key={kpi.key}
-            label={kpi.label}
-            value={kpi.value}
-            sub={kpi.sub}
-            icon={kpi.icon}
-            tone={kpi.tone}
-            delta={kpi.delta}
-            deltaDirection={kpi.deltaDirection}
-            goodWhen={kpi.goodWhen}
-            valueTestId={`dashboard-kpi-value-${kpi.key}`}
-          />
-        ))}
-      </div>
+      {widgetVisibility.kpiCards ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
+          {kpis.map((kpi) => (
+            <KpiCard
+              key={kpi.key}
+              label={kpi.label}
+              value={kpi.value}
+              sub={kpi.sub}
+              icon={kpi.icon}
+              tone={kpi.tone}
+              delta={kpi.delta}
+              deltaDirection={kpi.deltaDirection}
+              goodWhen={kpi.goodWhen}
+              valueTestId={`dashboard-kpi-value-${kpi.key}`}
+            />
+          ))}
+        </div>
+      ) : null}
 
       {effectiveRole === "Field" ? (
-        <ActivityFeed />
+        widgetVisibility.activityFeed ? <ActivityFeed /> : null
       ) : (
         <>
-          <div className="grid gap-6 xl:grid-cols-[1.55fr_1fr]">
-            <StockMovementChart data={movement ?? []} />
-            <AttentionPanel role={effectiveRole} />
-          </div>
-          <div className="grid gap-6 md:grid-cols-2">
-            <ActivityFeed />
-            <FacilityStatusList />
-          </div>
-          <RequisitionsTable />
+          {widgetVisibility.stockMovement || widgetVisibility.attentionPanel ? (
+            <div className="grid gap-6 xl:grid-cols-[1.55fr_1fr]">
+              {widgetVisibility.stockMovement ? <StockMovementChart data={movement ?? []} /> : null}
+              {widgetVisibility.attentionPanel ? <AttentionPanel role={effectiveRole} /> : null}
+            </div>
+          ) : null}
+          {widgetVisibility.activityFeed || widgetVisibility.facilityStatus ? (
+            <div className="grid gap-6 md:grid-cols-2">
+              {widgetVisibility.activityFeed ? <ActivityFeed /> : null}
+              {widgetVisibility.facilityStatus ? <FacilityStatusList /> : null}
+            </div>
+          ) : null}
+          {widgetVisibility.requisitionsTable ? <RequisitionsTable /> : null}
         </>
       )}
     </div>

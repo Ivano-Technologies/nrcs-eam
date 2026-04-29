@@ -5,12 +5,12 @@ import { Label } from "@/components/ui/label";
 import { useState, useEffect } from "react";
 
 const DEFAULT_WIDGETS = {
-  totalAssets: true,
-  assetsInMaintenance: true,
-  pendingWorkOrders: true,
-  lowStockItems: true,
-  upcomingMaintenance: true,
-  lowStockAlerts: true,
+  kpiCards: true,
+  stockMovement: true,
+  attentionPanel: true,
+  activityFeed: true,
+  facilityStatus: true,
+  requisitionsTable: true,
 };
 
 export function DashboardWidgetSettings() {
@@ -37,12 +37,12 @@ export function DashboardWidgetSettings() {
   };
 
   const widgetLabels: Record<string, { title: string; description: string }> = {
-    totalAssets: { title: "Total Assets", description: "Show total asset count card" },
-    assetsInMaintenance: { title: "Assets in Maintenance", description: "Show maintenance status card" },
-    pendingWorkOrders: { title: "Pending Work Orders", description: "Show pending work orders card" },
-    lowStockItems: { title: "Low Stock Items", description: "Show inventory alerts card" },
-    upcomingMaintenance: { title: "Upcoming Maintenance", description: "Show scheduled maintenance card" },
-    lowStockAlerts: { title: "Low Stock Alerts", description: "Show stock level warnings card" },
+    kpiCards: { title: "KPI Cards", description: "Show top-level metric cards" },
+    stockMovement: { title: "Stock Movement", description: "Show stock movement chart" },
+    attentionPanel: { title: "Attention Panel", description: "Show role-based action items" },
+    activityFeed: { title: "Activity Feed", description: "Show recent system activity" },
+    facilityStatus: { title: "Facility Status", description: "Show facility readiness list" },
+    requisitionsTable: { title: "Requisitions", description: "Show pending requisitions summary" },
   };
 
   return (
