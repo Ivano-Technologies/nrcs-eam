@@ -1,8 +1,9 @@
+import { cn } from "@/lib/utils";
 import { useTheme } from "next-themes";
 import { Sun, Moon, Monitor } from "lucide-react";
 import { useEffect, useState } from "react";
 
-export function ThemeToggle() {
+export function ThemeToggle({ className }: { className?: string }) {
   const { theme, setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -17,7 +18,7 @@ export function ThemeToggle() {
         else if (theme === "light") setTheme("dark");
         else setTheme("system");
       }}
-      className="p-2 rounded-full transition-colors hover:bg-black/10 dark:hover:bg-white/10 text-foreground"
+      className={cn("rounded-full p-2 text-foreground transition-colors hover:bg-black/10 dark:hover:bg-white/10", className)}
       title={`Theme: ${theme}`}
     >
       {theme === "system" ? (

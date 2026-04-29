@@ -401,13 +401,15 @@ function DashboardLayoutContent({
           </div>
         )}
         {!isMobile && (
-          <div className="flex border-b h-14 items-center justify-between gap-3 bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40 dark:bg-[#232323]/95">
+          <div className="sticky top-0 z-40 flex h-14 items-center justify-between gap-3 border-b border-white/20 bg-[var(--color-navy)] px-4 text-[hsl(0_0%_95%)] backdrop-blur supports-[backdrop-filter]:backdrop-blur">
             <div className="flex-1 min-w-0" />
-            <GlobalSearch />
+            <GlobalSearch className="min-w-[220px] border-white/30 bg-white/10 text-[hsl(0_0%_95%)] hover:bg-white/15 hover:text-[hsl(0_0%_95%)] [&_kbd]:border-white/30 [&_kbd]:bg-white/10 [&_kbd]:text-[hsl(0_0%_95%)]" />
             <div className="flex items-center gap-2 shrink-0">
-              <RoleSwitcher actualRole={actualRole} value={effectiveRole} onChange={setEffectiveRole} />
-              <ThemeToggle />
-              <NotificationCenter />
+              <div className="[&_[data-slot='select-trigger']]:border-white/30 [&_[data-slot='select-trigger']]:bg-white/10 [&_[data-slot='select-trigger']]:text-[hsl(0_0%_95%)] [&_[data-slot='select-trigger']]:hover:bg-white/15 [&_[data-slot='select-trigger']_[data-slot='select-value']]:text-[hsl(0_0%_95%)] [&_[data-slot='select-trigger']_svg]:text-[hsl(0_0%_95%)] [&_.text-muted-foreground]:text-[hsl(0_0%_95%)]">
+                <RoleSwitcher actualRole={actualRole} value={effectiveRole} onChange={setEffectiveRole} />
+              </div>
+              <ThemeToggle className="text-[hsl(0_0%_95%)] hover:bg-white/10 dark:text-[hsl(0_0%_95%)] dark:hover:bg-white/10" />
+              <NotificationCenter triggerClassName="text-[hsl(0_0%_95%)] hover:bg-white/10 dark:text-[hsl(0_0%_95%)] dark:hover:bg-white/10" />
             </div>
           </div>
         )}
