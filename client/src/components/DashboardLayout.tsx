@@ -411,7 +411,7 @@ function DashboardLayoutContent({
             </div>
           </div>
         )}
-        <main data-testid="app-page-main" className="flex-1 p-4">
+        <main data-testid="app-page-main" className="flex-1 overflow-x-hidden p-3 sm:p-4">
           {children}
         </main>
         <Footer />

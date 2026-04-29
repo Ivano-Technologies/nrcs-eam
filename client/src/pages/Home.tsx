@@ -146,12 +146,14 @@ export default function Home() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-muted-foreground mt-2">Overview of your asset management system</p>
         </div>
-        <PeriodSelector value={period} onChange={setPeriod} />
+        <div className="max-w-full overflow-x-auto">
+          <PeriodSelector value={period} onChange={setPeriod} />
+        </div>
       </div>
 
       {effectiveRole === "Field" && widgetVisibility.attentionPanel ? (
@@ -159,7 +161,7 @@ export default function Home() {
       ) : null}
 
       {widgetVisibility.kpiCards ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
+        <div className="grid max-[359px]:grid-cols-1 grid-cols-2 gap-3 md:grid-cols-2 md:gap-4 xl:grid-cols-5">
           {kpis.map((kpi) => (
             <KpiCard
               key={kpi.key}
@@ -182,7 +184,7 @@ export default function Home() {
       ) : (
         <>
           {widgetVisibility.stockMovement || widgetVisibility.attentionPanel ? (
-            <div className="grid gap-6 xl:grid-cols-[1.55fr_1fr]">
+            <div className="grid gap-6 md:grid-cols-1 xl:grid-cols-[1.55fr_1fr]">
               {widgetVisibility.stockMovement ? <StockMovementChart data={movement ?? []} /> : null}
               {widgetVisibility.attentionPanel ? <AttentionPanel role={effectiveRole} /> : null}
             </div>

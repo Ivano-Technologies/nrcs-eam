@@ -137,6 +137,8 @@ html.dark {
   body {
     @apply bg-background text-foreground;
     background-color: var(--background);
+    font-size: 16px;
+    overflow-x: hidden;
   }
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
@@ -148,6 +150,14 @@ html.dark {
   input[type="checkbox"]:not(:disabled),
   input[type="radio"]:not(:disabled) {
     @apply cursor-pointer;
+    touch-action: manipulation;
+  }
+  button,
+  a[href],
+  [role="button"],
+  [role="tab"],
+  [role="switch"] {
+    touch-action: manipulation;
   }
 }
 
@@ -282,6 +292,34 @@ html.dark {
   /* Show mobile-only elements */
   .mobile-only {
     @apply block;
+  }
+}
+
+@media (max-width: 639px) {
+  [data-slot="dialog-footer"] {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  [data-slot="dialog-footer"] > button,
+  [data-slot="dialog-footer"] > [role="button"],
+  [data-slot="dialog-footer"] > a {
+    width: 100%;
+    min-height: 48px;
+  }
+
+  form label {
+    display: block;
+    margin-bottom: 0.25rem;
+  }
+
+  form input,
+  form textarea,
+  form select,
+  form [data-slot="select-trigger"] {
+    width: 100%;
+    min-height: 48px;
   }
 }
 

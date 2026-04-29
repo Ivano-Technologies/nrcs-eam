@@ -10,7 +10,7 @@ type Props = {
 
 export function PeriodSelector({ value, onChange }: Props) {
   return (
-    <div className="inline-flex items-center gap-1 rounded-full bg-[#f1f3f5] p-1">
+    <div className="inline-flex max-w-full items-center gap-1 overflow-x-auto whitespace-nowrap rounded-full bg-[#f1f3f5] p-1">
       {PERIODS.map((period) => (
         <button
           key={period}
