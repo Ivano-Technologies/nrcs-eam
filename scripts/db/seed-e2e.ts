@@ -14,7 +14,7 @@
 import "dotenv/config";
 import { eq } from "drizzle-orm";
 import { createClient } from "@supabase/supabase-js";
-import { donors, users } from "../../drizzle/schema";
+import { donors, sites, users } from "../../drizzle/schema";
 import { WMS_DONOR_SEED } from "../../shared/wmsDonors";
 import { getDb } from "../../server/db";
 
@@ -33,6 +33,15 @@ function requireEnv(name: string): string {
 function isDuplicateSupabaseUserError(message: string | undefined): boolean {
   if (!message) return false;
   return /already exists|duplicate|already been registered/i.test(message);
+}
+
+function isStrongPassword(value: string): boolean {
+  return (
+    /[a-z]/.test(value) &&
+    /[A-Z]/.test(value) &&
+    /\d/.test(value) &&
+    /[^A-Za-z0-9]/.test(value)
+  );
 }
 
 const MAX_ATTEMPTS = 4;
@@ -64,6 +73,8 @@ async function withSeedRetry<T>(operation: () => Promise<T>): Promise<T> {
 export async function runSeedE2e() {
   const db = await getDb();
   if (!db) throw new Error("DB unavailable");
+  const existingSite = await db.select({ id: sites.id }).from(sites).limit(1);
+  const seedSiteId = existingSite[0]?.id ?? null;
 
   await db.insert(donors).values(WMS_DONOR_SEED).onConflictDoNothing({ target: donors.code });
 
@@ -76,18 +87,19 @@ export async function runSeedE2e() {
       loginMethod: "supabase",
       role: "admin",
       status: "active",
-      siteId: 1,
+      siteId: seedSiteId,
       hasCompletedOnboarding: true,
     })
     .onConflictDoUpdate({
-      target: users.openId,
+      target: users.email,
       set: {
+        openId: E2E_OPENID,
         name: "E2E Admin",
         email: E2E_EMAIL,
         loginMethod: "supabase",
         role: "admin",
         status: "active",
-        siteId: 1,
+        siteId: seedSiteId,
         hasCompletedOnboarding: true,
       },
     });
@@ -95,7 +107,11 @@ export async function runSeedE2e() {
   const supabaseUrl = requireEnv("SUPABASE_URL");
   const supabaseAnonKey = requireEnv("SUPABASE_ANON_KEY");
   const supabaseServiceRole = requireEnv("SUPABASE_SERVICE_ROLE_KEY");
-  const password = requireEnv("E2E_USER_PASSWORD");
+  const fromEnv =
+    process.env.E2E_USER_PASSWORD?.trim() ??
+    process.env.TEST_USER_PASSWORD?.trim();
+  const password =
+    fromEnv && isStrongPassword(fromEnv) ? fromEnv : "PlaywrightTest@2026";
 
   const admin = createClient(supabaseUrl, supabaseServiceRole, {
     auth: { persistSession: false, autoRefreshToken: false },

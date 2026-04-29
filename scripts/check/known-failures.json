@@ -19,14 +19,8 @@
           "plannedFixPhase": "N/A"
         },
         {
-          "file": "inventory-deeplinks.spec.ts",
-          "reason": "Flaky under full-suite runs due to per-test seedE2E dependency on Supabase network. Test logic is correct (specs pass when Supabase is stable). Scheduled for follow-up in test infrastructure cleanup workstream.",
-          "addedAt": "2026-04-22",
-          "plannedFixPhase": "2.5 — test infrastructure cleanup"
-        },
-        {
           "file": "wms-grn-create.spec.ts",
-          "reason": "Flaky under full-suite runs due to per-test seedE2E dependency on Supabase network. Test logic is correct (specs pass when Supabase is stable). Scheduled for follow-up in test infrastructure cleanup workstream.",
+          "reason": "Still failing in Phase 2.5 repeated runs: GRN print view assertion cannot find \"Goods Received Note (GRN)\" after finalize/print navigation. This is no longer seed/bootstrap-related and remains an unresolved functional/spec alignment issue.",
           "addedAt": "2026-04-22",
           "plannedFixPhase": "2.5 — test infrastructure cleanup"
         }
@@ -37,19 +31,13 @@
       "flaky-pending-cleanup": [
         {
           "file": "users-management.spec.ts",
-          "reason": "Live-auth runs against production (nrcseam.techivano.com). Baseline on origin/main (2026-04-23): the second card's role combobox stayed disabled (Radix Select trigger data-disabled), so the test timed out waiting for an enabled click. This matches production user/RBAC data, not a Phase 3 regression; kit assembly UI does not touch Users.tsx.",
+          "reason": "Still flaky in Phase 2.5 repeated runs against production data: editing another user's role intermittently leaves Save disabled, causing timeouts when clicking Save in the edit-user dialog.",
           "addedAt": "2026-04-23",
           "plannedFixPhase": "Live-auth data — use a mutable non-admin target user or gate the assertion on enabled state"
         },
         {
           "file": "inventory-movements.spec.ts",
-          "reason": "Heading assertion fails because page heading is not visible when navigated to directly without InventoryShell context. Pre-existing on origin/main before Phase 3. Fix in Phase 2.5 test infrastructure cleanup.",
-          "addedAt": "2026-04-23",
-          "plannedFixPhase": "2.5 — test infrastructure cleanup"
-        },
-        {
-          "file": "inventory-counts.spec.ts",
-          "reason": "Same heading assertion issue — test navigates to /app/inventory/movements and expects heading visible without shell context. Pre-existing on origin/main. Fix in Phase 2.5.",
+          "reason": "Still failing consistently in Phase 2.5 repeated runs: inventory movement dialogs time out waiting for combobox interaction (GRN/Waybill creation paths), so movement flow remains unstable in live-auth.",
           "addedAt": "2026-04-23",
           "plannedFixPhase": "2.5 — test infrastructure cleanup"
         }

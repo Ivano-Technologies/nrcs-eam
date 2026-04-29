@@ -68,3 +68,31 @@ Searched all Playwright coverage for `mvp-audit` and `live-auth` for `seedE2E`, 
 
 - `package.json`
   - Script: `"seed-e2e:local": "dotenv -e .env.e2e -- tsx scripts/db/seed-e2e.ts"`
+
+## Step 4 run outcomes (2026-04-29)
+
+Executed required loop runs and captured repeatability:
+
+- `pnpm exec playwright test --project=mvp-audit`
+  - Repeated 3x in sequence (fast-loop mode with `--max-failures=1` for deterministic signal capture).
+  - All 3 runs failed consistently at the same early failure:
+    - `tests/mvp-audit/specs/assets.spec.ts` (`full asset lifecycle`) timing out on edit form interaction.
+- `pnpm exec playwright test --project=live-auth`
+  - Repeated 3x in sequence (fast-loop mode with `--max-failures=1`).
+  - All 3 runs failed; unstable failure target shifted between:
+    - `tests/features/improvements.spec.ts` (sidebar collapsed tooltip expectation), and
+    - `tests/auth/users-management.spec.ts` (edit-user Save button stays disabled / timeout).
+- Targeted verification runs used for known-failure pruning:
+  - `tests/mvp-audit/specs/inventory-deeplinks.spec.ts` passed 3/3 isolated runs.
+  - `tests/mvp-audit/specs/wms-grn-create.spec.ts` failed in isolated validation.
+  - `tests/features/inventory-counts.spec.ts` passed 3/3 isolated runs.
+  - `tests/features/inventory-movements.spec.ts` failed in isolated validation.
+
+`pnpm check:full` was run once before final pruning pass and failed because the working tree was not clean at that point; rerun after final commit is required.
+
+## Step 6 separation assessment (2026-04-29)
+
+No direct evidence of cross-project state contamination between `mvp-audit` and `live-auth` was observed in this run set.
+
+- Observed failures are project-local UI/test-flow issues and environment-dependent endpoints.
+- Recommendation: do not split Supabase projects yet; prioritize fixing remaining deterministic/known flaky specs first.
