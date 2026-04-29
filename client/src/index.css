@@ -52,6 +52,8 @@
   --color-muted: #6b7280;
   --radius-card: 12px;
   --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.06);
+  --color-accent-border: #374151;
+  --dashboard-contrast-text: #334155;
   /* NRCS Red Cross Red as primary */
   --primary: oklch(0.60 0.24 25); /* Red #DC2626 */
   --primary-foreground: oklch(0.99 0 0);
@@ -124,6 +126,8 @@
   --sidebar-accent-foreground: oklch(0.99 0 0);
   --sidebar-border: oklch(0.20 0.08 250);
   --sidebar-ring: oklch(0.60 0.24 25);
+  --color-accent-border: #4b5563;
+  --dashboard-contrast-text: hsl(0 0% 95%);
 }
 
 html.dark {
@@ -177,6 +181,11 @@ html.dark {
     padding-bottom: 8px;
   }
 
+  .dark .dashboard-section-title {
+    color: hsl(0 0% 95%);
+    border-bottom-color: rgba(255, 255, 255, 0.14);
+  }
+
   .dashboard-empty-state {
     text-align: center;
   }
@@ -187,8 +196,30 @@ html.dark {
     color: var(--color-muted);
   }
 
+  .dark .dashboard-empty-state-icon {
+    color: hsl(0 0% 95%);
+  }
+
   .dashboard-empty-state-subtitle {
     color: var(--color-muted);
+  }
+
+  .dark .dashboard-empty-state-subtitle {
+    color: hsl(0 0% 95%);
+  }
+
+  .kpi-icon-badge {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+
+  .dark .kpi-icon-badge {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
   }
 
   /* Smooth transition for sidebar width changes */

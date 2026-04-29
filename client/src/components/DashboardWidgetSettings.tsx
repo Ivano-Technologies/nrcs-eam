@@ -48,17 +48,17 @@ export function DashboardWidgetSettings() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Dashboard Widgets</CardTitle>
-        <CardDescription>Customize which widgets appear on your dashboard</CardDescription>
+        <CardTitle className="text-[#1a2332] dark:text-[hsl(0_0%_95%)]">Dashboard Widgets</CardTitle>
+        <CardDescription className="text-[#334155] dark:text-[hsl(0_0%_95%)]">Customize which widgets appear on your dashboard</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {Object.entries(widgetLabels).map(([key, { title, description }]) => (
           <div key={key} className="flex items-center justify-between space-x-2">
             <div className="flex-1">
-              <Label htmlFor={key} className="text-sm font-medium">
+              <Label htmlFor={key} className="text-sm font-medium text-[#1a2332] dark:text-[hsl(0_0%_95%)]">
                 {title}
               </Label>
-              <p className="text-xs text-muted-foreground">{description}</p>
+              <p className="text-xs text-[#334155] dark:text-[hsl(0_0%_95%)]">{description}</p>
             </div>
             <Switch
               id={key}
