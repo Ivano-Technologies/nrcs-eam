@@ -5,10 +5,16 @@ import type { Page } from "@playwright/test";
 import { signInTestUser } from "../fixtures/supabaseAuth";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
+const MAX_ATTEMPTS = 4;
+const INITIAL_DELAY_MS = 500;
+
+function sleepSync(ms: number) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
 
 export function runSeedE2E() {
   let lastError = "";
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
     try {
       execSync("pnpm run seed-e2e:local", {
         cwd: ROOT,
@@ -20,12 +26,14 @@ export function runSeedE2E() {
       if (error instanceof Error) {
         lastError = error.message;
       }
-      if (attempt === 3) {
+      if (attempt === MAX_ATTEMPTS) {
         throw new Error(
-          "seed-e2e failed after 3 attempts — ensure .env.e2e exists and PostgreSQL is reachable. " +
-            `Last error: ${lastError}`,
+          `[seed] failed after 4 attempts — Supabase may be unavailable. Last error: ${lastError}`,
         );
       }
+      const delay = INITIAL_DELAY_MS * 2 ** (attempt - 1);
+      console.warn(`[seed] retry ${attempt + 1}/${MAX_ATTEMPTS} after ${delay}ms`);
+      sleepSync(delay);
     }
   }
 }
