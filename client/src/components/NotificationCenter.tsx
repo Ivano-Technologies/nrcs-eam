@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 
-export function NotificationCenter() {
+export function NotificationCenter({ triggerClassName }: { triggerClassName?: string } = {}) {
   const [isOpen, setIsOpen] = useState(false);
   const utils = trpc.useUtils();
 
@@ -78,7 +78,7 @@ export function NotificationCenter() {
         <Button
           variant="ghost"
           size="icon"
-          className="relative"
+          className={`relative ${triggerClassName ?? ""}`}
           aria-label="Notifications"
         >
           <Bell className="h-5 w-5" />
