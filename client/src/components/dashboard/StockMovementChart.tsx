@@ -16,11 +16,11 @@ export function StockMovementChart({ data }: Props) {
   const hasMovementData = data.some((point) => point.inbound > 0 || point.outbound > 0);
 
   return (
-    <Card className="rounded-2xl">
+    <Card className="dashboard-card">
       <CardHeader>
         <div className="flex items-start justify-between gap-3">
           <div>
-            <CardTitle>Stock movement</CardTitle>
+            <CardTitle className="dashboard-section-title">Stock movement</CardTitle>
             <CardDescription>Last 12 weeks · units × 100</CardDescription>
           </div>
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
@@ -37,10 +37,10 @@ export function StockMovementChart({ data }: Props) {
       </CardHeader>
       <CardContent className="h-[280px]">
         {!hasMovementData ? (
-          <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
-            <BarChart3 className="h-8 w-8 text-muted-foreground" />
+          <div className="dashboard-empty-state flex h-full flex-col items-center justify-center gap-2">
+            <BarChart3 className="dashboard-empty-state-icon" />
             <p className="text-sm font-medium">No stock movements recorded yet</p>
-            <p className="text-xs text-muted-foreground">GRN and Waybill activity will appear here</p>
+            <p className="dashboard-empty-state-subtitle text-xs">GRN and Waybill activity will appear here</p>
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">

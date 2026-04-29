@@ -15,9 +15,9 @@ export function ActivityFeed() {
   const { data } = trpc.dashboard.recentActivity.useQuery({ limit: 5 });
 
   return (
-    <Card className="rounded-2xl">
+    <Card className="dashboard-card">
       <CardHeader>
-        <CardTitle>Recent activity</CardTitle>
+        <CardTitle className="dashboard-section-title">Recent activity</CardTitle>
         <CardDescription>Latest operational events</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">

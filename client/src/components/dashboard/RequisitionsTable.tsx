@@ -8,11 +8,11 @@ export function RequisitionsTable() {
   const { data } = trpc.dashboard.pendingRequisitions.useQuery({ limit: 4 });
 
   return (
-    <Card className="rounded-2xl">
+    <Card className="dashboard-card">
       <CardHeader className="flex flex-row items-center justify-between gap-3">
-        <CardTitle>Pending requisitions</CardTitle>
+        <CardTitle className="dashboard-section-title">Pending requisitions</CardTitle>
         <Link href={appPath("/inventory/requisitions")}>
-          <Button className="bg-[#DC2626] hover:bg-[#B91C1C]">Go to queue</Button>
+          <Button>Go to queue</Button>
         </Link>
       </CardHeader>
       <CardContent>
@@ -34,9 +34,9 @@ export function RequisitionsTable() {
         </div>
         <div className="mt-4 rounded-xl border">
           {(data?.total ?? 0) === 0 ? (
-            <div className="px-4 py-8 text-center">
+            <div className="dashboard-empty-state px-4 py-8">
               <p className="text-sm font-medium">No pending requisitions</p>
-              <p className="mt-1 text-xs text-muted-foreground">Requisitions submitted by staff will appear here for approval</p>
+              <p className="dashboard-empty-state-subtitle mt-1 text-xs">Requisitions submitted by staff will appear here for approval</p>
             </div>
           ) : (
             <div className="px-4 py-3 text-sm text-muted-foreground">
