@@ -35,7 +35,7 @@ export function StockMovementChart({ data }: Props) {
           </div>
         </div>
       </CardHeader>
-      <CardContent className="h-[280px]">
+      <CardContent className="h-[280px] min-h-[200px] overflow-x-auto">
         {!hasMovementData ? (
           <div className="dashboard-empty-state flex h-full flex-col items-center justify-center gap-2">
             <BarChart3 className="dashboard-empty-state-icon" />
@@ -43,7 +43,7 @@ export function StockMovementChart({ data }: Props) {
             <p className="dashboard-empty-state-subtitle text-xs">GRN and Waybill activity will appear here</p>
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" minHeight={200} height="100%">
             <AreaChart data={data}>
               <defs>
                 <linearGradient id="inboundFill" x1="0" y1="0" x2="0" y2="1">
