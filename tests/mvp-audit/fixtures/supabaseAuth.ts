@@ -18,6 +18,8 @@ type SessionPayload = {
   refresh_token: string;
   user: User;
 };
+const MAX_ATTEMPTS = 4;
+const INITIAL_DELAY_MS = 500;
 
 function requireEnv(name: string): string {
   const value = process.env[name]?.trim();
@@ -68,53 +70,84 @@ function createAnonClient() {
   });
 }
 
+async function sleep(ms: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function withSeedRetry<T>(operation: () => Promise<T>): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      if (attempt === MAX_ATTEMPTS) {
+        const reason = lastError instanceof Error ? ` Last error: ${lastError.message}` : "";
+        throw new Error(`[seed] failed after 4 attempts — Supabase may be unavailable.${reason}`);
+      }
+      const delay = INITIAL_DELAY_MS * 2 ** (attempt - 1);
+      console.warn(`[seed] retry ${attempt + 1}/${MAX_ATTEMPTS} after ${delay}ms`);
+      await sleep(delay);
+    }
+  }
+  throw new Error("[seed] failed after 4 attempts — Supabase may be unavailable");
+}
+
 export async function createTestUserInSupabase(): Promise<User> {
   const admin = createAdminClient();
   const password = getE2EPassword();
   const email = getE2EEmail();
 
   let createdUser: User | null = null;
-  try {
-    const { data, error } = await admin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: { full_name: testUser.name },
-    });
-    if (error && !isDuplicateSupabaseUserError(error.message)) {
-      throw new Error(`[e2e auth] createUser failed: ${error.message}`);
+  await withSeedRetry(async () => {
+    try {
+      const { data, error } = await admin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: { full_name: testUser.name },
+      });
+      if (error && !isDuplicateSupabaseUserError(error.message)) {
+        throw new Error(`[e2e auth] createUser failed: ${error.message}`);
+      }
+      createdUser = data.user;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!isDuplicateSupabaseUserError(message)) {
+        throw error;
+      }
     }
-    createdUser = data.user;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    if (!isDuplicateSupabaseUserError(message)) {
-      throw error;
-    }
-  }
+  });
 
   let user = createdUser;
   if (!user) {
-    const { data: listed, error: listErr } = await admin.auth.admin.listUsers({
-      page: 1,
-      perPage: 1000,
+    const listed = await withSeedRetry(async () => {
+      const { data, error } = await admin.auth.admin.listUsers({
+        page: 1,
+        perPage: 1000,
+      });
+      if (error) {
+        throw new Error(`[e2e auth] listUsers failed: ${error.message}`);
+      }
+      return data;
     });
-    if (listErr) {
-      throw new Error(`[e2e auth] listUsers failed: ${listErr.message}`);
-    }
     user = listed.users.find((u) => (u.email ?? "").toLowerCase() === email.toLowerCase()) ?? null;
   }
   if (!user?.id) {
     throw new Error("[e2e auth] test user not found after create/list");
   }
 
-  const { data: updated, error: updateErr } = await admin.auth.admin.updateUserById(user.id, {
-    password,
-    email_confirm: true,
-    user_metadata: { full_name: testUser.name },
+  const updated = await withSeedRetry(async () => {
+    const { data, error } = await admin.auth.admin.updateUserById(user.id, {
+      password,
+      email_confirm: true,
+      user_metadata: { full_name: testUser.name },
+    });
+    if (error) {
+      throw new Error(`[e2e auth] updateUserById failed: ${error.message}`);
+    }
+    return data;
   });
-  if (updateErr) {
-    throw new Error(`[e2e auth] updateUserById failed: ${updateErr.message}`);
-  }
   if (!updated.user) {
     throw new Error("[e2e auth] updateUserById returned no user");
   }
@@ -125,13 +158,16 @@ export async function generateSessionForTestUser(): Promise<SessionPayload> {
   const password = getE2EPassword();
   const email = getE2EEmail();
   const anon = createAnonClient();
-  const { data, error } = await anon.auth.signInWithPassword({
-    email,
-    password,
+  const data = await withSeedRetry(async () => {
+    const { data, error } = await anon.auth.signInWithPassword({
+      email,
+      password,
+    });
+    if (error || !data.session || !data.user) {
+      throw new Error(`[e2e auth] signInWithPassword failed: ${error?.message ?? "no session"}`);
+    }
+    return data;
   });
-  if (error || !data.session || !data.user) {
-    throw new Error(`[e2e auth] signInWithPassword failed: ${error?.message ?? "no session"}`);
-  }
   return {
     access_token: data.session.access_token,
     refresh_token: data.session.refresh_token,
