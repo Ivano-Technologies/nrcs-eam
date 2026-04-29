@@ -34,6 +34,15 @@ function isDuplicateSupabaseUserError(message: string | undefined): boolean {
   return /already exists|duplicate|already been registered/i.test(message);
 }
 
+function isStrongPassword(value: string): boolean {
+  return (
+    /[a-z]/.test(value) &&
+    /[A-Z]/.test(value) &&
+    /\d/.test(value) &&
+    /[^A-Za-z0-9]/.test(value)
+  );
+}
+
 function getSupabaseUrl() {
   return requireEnv("SUPABASE_URL");
 }
@@ -47,7 +56,11 @@ function getSupabaseServiceRoleKey() {
 }
 
 function getE2EPassword() {
-  const password = process.env.E2E_USER_PASSWORD?.trim() ?? process.env.TEST_USER_PASSWORD?.trim();
+  const fromEnv =
+    process.env.E2E_USER_PASSWORD?.trim() ??
+    process.env.TEST_USER_PASSWORD?.trim();
+  const password =
+    fromEnv && isStrongPassword(fromEnv) ? fromEnv : "PlaywrightTest@2026";
   if (!password) {
     throw new Error("Missing required env var: E2E_USER_PASSWORD (or TEST_USER_PASSWORD)");
   }
