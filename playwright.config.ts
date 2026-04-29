@@ -6,6 +6,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 /** Default RDS CA bundle for local `dev:e2e` when `.env.e2e` enables strict DB TLS but omits the path. */
 const DEFAULT_DATABASE_SSL_CA = path.join(__dirname, "certs", "global-bundle.pem");
 const MVP_AUDIT_AUTH_FILE = path.join(__dirname, "playwright", ".auth", "mvp-audit-user.json");
+const LIVE_AUTH_AUTH_FILE = path.join(__dirname, "playwright", ".auth", "live-auth-user.json");
 
 const LIVE_AUTH_BASE = "https://nrcseam.techivano.com";
 
@@ -43,12 +44,24 @@ export default defineConfig({
       },
     },
     {
-      name: "live-auth",
-      testMatch: ["**/auth/**/*.spec.ts", "**/features/**/*.spec.ts"],
+      name: "live-auth-setup",
+      testMatch: "**/auth/**/*.setup.ts",
       use: {
         baseURL: LIVE_AUTH_BASE,
         trace: "retain-on-failure",
         screenshot: "only-on-failure",
+      },
+    },
+    {
+      name: "live-auth",
+      testMatch: ["**/auth/**/*.spec.ts", "**/features/**/*.spec.ts"],
+      testIgnore: "**/auth/**/*.setup.ts",
+      dependencies: ["live-auth-setup"],
+      use: {
+        baseURL: LIVE_AUTH_BASE,
+        trace: "retain-on-failure",
+        screenshot: "only-on-failure",
+        storageState: LIVE_AUTH_AUTH_FILE,
       },
     },
     {

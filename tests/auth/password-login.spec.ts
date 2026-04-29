@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { E2E_USER_EMAIL, E2E_USER_PASSWORD } from "./live-helpers";
 
 /**
  * Live production smoke: password login → /app dashboard.
@@ -10,8 +11,8 @@ test.describe("password login (nrcseam.techivano.com)", () => {
 
     await expect(page.getByText("No procedure found")).toHaveCount(0);
 
-    await page.getByTestId("login-email-input").fill("ivanonigeria@gmail.com");
-    await page.getByTestId("login-password-input").fill("@Localhost001");
+    await page.getByTestId("login-email-input").fill(E2E_USER_EMAIL);
+    await page.getByTestId("login-password-input").fill(E2E_USER_PASSWORD);
     await page.getByTestId("login-password-submit").click();
 
     await expect(page).toHaveURL(/\/app/, { timeout: 60_000 });

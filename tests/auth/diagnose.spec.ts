@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { E2E_USER_EMAIL, E2E_USER_PASSWORD } from "./live-helpers";
 
 test("API health check", async ({ request }) => {
   const response = await request.get("https://nrcseam.techivano.com/health");
@@ -13,7 +14,7 @@ test("tRPC endpoint returns JSON", async ({ request }) => {
     "https://nrcseam.techivano.com/api/trpc/auth.loginWithPassword",
     {
       headers: { "Content-Type": "application/json" },
-      data: { json: { email: "ivanonigeria@gmail.com", password: "@Localhost001" } },
+      data: { json: { email: E2E_USER_EMAIL, password: E2E_USER_PASSWORD } },
     }
   );
   const body = await response.text();
@@ -31,8 +32,8 @@ test("login page loads", async ({ page }) => {
 
 test("full login flow", async ({ page }) => {
   await page.goto("https://nrcseam.techivano.com/login");
-  await page.getByTestId("login-email-input").fill("ivanonigeria@gmail.com");
-  await page.getByTestId("login-password-input").fill("@Localhost001");
+  await page.getByTestId("login-email-input").fill(E2E_USER_EMAIL);
+  await page.getByTestId("login-password-input").fill(E2E_USER_PASSWORD);
 
   page.on("response", (response) => {
     if (response.url().includes("trpc")) {

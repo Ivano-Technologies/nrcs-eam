@@ -6,7 +6,8 @@
  * - SUPABASE_URL
  * - SUPABASE_ANON_KEY
  * - SUPABASE_SERVICE_ROLE_KEY
- * - TEST_USER_PASSWORD
+ * - E2E_USER_EMAIL
+ * - E2E_USER_PASSWORD
  *
  * This script no longer writes legacy magic-link tables; auth is Supabase session-based.
  */
@@ -18,7 +19,8 @@ import { WMS_DONOR_SEED } from "../../shared/wmsDonors";
 import { getDb } from "../../server/db";
 
 export const E2E_OPENID = "e2e-playwright-openid";
-export const E2E_EMAIL = "nrcs.eam.qa@gmail.com";
+export const E2E_EMAIL =
+  process.env.E2E_USER_EMAIL?.trim() || "playwright@nrcseam.techivano.com";
 
 function requireEnv(name: string): string {
   const value = process.env[name]?.trim();
@@ -52,6 +54,7 @@ export async function runSeedE2e() {
       email: E2E_EMAIL,
       loginMethod: "supabase",
       role: "admin",
+      status: "active",
       siteId: 1,
       hasCompletedOnboarding: true,
     });
@@ -61,6 +64,7 @@ export async function runSeedE2e() {
       .set({
         name: "E2E Admin",
         role: "admin",
+        status: "active",
         siteId: 1,
         hasCompletedOnboarding: true,
       })
@@ -70,7 +74,7 @@ export async function runSeedE2e() {
   const supabaseUrl = requireEnv("SUPABASE_URL");
   const supabaseAnonKey = requireEnv("SUPABASE_ANON_KEY");
   const supabaseServiceRole = requireEnv("SUPABASE_SERVICE_ROLE_KEY");
-  const password = requireEnv("TEST_USER_PASSWORD");
+  const password = requireEnv("E2E_USER_PASSWORD");
 
   const admin = createClient(supabaseUrl, supabaseServiceRole, {
     auth: { persistSession: false, autoRefreshToken: false },

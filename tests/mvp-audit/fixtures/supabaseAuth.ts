@@ -45,11 +45,15 @@ function getSupabaseServiceRoleKey() {
 }
 
 function getE2EPassword() {
-  const password = process.env.TEST_USER_PASSWORD?.trim();
+  const password = process.env.E2E_USER_PASSWORD?.trim() ?? process.env.TEST_USER_PASSWORD?.trim();
   if (!password) {
-    throw new Error("Missing required env var: TEST_USER_PASSWORD");
+    throw new Error("Missing required env var: E2E_USER_PASSWORD (or TEST_USER_PASSWORD)");
   }
   return password;
+}
+
+function getE2EEmail() {
+  return process.env.E2E_USER_EMAIL?.trim() || testUser.email;
 }
 
 function createAdminClient() {
@@ -67,11 +71,12 @@ function createAnonClient() {
 export async function createTestUserInSupabase(): Promise<User> {
   const admin = createAdminClient();
   const password = getE2EPassword();
+  const email = getE2EEmail();
 
   let createdUser: User | null = null;
   try {
     const { data, error } = await admin.auth.admin.createUser({
-      email: testUser.email,
+      email,
       password,
       email_confirm: true,
       user_metadata: { full_name: testUser.name },
@@ -96,7 +101,7 @@ export async function createTestUserInSupabase(): Promise<User> {
     if (listErr) {
       throw new Error(`[e2e auth] listUsers failed: ${listErr.message}`);
     }
-    user = listed.users.find((u) => (u.email ?? "").toLowerCase() === testUser.email.toLowerCase()) ?? null;
+    user = listed.users.find((u) => (u.email ?? "").toLowerCase() === email.toLowerCase()) ?? null;
   }
   if (!user?.id) {
     throw new Error("[e2e auth] test user not found after create/list");
@@ -118,9 +123,10 @@ export async function createTestUserInSupabase(): Promise<User> {
 
 export async function generateSessionForTestUser(): Promise<SessionPayload> {
   const password = getE2EPassword();
+  const email = getE2EEmail();
   const anon = createAnonClient();
   const { data, error } = await anon.auth.signInWithPassword({
-    email: testUser.email,
+    email,
     password,
   });
   if (error || !data.session || !data.user) {
