@@ -4,7 +4,6 @@
   "outputDirectory": "dist/public",
   "functions": {
     "api/trpc/[trpc].js": {
-      "memory": 3008,
       "maxDuration": 60
     },
     "api/health.ts": {
