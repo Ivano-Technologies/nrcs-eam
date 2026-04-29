@@ -14,6 +14,7 @@ type Props = {
 
 export function StockMovementChart({ data }: Props) {
   const hasMovementData = data.some((point) => point.inbound > 0 || point.outbound > 0);
+  const isDark = typeof document !== "undefined" && document.documentElement.classList.contains("dark");
 
   return (
     <Card className="dashboard-card">
@@ -21,9 +22,9 @@ export function StockMovementChart({ data }: Props) {
         <div className="flex items-start justify-between gap-3">
           <div>
             <CardTitle className="dashboard-section-title">Stock movement</CardTitle>
-            <CardDescription>Last 12 weeks · units × 100</CardDescription>
+            <CardDescription className="text-[#334155] dark:text-[hsl(0_0%_95%)]">Last 12 weeks · units × 100</CardDescription>
           </div>
-          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+          <div className="flex items-center gap-4 text-xs text-[#334155] dark:text-[hsl(0_0%_95%)]">
             <span className="inline-flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-[#DC2626]" />
               Inbound
@@ -39,7 +40,7 @@ export function StockMovementChart({ data }: Props) {
         {!hasMovementData ? (
           <div className="dashboard-empty-state flex h-full flex-col items-center justify-center gap-2">
             <BarChart3 className="dashboard-empty-state-icon" />
-            <p className="text-sm font-medium">No stock movements recorded yet</p>
+            <p className="text-sm font-medium text-[#1a2332] dark:text-[hsl(0_0%_95%)]">No stock movements recorded yet</p>
             <p className="dashboard-empty-state-subtitle text-xs">GRN and Waybill activity will appear here</p>
           </div>
         ) : (
@@ -56,14 +57,15 @@ export function StockMovementChart({ data }: Props) {
                 </linearGradient>
               </defs>
               <CartesianGrid vertical={false} strokeDasharray="3 3" />
-              <XAxis dataKey="w" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} axisLine={false} tickLine={false} width={34} />
+              <XAxis dataKey="w" tick={{ fill: "var(--dashboard-contrast-text)", fontSize: 12 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: "var(--dashboard-contrast-text)", fontSize: 12 }} axisLine={false} tickLine={false} width={34} />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "white",
+                  backgroundColor: isDark ? "#2b2b2b" : "white",
                   borderRadius: "0.75rem",
                   border: "1px solid hsl(var(--border))",
                   boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
+                  color: isDark ? "hsl(0 0% 95%)" : "#1a2332",
                 }}
               />
               <Area type="monotone" dataKey="inbound" stroke="#DC2626" fillOpacity={1} fill="url(#inboundFill)" strokeWidth={2} />

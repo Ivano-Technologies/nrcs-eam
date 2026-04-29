@@ -149,7 +149,7 @@ export default function Home() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground mt-2">Overview of your asset management system</p>
+          <p className="mt-2 text-[#334155] dark:text-[hsl(0_0%_95%)]">Overview of your asset management system</p>
         </div>
         <div className="max-w-full overflow-x-auto">
           <PeriodSelector value={period} onChange={setPeriod} />
