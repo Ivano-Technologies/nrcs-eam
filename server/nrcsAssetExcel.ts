@@ -13,22 +13,27 @@ const HEADER_TITLES = [
   "S/No",
   "Item Type",
   "Item Category",
-  "Sub-Item Category",
+  "Sub Item Category",
   "Item Description",
+  "Branch Code",
+  "Category Code",
+  "NUM",
   "Asset Code",
-  "Serial / Product No.",
-  "Actual Unit Value (NGN)",
-  "Current Depreciated Value (NGN)",
+  "Serial Number",
+  "Actual Unit Value",
+  "Depreciated Value",
   "Method of Acquisition",
+  "Acquisition Detail",
   "Project Ref / Name",
   "Year Acquired",
-  "New or Used",
+  "New/Used",
   "Current Status",
   "Assigned To",
   "Department",
-  "Current Location",
+  "Location",
   "Condition",
-  "Last Physical Check",
+  "Last Check Date",
+  "Check Conducted By",
   "Remarks",
 ] as const;
 
@@ -42,8 +47,29 @@ function writeNRCSAssetRegisterHeader(sheet: ExcelJS.Worksheet) {
   titleRow.getCell(1).value = NRCS_TITLE;
   titleRow.getCell(1).font = { bold: true, size: 14 };
   titleRow.getCell(1).alignment = { horizontal: "center" };
-
-  const headerRow = sheet.getRow(2);
+  sheet.getRow(2).getCell(1).value = "Branch Name:";
+  sheet.getRow(2).getCell(2).value = "";
+  sheet.getRow(3).getCell(1).value = "Updated By:";
+  sheet.getRow(3).getCell(2).value = "";
+  sheet.getRow(4).getCell(1).value = "Approved By:";
+  sheet.getRow(4).getCell(2).value = "";
+  const groupingRow = sheet.getRow(5);
+  const groups = [
+    ["ITEM DETAILS", 1, 5],
+    ["ITEM CODE", 6, 9],
+    ["FINANCIAL VALUE", 10, 11],
+    ["PURCHASE/ACQUISITION INFORMATION", 12, 18],
+    ["ASSIGNED TO", 19, 21],
+    ["CONDITION", 22, 25],
+  ] as const;
+  for (const [label, start, end] of groups) {
+    sheet.mergeCells(5, start, 5, end);
+    const c = groupingRow.getCell(start);
+    c.value = label;
+    c.font = { bold: true };
+    c.alignment = { horizontal: "center" };
+  }
+  const headerRow = sheet.getRow(6);
   HEADER_TITLES.forEach((h, i) => {
     const c = headerRow.getCell(i + 1);
     c.value = h;
@@ -65,7 +91,7 @@ function setNRCSColumnWidths(sheet: ExcelJS.Worksheet) {
 export async function generateNRCSAssetRegisterTemplateBuffer(): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet("Asset Register", {
-    views: [{ state: "frozen", ySplit: 2 }],
+    views: [{ state: "frozen", ySplit: 6 }],
   });
   writeNRCSAssetRegisterHeader(sheet);
   setNRCSColumnWidths(sheet);
@@ -90,7 +116,7 @@ export async function buildNRCSAssetRegisterWorkbook(
   const { rows } = await db.getAssetRegisterExportRows(params);
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet("Asset Register", {
-    views: [{ state: "frozen", ySplit: 2 }],
+    views: [{ state: "frozen", ySplit: 6 }],
   });
 
   writeNRCSAssetRegisterHeader(sheet);
@@ -99,7 +125,7 @@ export async function buildNRCSAssetRegisterWorkbook(
   const dateFmt = "dd/mm/yyyy";
 
   rows.forEach((row, idx) => {
-    const r = sheet.getRow(idx + 3);
+    const r = sheet.getRow(idx + 7);
     const year = row.acquisitionDate
       ? new Date(row.acquisitionDate).getFullYear()
       : "";
@@ -120,9 +146,12 @@ export async function buildNRCSAssetRegisterWorkbook(
     r.getCell(2).value = row.itemType === "inventory" ? "Inventory" : "Asset";
     r.getCell(3).value = row.categoryName ?? "";
     r.getCell(4).value = row.subCategory ?? "";
-    r.getCell(5).value = desc;
-    r.getCell(6).value = row.assetTag;
-    r.getCell(7).value = row.serialNumber ?? "";
+    r.getCell(5).value = row.itemDescription ?? desc;
+    r.getCell(6).value = row.branchCode ?? "";
+    r.getCell(7).value = row.itemCategoryCode ?? "";
+    r.getCell(8).value = row.assetNum ?? "";
+    r.getCell(9).value = row.assetCode ?? row.assetTag;
+    r.getCell(10).value = row.serialNumber ?? "";
 
     const unitVal = row.acquisitionCost != null ? Number(row.acquisitionCost) : null;
     const depVal =
@@ -132,30 +161,36 @@ export async function buildNRCSAssetRegisterWorkbook(
           ? Number(row.currentValue)
           : null;
 
-    r.getCell(8).value = unitVal;
-    r.getCell(8).numFmt = currencyFmt;
-    r.getCell(9).value = depVal;
-    r.getCell(9).numFmt = currencyFmt;
+    r.getCell(11).value = unitVal;
+    r.getCell(11).numFmt = currencyFmt;
+    r.getCell(12).value = depVal;
+    r.getCell(12).numFmt = currencyFmt;
 
-    r.getCell(10).value = row.acquisitionMethod ?? "";
-    r.getCell(11).value = row.projectRef ?? "";
-    r.getCell(12).value = year === "" ? "" : year;
-    r.getCell(13).value = row.acquisitionCondition ?? "";
-    r.getCell(14).value = statusLabel;
-    r.getCell(15).value = assigned;
-    r.getCell(16).value = row.department ?? "";
-    r.getCell(17).value = locationCell;
-    r.getCell(18).value = row.physicalCondition ?? "";
+    r.getCell(13).value = row.acquisitionMethod ?? "";
+    r.getCell(14).value = row.acquisitionOtherDetail ?? "";
+    r.getCell(15).value = row.projectRef ?? "";
+    r.getCell(16).value = row.yearAcquiredRegister ?? (year === "" ? "" : year);
+    r.getCell(17).value = row.acquiredNewOrUsed ?? row.acquisitionCondition ?? "";
+    r.getCell(18).value = row.currentStatus ?? statusLabel;
+    r.getCell(19).value = assigned;
+    r.getCell(20).value = row.department ?? "";
+    r.getCell(21).value = row.currentLocation ?? locationCell;
+    r.getCell(22).value = row.conditionRegister ?? row.physicalCondition ?? "";
 
-    const lastCheck = row.lastCheckedAt ? new Date(row.lastCheckedAt) : null;
-    r.getCell(19).value = lastCheck ? lastCheck : "";
+    const lastCheck = row.lastPhysicalCheck
+      ? new Date(row.lastPhysicalCheck)
+      : row.lastCheckedAt
+        ? new Date(row.lastCheckedAt)
+        : null;
+    r.getCell(23).value = lastCheck ? lastCheck : "";
     if (lastCheck) {
-      r.getCell(19).numFmt = dateFmt;
+      r.getCell(23).numFmt = dateFmt;
     }
 
-    r.getCell(20).value = row.notes ?? "";
+    r.getCell(24).value = row.checkConductedBy ?? row.checkedBy ?? "";
+    r.getCell(25).value = row.remarksRegister ?? row.notes ?? "";
 
-    [8, 9].forEach((col) => {
+    [11, 12].forEach((col) => {
       const cell = r.getCell(col);
       if (cell.value === "" || cell.value === null) cell.numFmt = currencyFmt;
     });

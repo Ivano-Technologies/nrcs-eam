@@ -42,6 +42,14 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ViewToggle, type ViewMode } from "@/components/ViewToggle";
 import { CardQrCode } from "@/components/CardQrCode";
 import { ModuleFiltersCard, ModuleFilterSearch } from "@/components/ModuleFiltersCard";
+import {
+  CONDITION_OPTIONS,
+  CURRENT_STATUS_OPTIONS,
+  ITEM_CATEGORY_CODE_MAP,
+  METHOD_OF_ACQUISITION_OPTIONS,
+  SUB_ITEM_CATEGORIES,
+  YEAR_ACQUIRED_OPTIONS,
+} from "@/lib/assetRegisterOptions";
 
 const REGISTER_STATUS_FILTER = [
   { value: "all", label: "All statuses" },
@@ -52,16 +60,6 @@ const REGISTER_STATUS_FILTER = [
   { value: "to_be_disposed", label: "To be Disposed" },
   { value: "out_of_order", label: "Out of Order" },
   { value: "beyond_repair", label: "Beyond Repair" },
-] as const;
-
-const ACQUISITION_METHODS = [
-  "Purchased Through Project",
-  "Purchased Through Internal Funding",
-  "Donated by ICRC",
-  "Donated by IFRC",
-  "Donated by Other Donor",
-  "By Local Organisation",
-  "Other",
 ] as const;
 
 const STATUS_BADGE: Record<string, string> = {
@@ -106,6 +104,23 @@ function formatDate(d: Date | string | null | undefined): string {
   const mm = String(x.getMonth() + 1).padStart(2, "0");
   const yyyy = x.getFullYear();
   return `${dd}/${mm}/${yyyy}`;
+}
+
+function registerStatusFromCurrentStatus(status: string): string {
+  switch (status) {
+    case "In Use":
+      return "in_use";
+    case "In Store":
+      return "in_store";
+    case "Under Maintenance":
+      return "under_maintenance";
+    case "Disposed":
+      return "disposed";
+    case "To be Disposed":
+      return "to_be_disposed";
+    default:
+      return "in_use";
+  }
 }
 
 type SortKey =
@@ -381,20 +396,35 @@ export default function Assets() {
       categoryId: "",
       siteId: "",
       itemType: "asset",
+      registerItemType: "Asset",
+      itemCategory: "",
+      itemCategoryCode: "",
       subCategory: "",
+      subItemCategory: "",
+      branchCode: "",
+      assetNum: "",
+      assetCode: "",
       serialNumber: "",
       acquisitionCost: "",
+      actualUnitValue: "",
       currentDepreciatedValue: "",
+      depreciatedValue: "",
       acquisitionMethod: "",
+      acquisitionOtherDetail: "",
       projectRef: "",
       yearAcquired: "",
+      currentStatus: "In Use",
       acquisitionCondition: "New",
       registerStatus: "in_use",
       assignedToName: "",
       department: "",
       location: "",
       physicalCondition: "Good",
+      conditionRegister: "Good",
+      lastPhysicalCheck: "",
+      checkConductedBy: "",
       notes: "",
+      remarksRegister: "",
     });
   };
 
@@ -405,21 +435,46 @@ export default function Assets() {
     categoryId: "",
     siteId: "",
     itemType: "asset" as "asset" | "inventory",
+    registerItemType: "Asset" as "Asset" | "Inventory",
+    itemCategory: "",
+    itemCategoryCode: "",
     subCategory: "",
+    subItemCategory: "",
+    branchCode: "",
+    assetNum: "",
+    assetCode: "",
     serialNumber: "",
     acquisitionCost: "",
+    actualUnitValue: "",
     currentDepreciatedValue: "",
+    depreciatedValue: "",
     acquisitionMethod: "",
+    acquisitionOtherDetail: "",
     projectRef: "",
     yearAcquired: "",
+    currentStatus: "In Use",
     acquisitionCondition: "New" as "New" | "Used",
     registerStatus: "in_use",
     assignedToName: "",
     department: "",
     location: "",
     physicalCondition: "Good" as "Good" | "Fair" | "Damaged" | "Beyond Repair",
+    conditionRegister: "Good",
+    lastPhysicalCheck: "",
+    checkConductedBy: "",
     notes: "",
+    remarksRegister: "",
   });
+
+  const selectedCategoryName =
+    categories?.find((cat) => cat.id.toString() === newAsset.categoryId)?.name ?? "";
+  const selectedCategoryCode = ITEM_CATEGORY_CODE_MAP[selectedCategoryName] ?? "";
+  const selectedSiteCode =
+    sites?.find((site) => site.id.toString() === newAsset.siteId)?.code ?? "";
+  const generatedAssetCodePreview =
+    selectedCategoryCode && selectedSiteCode
+      ? `NRCS_${selectedSiteCode}${selectedCategoryCode}${String(newAsset.assetNum || "1").padStart(4, "0")}`
+      : "Auto-generated after save";
 
   const handleCreateAsset = () => {
     setCreateFormError("");
@@ -436,6 +491,7 @@ export default function Assets() {
     }
     const showProject =
       newAsset.acquisitionMethod === "Purchased Through Project" && newAsset.projectRef.trim();
+    const registerStatus = registerStatusFromCurrentStatus(newAsset.currentStatus);
     createAssetMutation.mutate({
       assetTag: newAsset.assetTag.trim() || undefined,
       name: newAsset.name,
@@ -443,17 +499,35 @@ export default function Assets() {
       categoryId: Number(newAsset.categoryId),
       siteId: Number(newAsset.siteId),
       itemType: newAsset.itemType,
+      registerItemType: newAsset.itemType === "inventory" ? "Inventory" : "Asset",
+      itemCategory: selectedCategoryName || undefined,
+      itemCategoryCode: selectedCategoryCode || undefined,
       subCategory: newAsset.subCategory || undefined,
+      subItemCategory: newAsset.subItemCategory || undefined,
+      branchCode: selectedSiteCode || undefined,
+      assetCode: undefined,
       serialNumber: newAsset.serialNumber || undefined,
       acquisitionCost: newAsset.acquisitionCost || undefined,
+      actualUnitValue: newAsset.actualUnitValue || undefined,
       currentDepreciatedValue: newAsset.currentDepreciatedValue
         ? Number(newAsset.currentDepreciatedValue)
         : undefined,
+      depreciatedValue: newAsset.depreciatedValue || undefined,
       acquisitionMethod: newAsset.acquisitionMethod || undefined,
+      acquisitionOtherDetail:
+        newAsset.acquisitionMethod === "Other" ? newAsset.acquisitionOtherDetail || undefined : undefined,
       projectRef: showProject ? newAsset.projectRef : newAsset.projectRef || undefined,
       yearAcquired: year,
+      yearAcquiredRegister: year,
+      currentStatus: newAsset.currentStatus as
+        | "In Use"
+        | "In Store"
+        | "Under Maintenance"
+        | "Disposed"
+        | "To be Disposed",
       acquisitionCondition: newAsset.acquisitionCondition,
-      registerStatus: newAsset.registerStatus as
+      acquiredNewOrUsed: newAsset.acquisitionCondition,
+      registerStatus: registerStatus as
         | "in_use"
         | "in_store"
         | "under_maintenance"
@@ -464,7 +538,17 @@ export default function Assets() {
       assignedToName: newAsset.assignedToName || undefined,
       department: newAsset.department || undefined,
       location: newAsset.location || undefined,
+      currentLocation: newAsset.location || undefined,
       physicalCondition: newAsset.physicalCondition,
+      conditionRegister: newAsset.conditionRegister as
+        | "Good"
+        | "Fair"
+        | "Damaged"
+        | "Beyond Repair (For Disposal)"
+        | "Out of Order (To be repaired)",
+      lastPhysicalCheck: newAsset.lastPhysicalCheck ? new Date(newAsset.lastPhysicalCheck) : undefined,
+      checkConductedBy: newAsset.checkConductedBy || undefined,
+      remarksRegister: newAsset.remarksRegister || undefined,
       notes: newAsset.notes || undefined,
     });
   };
@@ -580,6 +664,7 @@ export default function Assets() {
                   </p>
                 ) : null}
                 <div className="grid gap-4 py-4">
+                  <h3 className="text-sm font-semibold text-[#1a2332]">Item Details</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Item Type *</Label>
@@ -618,13 +703,29 @@ export default function Assets() {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="subCategory">Sub-Item Category</Label>
-                    <Input
-                      id="subCategory"
-                      data-testid="asset-form-subcategory"
-                      value={newAsset.subCategory}
-                      onChange={(e) => setNewAsset({ ...newAsset, subCategory: e.target.value })}
-                    />
+                    <Label htmlFor="subCategory">Sub Item Category</Label>
+                    <Select
+                      value={newAsset.subItemCategory || "__none__"}
+                      onValueChange={(value) =>
+                        setNewAsset({
+                          ...newAsset,
+                          subItemCategory: value === "__none__" ? "" : value,
+                          subCategory: value === "__none__" ? "" : value,
+                        })
+                      }
+                    >
+                      <SelectTrigger data-testid="asset-form-subcategory">
+                        <SelectValue placeholder="Select sub item category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">—</SelectItem>
+                        {SUB_ITEM_CATEGORIES.map((item) => (
+                          <SelectItem key={item} value={item}>
+                            {item}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="name">Item Description *</Label>
@@ -636,16 +737,29 @@ export default function Assets() {
                       placeholder="Full item description"
                     />
                   </div>
+                  <h3 className="mt-2 text-sm font-semibold text-[#1a2332]">Item Code</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="assetTag">Asset Code (optional)</Label>
-                      <Input
-                        id="assetTag"
-                        value={newAsset.assetTag}
-                        onChange={(e) => setNewAsset({ ...newAsset, assetTag: e.target.value })}
-                        placeholder="Auto-generated if empty"
-                      />
+                      <Label>Branch Code</Label>
+                      <Input value={selectedSiteCode} readOnly />
                     </div>
+                    <div className="space-y-2">
+                      <Label>Item Category Code</Label>
+                      <Input value={selectedCategoryCode} readOnly />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>NUM</Label>
+                      <Input value={newAsset.assetNum || "Auto"} readOnly />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="assetTag">Asset Code</Label>
+                      <Input id="assetTag" value={generatedAssetCodePreview} readOnly className="font-semibold" />
+                    </div>
+                  </div>
+                  <h3 className="mt-2 text-sm font-semibold text-[#1a2332]">Financial Value</h3>
+                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="serialNumber">Serial / Product No.</Label>
                       <Input
@@ -662,8 +776,14 @@ export default function Assets() {
                       <Input
                         data-testid="asset-form-unit-value"
                         type="number"
-                        value={newAsset.acquisitionCost}
-                        onChange={(e) => setNewAsset({ ...newAsset, acquisitionCost: e.target.value })}
+                        value={newAsset.actualUnitValue}
+                        onChange={(e) =>
+                          setNewAsset({
+                            ...newAsset,
+                            actualUnitValue: e.target.value,
+                            acquisitionCost: e.target.value,
+                          })
+                        }
                       />
                     </div>
                     <div className="space-y-2">
@@ -671,13 +791,18 @@ export default function Assets() {
                       <Input
                         data-testid="asset-form-depreciated-value"
                         type="number"
-                        value={newAsset.currentDepreciatedValue}
+                        value={newAsset.depreciatedValue || newAsset.currentDepreciatedValue}
                         onChange={(e) =>
-                          setNewAsset({ ...newAsset, currentDepreciatedValue: e.target.value })
+                          setNewAsset({
+                            ...newAsset,
+                            depreciatedValue: e.target.value,
+                            currentDepreciatedValue: e.target.value,
+                          })
                         }
                       />
                     </div>
                   </div>
+                  <h3 className="mt-2 text-sm font-semibold text-[#1a2332]">Purchase / Acquisition Information</h3>
                   <div className="space-y-2">
                     <Label>Method of Acquisition</Label>
                     <Select
@@ -694,7 +819,7 @@ export default function Assets() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="__none__">—</SelectItem>
-                        {ACQUISITION_METHODS.map((m) => (
+                        {METHOD_OF_ACQUISITION_OPTIONS.map((m) => (
                           <SelectItem key={m} value={m}>
                             {m}
                           </SelectItem>
@@ -702,7 +827,16 @@ export default function Assets() {
                       </SelectContent>
                     </Select>
                   </div>
-                  {newAsset.acquisitionMethod === "Purchased Through Project" ? (
+                  {newAsset.acquisitionMethod === "Other" ? (
+                    <div className="space-y-2">
+                      <Label>Method Detail</Label>
+                      <Input
+                        value={newAsset.acquisitionOtherDetail}
+                        onChange={(e) => setNewAsset({ ...newAsset, acquisitionOtherDetail: e.target.value })}
+                      />
+                    </div>
+                  ) : null}
+                  {newAsset.acquisitionMethod === "Purchase Through Project" ? (
                     <div className="space-y-2">
                       <Label>Project Reference</Label>
                       <Input
@@ -715,13 +849,24 @@ export default function Assets() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="year">Year Acquired</Label>
-                      <Input
-                        id="year"
-                        data-testid="asset-form-year"
-                        type="number"
-                        value={newAsset.yearAcquired}
-                        onChange={(e) => setNewAsset({ ...newAsset, yearAcquired: e.target.value })}
-                      />
+                      <Select
+                        value={newAsset.yearAcquired || "__none__"}
+                        onValueChange={(value) =>
+                          setNewAsset({ ...newAsset, yearAcquired: value === "__none__" ? "" : value })
+                        }
+                      >
+                        <SelectTrigger data-testid="asset-form-year">
+                          <SelectValue placeholder="Select year" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">—</SelectItem>
+                          {YEAR_ACQUIRED_OPTIONS.map((yearOption) => (
+                            <SelectItem key={yearOption} value={yearOption}>
+                              {yearOption}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="space-y-2">
                       <Label>Acquired New or Used</Label>
@@ -747,16 +892,16 @@ export default function Assets() {
                     <div className="space-y-2">
                       <Label>Current Status</Label>
                       <Select
-                        value={newAsset.registerStatus}
-                        onValueChange={(v) => setNewAsset({ ...newAsset, registerStatus: v })}
+                        value={newAsset.currentStatus}
+                        onValueChange={(v) => setNewAsset({ ...newAsset, currentStatus: v })}
                       >
                         <SelectTrigger data-testid="asset-form-status">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {REGISTER_STATUS_FILTER.filter((x) => x.value !== "all").map((s) => (
-                            <SelectItem key={s.value} value={s.value}>
-                              {s.label}
+                          {CURRENT_STATUS_OPTIONS.map((statusOption) => (
+                            <SelectItem key={statusOption} value={statusOption}>
+                              {statusOption}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -781,6 +926,7 @@ export default function Assets() {
                       </Select>
                     </div>
                   </div>
+                  <h3 className="mt-2 text-sm font-semibold text-[#1a2332]">Assigned To</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Assigned To</Label>
@@ -807,14 +953,17 @@ export default function Assets() {
                       placeholder="Building, floor, room"
                     />
                   </div>
+                  <h3 className="mt-2 text-sm font-semibold text-[#1a2332]">Condition</h3>
                   <div className="space-y-2">
                     <Label>Condition</Label>
                     <Select
-                      value={newAsset.physicalCondition}
+                      value={newAsset.conditionRegister}
                       onValueChange={(v) =>
                         setNewAsset({
                           ...newAsset,
-                          physicalCondition: v as typeof newAsset.physicalCondition,
+                          conditionRegister: v,
+                          physicalCondition:
+                            v === "Beyond Repair (For Disposal)" ? "Beyond Repair" : v === "Out of Order (To be repaired)" ? "Damaged" : (v as "Good" | "Fair" | "Damaged" | "Beyond Repair"),
                         })
                       }
                     >
@@ -822,20 +971,39 @@ export default function Assets() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {(["Good", "Fair", "Damaged", "Beyond Repair"] as const).map((c) => (
+                        {CONDITION_OPTIONS.map((c) => (
                           <SelectItem key={c} value={c}>
                             {c}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Date of Last Physical Check</Label>
+                      <Input
+                        type="date"
+                        value={newAsset.lastPhysicalCheck}
+                        onChange={(e) => setNewAsset({ ...newAsset, lastPhysicalCheck: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Check Conducted By</Label>
+                      <Input
+                        value={newAsset.checkConductedBy}
+                        onChange={(e) => setNewAsset({ ...newAsset, checkConductedBy: e.target.value })}
+                      />
+                    </div>
+                  </div>
                   </div>
                   <div className="space-y-2">
                     <Label>Remarks</Label>
                     <Textarea
                       data-testid="asset-form-remarks"
-                      value={newAsset.notes}
-                      onChange={(e) => setNewAsset({ ...newAsset, notes: e.target.value })}
+                      value={newAsset.remarksRegister}
+                      onChange={(e) =>
+                        setNewAsset({ ...newAsset, remarksRegister: e.target.value, notes: e.target.value })
+                      }
                     />
                   </div>
                 </div>
@@ -996,139 +1164,33 @@ export default function Assets() {
               data-testid="asset-register-data-table"
             >
               <thead className="sticky top-0 z-40 bg-background">
+                <tr className="border-b bg-muted/40">
+                  <th className="px-2 py-1 text-center" colSpan={5}>ITEM DETAILS</th>
+                  <th className="px-2 py-1 text-center" colSpan={4}>ITEM CODE</th>
+                  <th className="px-2 py-1 text-center" colSpan={2}>FINANCIAL VALUE</th>
+                  <th className="px-2 py-1 text-center" colSpan={7}>PURCHASE/ACQUISITION INFORMATION</th>
+                  <th className="px-2 py-1 text-center" colSpan={3}>ASSIGNED TO</th>
+                  <th className="px-2 py-1 text-center" colSpan={3}>CONDITION</th>
+                  {canEditAssets ? <th className="px-2 py-1" /> : null}
+                </tr>
                 <tr className="border-b">
-                  <th
-                    className="sticky left-0 z-[45] border-r bg-background px-2 py-1.5 text-left font-medium whitespace-nowrap w-[3rem] min-w-[3rem] max-w-[3rem]"
-                    data-testid="asset-col-sno"
-                  >
-                    S/No
-                  </th>
-                  <th
-                    className="sticky left-[3rem] z-[45] border-r bg-background px-2 py-1.5 text-left font-medium whitespace-nowrap min-w-[7rem] cursor-pointer"
-                    data-testid="asset-col-asset-code"
-                    onClick={() => toggleSort("assetTag")}
-                  >
-                    Asset Code {sortIndicator("assetTag")}
-                  </th>
-                  <th
-                    className="sticky left-[10rem] z-[45] border-r bg-background px-2 py-1.5 text-left font-medium whitespace-nowrap w-[14rem] min-w-[14rem] max-w-[14rem] cursor-pointer shadow-[4px_0_8px_-4px_rgba(0,0,0,0.25)]"
-                    data-testid="asset-col-description"
-                    onClick={() => toggleSort("name")}
-                  >
-                    Item Description {sortIndicator("name")}
-                  </th>
-                  <th
-                    className="px-2 py-1.5 text-left font-medium whitespace-nowrap min-w-[5.5rem] cursor-pointer"
-                    onClick={() => toggleSort("itemType")}
-                  >
-                    Item Type {sortIndicator("itemType")}
-                  </th>
-                  <th
-                    className="px-2 py-1.5 text-left font-medium whitespace-nowrap min-w-[8rem] cursor-pointer"
-                    onClick={() => toggleSort("categoryName")}
-                  >
-                    Item Category {sortIndicator("categoryName")}
-                  </th>
-                  <th
-                    className="px-2 py-1.5 text-left font-medium whitespace-nowrap min-w-[7rem] cursor-pointer"
-                    onClick={() => toggleSort("subCategory")}
-                  >
-                    Sub-Item {sortIndicator("subCategory")}
-                  </th>
-                  <th
-                    className="px-2 py-1.5 text-left font-medium whitespace-nowrap min-w-[7rem] cursor-pointer"
-                    onClick={() => toggleSort("serialNumber")}
-                  >
-                    Serial / Product No. {sortIndicator("serialNumber")}
-                  </th>
-                  <th
-                    className="px-2 py-1.5 text-right font-medium whitespace-nowrap min-w-[8rem] cursor-pointer"
-                    onClick={() => toggleSort("acquisitionCost")}
-                  >
-                    Actual Unit (NGN) {sortIndicator("acquisitionCost")}
-                  </th>
-                  <th
-                    className="px-2 py-1.5 text-right font-medium whitespace-nowrap min-w-[8rem] cursor-pointer"
-                    onClick={() => toggleSort("currentDepreciatedValue")}
-                  >
-                    Depreciated (NGN) {sortIndicator("currentDepreciatedValue")}
-                  </th>
-                  <th
-                    className="px-2 py-1.5 text-left font-medium whitespace-nowrap min-w-[9rem] cursor-pointer"
-                    onClick={() => toggleSort("acquisitionMethod")}
-                  >
-                    Method {sortIndicator("acquisitionMethod")}
-                  </th>
-                  <th
-                    className="px-2 py-1.5 text-left font-medium whitespace-nowrap min-w-[8rem] cursor-pointer"
-                    onClick={() => toggleSort("projectRef")}
-                  >
-                    Project Ref {sortIndicator("projectRef")}
-                  </th>
-                  <th
-                    className="px-2 py-1.5 text-left font-medium whitespace-nowrap min-w-[5rem] cursor-pointer"
-                    onClick={() => toggleSort("yearAcquired")}
-                  >
-                    Year {sortIndicator("yearAcquired")}
-                  </th>
-                  <th
-                    className="px-2 py-1.5 text-left font-medium whitespace-nowrap min-w-[5rem] cursor-pointer"
-                    onClick={() => toggleSort("acquisitionCondition")}
-                  >
-                    New/Used {sortIndicator("acquisitionCondition")}
-                  </th>
-                  <th
-                    className="px-2 py-1.5 text-left font-medium whitespace-nowrap min-w-[8rem] cursor-pointer"
-                    onClick={() => toggleSort("registerStatus")}
-                  >
-                    Status {sortIndicator("registerStatus")}
-                  </th>
-                  <th
-                    className="px-2 py-1.5 text-left font-medium whitespace-nowrap min-w-[8rem] cursor-pointer"
-                    onClick={() => toggleSort("assignedToName")}
-                  >
-                    Assigned To {sortIndicator("assignedToName")}
-                  </th>
-                  <th
-                    className="px-2 py-1.5 text-left font-medium whitespace-nowrap min-w-[7rem] cursor-pointer"
-                    onClick={() => toggleSort("department")}
-                  >
-                    Department {sortIndicator("department")}
-                  </th>
-                  <th
-                    className="px-2 py-1.5 text-left font-medium whitespace-nowrap min-w-[9rem] cursor-pointer"
-                    onClick={() => toggleSort("siteName")}
-                  >
-                    Location {sortIndicator("siteName")}
-                  </th>
-                  <th
-                    className="px-2 py-1.5 text-left font-medium whitespace-nowrap min-w-[6rem] cursor-pointer"
-                    onClick={() => toggleSort("physicalCondition")}
-                  >
-                    Condition {sortIndicator("physicalCondition")}
-                  </th>
-                  <th
-                    className="px-2 py-1.5 text-left font-medium whitespace-nowrap min-w-[7rem] cursor-pointer"
-                    onClick={() => toggleSort("lastCheckedAt")}
-                  >
-                    Last Check {sortIndicator("lastCheckedAt")}
-                  </th>
-                  <th
-                    className="px-2 py-1.5 text-left font-medium whitespace-nowrap min-w-[10rem] cursor-pointer"
-                    onClick={() => toggleSort("notes")}
-                  >
-                    Remarks {sortIndicator("notes")}
-                  </th>
-                  {canEditAssets ? (
-                    <th className="sticky right-0 z-[45] border-l bg-muted px-1 py-1.5 w-20 shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.08)]" />
-                  ) : null}
+                  {[
+                    "S.No","Item Type","Item Category","Sub Item Category","Item Description",
+                    "Branch Code","Category Code","NUM","Asset Code",
+                    "Serial Number","Actual Unit Value","Depreciated Value",
+                    "Method of Acquisition","Acquisition Detail","Project Ref","Year Acquired","New/Used","Status","Assigned To",
+                    "Department","Location","Condition","Last Check Date","Check Conducted By","Remarks",
+                  ].map((header) => (
+                    <th key={header} className="px-2 py-1.5 text-left font-medium whitespace-nowrap">{header}</th>
+                  ))}
+                  {canEditAssets ? <th className="px-2 py-1.5 text-left font-medium whitespace-nowrap">Actions</th> : null}
                 </tr>
               </thead>
               <tbody>
                 {rows.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={canEditAssets ? 21 : 20}
+                      colSpan={canEditAssets ? 26 : 25}
                       className="px-4 py-12 text-center text-muted-foreground"
                     >
                       No rows match filters
@@ -1167,87 +1229,35 @@ export default function Assets() {
                         )}
                         onClick={() => setLocation(appPath(`/assets/${row.id}`))}
                       >
-                        <td className="sticky left-0 z-[35] border-r bg-background px-2 py-1 text-muted-foreground w-[3rem] min-w-[3rem] max-w-[3rem]">
-                          {offset + i + 1}
-                        </td>
-                        <td className="sticky left-[3rem] z-[35] min-w-[7rem] whitespace-nowrap border-r bg-background px-2 py-1">
-                          {row.assetTag?.trim() || EM_DASH}
-                        </td>
-                        <td
-                          className="sticky left-[10rem] z-[35] border-r bg-background px-2 py-1 w-[14rem] min-w-[14rem] max-w-[14rem] truncate shadow-[4px_0_8px_-4px_rgba(0,0,0,0.25)]"
-                          title={desc}
-                          data-testid={`asset-cell-desc-${row.id}`}
-                        >
-                          {desc || EM_DASH}
-                        </td>
-                        <td className="px-2 py-1 whitespace-nowrap">
-                          {row.itemType === "inventory" ? "Inventory" : "Asset"}
-                        </td>
-                        <td className="px-2 py-1 whitespace-nowrap">
-                          {row.categoryName?.trim() || EM_DASH}
-                        </td>
-                        <td className="px-2 py-1 max-w-[10rem] truncate">{row.subCategory?.trim() || EM_DASH}</td>
-                        <td className="px-2 py-1 whitespace-nowrap">
-                          {row.serialNumber?.trim() || EM_DASH}
-                        </td>
-                        <td className="px-2 py-1 text-right tabular-nums whitespace-nowrap">
-                          {formatMoney(unit)}
-                        </td>
-                        <td className="px-2 py-1 text-right tabular-nums whitespace-nowrap">
-                          {formatMoney(dep)}
-                        </td>
-                        <td className="px-2 py-1 max-w-[10rem] truncate">
-                          {row.acquisitionMethod?.trim() || EM_DASH}
-                        </td>
-                        <td className="px-2 py-1 max-w-[8rem] truncate">
-                          {row.projectRef?.trim() || EM_DASH}
-                        </td>
-                        <td className="px-2 py-1">{year ?? EM_DASH}</td>
-                        <td className="px-2 py-1">{row.acquisitionCondition?.trim() || EM_DASH}</td>
-                        <td className="px-2 py-1 whitespace-nowrap">
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "text-xs font-normal",
-                              STATUS_BADGE[rs] ?? "bg-slate-100 text-slate-800"
-                            )}
-                          >
-                            {statusLabel}
-                          </Badge>
-                        </td>
-                        <td className="px-2 py-1 max-w-[9rem] truncate">{assigned || EM_DASH}</td>
-                        <td className="px-2 py-1 max-w-[8rem] truncate">
-                          {row.department?.trim() || EM_DASH}
-                        </td>
-                        <td className="px-2 py-1 max-w-[12rem] truncate" title={loc}>
-                          {loc || EM_DASH}
-                        </td>
-                        <td className="px-2 py-1 whitespace-nowrap">
-                          {cond ? (
-                            <Badge
-                              variant="outline"
-                              className={cn(
-                                "text-xs font-normal",
-                                CONDITION_BADGE[cond] ?? "bg-slate-100"
-                              )}
-                            >
-                              {cond}
-                            </Badge>
-                          ) : (
-                            EM_DASH
-                          )}
-                        </td>
-                        <td className="px-2 py-1 whitespace-nowrap">
-                          {formatDate(row.lastCheckedAt)}
-                        </td>
-                        <td className="px-2 py-1 max-w-[14rem] truncate" title={row.notes ?? ""}>
-                          {row.notes?.trim() || EM_DASH}
+                        <td className="px-2 py-1">{offset + i + 1}</td>
+                        <td className="px-2 py-1">{row.registerItemType ?? (row.itemType === "inventory" ? "Inventory" : "Asset")}</td>
+                        <td className="px-2 py-1">{row.itemCategory?.trim() || row.categoryName?.trim() || EM_DASH}</td>
+                        <td className="px-2 py-1">{row.subItemCategory?.trim() || row.subCategory?.trim() || EM_DASH}</td>
+                        <td className="px-2 py-1 max-w-[14rem] truncate" title={desc}>{row.itemDescription?.trim() || desc || EM_DASH}</td>
+                        <td className="px-2 py-1">{row.branchCode?.trim() || EM_DASH}</td>
+                        <td className="px-2 py-1">{row.itemCategoryCode?.trim() || EM_DASH}</td>
+                        <td className="px-2 py-1">{row.assetNum ?? EM_DASH}</td>
+                        <td className="px-2 py-1 font-medium">{row.assetCode?.trim() || row.assetTag?.trim() || EM_DASH}</td>
+                        <td className="px-2 py-1">{row.serialNumber?.trim() || EM_DASH}</td>
+                        <td className="px-2 py-1 text-right tabular-nums">{formatMoney(row.actualUnitValue != null ? Number(row.actualUnitValue) : unit)}</td>
+                        <td className="px-2 py-1 text-right tabular-nums">{formatMoney(row.depreciatedValue != null ? Number(row.depreciatedValue) : dep)}</td>
+                        <td className="px-2 py-1">{row.acquisitionMethod?.trim() || EM_DASH}</td>
+                        <td className="px-2 py-1">{row.acquisitionOtherDetail?.trim() || EM_DASH}</td>
+                        <td className="px-2 py-1">{row.projectRef?.trim() || EM_DASH}</td>
+                        <td className="px-2 py-1">{row.yearAcquiredRegister ?? year ?? EM_DASH}</td>
+                        <td className="px-2 py-1">{row.acquiredNewOrUsed?.trim() || row.acquisitionCondition?.trim() || EM_DASH}</td>
+                        <td className="px-2 py-1">{row.currentStatus?.trim() || statusLabel}</td>
+                        <td className="px-2 py-1">{assigned || EM_DASH}</td>
+                        <td className="px-2 py-1">{row.department?.trim() || EM_DASH}</td>
+                        <td className="px-2 py-1 max-w-[12rem] truncate" title={loc}>{row.currentLocation?.trim() || loc || EM_DASH}</td>
+                        <td className="px-2 py-1">{row.conditionRegister?.trim() || cond || EM_DASH}</td>
+                        <td className="px-2 py-1">{formatDate(row.lastPhysicalCheck || row.lastCheckedAt)}</td>
+                        <td className="px-2 py-1">{row.checkConductedBy?.trim() || row.checkedBy?.trim() || EM_DASH}</td>
+                        <td className="px-2 py-1 max-w-[14rem] truncate" title={row.remarksRegister ?? row.notes ?? ""}>
+                          {row.remarksRegister?.trim() || row.notes?.trim() || EM_DASH}
                         </td>
                         {canEditAssets ? (
-                          <td
-                            className="sticky right-0 z-[35] border-l bg-background px-1 py-0.5 shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.06)]"
-                            onClick={(e) => e.stopPropagation()}
-                          >
+                          <td className="px-1 py-0.5" onClick={(e) => e.stopPropagation()}>
                             <div className="flex gap-0.5">
                               <Button
                                 data-testid="asset-edit-btn"
