@@ -197,6 +197,20 @@
       "when": 1777400000000,
       "tag": "0027_user_status_and_facility",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1777400100000,
+      "tag": "0028_facility_hierarchy_constraints",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1777400200000,
+      "tag": "0029_users_email_unique",
+      "breakpoints": true
     }
   ]
 }
