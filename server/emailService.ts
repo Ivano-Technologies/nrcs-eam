@@ -11,6 +11,10 @@ interface EmailOptions {
  * Otherwise use Manus Forge API if configured.
  */
 export async function sendEmail(options: EmailOptions): Promise<boolean> {
+  if ((process.env.SUPABASE_TEST_SCHEMA ?? "").trim() === "test") {
+    console.log(`[email stub] skipped send to ${options.to}`);
+    return true;
+  }
   console.log("[email-debug] sendEmail called, SMTP_HOST:",
     process.env.SMTP_HOST ? "SET" : "NOT SET",
     "RESEND_API_KEY:",
