@@ -302,9 +302,31 @@ export const assets = pgTable("assets", {
 
   /** Asset Register (NRCS) — item vs inventory */
   itemType: varchar("itemType", { length: 20 }).default("asset").notNull(),
+  /** NRCS v1.1.2.25 register item type (Asset | Inventory). */
+  registerItemType: varchar("item_type", { length: 20 }).default("Asset").notNull(),
+  /** NRCS register category label (Computer, Vehicle, ...). */
+  itemCategory: varchar("item_category", { length: 100 }),
+  /** Derived NRCS category code (CO, FF, GE, LA, LB, ME, OE, VE). */
+  itemCategoryCode: varchar("item_category_code", { length: 2 }),
   subCategory: varchar("subCategory", { length: 255 }),
+  subItemCategory: varchar("sub_item_category", { length: 255 }),
+  itemDescription: text("item_description"),
+  branchCode: varchar("branch_code", { length: 32 }),
+  assetNum: integer("asset_num"),
+  assetCode: varchar("asset_code", { length: 64 }),
   acquisitionMethod: varchar("acquisitionMethod", { length: 100 }),
+  acquisitionOtherDetail: varchar("acquisition_other_detail", { length: 255 }),
   projectRef: varchar("projectRef", { length: 255 }),
+  yearAcquiredRegister: integer("year_acquired"),
+  acquiredNewOrUsed: varchar("acquired_new_or_used", { length: 16 }),
+  currentStatus: varchar("current_status", { length: 32 }),
+  currentLocation: varchar("current_location", { length: 255 }),
+  conditionRegister: varchar("condition", { length: 64 }),
+  lastPhysicalCheck: date("last_physical_check"),
+  checkConductedBy: varchar("check_conducted_by", { length: 255 }),
+  remarksRegister: text("remarks"),
+  actualUnitValue: decimal("actual_unit_value", { precision: 15, scale: 2 }),
+  depreciatedValue: decimal("depreciated_value", { precision: 15, scale: 2 }),
   /** New / Used at acquisition */
   acquisitionCondition: varchar("acquisitionCondition", { length: 50 }),
   department: varchar("department", { length: 255 }),
@@ -322,6 +344,20 @@ export const assets = pgTable("assets", {
 
   createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
   updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
+});
+
+export const assetApprovals = pgTable("asset_approvals", {
+  id: serial("id").primaryKey(),
+  siteId: integer("site_id").notNull().references(() => sites.id, { onDelete: "cascade" }),
+  period: varchar("period", { length: 64 }).notNull(),
+  updatedByName: varchar("updated_by_name", { length: 255 }),
+  updatedByDesignation: varchar("updated_by_designation", { length: 255 }),
+  updatedByDate: date("updated_by_date"),
+  approvedByName: varchar("approved_by_name", { length: 255 }),
+  approvedByDesignation: varchar("approved_by_designation", { length: 255 }),
+  approvedByDate: date("approved_by_date"),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
 });
 
 /**
@@ -1112,6 +1148,8 @@ export type InsertSite = typeof sites.$inferInsert;
 export type AssetCategory = typeof assetCategories.$inferSelect;
 export type Asset = typeof assets.$inferSelect;
 export type InsertAsset = typeof assets.$inferInsert;
+export type AssetApproval = typeof assetApprovals.$inferSelect;
+export type InsertAssetApproval = typeof assetApprovals.$inferInsert;
 export type WorkOrder = typeof workOrders.$inferSelect;
 export type InsertWorkOrder = typeof workOrders.$inferInsert;
 export type MaintenanceSchedule = typeof maintenanceSchedules.$inferSelect;
