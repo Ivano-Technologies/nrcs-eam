@@ -90,6 +90,11 @@ const REGISTER_LABELS: Record<string, string> = {
 };
 
 const EM_DASH = "—";
+const REGISTER_TABLE_COLUMN_ORDER = [
+  "S.No","Item Type","Item Category","Sub Item Category","Item Description","Branch Code","Category Code","NUM","Asset Code",
+  "Serial Number","Actual Unit Value","Depreciated Value","Method of Acquisition","Acquisition Detail","Project Ref","Year Acquired",
+  "New/Used","Status","Assigned To","Department","Location","Condition","Last Check Date","Check Conducted By","Remarks",
+] as const;
 
 function formatMoney(n: number | null | undefined): string {
   if (n === null || n === undefined || Number.isNaN(n)) return EM_DASH;
@@ -1174,13 +1179,7 @@ export default function Assets() {
                   {canEditAssets ? <th className="px-2 py-1" /> : null}
                 </tr>
                 <tr className="border-b">
-                  {[
-                    "S.No","Item Type","Item Category","Sub Item Category","Item Description",
-                    "Branch Code","Category Code","NUM","Asset Code",
-                    "Serial Number","Actual Unit Value","Depreciated Value",
-                    "Method of Acquisition","Acquisition Detail","Project Ref","Year Acquired","New/Used","Status","Assigned To",
-                    "Department","Location","Condition","Last Check Date","Check Conducted By","Remarks",
-                  ].map((header) => (
+                  {REGISTER_TABLE_COLUMN_ORDER.map((header) => (
                     <th key={header} className="px-2 py-1.5 text-left font-medium whitespace-nowrap">{header}</th>
                   ))}
                   {canEditAssets ? <th className="px-2 py-1.5 text-left font-medium whitespace-nowrap">Actions</th> : null}
