@@ -69,6 +69,9 @@ function writeNRCSAssetRegisterHeader(sheet: ExcelJS.Worksheet) {
     c.font = { bold: true };
     c.alignment = { horizontal: "center" };
   }
+  [2, 3, 4].forEach((rowIndex) => {
+    sheet.getRow(rowIndex).font = { bold: true };
+  });
   const headerRow = sheet.getRow(6);
   HEADER_TITLES.forEach((h, i) => {
     const c = headerRow.getCell(i + 1);
@@ -84,7 +87,7 @@ function writeNRCSAssetRegisterHeader(sheet: ExcelJS.Worksheet) {
 
 function setNRCSColumnWidths(sheet: ExcelJS.Worksheet) {
   HEADER_TITLES.forEach((_, i) => {
-    sheet.getColumn(i + 1).width = i === 4 ? 36 : i === 19 ? 28 : 14;
+    sheet.getColumn(i + 1).width = i === 4 ? 36 : i === 24 ? 28 : 14;
   });
 }
 
