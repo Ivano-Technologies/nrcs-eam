@@ -30,6 +30,7 @@ const runLiveAuthOnly =
  */
 export default defineConfig({
   testDir: "./tests",
+  globalTeardown: "./tests/teardown/global.teardown.ts",
   timeout: 120_000,
   fullyParallel: false,
   workers: 1,
