@@ -3,10 +3,12 @@ import path from "node:path";
 import { test as setup, expect } from "@playwright/test";
 import { runSeedE2E } from "./helpers/e2eAuth";
 import { E2E_USER_EMAIL, E2E_USER_PASSWORD } from "../auth/live-helpers";
+import { setupTestSchema } from "../../scripts/db/setup-test-schema";
 
 const authFile = path.join("playwright", ".auth", "mvp-audit-user.json");
 
 setup("bootstrap mvp-audit auth storage state", async ({ page, context }) => {
+  await setupTestSchema();
   runSeedE2E();
   await page.goto("/login");
   await expect(page.getByTestId("login-email-input")).toBeVisible({ timeout: 30_000 });

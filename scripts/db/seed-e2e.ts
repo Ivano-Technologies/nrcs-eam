@@ -12,15 +12,16 @@
  * This script no longer writes legacy magic-link tables; auth is Supabase session-based.
  */
 import "dotenv/config";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { createClient } from "@supabase/supabase-js";
 import { donors, sites, users } from "../../drizzle/schema";
 import { WMS_DONOR_SEED } from "../../shared/wmsDonors";
 import { getDb } from "../../server/db";
+import { applySupabaseTestSchema, getPlaywrightTestSchema } from "../../tests/helpers/testSchema";
 
-export const E2E_OPENID = "e2e-playwright-openid";
+export const E2E_OPENID = "PLW_E2E_ADMIN_OPENID";
 export const E2E_EMAIL =
-  process.env.E2E_USER_EMAIL?.trim() || "playwright@nrcseam.techivano.com";
+  process.env.E2E_USER_EMAIL?.trim() || "playwright_admin@nrcseam.techivano.com";
 
 function requireEnv(name: string): string {
   const value = process.env[name]?.trim();
@@ -73,6 +74,8 @@ async function withSeedRetry<T>(operation: () => Promise<T>): Promise<T> {
 export async function runSeedE2e() {
   const db = await getDb();
   if (!db) throw new Error("DB unavailable");
+  const testSchema = getPlaywrightTestSchema();
+  await db.execute(sql.raw(`SET search_path TO "${testSchema}";`));
   const existingSite = await db.select({ id: sites.id }).from(sites).limit(1);
   const seedSiteId = existingSite[0]?.id ?? null;
 
@@ -82,7 +85,7 @@ export async function runSeedE2e() {
     .insert(users)
     .values({
       openId: E2E_OPENID,
-      name: "E2E Admin",
+      name: "[TEST] E2E Admin",
       email: E2E_EMAIL,
       loginMethod: "supabase",
       role: "admin",
@@ -94,7 +97,7 @@ export async function runSeedE2e() {
       target: users.email,
       set: {
         openId: E2E_OPENID,
-        name: "E2E Admin",
+        name: "[TEST] E2E Admin",
         email: E2E_EMAIL,
         loginMethod: "supabase",
         role: "admin",
@@ -119,6 +122,8 @@ export async function runSeedE2e() {
   const anon = createClient(supabaseUrl, supabaseAnonKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+  await applySupabaseTestSchema(admin, "seed-e2e");
+  await applySupabaseTestSchema(anon, "seed-e2e");
 
   let created:
     | {
@@ -131,7 +136,7 @@ export async function runSeedE2e() {
         email: E2E_EMAIL,
         password,
         email_confirm: true,
-        user_metadata: { full_name: "E2E Admin" },
+        user_metadata: { full_name: "[TEST] E2E Admin" },
       });
       created = response.data as typeof created;
       if (response.error && !isDuplicateSupabaseUserError(response.error.message)) {
@@ -167,7 +172,7 @@ export async function runSeedE2e() {
     const { error } = await admin.auth.admin.updateUserById(authId, {
       password,
       email_confirm: true,
-      user_metadata: { full_name: "E2E Admin" },
+      user_metadata: { full_name: "[TEST] E2E Admin" },
     });
     if (error) {
       throw new Error(`[seed-e2e] Supabase updateUserById failed: ${error.message}`);

@@ -8,6 +8,7 @@ import {
   SUPABASE_REFRESH_TOKEN_COOKIE,
 } from "../../../shared/const";
 import { testUser } from "./testUser";
+import { applySupabaseTestSchema } from "../../helpers/testSchema";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, "..", "..", "..");
@@ -108,6 +109,7 @@ async function withSeedRetry<T>(operation: () => Promise<T>): Promise<T> {
 
 export async function createTestUserInSupabase(): Promise<User> {
   const admin = createAdminClient();
+  await applySupabaseTestSchema(admin, "mvp-audit auth");
   const password = getE2EPassword();
   const email = getE2EEmail();
 
@@ -171,6 +173,7 @@ export async function generateSessionForTestUser(): Promise<SessionPayload> {
   const password = getE2EPassword();
   const email = getE2EEmail();
   const anon = createAnonClient();
+  await applySupabaseTestSchema(anon, "mvp-audit auth");
   const data = await withSeedRetry(async () => {
     const { data, error } = await anon.auth.signInWithPassword({
       email,
