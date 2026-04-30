@@ -218,6 +218,13 @@
       "when": 1777500000000,
       "tag": "0030_asset_register_v11225",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1777500100000,
+      "tag": "0031_asset_code_generation",
+      "breakpoints": true
     }
   ]
 }
