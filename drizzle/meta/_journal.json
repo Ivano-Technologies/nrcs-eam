@@ -211,6 +211,13 @@
       "when": 1777400200000,
       "tag": "0029_users_email_unique",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1777500000000,
+      "tag": "0030_asset_register_v11225",
+      "breakpoints": true
     }
   ]
 }
