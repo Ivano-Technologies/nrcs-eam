@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { pathToFileURL } from "node:url";
 import postgres from "postgres";
 import { getPostgresJsSslOption } from "../../shared/mysqlSsl";
 
@@ -16,7 +17,7 @@ function quoteIdent(value: string): string {
   return `"${value.replaceAll('"', '""')}"`;
 }
 
-async function setupTestSchema(): Promise<void> {
+export async function setupTestSchema(): Promise<void> {
   const databaseUrl = requireEnv("DATABASE_URL");
   // Require service role key so this script only runs in privileged test contexts.
   requireEnv("SUPABASE_SERVICE_ROLE_KEY");
@@ -56,9 +57,12 @@ async function setupTestSchema(): Promise<void> {
   }
 }
 
-setupTestSchema()
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error(error);
-    process.exit(1);
-  });
+const isDirectRun = process.argv[1] ? import.meta.url === pathToFileURL(process.argv[1]).href : false;
+if (isDirectRun) {
+  setupTestSchema()
+    .then(() => process.exit(0))
+    .catch((error) => {
+      console.error(error);
+      process.exit(1);
+    });
+}
