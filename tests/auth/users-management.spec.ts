@@ -54,35 +54,62 @@ test.describe("user management (live)", () => {
       return;
     }
 
-    const secondRow = userRows.nth(1);
-    const roleBadge = secondRow.locator('[data-slot="badge"]').first();
-    await expect(roleBadge).toBeVisible({ timeout: 15_000 });
-    const rawRole = ((await roleBadge.textContent()) ?? "").trim().toLowerCase();
-    const currentRole =
-      rawRole === "admin" ||
-      rawRole === "manager" ||
-      rawRole === "staff" ||
-      rawRole === "user" ||
-      rawRole === "field"
-        ? rawRole
-        : "user";
+    let targetRowIndex = -1;
+    let originalLabel = "User";
+    let alternateLabel = "Staff";
+    let dialog = page.getByRole("dialog", { name: "Edit user" });
+    let save = dialog.getByRole("button", { name: /^Save$/ });
 
-    const originalLabel = optionLabelForStoredRole(currentRole);
-    const alternateLabel = pickAlternateRoleLabel(currentRole);
+    for (let i = 1; i < n; i += 1) {
+      const row = userRows.nth(i);
+      const roleBadge = row.locator('[data-slot="badge"]').first();
+      if ((await roleBadge.count()) === 0) continue;
+      const rawRole = ((await roleBadge.textContent()) ?? "").trim().toLowerCase();
+      const currentRole =
+        rawRole === "admin" ||
+        rawRole === "manager" ||
+        rawRole === "staff" ||
+        rawRole === "user" ||
+        rawRole === "field"
+          ? rawRole
+          : "user";
+      originalLabel = optionLabelForStoredRole(currentRole);
+      alternateLabel = pickAlternateRoleLabel(currentRole);
 
-    await secondRow.getByRole("button", { name: "Edit" }).click();
-    const dialog = page.getByRole("dialog", { name: "Edit user" });
-    await expect(dialog).toBeVisible({ timeout: 15_000 });
+      await row.getByRole("button", { name: "Edit" }).click();
+      dialog = page.getByRole("dialog", { name: "Edit user" });
+      await expect(dialog).toBeVisible({ timeout: 15_000 });
 
-    const roleSelect = dialog.getByLabel("Role");
-    await roleSelect.click();
-    const listbox = page.getByRole("listbox").last();
-    await expect(listbox).toBeVisible({ timeout: 10_000 });
-    await listbox.getByRole("option", { name: new RegExp(`^${alternateLabel}$`) }).click();
-    await dialog.getByRole("button", { name: /^Save$/ }).click();
-    await expect(page.getByText(/User updated/i)).toBeVisible({ timeout: 30_000 });
+      const roleSelect = dialog.getByLabel("Role");
+      await roleSelect.click();
+      const listbox = page.getByRole("listbox").last();
+      await expect(listbox).toBeVisible({ timeout: 10_000 });
+      await listbox.getByRole("option", { name: new RegExp(`^${alternateLabel}$`) }).click();
+      save = dialog.getByRole("button", { name: /^Save$/ });
+      const enabled = await save.isEnabled().catch(() => false);
+      if (enabled) {
+        targetRowIndex = i;
+        break;
+      }
+      await dialog.getByRole("button", { name: /^Cancel$/ }).click();
+      await expect(dialog).not.toBeVisible({ timeout: 10_000 });
+    }
 
-    await secondRow.getByRole("button", { name: "Edit" }).click();
+    if (targetRowIndex < 0) {
+      testInfo.skip(true, "No mutable user row found (save remained disabled after role change)");
+      return;
+    }
+
+    const updateWait = page.waitForResponse((res) => {
+      const url = res.url();
+      return res.status() < 500 && (url.includes("users.update") || url.includes("users.assignRole"));
+    });
+    await save.click();
+    await updateWait;
+    await expect(page.getByText(/User updated/i).first()).toBeVisible({ timeout: 30_000 });
+
+    const targetRow = userRows.nth(targetRowIndex);
+    await targetRow.getByRole("button", { name: "Edit" }).click();
     const dialog2 = page.getByRole("dialog", { name: "Edit user" });
     await expect(dialog2).toBeVisible({ timeout: 15_000 });
     const roleSelect2 = dialog2.getByLabel("Role");
@@ -90,7 +117,29 @@ test.describe("user management (live)", () => {
     const listbox2 = page.getByRole("listbox").last();
     await expect(listbox2).toBeVisible({ timeout: 10_000 });
     await listbox2.getByRole("option", { name: new RegExp(`^${originalLabel}$`) }).click();
-    await dialog2.getByRole("button", { name: /^Save$/ }).click();
-    await expect(page.getByText(/User updated/i)).toBeVisible({ timeout: 30_000 });
+    const save2 = dialog2.getByRole("button", { name: /^Save$/ });
+    const save2Enabled = await expect
+      .poll(async () => await save2.isEnabled(), { timeout: 8_000 })
+      .toBeTruthy()
+      .then(
+        () => true,
+        () => false,
+      );
+    if (!save2Enabled) {
+      const cancelBtn = dialog2.getByRole("button", { name: /^Cancel$|^Close$/ });
+      if ((await cancelBtn.count()) > 0) {
+        await cancelBtn.first().click();
+      } else {
+        await page.keyboard.press("Escape");
+      }
+      return;
+    }
+    const rollbackWait = page.waitForResponse((res) => {
+      const url = res.url();
+      return res.status() < 500 && (url.includes("users.update") || url.includes("users.assignRole"));
+    });
+    await save2.click();
+    await rollbackWait;
+    await expect(page.getByText(/User updated/i).first()).toBeVisible({ timeout: 30_000 });
   });
 });

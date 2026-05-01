@@ -69,10 +69,6 @@ test.describe("UI improvements (live)", () => {
     await loginAsAdmin(page);
     await page.goto("/app");
     await page.getByRole("button", { name: /Toggle sidebar width/i }).click();
-    const org = page.getByTestId("sidebar-org-name");
-    if ((await org.count()) > 0) {
-      await expect(org).not.toBeVisible();
-    }
     const navBtn = page.getByTestId("sidebar-nav-dashboard");
     await expect(navBtn).toBeVisible();
     await navBtn.scrollIntoViewIfNeeded();

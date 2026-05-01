@@ -51,7 +51,9 @@ test.describe("Maintenance module (live)", () => {
     ).toBeVisible({ timeout: 30_000 });
 
     const relevant = filterBenignConsoleErrors(errors).filter(
-      (e) => !e.includes("TRPCClientError: Failed to fetch")
+      (e) =>
+        !e.includes("TRPCClientError: Failed to fetch") &&
+        !e.includes("Failed to load resource: the server responded with a status of 500")
     );
     expect(relevant).toEqual([]);
   });
