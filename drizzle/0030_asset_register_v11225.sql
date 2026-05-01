@@ -30,9 +30,40 @@ UPDATE "assets"
 SET
   "sub_item_category" = coalesce("sub_item_category", "subCategory"),
   "item_description" = coalesce("item_description", "name"),
-  "actual_unit_value" = coalesce("actual_unit_value", nullif("acquisitionCost", '')::numeric),
-  "depreciated_value" = coalesce("depreciated_value", "currentDepreciatedValue"),
-  "year_acquired" = coalesce("year_acquired", extract(year from "acquisitionDate")::int),
+  "item_category_code" = coalesce(
+    "item_category_code",
+    public.nrcs_item_category_code("item_category"),
+    CASE
+      WHEN "item_category" ILIKE '%computer%' THEN 'CO'
+      WHEN "item_category" ILIKE '%furniture%' OR "item_category" ILIKE '%fixture%' THEN 'FF'
+      WHEN "item_category" ILIKE '%generator%' THEN 'GE'
+      WHEN "item_category" ILIKE '%land%building%' OR "item_category" ILIKE '%building%land%' THEN 'LB'
+      WHEN "item_category" ILIKE '%land%' THEN 'LA'
+      WHEN "item_category" ILIKE '%medical%' THEN 'ME'
+      WHEN "item_category" ILIKE '%office%' THEN 'OE'
+      WHEN "item_category" ILIKE '%vehicle%' THEN 'VE'
+      ELSE NULL
+    END
+  ),
+  "actual_unit_value" = coalesce("actual_unit_value", "acquisitionCost"),
+  "depreciated_value" = coalesce(
+    "depreciated_value",
+    CASE
+      WHEN nullif(btrim("currentDepreciatedValue"::text), '') IS NULL THEN NULL
+      WHEN "currentDepreciatedValue"::text ~ '^[0-9]+(\.[0-9]+)?$'
+        THEN ("currentDepreciatedValue"::text)::numeric
+      ELSE NULL
+    END
+  ),
+  "year_acquired" = coalesce(
+    "year_acquired",
+    CASE
+      WHEN nullif(btrim("acquisitionDate"::text), '') IS NULL THEN NULL
+      WHEN "acquisitionDate"::text ~ '^\d{4}-\d{2}-\d{2}'
+        THEN extract(year from ("acquisitionDate"::timestamp))::int
+      ELSE NULL
+    END
+  ),
   "acquired_new_or_used" = coalesce("acquired_new_or_used", "acquisitionCondition"),
   "current_status" = coalesce("current_status",
     CASE "registerStatus"
@@ -50,7 +81,34 @@ SET
   "check_conducted_by" = coalesce("check_conducted_by", "checkedBy"),
   "remarks" = coalesce("remarks", "notes"),
   "asset_code" = coalesce("asset_code", "assetTag")
-WHERE true;
+WHERE
+  "asset_code" IS NOT NULL
+  OR (
+    coalesce(
+      "item_category_code",
+      public.nrcs_item_category_code("item_category"),
+      CASE
+        WHEN "item_category" ILIKE '%computer%' THEN 'CO'
+        WHEN "item_category" ILIKE '%furniture%' OR "item_category" ILIKE '%fixture%' THEN 'FF'
+        WHEN "item_category" ILIKE '%generator%' THEN 'GE'
+        WHEN "item_category" ILIKE '%land%building%' OR "item_category" ILIKE '%building%land%' THEN 'LB'
+        WHEN "item_category" ILIKE '%land%' THEN 'LA'
+        WHEN "item_category" ILIKE '%medical%' THEN 'ME'
+        WHEN "item_category" ILIKE '%office%' THEN 'OE'
+        WHEN "item_category" ILIKE '%vehicle%' THEN 'VE'
+        ELSE NULL
+      END
+    ) IS NOT NULL
+    AND (
+      nullif("branch_code", '') IS NOT NULL
+      OR EXISTS (
+        SELECT 1
+        FROM "sites" s
+        WHERE s."id" = "assets"."siteId"
+          AND nullif(s."code", '') IS NOT NULL
+      )
+    )
+  );
 
 DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'assets_item_type_ck') THEN
