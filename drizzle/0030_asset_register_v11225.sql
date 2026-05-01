@@ -52,38 +52,67 @@ SET
   "asset_code" = coalesce("asset_code", "assetTag")
 WHERE true;
 
-ALTER TABLE "assets"
-  ADD CONSTRAINT IF NOT EXISTS "assets_item_type_ck"
-    CHECK ("item_type" IN ('Asset', 'Inventory')),
-  ADD CONSTRAINT IF NOT EXISTS "assets_item_category_code_ck"
-    CHECK ("item_category_code" IN ('CO', 'FF', 'GE', 'LA', 'LB', 'ME', 'OE', 'VE') OR "item_category_code" IS NULL),
-  ADD CONSTRAINT IF NOT EXISTS "assets_method_of_acquisition_ck"
-    CHECK ("acquisitionMethod" IN ('Donated By ICRC','Donated By IFRC','Donated by Other Donor','Purchase Through Project','Purchase Through Internal Funding','Other') OR "acquisitionMethod" IS NULL),
-  ADD CONSTRAINT IF NOT EXISTS "assets_acquired_new_or_used_ck"
-    CHECK ("acquired_new_or_used" IN ('New','Used') OR "acquired_new_or_used" IS NULL),
-  ADD CONSTRAINT IF NOT EXISTS "assets_current_status_ck"
-    CHECK ("current_status" IN ('In Use','In Store','Under Maintenance','Disposed','To be Disposed') OR "current_status" IS NULL),
-  ADD CONSTRAINT IF NOT EXISTS "assets_condition_ck"
-    CHECK ("condition" IN ('Good','Fair','Damaged','Beyond Repair (For Disposal)','Out of Order (To be repaired)') OR "condition" IS NULL);
-
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1
-    FROM pg_constraint
-    WHERE conname = 'assets_branch_code_sites_code_fk'
-  ) THEN
-    ALTER TABLE "assets"
-      ADD CONSTRAINT "assets_branch_code_sites_code_fk"
-      FOREIGN KEY ("branch_code")
-      REFERENCES "sites"("code")
-      ON DELETE SET NULL;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'assets_item_type_ck') THEN
+    ALTER TABLE "assets" ADD CONSTRAINT "assets_item_type_ck"
+      CHECK ("item_type" IN ('Asset', 'Inventory'));
   END IF;
-END$$;
+END $$;
 
-CREATE UNIQUE INDEX IF NOT EXISTS "assets_asset_code_unique_idx" ON "assets" ("asset_code");
-CREATE UNIQUE INDEX IF NOT EXISTS "assets_branch_category_num_unique_idx"
-  ON "assets" ("branch_code", "item_category_code", "asset_num");
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'assets_item_category_code_ck') THEN
+    ALTER TABLE "assets" ADD CONSTRAINT "assets_item_category_code_ck"
+      CHECK ("item_category_code" IN ('CO', 'FF', 'GE', 'LA', 'LB', 'ME', 'OE', 'VE') OR "item_category_code" IS NULL);
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'assets_method_of_acquisition_ck') THEN
+    ALTER TABLE "assets" ADD CONSTRAINT "assets_method_of_acquisition_ck"
+      CHECK ("acquisitionMethod" IN ('Donated By ICRC','Donated By IFRC','Donated by Other Donor','Purchase Through Project','Purchase Through Internal Funding','Other') OR "acquisitionMethod" IS NULL);
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'assets_acquired_new_or_used_ck') THEN
+    ALTER TABLE "assets" ADD CONSTRAINT "assets_acquired_new_or_used_ck"
+      CHECK ("acquired_new_or_used" IN ('New','Used') OR "acquired_new_or_used" IS NULL);
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'assets_current_status_ck') THEN
+    ALTER TABLE "assets" ADD CONSTRAINT "assets_current_status_ck"
+      CHECK ("current_status" IN ('In Use','In Store','Under Maintenance','Disposed','To be Disposed') OR "current_status" IS NULL);
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'assets_condition_ck') THEN
+    ALTER TABLE "assets" ADD CONSTRAINT "assets_condition_ck"
+      CHECK ("condition" IN ('Good','Fair','Damaged','Beyond Repair (For Disposal)','Out of Order (To be repaired)') OR "condition" IS NULL);
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'assets_branch_code_sites_code_fk') THEN
+    ALTER TABLE "assets" ADD CONSTRAINT "assets_branch_code_sites_code_fk"
+      FOREIGN KEY ("branch_code") REFERENCES "sites"("code") ON DELETE SET NULL;
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'assets_asset_code_unique_idx') THEN
+    CREATE UNIQUE INDEX "assets_asset_code_unique_idx" ON "assets" ("asset_code");
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'assets_branch_category_num_unique_idx') THEN
+    CREATE UNIQUE INDEX "assets_branch_category_num_unique_idx"
+      ON "assets" ("branch_code", "item_category_code", "asset_num");
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS "asset_approvals" (
   "id" serial PRIMARY KEY NOT NULL,
@@ -99,5 +128,9 @@ CREATE TABLE IF NOT EXISTS "asset_approvals" (
   "updated_at" timestamp DEFAULT now() NOT NULL
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS "asset_approvals_site_period_unique_idx"
-  ON "asset_approvals" ("site_id", "period");
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'asset_approvals_site_period_unique_idx') THEN
+    CREATE UNIQUE INDEX "asset_approvals_site_period_unique_idx"
+      ON "asset_approvals" ("site_id", "period");
+  END IF;
+END $$;
