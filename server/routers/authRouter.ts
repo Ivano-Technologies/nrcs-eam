@@ -9,9 +9,9 @@ import { toPublicUser } from "../_core/sanitizeUser";
 import * as db from "../db";
 import type { InsertUser } from "../../drizzle/schema";
 import { createSignupRequest } from "../pendingUsersService";
-import { storagePut } from "../storage";
 
 const emailSchema = z.string().email();
+const AVATARS_BUCKET = "avatars";
 
 export const authRouter = router({
   me: publicProcedure.query((opts) =>
@@ -221,6 +221,7 @@ export const authRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
+      const supabase = getSupabaseServiceRole();
       const bytes = Buffer.from(input.dataBase64, "base64");
       if (!bytes.length) {
         throw new TRPCError({
@@ -235,10 +236,51 @@ export const authRouter = router({
         });
       }
 
+      const { data: existingBucket, error: getBucketError } = await supabase.storage.getBucket(AVATARS_BUCKET);
+      if (getBucketError && getBucketError.message && !/not found/i.test(getBucketError.message)) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to access avatars bucket: ${getBucketError.message}`,
+        });
+      }
+      if (!existingBucket) {
+        const { error: createBucketError } = await supabase.storage.createBucket(AVATARS_BUCKET, {
+          public: true,
+          fileSizeLimit: 5 * 1024 * 1024,
+          allowedMimeTypes: ["image/jpeg", "image/png", "image/webp", "image/gif"],
+        });
+        if (createBucketError) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `Failed to create avatars bucket: ${createBucketError.message}`,
+          });
+        }
+      }
+
       const safeName = input.fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
-      const key = `avatars/user-${ctx.user.id}/${Date.now()}-${safeName}`;
-      const uploaded = await storagePut(key, bytes, input.mimeType);
-      return { url: uploaded.url };
+      const key = `user-${ctx.user.id}/${Date.now()}-${safeName}`;
+      const { error: uploadError } = await supabase.storage
+        .from(AVATARS_BUCKET)
+        .upload(key, bytes, {
+          contentType: input.mimeType,
+          upsert: true,
+        });
+      if (uploadError) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Avatar upload failed: ${uploadError.message}`,
+        });
+      }
+
+      const { data: publicData } = supabase.storage.from(AVATARS_BUCKET).getPublicUrl(key);
+      if (!publicData?.publicUrl) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Could not resolve uploaded avatar URL",
+        });
+      }
+
+      return { url: publicData.publicUrl };
     }),
 
   changePassword: protectedProcedure
