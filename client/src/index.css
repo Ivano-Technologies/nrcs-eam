@@ -267,6 +267,45 @@ html.dark {
       max-width: 1280px; /* Standard content width */
     }
   }
+
+  .table-freeze {
+    position: relative;
+    --sticky-col-1-width: 4rem;
+    --sticky-col-2-width: 8rem;
+  }
+
+  .table-freeze thead {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
+
+  .table-col-sticky-1,
+  .table-col-sticky-2,
+  .table-col-sticky-3 {
+    position: sticky;
+    z-index: 10;
+    background: inherit;
+  }
+
+  .table-col-sticky-1 {
+    left: 0;
+  }
+
+  .table-col-sticky-2 {
+    left: var(--sticky-col-1-width);
+  }
+
+  .table-col-sticky-3 {
+    left: calc(var(--sticky-col-1-width) + var(--sticky-col-2-width));
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.08);
+  }
+
+  thead .table-col-sticky-1,
+  thead .table-col-sticky-2,
+  thead .table-col-sticky-3 {
+    z-index: 30;
+  }
 }
 
 /* ===== Mobile-First Responsive Design Enhancements ===== */

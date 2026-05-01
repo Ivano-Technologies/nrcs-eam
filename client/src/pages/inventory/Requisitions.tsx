@@ -137,13 +137,21 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
           ))}
         </div>
       ) : (
-        <div className="rounded-md border">
-          <table className="w-full text-sm">
+        <div className="overflow-x-auto rounded-md border">
+          <table
+            className="table-freeze min-w-[980px] w-full text-sm"
+            style={
+              {
+                "--sticky-col-1-width": "140px",
+                "--sticky-col-2-width": "260px",
+              } as Record<string, string>
+            }
+          >
             <thead className="bg-muted/50">
               <tr className="border-b">
-                <th className="px-2 py-2 text-left">Req No</th>
-                <th className="px-2 py-2 text-left">Title</th>
-                <th className="px-2 py-2 text-left">Priority</th>
+                <th className="table-col-sticky-1 px-2 py-2 text-left">Req No</th>
+                <th className="table-col-sticky-2 px-2 py-2 text-left">Title</th>
+                <th className="table-col-sticky-3 px-2 py-2 text-left">Priority</th>
                 <th className="px-2 py-2 text-left">Status</th>
                 <th className="px-2 py-2 text-left">Facility</th>
                 <th className="px-2 py-2 text-left">Items</th>
@@ -153,9 +161,9 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
             <tbody>
               {(list.data ?? []).map((row) => (
                 <tr key={row.id} data-testid={`req-row-${row.reqNumber}`} className="border-b">
-                  <td className="px-2 py-2 font-mono">{row.reqNumber}</td>
-                  <td className="px-2 py-2">{row.title}</td>
-                  <td className="px-2 py-2">
+                  <td className="table-col-sticky-1 px-2 py-2 font-mono">{row.reqNumber}</td>
+                  <td className="table-col-sticky-2 px-2 py-2">{row.title}</td>
+                  <td className="table-col-sticky-3 px-2 py-2">
                     <Badge data-testid="req-priority-badge" data-priority={row.priority ?? "routine"} variant={priorityVariant(row.priority ?? undefined) as any}>{row.priority}</Badge>
                   </td>
                   <td className="px-2 py-2">{row.status}</td>

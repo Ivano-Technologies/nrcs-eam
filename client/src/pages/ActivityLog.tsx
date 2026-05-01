@@ -137,12 +137,21 @@ export default function ActivityLog() {
       ) : rows.length > 0 ? (
         <Card>
           <CardContent className="pt-6">
-            <Table>
-              <TableHeader>
+            <div className="overflow-x-auto">
+              <Table
+                className="table-freeze min-w-[1100px]"
+                style={
+                  {
+                    "--sticky-col-1-width": "200px",
+                    "--sticky-col-2-width": "200px",
+                  } as Record<string, string>
+                }
+              >
+              <TableHeader className="bg-background">
                 <TableRow>
-                  <TableHead>Timestamp</TableHead>
-                  <TableHead>User</TableHead>
-                  <TableHead>Action</TableHead>
+                  <TableHead className="table-col-sticky-1 bg-background">Timestamp</TableHead>
+                  <TableHead className="table-col-sticky-2 bg-background">User</TableHead>
+                  <TableHead className="table-col-sticky-3 bg-background">Action</TableHead>
                   <TableHead>Resource</TableHead>
                   <TableHead>Details</TableHead>
                   <TableHead>Facility</TableHead>
@@ -151,16 +160,17 @@ export default function ActivityLog() {
               <TableBody>
                 {rows.map((log) => (
                   <TableRow key={log.id}>
-                    <TableCell>{new Date(log.timestamp).toLocaleString()}</TableCell>
-                    <TableCell>{log.userLabel}</TableCell>
-                    <TableCell>{log.action}</TableCell>
+                    <TableCell className="table-col-sticky-1 bg-background">{new Date(log.timestamp).toLocaleString()}</TableCell>
+                    <TableCell className="table-col-sticky-2 bg-background">{log.userLabel}</TableCell>
+                    <TableCell className="table-col-sticky-3 bg-background">{log.action}</TableCell>
                     <TableCell>{log.resource}</TableCell>
                     <TableCell>{log.details ?? "-"}</TableCell>
                     <TableCell>{log.facilityName ?? "-"}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
-            </Table>
+              </Table>
+            </div>
             <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
               <span>
                 Page {page} of {totalPages} · {data?.total ?? 0} records

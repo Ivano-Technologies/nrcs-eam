@@ -85,13 +85,21 @@ export default function Issues({ embedInShell = false }: { embedInShell?: boolea
         toolbarEnd={<Button data-testid="new-waybill-btn" onClick={() => setLocation("/app/inventory/issues/new")}>New Waybill</Button>}
       />
 
-      <div className="rounded-md border">
-        <table className="w-full text-sm">
+      <div className="overflow-x-auto rounded-md border">
+        <table
+          className="table-freeze min-w-[1000px] w-full text-sm"
+          style={
+            {
+              "--sticky-col-1-width": "150px",
+              "--sticky-col-2-width": "140px",
+            } as Record<string, string>
+          }
+        >
           <thead className="bg-muted/50">
             <tr className="border-b">
-              <th className="px-2 py-2 text-left">WB number</th>
-              <th className="px-2 py-2 text-left">Date</th>
-              <th className="px-2 py-2 text-left">Source warehouse</th>
+              <th className="table-col-sticky-1 px-2 py-2 text-left">WB number</th>
+              <th className="table-col-sticky-2 px-2 py-2 text-left">Date</th>
+              <th className="table-col-sticky-3 px-2 py-2 text-left">Source warehouse</th>
               <th className="px-2 py-2 text-left">Destination</th>
               <th className="px-2 py-2 text-left">Line count</th>
               <th className="px-2 py-2 text-left">Total units</th>
@@ -106,9 +114,9 @@ export default function Issues({ embedInShell = false }: { embedInShell?: boolea
                 className="cursor-pointer border-b hover:bg-muted/30"
                 onClick={() => setLocation(`/app/inventory/issues/${row.id}`)}
               >
-                <td className="px-2 py-2 font-mono">{row.wbNumber}</td>
-                <td className="px-2 py-2">{row.date ?? "—"}</td>
-                <td className="px-2 py-2">{wh.find((x) => x.id === row.warehouseId)?.name ?? row.warehouseId}</td>
+                <td className="table-col-sticky-1 px-2 py-2 font-mono">{row.wbNumber}</td>
+                <td className="table-col-sticky-2 px-2 py-2">{row.date ?? "—"}</td>
+                <td className="table-col-sticky-3 px-2 py-2">{wh.find((x) => x.id === row.warehouseId)?.name ?? row.warehouseId}</td>
                 <td className="px-2 py-2">{row.destinationBeneficiary ?? "—"}</td>
                 <td className="px-2 py-2">{row.lineCount ?? 0}</td>
                 <td className="px-2 py-2">{row.totalUnits ?? 0}</td>
