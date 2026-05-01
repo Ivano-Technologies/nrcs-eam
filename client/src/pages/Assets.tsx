@@ -1164,11 +1164,8 @@ export default function Assets() {
           </div>
         ) : (
           <div className="overflow-x-auto max-h-[70vh] overflow-y-auto">
-            <table
-              className="w-max min-w-full border-collapse text-sm"
-              data-testid="asset-register-data-table"
-            >
-              <thead className="sticky top-0 z-40 bg-background">
+            <table className="w-max min-w-full border-collapse text-sm" data-testid="asset-register-data-table">
+              <thead className="sticky top-0 z-20 bg-background">
                 <tr className="border-b bg-muted/40">
                   <th className="px-2 py-1 text-center" colSpan={5}>ITEM DETAILS</th>
                   <th className="px-2 py-1 text-center" colSpan={4}>ITEM CODE</th>
@@ -1179,8 +1176,19 @@ export default function Assets() {
                   {canEditAssets ? <th className="px-2 py-1" /> : null}
                 </tr>
                 <tr className="border-b">
-                  {REGISTER_TABLE_COLUMN_ORDER.map((header) => (
-                    <th key={header} className="px-2 py-1.5 text-left font-medium whitespace-nowrap">{header}</th>
+                  {REGISTER_TABLE_COLUMN_ORDER.map((header, index) => (
+                    <th
+                      key={header}
+                      className={cn(
+                        "px-2 py-1.5 text-left font-medium whitespace-nowrap",
+                        index === 0 && "sticky left-0 z-30 bg-background",
+                        index === 0 && "w-16 min-w-16",
+                        index === 1 && "sticky left-[4rem] z-30 bg-background w-32 min-w-32",
+                        index === 2 && "sticky left-[12rem] z-30 bg-background w-56 min-w-56 shadow-[2px_0_4px_rgba(0,0,0,0.08)]"
+                      )}
+                    >
+                      {header}
+                    </th>
                   ))}
                   {canEditAssets ? <th className="px-2 py-1.5 text-left font-medium whitespace-nowrap">Actions</th> : null}
                 </tr>
@@ -1217,6 +1225,7 @@ export default function Assets() {
                       row.description?.trim() ? `${row.name} — ${row.description}` : row.name;
                     const statusLabel = REGISTER_LABELS[rs] ?? rs;
                     const cond = row.physicalCondition?.trim() || "";
+                    const rowBgClass = i % 2 === 1 ? "bg-muted/30" : "bg-background";
 
                     return (
                       <tr
@@ -1224,13 +1233,17 @@ export default function Assets() {
                         data-testid={`asset-row-${row.id}`}
                         className={cn(
                           "relative z-10 border-b cursor-pointer hover:bg-muted/50",
-                          i % 2 === 1 ? "bg-muted/30" : "bg-background"
+                          rowBgClass
                         )}
                         onClick={() => setLocation(appPath(`/assets/${row.id}`))}
                       >
-                        <td className="px-2 py-1">{offset + i + 1}</td>
-                        <td className="px-2 py-1">{row.registerItemType ?? (row.itemType === "inventory" ? "Inventory" : "Asset")}</td>
-                        <td className="px-2 py-1">{row.itemCategory?.trim() || row.categoryName?.trim() || EM_DASH}</td>
+                        <td className={cn("px-2 py-1 sticky left-0 z-20 w-16 min-w-16", rowBgClass)}>{offset + i + 1}</td>
+                        <td className={cn("px-2 py-1 sticky left-[4rem] z-20 w-32 min-w-32", rowBgClass)}>
+                          {row.registerItemType ?? (row.itemType === "inventory" ? "Inventory" : "Asset")}
+                        </td>
+                        <td className={cn("px-2 py-1 sticky left-[12rem] z-20 w-56 min-w-56 shadow-[2px_0_4px_rgba(0,0,0,0.08)]", rowBgClass)}>
+                          {row.itemCategory?.trim() || row.categoryName?.trim() || EM_DASH}
+                        </td>
                         <td className="px-2 py-1">{row.subItemCategory?.trim() || row.subCategory?.trim() || EM_DASH}</td>
                         <td className="px-2 py-1 max-w-[14rem] truncate" title={desc}>{row.itemDescription?.trim() || desc || EM_DASH}</td>
                         <td className="px-2 py-1">{row.branchCode?.trim() || EM_DASH}</td>

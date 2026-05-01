@@ -246,13 +246,13 @@ export default function DashboardSettings() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-full min-w-0">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-        <p className="text-muted-foreground mt-2">Account, appearance, and preferences</p>
+        <p className="text-muted-foreground mt-2 break-words">Account, appearance, and preferences</p>
       </div>
 
-      <Card id="profile-settings" className="scroll-mt-24">
+      <Card id="profile-settings" className="scroll-mt-24 max-w-full overflow-hidden">
         <CardHeader>
           <CardTitle>Profile</CardTitle>
           <CardDescription>
@@ -305,7 +305,7 @@ export default function DashboardSettings() {
                 </Button>
               </div>
             </div>
-            <div className="flex-1 space-y-4 min-w-0">
+            <div className="flex-1 space-y-4 min-w-0 max-w-full">
               <div className="space-y-2">
                 <Label htmlFor="profile-name">Display name</Label>
                 <Input
@@ -318,7 +318,7 @@ export default function DashboardSettings() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="profile-photo-url">Photo URL (optional)</Label>
-                <div className="flex flex-col gap-2 sm:flex-row">
+                <div className="flex flex-col gap-2 sm:flex-row min-w-0">
                   <Input
                     id="profile-photo-url"
                     placeholder="https://…"
@@ -326,11 +326,11 @@ export default function DashboardSettings() {
                     onChange={(e) => setPhotoUrlField(e.target.value)}
                     className="flex-1"
                   />
-                  <Button type="button" variant="secondary" onClick={applyPhotoUrl}>
+                  <Button type="button" variant="secondary" onClick={applyPhotoUrl} className="sm:self-auto self-start">
                     Use URL
                   </Button>
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground break-words">
                   Use upload above, or paste a direct link to an image. Save to apply changes.
                 </p>
               </div>
@@ -368,7 +368,7 @@ export default function DashboardSettings() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="max-w-full overflow-hidden">
         <CardHeader>
           <CardTitle>Appearance</CardTitle>
           <CardDescription>
@@ -410,7 +410,7 @@ export default function DashboardSettings() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="max-w-full overflow-hidden">
         <CardHeader>
           <CardTitle>Install App</CardTitle>
           <CardDescription>
@@ -419,9 +419,9 @@ export default function DashboardSettings() {
         </CardHeader>
         <CardContent>
           <InstallPWAButton />
-          <div className="mt-4 rounded-lg bg-muted p-4 text-sm space-y-2">
+          <div className="mt-4 rounded-lg bg-muted p-4 text-sm space-y-2 max-w-full">
             <p className="font-medium">Benefits of installing:</p>
-            <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
+            <ul className="list-disc pl-5 space-y-1 text-muted-foreground break-words">
               <li>Quick access from your home screen or desktop</li>
               <li>Full-screen experience without browser UI</li>
               <li>Faster load times</li>
