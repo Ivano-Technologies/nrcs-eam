@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { loginViaMagicLink } from "../helpers/e2eAuth";
+import { loginViaPassword } from "../helpers/e2eAuth";
 import { shot } from "../helpers/shot";
 import { deleteAssetByTagViaUi, runLiveBrowserCleanup } from "../../helpers/liveTestData";
 import { readGeneratedAssetCodeFromRegister } from "../../helpers/generatedAssetCode";
@@ -12,7 +12,7 @@ test.describe("Assets CRUD (2c)", () => {
 
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
-    await loginViaMagicLink(page);
+    await loginViaPassword(page);
   });
 
   test.afterAll(async () => {

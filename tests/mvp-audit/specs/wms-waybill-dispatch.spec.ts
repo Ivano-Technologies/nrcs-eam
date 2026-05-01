@@ -1,10 +1,10 @@
 import { expect, test } from "@playwright/test";
-import { loginViaMagicLink } from "../helpers/e2eAuth";
+import { loginViaPassword } from "../helpers/e2eAuth";
 
 test.describe.configure({ mode: "serial" });
 
 test("WMS waybill create -> multi-CTN dispatch -> print copies", async ({ page }) => {
-  await loginViaMagicLink(page);
+  await loginViaPassword(page);
   await page.goto("/app/inventory/issues");
   await page.getByTestId("new-waybill-btn").click();
   await page.waitForURL(/\/app\/inventory\/issues\/new/, { timeout: 20_000 });
@@ -38,7 +38,7 @@ test("WMS waybill create -> multi-CTN dispatch -> print copies", async ({ page }
 });
 
 test("WMS waybill validation blocks overdraw and expired without override", async ({ page }) => {
-  await loginViaMagicLink(page);
+  await loginViaPassword(page);
   await page.goto("/app/inventory/issues/new");
   await page.getByRole("button", { name: "Dispatch" }).click();
   await expect(page.getByText("Each line must have CTN sources summing exactly to line quantity.")).toBeVisible();

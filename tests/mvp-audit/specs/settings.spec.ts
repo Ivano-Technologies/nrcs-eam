@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { loginViaMagicLink } from "../helpers/e2eAuth";
+import { loginViaPassword } from "../helpers/e2eAuth";
 import { shot } from "../helpers/shot";
 
 test.describe.configure({ mode: "serial" });
@@ -7,7 +7,7 @@ test.describe.configure({ mode: "serial" });
 test.describe("Settings (2g)", () => {
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
-    await loginViaMagicLink(page);
+    await loginViaPassword(page);
   });
 
   test("dashboard widget toggle persists", async ({ page }) => {
