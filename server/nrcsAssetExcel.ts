@@ -146,7 +146,7 @@ export async function buildNRCSAssetRegisterWorkbook(
       "";
 
     r.getCell(1).value = idx + 1;
-    r.getCell(2).value = row.itemType === "inventory" ? "Inventory" : "Asset";
+    r.getCell(2).value = row.itemType === "Inventory" ? "Inventory" : "Asset";
     r.getCell(3).value = row.categoryName ?? "";
     r.getCell(4).value = row.subCategory ?? "";
     r.getCell(5).value = row.itemDescription ?? desc;
@@ -218,7 +218,7 @@ export type NRCSImportPreviewRow = {
     description?: string;
     categoryId: number;
     siteId: number;
-    itemType: "asset" | "inventory";
+    itemType: "Asset" | "Inventory";
     subCategory?: string;
     serialNumber?: string;
     acquisitionCost?: string;
@@ -347,8 +347,8 @@ export async function previewNRCSAssetImport(fileBuffer: Buffer): Promise<{
     const errors: string[] = [];
 
     const itemTypeRaw = strCell(cellAt(row, map, "item type")).toLowerCase();
-    const itemType: "asset" | "inventory" =
-      itemTypeRaw.includes("invent") ? "inventory" : "asset";
+    const itemType: "Asset" | "Inventory" =
+      itemTypeRaw.includes("invent") ? "Inventory" : "Asset";
 
     const categoryName = strCell(cellAt(row, map, "item category"));
     const subCategory = strCell(cellAt(row, map, "sub-item category", "sub item category"));

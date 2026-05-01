@@ -301,7 +301,7 @@ export const assets = pgTable("assets", {
   depreciationStartDate: timestamp("depreciationStartDate", { mode: "date" }),
 
   /** Asset Register (NRCS) — item vs inventory */
-  itemType: varchar("itemType", { length: 20 }).default("asset").notNull(),
+  itemType: varchar("itemType", { length: 20 }).default("Asset").notNull(),
   /** NRCS v1.1.2.25 register item type (Asset | Inventory). */
   registerItemType: varchar("item_type", { length: 20 }).default("Asset").notNull(),
   /** NRCS register category label (Computer, Vehicle, ...). */
