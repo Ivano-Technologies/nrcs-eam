@@ -1164,7 +1164,7 @@ export default function Assets() {
           </div>
         ) : (
           <div
-            className="frozen-table-wrap"
+            className="frozen-table-wrap frozen-table-double-header"
             style={
               {
                 "--col1-width": "4rem",

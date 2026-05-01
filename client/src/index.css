@@ -283,8 +283,8 @@ html.dark {
 
   /* Frozen header row */
   .frozen-table-wrap table thead th {
-    position: sticky;
-    top: 0;
+    position: sticky !important;
+    top: 0 !important;
     z-index: 30;
     background-color: var(--color-background-primary);
   }
@@ -318,11 +318,40 @@ html.dark {
     box-shadow: 2px 0 4px rgba(0,0,0,0.08);
   }
 
-  /* Alternating row backgrounds for sticky cells */
+  /* Sticky cell background hardening to prevent bleed-through */
+  .frozen-table-wrap table tbody tr td:nth-child(1),
+  .frozen-table-wrap table tbody tr td:nth-child(2),
+  .frozen-table-wrap table tbody tr td:nth-child(3) {
+    background-color: var(--color-background-primary) !important;
+  }
+
   .frozen-table-wrap table tbody tr:nth-child(even) td:nth-child(1),
   .frozen-table-wrap table tbody tr:nth-child(even) td:nth-child(2),
   .frozen-table-wrap table tbody tr:nth-child(even) td:nth-child(3) {
-    background-color: var(--color-background-secondary);
+    background-color: var(--color-background-secondary) !important;
+  }
+
+  .frozen-table-double-header thead tr:nth-child(1) th {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    background-color: var(--color-background-primary);
+  }
+
+  .frozen-table-double-header thead tr:nth-child(2) th {
+    position: sticky;
+    top: 40px;
+    z-index: 30;
+    background-color: var(--color-background-primary);
+  }
+
+  .frozen-table-double-header thead tr:nth-child(1) th:nth-child(1),
+  .frozen-table-double-header thead tr:nth-child(1) th:nth-child(2),
+  .frozen-table-double-header thead tr:nth-child(1) th:nth-child(3),
+  .frozen-table-double-header thead tr:nth-child(2) th:nth-child(1),
+  .frozen-table-double-header thead tr:nth-child(2) th:nth-child(2),
+  .frozen-table-double-header thead tr:nth-child(2) th:nth-child(3) {
+    z-index: 40;
   }
 
   /* Dark mode */
