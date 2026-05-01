@@ -19,12 +19,12 @@ ALTER TABLE "assets"
   ADD COLUMN IF NOT EXISTS "remarks" text;
 
 UPDATE "assets"
-SET "item_type" = CASE
-  WHEN coalesce("item_type", '') IN ('asset', 'Asset') THEN 'Asset'
-  WHEN coalesce("item_type", '') IN ('inventory', 'Inventory') THEN 'Inventory'
+SET "itemType" = CASE
+  WHEN coalesce("itemType", '') IN ('asset', 'Asset') THEN 'Asset'
+  WHEN coalesce("itemType", '') IN ('inventory', 'Inventory') THEN 'Inventory'
   ELSE 'Asset'
 END
-WHERE "item_type" IS NULL OR "item_type" NOT IN ('Asset', 'Inventory');
+WHERE "itemType" IS NULL OR "itemType" NOT IN ('Asset', 'Inventory');
 
 UPDATE "assets"
 SET
@@ -55,7 +55,7 @@ WHERE true;
 DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'assets_item_type_ck') THEN
     ALTER TABLE "assets" ADD CONSTRAINT "assets_item_type_ck"
-      CHECK ("item_type" IN ('Asset', 'Inventory'));
+      CHECK ("itemType" IN ('Asset', 'Inventory'));
   END IF;
 END $$;
 
