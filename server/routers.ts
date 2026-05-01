@@ -1648,7 +1648,7 @@ export const appRouter = router({
       const movementTotals = database
         .select({
           stockCardId: stockMovements.stockCardId,
-          netQuantity: sql<number>`coalesce(sum(${stockMovements.quantityIn} - ${stockMovements.quantityOut}), 0)`.mapWith(Number),
+          netQuantity: sql<number>`coalesce(sum(${stockMovements.quantityIn} - ${stockMovements.quantityOut}), 0)`.mapWith(Number).as("netQuantity"),
         })
         .from(stockMovements)
         .groupBy(stockMovements.stockCardId)
@@ -1778,7 +1778,7 @@ export const appRouter = router({
             const movementTotals = database
               .select({
                 stockCardId: stockMovements.stockCardId,
-                netQuantity: sql<number>`coalesce(sum(${stockMovements.quantityIn} - ${stockMovements.quantityOut}), 0)`.mapWith(Number),
+                netQuantity: sql<number>`coalesce(sum(${stockMovements.quantityIn} - ${stockMovements.quantityOut}), 0)`.mapWith(Number).as("netQuantity"),
               })
               .from(stockMovements)
               .groupBy(stockMovements.stockCardId)
