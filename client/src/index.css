@@ -289,6 +289,19 @@ html.dark {
     border-collapse: collapse;
   }
 
+  /* When using shadcn Table component inside frozen-table-wrap, its internal
+     table-container sets overflow-x-auto, which creates an ancestor overflow
+     context and breaks sticky header behavior on vertical scroll. */
+  .frozen-table-wrap [data-slot="table-container"] {
+    overflow: visible !important;
+  }
+
+  .frozen-table-wrap [data-slot="table-container"] > table {
+    display: table;
+    width: 100%;
+    border-collapse: collapse;
+  }
+
   /* Frozen header row */
   .frozen-table-wrap table thead th {
     position: sticky !important;
