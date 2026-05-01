@@ -1173,7 +1173,7 @@ export default function Assets() {
             }
           >
             <table
-              className="w-max min-w-full border-collapse text-sm"
+              className="w-full min-w-full border-collapse text-sm"
               data-testid="asset-register-data-table"
             >
               <thead className="bg-background">

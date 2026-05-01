@@ -275,10 +275,18 @@ html.dark {
   /* Frozen table container */
   .frozen-table-wrap {
     overflow: auto;
-    max-height: calc(100vh - 280px);
+    max-height: calc(100vh - 320px);
+    width: 100%;
     position: relative;
+    display: block;
     --col1-width: 60px;
     --col2-width: 60px;
+  }
+
+  .frozen-table-wrap > table {
+    display: table;
+    width: 100%;
+    border-collapse: collapse;
   }
 
   /* Frozen header row */
