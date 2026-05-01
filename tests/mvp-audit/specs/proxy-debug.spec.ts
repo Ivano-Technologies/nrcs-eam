@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 const BASE = "https://nrcseam.techivano.com";
-const EMAIL = process.env.E2E_USER_EMAIL ?? "playwright_admin@nrcseam.techivano.com";
+const EMAIL = process.env.E2E_USER_EMAIL ?? "playwright@nrcseam.techivano.com";
 
 test.describe.configure({ mode: "serial" });
 

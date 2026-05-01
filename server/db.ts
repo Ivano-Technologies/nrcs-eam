@@ -14,6 +14,7 @@ import {
   ilike,
   getTableColumns,
   notInArray,
+  max,
 } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
@@ -501,6 +502,21 @@ export async function createAssetCategory(name: string, description?: string) {
 }
 
 // ============= ASSETS MANAGEMENT =============
+
+/** Next NRCS register sequence number for a branch + 2-letter category code (existing rows with null assetNum are ignored). */
+export async function getNextAssetRegisterSequence(branchCode: string, itemCategoryCode: string): Promise<number> {
+  const database = await getDb();
+  if (!database) return 1;
+  const branch = branchCode.trim();
+  const cat = itemCategoryCode.trim().slice(0, 2).toUpperCase();
+  if (!branch || cat.length !== 2) return 1;
+  const [row] = await database
+    .select({ m: max(assets.assetNum) })
+    .from(assets)
+    .where(and(eq(assets.branchCode, branch), eq(assets.itemCategoryCode, cat)));
+  const maxNum = row?.m != null ? Number(row.m) : 0;
+  return Number.isFinite(maxNum) ? maxNum + 1 : 1;
+}
 
 export async function createAsset(asset: InsertAsset) {
   const db = await getDb();

@@ -21,7 +21,7 @@ import { applySupabaseTestSchema, getPlaywrightTestSchema } from "../../tests/he
 
 export const E2E_OPENID = "PLW_E2E_ADMIN_OPENID";
 export const E2E_EMAIL =
-  process.env.E2E_USER_EMAIL?.trim() || "playwright_admin@nrcseam.techivano.com";
+  process.env.E2E_USER_EMAIL?.trim() || "playwright@nrcseam.techivano.com";
 
 function requireEnv(name: string): string {
   const value = process.env[name]?.trim();
