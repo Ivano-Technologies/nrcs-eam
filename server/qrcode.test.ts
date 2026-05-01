@@ -90,6 +90,9 @@ describe("QR Code API Endpoints", () => {
       description: "Asset for QR code testing",
       categoryId: categories[0]!.id,
       siteId: sites[0]!.id,
+      itemCategory: "Office Equipment",
+      itemCategoryCode: "OE",
+      branchCode: sites[0]!.code ?? undefined,
       manufacturer: "Test Manufacturer",
       model: "Test Model",
     });
@@ -117,6 +120,9 @@ describe("QR Code API Endpoints", () => {
       name: "Scan Test Asset",
       categoryId: categories[0]!.id,
       siteId: sites[0]!.id,
+      itemCategory: "Office Equipment",
+      itemCategoryCode: "OE",
+      branchCode: sites[0]!.code ?? undefined,
     });
 
     // Create QR code data
@@ -165,6 +171,9 @@ describe("Asset Mapping", () => {
       name: "GPS Test Asset",
       categoryId: categories[0]!.id,
       siteId: sites[0]!.id,
+      itemCategory: "Office Equipment",
+      itemCategoryCode: "OE",
+      branchCode: sites[0]!.code ?? undefined,
     });
 
     // Update with GPS coordinates (Abuja, Nigeria)
