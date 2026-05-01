@@ -43,18 +43,17 @@ test.describe("Inventory V2 (live)", () => {
     await page.getByTestId("inventory-tab-overview").click();
     await page.getByTestId("view-toggle-table").click();
 
-    const table = page.locator("table").first();
+    const scroller = page.locator(".frozen-table-wrap").first();
+    await expect(scroller).toBeVisible();
+    const table = scroller.locator("table").first();
     await expect(table).toBeVisible();
-    const stickyHeaders = table.locator("thead th.sticky");
-    const stickyCount = await stickyHeaders.count();
-    expect(stickyCount).toBeGreaterThanOrEqual(1);
+    const pos1 = await table.locator("thead th").nth(0).evaluate((el) => window.getComputedStyle(el).position);
+    const pos2 = await table.locator("thead th").nth(1).evaluate((el) => window.getComputedStyle(el).position);
+    const pos3 = await table.locator("thead th").nth(2).evaluate((el) => window.getComputedStyle(el).position);
+    expect(pos1).toBe("sticky");
+    expect(pos2).toBe("sticky");
+    expect(pos3).toBe("sticky");
 
-    const stickyPositions = await stickyHeaders.evaluateAll((els) =>
-      els.map((el) => window.getComputedStyle(el).position)
-    );
-    expect(stickyPositions.every((p) => p === "sticky")).toBeTruthy();
-
-    const scroller = page.locator(".overflow-x-auto").first();
     await scroller.evaluate((el) => {
       (el as HTMLElement).scrollLeft = 800;
     });
