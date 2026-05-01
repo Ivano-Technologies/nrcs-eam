@@ -53,6 +53,13 @@ const facilityTypeNormalizingZod = z.preprocess(
 );
 
 const appUserRoleZod = z.enum(["admin", "manager", "staff", "field", "user"]);
+const assetItemTypeInputZod = z.enum(["Asset", "Inventory", "asset", "inventory"]);
+
+function normalizeAssetItemType(
+  value: z.infer<typeof assetItemTypeInputZod> | undefined
+): "Asset" | "Inventory" {
+  return value?.toLowerCase() === "inventory" ? "Inventory" : "Asset";
+}
 
 function getFrontendOriginForUserEmails(): string {
   const fromEnv =
@@ -332,7 +339,7 @@ export const appRouter = router({
         siteId: z.number(),
         status: z.enum(["operational", "maintenance", "repair", "retired", "disposed"]).optional(),
         registerStatus: registerStatusZodEnum.optional(),
-        itemType: z.enum(["asset", "inventory"]).optional(),
+        itemType: assetItemTypeInputZod.optional(),
         registerItemType: z.enum(["Asset", "Inventory"]).optional(),
         itemCategory: z.string().optional(),
         itemCategoryCode: z.string().length(2).optional(),
@@ -395,8 +402,9 @@ export const appRouter = router({
           siteId: input.siteId,
           status,
           registerStatus,
-          itemType: input.itemType ?? "asset",
-          registerItemType: input.registerItemType ?? (input.itemType === "inventory" ? "Inventory" : "Asset"),
+          itemType: normalizeAssetItemType(input.itemType),
+          registerItemType:
+            input.registerItemType ?? normalizeAssetItemType(input.itemType),
           itemCategory: input.itemCategory,
           itemCategoryCode: input.itemCategoryCode,
           subCategory: input.subCategory,
@@ -540,7 +548,7 @@ export const appRouter = router({
         siteId: z.number().optional(),
         status: z.enum(["operational", "maintenance", "repair", "retired", "disposed"]).optional(),
         registerStatus: registerStatusZodEnum.optional(),
-        itemType: z.enum(["asset", "inventory"]).optional(),
+        itemType: assetItemTypeInputZod.optional(),
         registerItemType: z.enum(["Asset", "Inventory"]).optional(),
         itemCategory: z.string().optional(),
         itemCategoryCode: z.string().length(2).optional(),
@@ -589,6 +597,9 @@ export const appRouter = router({
       .mutation(async ({ input, ctx }) => {
         const { id, yearAcquired, registerStatus, status, ...rest } = input;
         const data: Record<string, unknown> = { ...rest };
+        if (rest.itemType !== undefined) {
+          data.itemType = normalizeAssetItemType(rest.itemType);
+        }
         if (registerStatus !== undefined) {
           data.registerStatus = registerStatus;
           data.status = status ?? legacyStatusFromRegister(registerStatus);
@@ -2790,7 +2801,7 @@ export const appRouter = router({
               description: z.string().optional(),
               categoryId: z.number(),
               siteId: z.number(),
-              itemType: z.enum(["asset", "inventory"]),
+              itemType: assetItemTypeInputZod,
               subCategory: z.string().optional(),
               serialNumber: z.string().optional(),
               acquisitionCost: z.string().optional(),
@@ -2815,7 +2826,12 @@ export const appRouter = router({
       )
       .mutation(async ({ input }) => {
         const { confirmNRCSAssetImport } = await import("./nrcsAssetExcel");
-        return await confirmNRCSAssetImport(input.rows);
+        return await confirmNRCSAssetImport(
+          input.rows.map((row) => ({
+            ...row,
+            itemType: normalizeAssetItemType(row.itemType),
+          }))
+        );
       }),
 
     exportSites: protectedProcedure

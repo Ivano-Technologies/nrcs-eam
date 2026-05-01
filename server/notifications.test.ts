@@ -111,6 +111,7 @@ describe("Notification System", () => {
       name: "Test Asset for Notification",
       categoryId: 1,
       siteId: site.id,
+      itemType: "Asset",
       itemCategory: "Office Equipment",
       itemCategoryCode: "OE",
       branchCode: site.code,

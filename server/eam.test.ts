@@ -145,6 +145,7 @@ describe("Assets Management", () => {
       description: "Test asset for unit testing",
       categoryId: categories[0]!.id,
       siteId: sites[0]!.id,
+      itemType: "Asset",
       itemCategory: "Office Equipment",
       itemCategoryCode: "OE",
       branchCode: sites[0]!.code ?? undefined,
