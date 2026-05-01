@@ -123,21 +123,23 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
         }
       />
 
-      <div className="overflow-x-auto rounded-md border">
+      <div
+        className="frozen-table-wrap rounded-md border"
+        style={
+          {
+            "--col1-width": "170px",
+            "--col2-width": "170px",
+          } as Record<string, string>
+        }
+      >
         <table
-          className="table-freeze min-w-[1080px] w-full text-sm"
-          style={
-            {
-              "--sticky-col-1-width": "170px",
-              "--sticky-col-2-width": "170px",
-            } as Record<string, string>
-          }
+          className="min-w-[1080px] w-full text-sm"
         >
           <thead className="bg-muted/50">
             <tr className="border-b">
-              <th className="table-col-sticky-1 px-2 py-2 text-left">Document #</th>
-              <th className="table-col-sticky-2 px-2 py-2 text-left">Date of Arrival</th>
-              <th className="table-col-sticky-3 px-2 py-2 text-left">Received From</th>
+              <th className="px-2 py-2 text-left">Document #</th>
+              <th className="px-2 py-2 text-left">Date of Arrival</th>
+              <th className="px-2 py-2 text-left">Received From</th>
               <th className="px-2 py-2 text-left">Consignment(s)</th>
               <th className="px-2 py-2 text-left">Items</th>
               <th className="px-2 py-2 text-left">Status</th>
@@ -152,9 +154,9 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
                 className="cursor-pointer border-b hover:bg-muted/30"
                 onClick={() => setLocation(`/app/inventory/receipts/${row.id}`)}
               >
-                <td className="table-col-sticky-1 px-2 py-2 font-mono">{row.documentNumber}</td>
-                <td className="table-col-sticky-2 px-2 py-2">{row.createdAt ? new Date(row.createdAt).toLocaleDateString() : "—"}</td>
-                <td className="table-col-sticky-3 px-2 py-2">{row.referenceDocument ?? "—"}</td>
+                <td className="px-2 py-2 font-mono">{row.documentNumber}</td>
+                <td className="px-2 py-2">{row.createdAt ? new Date(row.createdAt).toLocaleDateString() : "—"}</td>
+                <td className="px-2 py-2">{row.referenceDocument ?? "—"}</td>
                 <td className="px-2 py-2">{row.referenceDocument ?? "—"}</td>
                 <td className="px-2 py-2">{Array.isArray(row.items) ? row.items.length : 0}</td>
                 <td className="px-2 py-2">

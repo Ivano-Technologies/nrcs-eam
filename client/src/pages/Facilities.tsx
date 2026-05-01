@@ -544,21 +544,24 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
           ))}
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-md border bg-card px-2 md:px-3" data-testid="sites-list">
+        <div
+          className="frozen-table-wrap rounded-md border bg-card px-2 md:px-3"
+          style={
+            {
+              "--col1-width": "56px",
+              "--col2-width": "260px",
+            } as Record<string, string>
+          }
+          data-testid="sites-list"
+        >
           <Table
-            className="table-freeze min-w-[1600px] text-sm"
-            style={
-              {
-                "--sticky-col-1-width": "56px",
-                "--sticky-col-2-width": "260px",
-              } as Record<string, string>
-            }
+            className="min-w-[1600px] text-sm"
           >
             <TableHeader className="bg-background">
               <TableRow>
-                <StickyHead className="table-col-sticky-1 px-2 py-1.5 text-left font-medium whitespace-nowrap">S/No</StickyHead>
-                <StickyHead onClick={() => sort("name")} className="table-col-sticky-2 px-2 py-1.5 text-left font-medium whitespace-nowrap">Name</StickyHead>
-                <StickyHead onClick={() => sort("state")} className="table-col-sticky-3 px-2 py-1.5 text-left font-medium whitespace-nowrap">State/Region</StickyHead>
+                <StickyHead className="px-2 py-1.5 text-left font-medium whitespace-nowrap">S/No</StickyHead>
+                <StickyHead onClick={() => sort("name")} className="px-2 py-1.5 text-left font-medium whitespace-nowrap">Name</StickyHead>
+                <StickyHead onClick={() => sort("state")} className="px-2 py-1.5 text-left font-medium whitespace-nowrap">State/Region</StickyHead>
                 <TableHead className="px-2 py-1.5 text-left font-medium whitespace-nowrap">Address</TableHead>
                 <TableHead onClick={() => sort("code")} className="cursor-pointer px-2 py-1.5 text-left font-medium whitespace-nowrap">Code</TableHead>
                 <TableHead onClick={() => sort("facilityType")} className="cursor-pointer px-2 py-1.5 text-left font-medium whitespace-nowrap">Type</TableHead>
@@ -581,9 +584,9 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
                     className={cn("relative z-10 h-9 cursor-pointer hover:bg-muted/50", rowCls)}
                     onClick={() => setLocation(appPath(`/facilities/${f.id}`))}
                   >
-                    <StickyCell className="table-col-sticky-1 px-2 py-1 text-muted-foreground">{rowNo}</StickyCell>
-                    <StickyCell className="table-col-sticky-2 px-2 py-1 w-[260px] min-w-[260px] max-w-[260px] truncate font-medium" data-testid={`facility-name-${f.id}`}>{f.name}</StickyCell>
-                    <StickyCell className="table-col-sticky-3 px-2 py-1 w-[160px] min-w-[160px] max-w-[160px] truncate">{f.state ?? "—"}</StickyCell>
+                    <StickyCell className="px-2 py-1 text-muted-foreground">{rowNo}</StickyCell>
+                    <StickyCell className="px-2 py-1 w-[260px] min-w-[260px] max-w-[260px] truncate font-medium" data-testid={`facility-name-${f.id}`}>{f.name}</StickyCell>
+                    <StickyCell className="px-2 py-1 w-[160px] min-w-[160px] max-w-[160px] truncate">{f.state ?? "—"}</StickyCell>
                     <TableCell title={f.address ?? ""} className="px-2 py-1 max-w-[260px] truncate">
                       {f.address ?? "—"}
                     </TableCell>

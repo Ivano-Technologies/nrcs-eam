@@ -517,25 +517,27 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
               })}
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-md border px-2 md:px-3">
+            <div
+              className="frozen-table-wrap rounded-md border px-2 md:px-3"
+              style={
+                {
+                  "--col1-width": "120px",
+                  "--col2-width": "200px",
+                } as Record<string, string>
+              }
+            >
               <table
-                className="table-freeze min-w-[1620px] text-sm"
-                style={
-                  {
-                    "--sticky-col-1-width": "120px",
-                    "--sticky-col-2-width": "200px",
-                  } as Record<string, string>
-                }
+                className="min-w-[1620px] text-sm"
               >
                 <thead className="bg-background">
                   <tr className="border-b">
-                    <th className="table-col-sticky-1 w-[120px] min-w-[120px] border-r bg-background px-2 py-2 text-left">
+                    <th className="w-[120px] min-w-[120px] border-r bg-background px-2 py-2 text-left">
                       Item Code
                     </th>
-                    <th className="table-col-sticky-2 w-[200px] min-w-[200px] border-r bg-background px-2 py-2 text-left">
+                    <th className="w-[200px] min-w-[200px] border-r bg-background px-2 py-2 text-left">
                       Location
                     </th>
-                    <th className="table-col-sticky-3 w-[240px] min-w-[240px] max-w-[240px] border-r bg-background px-2 py-2 text-left">
+                    <th className="w-[240px] min-w-[240px] max-w-[240px] border-r bg-background px-2 py-2 text-left">
                       Item Name
                     </th>
                     <th className="px-2 py-2 text-left">Category</th>
@@ -562,13 +564,13 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                         setSafetyInput(row.safetyStockLevel == null ? "" : String(row.safetyStockLevel));
                       }}
                     >
-                      <td className="table-col-sticky-1 w-[120px] min-w-[120px] border-r bg-background px-2 py-2">
+                      <td className="w-[120px] min-w-[120px] border-r bg-background px-2 py-2">
                         {row.itemCode}
                       </td>
-                      <td className="table-col-sticky-2 w-[200px] min-w-[200px] truncate border-r bg-background px-2 py-2">
+                      <td className="w-[200px] min-w-[200px] truncate border-r bg-background px-2 py-2">
                         {row.warehouseName}
                       </td>
-                      <td className="table-col-sticky-3 w-[240px] min-w-[240px] max-w-[240px] truncate border-r bg-background px-2 py-2">
+                      <td className="w-[240px] min-w-[240px] max-w-[240px] truncate border-r bg-background px-2 py-2">
                         <span className="inline-flex items-center gap-1">
                           {row.itemName}
                           {row.itemCategory == null ? (
@@ -731,21 +733,23 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
               ))}
             </div>
           ) : (
-          <div className="overflow-x-auto rounded-md border">
+          <div
+            className="frozen-table-wrap rounded-md border"
+            style={
+              {
+                "--col1-width": "140px",
+                "--col2-width": "300px",
+              } as Record<string, string>
+            }
+          >
             <table
-              className="table-freeze min-w-[1100px] w-full text-sm"
-              style={
-                {
-                  "--sticky-col-1-width": "140px",
-                  "--sticky-col-2-width": "300px",
-                } as Record<string, string>
-              }
+              className="min-w-[1100px] w-full text-sm"
             >
               <thead className="bg-muted/60">
                 <tr className="border-b">
-                  <th className="table-col-sticky-1 px-2 py-2 text-left">Code</th>
-                  <th className="table-col-sticky-2 px-2 py-2 text-left">Name</th>
-                  <th className="table-col-sticky-3 px-2 py-2 text-left">Category</th>
+                  <th className="px-2 py-2 text-left">Code</th>
+                  <th className="px-2 py-2 text-left">Name</th>
+                  <th className="px-2 py-2 text-left">Category</th>
                   <th className="px-2 py-2 text-left">Subcategory</th>
                   <th className="px-2 py-2 text-left">Unit</th>
                   <th className="px-2 py-2 text-left">VED</th>
@@ -762,9 +766,9 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                     className="cursor-pointer border-b hover:bg-muted/40"
                     onClick={() => setSelectedCatalogue(row)}
                   >
-                    <td className="table-col-sticky-1 px-2 py-2">{row.itemCode}</td>
-                    <td className="table-col-sticky-2 px-2 py-2">{row.name}</td>
-                    <td className="table-col-sticky-3 px-2 py-2">{row.category}</td>
+                    <td className="px-2 py-2">{row.itemCode}</td>
+                    <td className="px-2 py-2">{row.name}</td>
+                    <td className="px-2 py-2">{row.category}</td>
                     <td className="px-2 py-2">{row.subcategory ?? "—"}</td>
                     <td className="px-2 py-2">{row.unitOfMeasure}</td>
                     <td className="px-2 py-2">

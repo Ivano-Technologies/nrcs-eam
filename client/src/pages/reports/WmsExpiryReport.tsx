@@ -33,7 +33,7 @@ export default function WmsExpiryReport() {
         <h1 className="text-3xl font-bold">WMS Expiry Report</h1>
         <Button onClick={exportCsv}>Export CSV</Button>
       </div>
-      <div className="rounded-md border">
+      <div className="frozen-table-wrap rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>

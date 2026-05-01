@@ -137,21 +137,23 @@ export default function ActivityLog() {
       ) : rows.length > 0 ? (
         <Card>
           <CardContent className="pt-6">
-            <div className="overflow-x-auto">
+            <div
+              className="frozen-table-wrap"
+              style={
+                {
+                  "--col1-width": "200px",
+                  "--col2-width": "200px",
+                } as Record<string, string>
+              }
+            >
               <Table
-                className="table-freeze min-w-[1100px]"
-                style={
-                  {
-                    "--sticky-col-1-width": "200px",
-                    "--sticky-col-2-width": "200px",
-                  } as Record<string, string>
-                }
+                className="min-w-[1100px]"
               >
               <TableHeader className="bg-background">
                 <TableRow>
-                  <TableHead className="table-col-sticky-1 bg-background">Timestamp</TableHead>
-                  <TableHead className="table-col-sticky-2 bg-background">User</TableHead>
-                  <TableHead className="table-col-sticky-3 bg-background">Action</TableHead>
+                  <TableHead className="bg-background">Timestamp</TableHead>
+                  <TableHead className="bg-background">User</TableHead>
+                  <TableHead className="bg-background">Action</TableHead>
                   <TableHead>Resource</TableHead>
                   <TableHead>Details</TableHead>
                   <TableHead>Facility</TableHead>
@@ -160,9 +162,9 @@ export default function ActivityLog() {
               <TableBody>
                 {rows.map((log) => (
                   <TableRow key={log.id}>
-                    <TableCell className="table-col-sticky-1 bg-background">{new Date(log.timestamp).toLocaleString()}</TableCell>
-                    <TableCell className="table-col-sticky-2 bg-background">{log.userLabel}</TableCell>
-                    <TableCell className="table-col-sticky-3 bg-background">{log.action}</TableCell>
+                    <TableCell className="bg-background">{new Date(log.timestamp).toLocaleString()}</TableCell>
+                    <TableCell className="bg-background">{log.userLabel}</TableCell>
+                    <TableCell className="bg-background">{log.action}</TableCell>
                     <TableCell>{log.resource}</TableCell>
                     <TableCell>{log.details ?? "-"}</TableCell>
                     <TableCell>{log.facilityName ?? "-"}</TableCell>

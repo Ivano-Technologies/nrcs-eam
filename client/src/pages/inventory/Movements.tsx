@@ -91,7 +91,7 @@ export default function Movements({ embedInShell = false }: { embedInShell?: boo
           <Button variant="outline" className="ml-auto" onClick={exportCsv}>Export to Excel</Button>
         </CardContent>
       </Card>
-      <div className="rounded-md border overflow-x-auto">
+      <div className="frozen-table-wrap rounded-md border">
         <table className="w-full text-sm">
           <thead className="bg-muted/50">
             <tr className="border-b">
