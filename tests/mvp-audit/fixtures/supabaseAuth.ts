@@ -7,6 +7,7 @@ import {
   SUPABASE_ACCESS_TOKEN_COOKIE,
   SUPABASE_REFRESH_TOKEN_COOKIE,
 } from "../../../shared/const";
+import { E2E_USER_EMAIL } from "../../auth/live-helpers";
 import { testUser } from "./testUser";
 import { applySupabaseTestSchema } from "../../helpers/testSchema";
 
@@ -69,7 +70,7 @@ function getE2EPassword() {
 }
 
 function getE2EEmail() {
-  return process.env.E2E_USER_EMAIL?.trim() || testUser.email;
+  return E2E_USER_EMAIL;
 }
 
 function createAdminClient() {
@@ -195,8 +196,9 @@ export async function signInTestUser(page: Page): Promise<void> {
   const session = await generateSessionForTestUser();
   await injectSessionIntoContext(page.context(), session, "http://127.0.0.1:3000");
   await page.goto("/app");
-  await page.waitForURL(/\/app(\/|$)/, { timeout: 30_000 });
-  await page.getByRole("button", { name: /E2E Admin/i }).waitFor({ state: "visible", timeout: 20_000 });
+  await page.waitForURL(/\/app(\/|$)/, { timeout: 60_000 });
+  // Narrow sidebar hides user name on the trigger, so getByRole(..., /E2E Admin/) is flaky.
+  await page.getByTestId("sidebar-nav-dashboard").waitFor({ state: "visible", timeout: 60_000 });
 }
 
 export async function injectSessionIntoContext(

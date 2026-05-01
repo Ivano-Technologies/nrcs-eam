@@ -47,7 +47,7 @@ test.describe("Authentication (2a)", () => {
     await page.getByRole("menuitem", { name: /sign out/i }).click();
     await page.waitForURL(/\/login/, { timeout: 15_000 });
     await expect(
-      page.getByRole("heading", { name: /sign in to nrcs asset management/i }),
+      page.getByRole("heading", { name: /log in to nrcs eam/i }),
     ).toBeVisible();
     await shot(page, "auth-logout");
   });

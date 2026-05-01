@@ -3,7 +3,7 @@ import { expect, type Page } from "@playwright/test";
 export const E2E_USER_EMAIL =
   process.env.E2E_USER_EMAIL ??
   process.env.PLAYWRIGHT_ADMIN_EMAIL ??
-  "playwright_admin@nrcseam.techivano.com";
+  "playwright@nrcseam.techivano.com";
 export const E2E_USER_PASSWORD =
   process.env.E2E_USER_PASSWORD ?? process.env.PLAYWRIGHT_ADMIN_PASSWORD ?? "PlaywrightTest@2026";
 
