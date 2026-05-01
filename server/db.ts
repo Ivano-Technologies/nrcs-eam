@@ -521,7 +521,11 @@ export async function getNextAssetRegisterSequence(branchCode: string, itemCateg
 export async function createAsset(asset: InsertAsset) {
   const db = await getDb();
   if (!db) return null;
-  const [inserted] = await db.insert(assets).values(asset).returning({ id: assets.id });
+  const payload: Record<string, unknown> = { ...asset };
+  if (payload.registerItemType != null) {
+    delete payload.itemType;
+  }
+  const [inserted] = await db.insert(assets).values(payload as InsertAsset).returning({ id: assets.id });
   const insertId = inserted?.id;
   if (!insertId || isNaN(insertId)) {
     throw new Error("Failed to get insert ID");
@@ -556,7 +560,11 @@ export async function getAssetById(id: number) {
 export async function updateAsset(id: number, data: Partial<InsertAsset>) {
   const db = await getDb();
   if (!db) return null;
-  await db.update(assets).set(data).where(eq(assets.id, id));
+  const payload: Record<string, unknown> = { ...data };
+  if (payload.registerItemType != null) {
+    delete payload.itemType;
+  }
+  await db.update(assets).set(payload as Partial<InsertAsset>).where(eq(assets.id, id));
   return await getAssetById(id);
 }
 
