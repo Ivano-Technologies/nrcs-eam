@@ -225,6 +225,13 @@
       "when": 1777500100000,
       "tag": "0031_asset_code_generation",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1777500200000,
+      "tag": "0032_register_item_type_column",
+      "breakpoints": true
     }
   ]
 }
