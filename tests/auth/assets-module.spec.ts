@@ -5,6 +5,7 @@ import {
   resolveLiveTestSiteName,
   runLiveBrowserCleanup,
 } from "../helpers/liveTestData";
+import { readGeneratedAssetCodeFromRegister } from "../helpers/generatedAssetCode";
 
 test.describe.configure({ mode: "serial" });
 
@@ -28,8 +29,6 @@ test.describe.skip("assets module (live)", () => {
   });
 
   test("list, create, view detail, edit asset", async ({ page }) => {
-    const tag = `E2E-A-${Date.now()}`;
-    createdAssetTag = tag;
     const name = `E2E Asset ${Date.now()}`;
     const nameEdited = `${name} (edited)`;
 
@@ -43,7 +42,6 @@ test.describe.skip("assets module (live)", () => {
     await expect(page.getByTestId("asset-list-table")).toBeVisible();
 
     await page.getByTestId("asset-create-btn").click();
-    await page.getByLabel(/Asset Code/i).fill(tag);
     await page.getByLabel(/Item Description \*/i).fill(name);
 
     await page.getByTestId("asset-form-category").click();
@@ -57,10 +55,14 @@ test.describe.skip("assets module (live)", () => {
       timeout: 60_000,
     });
 
-    await page.getByTestId("asset-search-input").fill(tag);
-    await expect(page.getByText(tag)).toBeVisible({ timeout: 30_000 });
+    await page.goto("/app/assets");
+    const generatedTag = await readGeneratedAssetCodeFromRegister(page, name);
+    createdAssetTag = generatedTag;
 
-    await page.locator("tr").filter({ hasText: tag }).first().click();
+    await page.getByTestId("asset-search-input").fill(generatedTag);
+    await expect(page.getByText(generatedTag)).toBeVisible({ timeout: 30_000 });
+
+    await page.locator("tr").filter({ hasText: generatedTag }).first().click();
 
     await expect(page).toHaveURL(/\/app\/assets\/\d+/, { timeout: 30_000 });
     await expect(
