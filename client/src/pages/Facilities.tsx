@@ -545,12 +545,20 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
         </div>
       ) : (
         <div className="overflow-x-auto rounded-md border bg-card px-2 md:px-3" data-testid="sites-list">
-          <Table className="min-w-[1600px] text-sm">
-            <TableHeader className="sticky top-0 z-40 bg-background">
+          <Table
+            className="table-freeze min-w-[1600px] text-sm"
+            style={
+              {
+                "--sticky-col-1-width": "56px",
+                "--sticky-col-2-width": "260px",
+              } as Record<string, string>
+            }
+          >
+            <TableHeader className="bg-background">
               <TableRow>
-                <StickyHead left={0} className="px-2 py-1.5 text-left font-medium whitespace-nowrap">S/No</StickyHead>
-                <StickyHead left={56} onClick={() => sort("name")} className="px-2 py-1.5 text-left font-medium whitespace-nowrap">Name</StickyHead>
-                <StickyHead left={316} onClick={() => sort("state")} className="px-2 py-1.5 text-left font-medium whitespace-nowrap shadow-[4px_0_8px_-4px_rgba(0,0,0,0.25)]">State/Region</StickyHead>
+                <StickyHead className="table-col-sticky-1 px-2 py-1.5 text-left font-medium whitespace-nowrap">S/No</StickyHead>
+                <StickyHead onClick={() => sort("name")} className="table-col-sticky-2 px-2 py-1.5 text-left font-medium whitespace-nowrap">Name</StickyHead>
+                <StickyHead onClick={() => sort("state")} className="table-col-sticky-3 px-2 py-1.5 text-left font-medium whitespace-nowrap">State/Region</StickyHead>
                 <TableHead className="px-2 py-1.5 text-left font-medium whitespace-nowrap">Address</TableHead>
                 <TableHead onClick={() => sort("code")} className="cursor-pointer px-2 py-1.5 text-left font-medium whitespace-nowrap">Code</TableHead>
                 <TableHead onClick={() => sort("facilityType")} className="cursor-pointer px-2 py-1.5 text-left font-medium whitespace-nowrap">Type</TableHead>
@@ -573,9 +581,9 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
                     className={cn("relative z-10 h-9 cursor-pointer hover:bg-muted/50", rowCls)}
                     onClick={() => setLocation(appPath(`/facilities/${f.id}`))}
                   >
-                    <StickyCell left={0} className="px-2 py-1 text-muted-foreground">{rowNo}</StickyCell>
-                    <StickyCell left={56} className="px-2 py-1 w-[260px] min-w-[260px] max-w-[260px] truncate font-medium" data-testid={`facility-name-${f.id}`}>{f.name}</StickyCell>
-                    <StickyCell left={316} className="px-2 py-1 w-[160px] min-w-[160px] max-w-[160px] truncate shadow-[4px_0_8px_-4px_rgba(0,0,0,0.25)]">{f.state ?? "—"}</StickyCell>
+                    <StickyCell className="table-col-sticky-1 px-2 py-1 text-muted-foreground">{rowNo}</StickyCell>
+                    <StickyCell className="table-col-sticky-2 px-2 py-1 w-[260px] min-w-[260px] max-w-[260px] truncate font-medium" data-testid={`facility-name-${f.id}`}>{f.name}</StickyCell>
+                    <StickyCell className="table-col-sticky-3 px-2 py-1 w-[160px] min-w-[160px] max-w-[160px] truncate">{f.state ?? "—"}</StickyCell>
                     <TableCell title={f.address ?? ""} className="px-2 py-1 max-w-[260px] truncate">
                       {f.address ?? "—"}
                     </TableCell>
@@ -775,23 +783,21 @@ function FacilityFormFields(props: {
   );
 }
 
-function StickyHead(props: ComponentProps<typeof TableHead> & { left: number }) {
-  const { left, className, ...rest } = props;
+function StickyHead(props: ComponentProps<typeof TableHead>) {
+  const { className, ...rest } = props;
   return (
     <TableHead
-      className={cn("sticky z-[45] border-r bg-background cursor-pointer", className)}
-      style={{ left }}
+      className={cn("border-r bg-background cursor-pointer", className)}
       {...rest}
     />
   );
 }
 
-function StickyCell(props: ComponentProps<typeof TableCell> & { left: number }) {
-  const { left, className, ...rest } = props;
+function StickyCell(props: ComponentProps<typeof TableCell>) {
+  const { className, ...rest } = props;
   return (
     <TableCell
-      className={cn("sticky z-[35] border-r bg-background", className)}
-      style={{ left }}
+      className={cn("border-r", className)}
       {...rest}
     />
   );

@@ -1164,8 +1164,17 @@ export default function Assets() {
           </div>
         ) : (
           <div className="overflow-x-auto max-h-[70vh] overflow-y-auto">
-            <table className="w-max min-w-full border-collapse text-sm" data-testid="asset-register-data-table">
-              <thead className="sticky top-0 z-20 bg-background">
+            <table
+              className="table-freeze w-max min-w-full border-collapse text-sm"
+              style={
+                {
+                  "--sticky-col-1-width": "4rem",
+                  "--sticky-col-2-width": "8rem",
+                } as Record<string, string>
+              }
+              data-testid="asset-register-data-table"
+            >
+              <thead className="bg-background">
                 <tr className="border-b bg-muted/40">
                   <th className="px-2 py-1 text-center" colSpan={5}>ITEM DETAILS</th>
                   <th className="px-2 py-1 text-center" colSpan={4}>ITEM CODE</th>
@@ -1181,10 +1190,9 @@ export default function Assets() {
                       key={header}
                       className={cn(
                         "px-2 py-1.5 text-left font-medium whitespace-nowrap",
-                        index === 0 && "sticky left-0 z-30 bg-background",
-                        index === 0 && "w-16 min-w-16",
-                        index === 1 && "sticky left-[4rem] z-30 bg-background w-32 min-w-32",
-                        index === 2 && "sticky left-[12rem] z-30 bg-background w-56 min-w-56 shadow-[2px_0_4px_rgba(0,0,0,0.08)]"
+                        index === 0 && "table-col-sticky-1 bg-background w-16 min-w-16",
+                        index === 1 && "table-col-sticky-2 bg-background w-32 min-w-32",
+                        index === 2 && "table-col-sticky-3 bg-background w-56 min-w-56"
                       )}
                     >
                       {header}
@@ -1237,11 +1245,11 @@ export default function Assets() {
                         )}
                         onClick={() => setLocation(appPath(`/assets/${row.id}`))}
                       >
-                        <td className={cn("px-2 py-1 sticky left-0 z-20 w-16 min-w-16", rowBgClass)}>{offset + i + 1}</td>
-                        <td className={cn("px-2 py-1 sticky left-[4rem] z-20 w-32 min-w-32", rowBgClass)}>
+                        <td className={cn("table-col-sticky-1 px-2 py-1 w-16 min-w-16", rowBgClass)}>{offset + i + 1}</td>
+                        <td className={cn("table-col-sticky-2 px-2 py-1 w-32 min-w-32", rowBgClass)}>
                           {row.registerItemType ?? (row.itemType === "inventory" ? "Inventory" : "Asset")}
                         </td>
-                        <td className={cn("px-2 py-1 sticky left-[12rem] z-20 w-56 min-w-56 shadow-[2px_0_4px_rgba(0,0,0,0.08)]", rowBgClass)}>
+                        <td className={cn("table-col-sticky-3 px-2 py-1 w-56 min-w-56", rowBgClass)}>
                           {row.itemCategory?.trim() || row.categoryName?.trim() || EM_DASH}
                         </td>
                         <td className="px-2 py-1">{row.subItemCategory?.trim() || row.subCategory?.trim() || EM_DASH}</td>

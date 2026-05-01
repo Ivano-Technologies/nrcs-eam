@@ -256,13 +256,21 @@ export default function Users() {
         </div>
       </div>
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
+      <div className="overflow-x-auto rounded-md border">
+        <Table
+          className="table-freeze min-w-[1100px]"
+          style={
+            {
+              "--sticky-col-1-width": "180px",
+              "--sticky-col-2-width": "260px",
+            } as Record<string, string>
+          }
+        >
+          <TableHeader className="bg-background">
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Role</TableHead>
+              <TableHead className="table-col-sticky-1 bg-background">Name</TableHead>
+              <TableHead className="table-col-sticky-2 bg-background">Email</TableHead>
+              <TableHead className="table-col-sticky-3 bg-background">Role</TableHead>
               <TableHead>Facility</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Last sign in</TableHead>
@@ -275,9 +283,9 @@ export default function Users() {
               const facilityName = (u as { facilityName?: string | null }).facilityName ?? null;
               return (
                 <TableRow key={u.id} data-testid={`user-row-${u.id}`}>
-                  <TableCell className="font-medium">{u.name || "—"}</TableCell>
-                  <TableCell className="max-w-[220px] truncate">{u.email || "—"}</TableCell>
-                  <TableCell>
+                  <TableCell className="table-col-sticky-1 font-medium bg-background">{u.name || "—"}</TableCell>
+                  <TableCell className="table-col-sticky-2 max-w-[220px] truncate bg-background">{u.email || "—"}</TableCell>
+                  <TableCell className="table-col-sticky-3 bg-background">
                     <Badge className={roleBadgeClass(u.role)} variant="secondary">
                       {roleLabel(u.role)}
                     </Badge>
