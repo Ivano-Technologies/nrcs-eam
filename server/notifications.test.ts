@@ -96,6 +96,7 @@ describe("Notification System", () => {
     });
 
     const site = await caller.sites.create({
+      code: `NOTIF-${Date.now().toString().slice(-6)}`,
       name: "Test Site for Notifications",
       facilityType: "branch",
       parentFacilityId: nhq.id,
@@ -110,6 +111,9 @@ describe("Notification System", () => {
       name: "Test Asset for Notification",
       categoryId: 1,
       siteId: site.id,
+      itemCategory: "Office Equipment",
+      itemCategoryCode: "OE",
+      branchCode: site.code,
       status: "operational",
       condition: "good",
     });
