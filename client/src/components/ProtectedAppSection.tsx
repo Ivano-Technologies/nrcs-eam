@@ -67,7 +67,6 @@ import WorkOrders from "@/pages/WorkOrders";
 import WorkOrderTemplates from "@/pages/WorkOrderTemplates";
 import { appPath } from "@/lib/routes";
 import { Redirect, Route, Switch, useRoute } from "wouter";
-import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 
 /**
  * Authenticated area: all routes live under /app/...
@@ -120,7 +119,6 @@ export default function ProtectedAppSection() {
   return (
     <ProtectedRoute>
       <>
-        <PWAInstallPrompt />
         <DashboardLayout>
         <Switch>
           <Route path="/app" component={Home} />

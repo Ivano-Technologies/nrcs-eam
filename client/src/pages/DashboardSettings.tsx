@@ -88,6 +88,7 @@ export default function DashboardSettings() {
     },
     onError: (e) => toast.error(e.message),
   });
+  const uploadAvatarMutation = trpc.auth.uploadAvatar.useMutation();
 
   const displayAvatar =
     avatarOverride !== undefined ? avatarOverride : (user?.avatarUrl ?? null);
@@ -102,6 +103,7 @@ export default function DashboardSettings() {
   }, [user, profileName, avatarOverride]);
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const allowedMimeTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
@@ -109,17 +111,36 @@ export default function DashboardSettings() {
       toast.error("Image must be 5MB or smaller");
       return;
     }
-    if (!file.type.startsWith("image/")) {
+    if (!allowedMimeTypes.includes(file.type as (typeof allowedMimeTypes)[number])) {
       toast.error("Please choose an image file");
       return;
     }
     setUploadingAvatar(true);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const response = await fetch("/api/upload", { method: "POST", body: formData });
-      if (!response.ok) throw new Error("Upload failed");
-      const data = (await response.json()) as { url: string };
+      const dataBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result;
+          if (typeof result !== "string") {
+            reject(new Error("Failed to read file"));
+            return;
+          }
+          const [, base64] = result.split(",", 2);
+          if (!base64) {
+            reject(new Error("Failed to encode image"));
+            return;
+          }
+          resolve(base64);
+        };
+        reader.onerror = () => reject(reader.error ?? new Error("Failed to read file"));
+        reader.readAsDataURL(file);
+      });
+
+      const data = await uploadAvatarMutation.mutateAsync({
+        fileName: file.name,
+        mimeType: file.type as (typeof allowedMimeTypes)[number],
+        dataBase64,
+      });
       setAvatarOverride(data.url);
       toast.success("Photo uploaded — save to apply");
     } catch {

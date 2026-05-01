@@ -9,6 +9,7 @@ import { toPublicUser } from "../_core/sanitizeUser";
 import * as db from "../db";
 import type { InsertUser } from "../../drizzle/schema";
 import { createSignupRequest } from "../pendingUsersService";
+import { storagePut } from "../storage";
 
 const emailSchema = z.string().email();
 
@@ -209,6 +210,35 @@ export const authRouter = router({
       }
       await db.updateUser(ctx.user.id, patch);
       return { success: true as const };
+    }),
+
+  uploadAvatar: protectedProcedure
+    .input(
+      z.object({
+        fileName: z.string().min(1).max(255),
+        mimeType: z.enum(["image/jpeg", "image/png", "image/webp", "image/gif"]),
+        dataBase64: z.string().min(1),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const bytes = Buffer.from(input.dataBase64, "base64");
+      if (!bytes.length) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "File payload is empty",
+        });
+      }
+      if (bytes.length > 5 * 1024 * 1024) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Image must be 5MB or smaller",
+        });
+      }
+
+      const safeName = input.fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const key = `avatars/user-${ctx.user.id}/${Date.now()}-${safeName}`;
+      const uploaded = await storagePut(key, bytes, input.mimeType);
+      return { url: uploaded.url };
     }),
 
   changePassword: protectedProcedure

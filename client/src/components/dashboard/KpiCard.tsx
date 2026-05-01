@@ -92,11 +92,13 @@ export function KpiCard({
           {value}
         </div>
 
-        <footer className="mt-auto flex items-center justify-between gap-2 pt-4">
+        <footer className="mt-auto flex flex-col items-start gap-2 pt-4">
           {sub ? (
-            <span className="min-w-0 text-sm text-[#334155] dark:text-[hsl(0_0%_95%)]">{sub}</span>
+            <span className="w-full min-w-0 whitespace-normal break-words text-sm leading-relaxed text-[#334155] dark:text-[hsl(0_0%_95%)]">
+              {sub}
+            </span>
           ) : (
-            <span className="select-none text-sm text-[#334155] dark:text-[hsl(0_0%_95%)]" aria-hidden>
+            <span className="w-full select-none text-sm text-[#334155] dark:text-[hsl(0_0%_95%)]" aria-hidden>
               {"\u00a0"}
             </span>
           )}

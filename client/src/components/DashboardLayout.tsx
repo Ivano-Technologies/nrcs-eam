@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
 import { appPath } from "@/lib/routes";
-import { LogOut, Settings, Maximize2, Search, User } from "lucide-react";
+import { LogOut, Settings, ChevronsLeft, Search, User } from "lucide-react";
 import { CSSProperties, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -29,7 +29,6 @@ import Footer from "./Footer";
 import { ThemeToggle } from "./ui/ThemeToggle";
 import { SidebarGroupedNav } from "./SidebarGroupedNav";
 import { GlobalSearch } from "./GlobalSearch";
-import { InstallPWABanner } from "./InstallPWABanner";
 import { flattenNavItems } from "@/config/appNav";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { Link } from "wouter";
@@ -243,7 +242,12 @@ function DashboardLayoutContent({
                   aria-label="Toggle sidebar width (Ctrl+B)"
                   title="Toggle sidebar width (Ctrl+B)"
                 >
-                  <Maximize2 className="h-3.5 w-3.5 text-sidebar-foreground" />
+                  <ChevronsLeft
+                    className={cn(
+                      "h-3.5 w-3.5 text-sidebar-foreground transition-transform duration-200 ease-in-out",
+                      sidebarWidth <= PRESET_WIDTHS.narrow ? "rotate-180" : "rotate-0"
+                    )}
+                  />
                 </button>
               </div>
             ) : (
@@ -283,7 +287,12 @@ function DashboardLayoutContent({
                     aria-label="Toggle sidebar width (Ctrl+B)"
                     title="Toggle sidebar width (Ctrl+B)"
                   >
-                    <Maximize2 className="h-3.5 w-3.5 text-sidebar-foreground" />
+                    <ChevronsLeft
+                      className={cn(
+                        "h-3.5 w-3.5 text-sidebar-foreground transition-transform duration-200 ease-in-out",
+                        sidebarWidth <= PRESET_WIDTHS.narrow ? "rotate-180" : "rotate-0"
+                      )}
+                    />
                   </button>
                 </div>
               </div>
@@ -379,8 +388,7 @@ function DashboardLayoutContent({
         />
       </div>
 
-      <SidebarInset className="min-h-svh bg-background dark:bg-[#232323]">
-        <InstallPWABanner />
+      <SidebarInset className="min-h-svh bg-background dark:bg-[#232323] transition-[margin,padding] duration-200 ease-in-out">
         {isMobile && (
           <div className="flex border-b h-14 items-center justify-between bg-background/95 dark:bg-[#232323]/95 px-2 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
             <div className="flex items-center gap-2">
