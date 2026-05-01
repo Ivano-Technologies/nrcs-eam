@@ -38,7 +38,7 @@ export function runSeedE2E() {
   }
 }
 
-/** Retained name for compatibility; now signs in with Supabase email+password. */
-export async function loginViaMagicLink(page: Page) {
+/** Signs in with Supabase email+password via the seeded E2E test user. */
+export async function loginViaPassword(page: Page) {
   await signInTestUser(page);
 }

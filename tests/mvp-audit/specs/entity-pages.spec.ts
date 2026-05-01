@@ -2,7 +2,7 @@
  * One test per primary `/app/*` route (2d) — page loads without error boundary.
  */
 import { test, expect } from "@playwright/test";
-import { loginViaMagicLink } from "../helpers/e2eAuth";
+import { loginViaPassword } from "../helpers/e2eAuth";
 import { shot } from "../helpers/shot";
 
 const ROUTES: { path: string; slug: string; heading: string | RegExp }[] = [
@@ -38,7 +38,7 @@ test.describe.configure({ mode: "serial" });
 test.describe("Domain entity pages (2d)", () => {
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
-    await loginViaMagicLink(page);
+    await loginViaPassword(page);
   });
 
   for (const r of ROUTES) {

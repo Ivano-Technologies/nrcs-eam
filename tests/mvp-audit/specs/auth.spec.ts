@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { loginViaMagicLink } from "../helpers/e2eAuth";
+import { loginViaPassword } from "../helpers/e2eAuth";
 import { shot } from "../helpers/shot";
 
 test.describe.configure({ mode: "serial" });
@@ -24,7 +24,7 @@ test.describe("Authentication (2a)", () => {
       return;
     }
 
-    await loginViaMagicLink(page);
+    await loginViaPassword(page);
   });
 
   test("session-auth login reaches dashboard", async ({ page }) => {

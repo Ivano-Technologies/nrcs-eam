@@ -1,5 +1,5 @@
 import { expect, test, type Page, type Locator } from "@playwright/test";
-import { loginViaMagicLink } from "../helpers/e2eAuth";
+import { loginViaPassword } from "../helpers/e2eAuth";
 
 /**
  * Verifies frozen-table-wrap behavior on tables with sticky thead and the
@@ -109,7 +109,7 @@ test.describe.configure({ mode: "serial" });
 test.describe("Frozen table sticky behavior", () => {
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
-    await loginViaMagicLink(page);
+    await loginViaPassword(page);
     await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible({
       timeout: 30_000,
     });

@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { SIDEBAR_NAV_ADMIN } from "../fixtures/sidebarNav";
-import { loginViaMagicLink } from "../helpers/e2eAuth";
+import { loginViaPassword } from "../helpers/e2eAuth";
 import {
   attachGuards,
   createGuardState,
@@ -18,7 +18,7 @@ test.describe("Dashboard (2b)", () => {
     await page.setViewportSize({ width: 1280, height: 720 });
     guard = createGuardState();
     attachGuards(page, guard);
-    await loginViaMagicLink(page);
+    await loginViaPassword(page);
     await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible({
       timeout: 20_000,
     });

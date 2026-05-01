@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { loginViaMagicLink } from "../helpers/e2eAuth";
+import { loginViaPassword } from "../helpers/e2eAuth";
 import { shot } from "../helpers/shot";
 import { testUser } from "../fixtures/testUser";
 
@@ -38,7 +38,7 @@ test.describe("Email — Mailpit (2f)", () => {
 
   test("admin bulk email notification", async ({ page, request }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
-    await loginViaMagicLink(page);
+    await loginViaPassword(page);
     await page.goto("/app/email-notifications");
     await expect(page.getByRole("heading", { name: "Email Notifications" })).toBeVisible();
 

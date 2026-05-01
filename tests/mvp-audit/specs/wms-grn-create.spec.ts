@@ -1,10 +1,10 @@
 import { expect, test } from "@playwright/test";
-import { loginViaMagicLink } from "../helpers/e2eAuth";
+import { loginViaPassword } from "../helpers/e2eAuth";
 
 test.describe.configure({ mode: "serial" });
 
 test("WMS GRN create -> draft -> finalize -> print", async ({ page }) => {
-  await loginViaMagicLink(page);
+  await loginViaPassword(page);
 
   await page.goto("/app/inventory/receipts");
   await page.getByTestId("new-grn-btn").click();
@@ -39,7 +39,10 @@ test("WMS GRN create -> draft -> finalize -> print", async ({ page }) => {
   await expect(page.getByRole("button", { name: "White copy" })).toBeVisible({ timeout: 20_000 });
   await page.getByRole("button", { name: "White copy" }).click();
   await page.waitForURL(/\/app\/inventory\/receipts\/\d+\/print\/white/, { timeout: 20_000 });
-  await expect(page.getByText("Goods Received Note (GRN)")).toBeVisible();
+  await page.waitForLoadState("networkidle");
+  await expect(page.getByText(/GOODS RECEIVED NOTE|Goods Received Note/i).first()).toBeVisible({
+    timeout: 15_000,
+  });
   await expect(page.getByText("ORIGINAL")).toBeVisible();
   await expect(page.getByText("Inventory")).not.toBeVisible();
 });

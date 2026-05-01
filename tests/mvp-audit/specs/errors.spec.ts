@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { loginViaMagicLink } from "../helpers/e2eAuth";
+import { loginViaPassword } from "../helpers/e2eAuth";
 import { shot } from "../helpers/shot";
 
 test.describe.configure({ mode: "serial" });
@@ -7,7 +7,7 @@ test.describe.configure({ mode: "serial" });
 test.describe("Error states (2h)", () => {
   test("empty asset create shows validation", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
-    await loginViaMagicLink(page);
+    await loginViaPassword(page);
     await page.goto("/app/assets");
     await page.getByTestId("asset-create-btn").click();
     await page.getByTestId("asset-form-submit").click();
@@ -25,7 +25,7 @@ test.describe("Error states (2h)", () => {
 
   test("protected route redirects when logged out", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
-    await loginViaMagicLink(page);
+    await loginViaPassword(page);
     await page.context().clearCookies();
     await page.goto("/app/assets");
     await expect(page).toHaveURL(/\/login/);
