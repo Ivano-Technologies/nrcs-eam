@@ -173,7 +173,7 @@ export default function CtnRegistryPage() {
           original quantity.
         </span>
 
-        <div className="rounded-md border">
+        <div className="frozen-table-wrap rounded-md border">
           <Table>
             <TableHeader>
               <TableRow>

@@ -130,7 +130,7 @@ export default function MonthlyWarehouseReport() {
         </Button>
       </div>
 
-      <div className="rounded-md border">
+      <div className="frozen-table-wrap rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>

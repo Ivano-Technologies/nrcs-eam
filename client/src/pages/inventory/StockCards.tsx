@@ -71,7 +71,7 @@ export default function StockCards({ embedInShell = false }: Props = {}) {
         }
       />
 
-      <div className="rounded-md border">
+      <div className="frozen-table-wrap rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>

@@ -88,7 +88,7 @@ export default function Distributions({ embedInShell = false }: { embedInShell?:
           ))}
         </div>
       ) : (
-        <div className="rounded-md border">
+        <div className="frozen-table-wrap rounded-md border">
           <table className="w-full text-sm">
             <thead className="bg-muted/50">
               <tr className="border-b">

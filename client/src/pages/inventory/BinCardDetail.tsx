@@ -57,7 +57,7 @@ export default function BinCardDetail() {
           </>
         )}
       </div>
-      <div className="rounded-md border">
+      <div className="frozen-table-wrap rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>

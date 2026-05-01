@@ -1163,15 +1163,17 @@ export default function Assets() {
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
           </div>
         ) : (
-          <div className="overflow-x-auto max-h-[70vh] overflow-y-auto">
+          <div
+            className="frozen-table-wrap"
+            style={
+              {
+                "--col1-width": "4rem",
+                "--col2-width": "8rem",
+              } as Record<string, string>
+            }
+          >
             <table
-              className="table-freeze w-max min-w-full border-collapse text-sm"
-              style={
-                {
-                  "--sticky-col-1-width": "4rem",
-                  "--sticky-col-2-width": "8rem",
-                } as Record<string, string>
-              }
+              className="w-max min-w-full border-collapse text-sm"
               data-testid="asset-register-data-table"
             >
               <thead className="bg-background">
@@ -1190,9 +1192,9 @@ export default function Assets() {
                       key={header}
                       className={cn(
                         "px-2 py-1.5 text-left font-medium whitespace-nowrap",
-                        index === 0 && "table-col-sticky-1 bg-background w-16 min-w-16",
-                        index === 1 && "table-col-sticky-2 bg-background w-32 min-w-32",
-                        index === 2 && "table-col-sticky-3 bg-background w-56 min-w-56"
+                        index === 0 && "bg-background w-16 min-w-16",
+                        index === 1 && "bg-background w-32 min-w-32",
+                        index === 2 && "bg-background w-56 min-w-56"
                       )}
                     >
                       {header}
@@ -1245,11 +1247,11 @@ export default function Assets() {
                         )}
                         onClick={() => setLocation(appPath(`/assets/${row.id}`))}
                       >
-                        <td className={cn("table-col-sticky-1 px-2 py-1 w-16 min-w-16", rowBgClass)}>{offset + i + 1}</td>
-                        <td className={cn("table-col-sticky-2 px-2 py-1 w-32 min-w-32", rowBgClass)}>
+                        <td className={cn("px-2 py-1 w-16 min-w-16", rowBgClass)}>{offset + i + 1}</td>
+                        <td className={cn("px-2 py-1 w-32 min-w-32", rowBgClass)}>
                           {row.registerItemType ?? (row.itemType === "inventory" ? "Inventory" : "Asset")}
                         </td>
-                        <td className={cn("table-col-sticky-3 px-2 py-1 w-56 min-w-56", rowBgClass)}>
+                        <td className={cn("px-2 py-1 w-56 min-w-56", rowBgClass)}>
                           {row.itemCategory?.trim() || row.categoryName?.trim() || EM_DASH}
                         </td>
                         <td className="px-2 py-1">{row.subItemCategory?.trim() || row.subCategory?.trim() || EM_DASH}</td>

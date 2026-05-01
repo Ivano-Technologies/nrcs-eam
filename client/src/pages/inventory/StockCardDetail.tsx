@@ -77,7 +77,7 @@ export default function StockCardDetail() {
         <Button onClick={submitStockCheck} disabled={addStockCheck.isPending}>Add Stock Check</Button>
       </div>
 
-      <div className="rounded-md border">
+      <div className="frozen-table-wrap rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>

@@ -53,7 +53,7 @@ export default function Expiry({ embedInShell = false }: { embedInShell?: boolea
           <TabsTrigger value="disposed" data-testid="expiry-tab-disposed">Disposed</TabsTrigger>
         </TabsList>
         <TabsContent value="soon">
-          <div className="rounded-md border overflow-x-auto">
+          <div className="frozen-table-wrap rounded-md border">
             <table className="w-full text-sm">
               <thead className="bg-muted/50">
                 <tr className="border-b">
