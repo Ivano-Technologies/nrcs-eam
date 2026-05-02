@@ -13,7 +13,12 @@ export async function readGeneratedAssetCodeFromRegister(
   await page.getByTestId("asset-search-input").fill(itemDescription);
   const row = page.locator(`[data-testid^="asset-row-"]`).filter({ hasText: itemDescription }).first();
   await expect(row).toBeVisible({ timeout: 30_000 });
-  const codeCell = row.locator("td").nth(8);
+  const rowTestId = await row.getAttribute("data-testid");
+  const rowId = rowTestId?.match(/^asset-row-(\d+)$/)?.[1];
+  const codeCell = rowId
+    ? page.getByTestId(`asset-register-code-${rowId}`)
+    : row.locator("td").nth(8);
+  await expect(codeCell).toBeVisible({ timeout: 15_000 });
   await expect(codeCell).toHaveText(GENERATED_ASSET_CODE_RE, { timeout: 60_000 });
   const code = (await codeCell.innerText()).trim();
   return code;

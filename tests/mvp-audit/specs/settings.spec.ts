@@ -21,7 +21,8 @@ test.describe("Settings (2g)", () => {
       page.waitForResponse(
         (r) =>
           r.request().method() === "POST" &&
-          r.url().includes("updateDashboardWidgets") &&
+          r.url().includes("userPreferences") &&
+          r.url().includes("updateDashboard") &&
           r.ok(),
         { timeout: 30_000 },
       );

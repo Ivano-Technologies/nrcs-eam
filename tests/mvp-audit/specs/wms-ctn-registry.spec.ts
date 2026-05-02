@@ -42,11 +42,10 @@ test.describe("WMS CTN registry (Phase 1)", () => {
   });
 
   test("CTN registry page loads and shell tab is active", async ({ page }) => {
-    await expect(page.getByTestId("inventory-shell-tab-ctn-registry")).toHaveAttribute(
-      "data-active",
-      "true",
-      { timeout: 15_000 },
-    );
+    const tab = page.getByTestId("inventory-shell-tab-ctn-registry");
+    await expect(tab).toBeVisible({ timeout: 20_000 });
+    // InventoryShell derives active tab from wouter location; wait until URL-driven state commits.
+    await expect(tab).toHaveAttribute("data-active", "true", { timeout: 25_000 });
     await expect(page.getByRole("heading", { name: "Commodity tracking numbers (CTN)" })).toBeVisible();
   });
 });

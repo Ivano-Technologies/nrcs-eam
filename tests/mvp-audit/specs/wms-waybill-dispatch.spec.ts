@@ -56,6 +56,7 @@ test("WMS waybill create -> multi-CTN dispatch -> print copies", async ({ page }
   await expect(page.getByText("Waybill draft updated.")).toBeVisible({ timeout: 20_000 });
 
   await page.getByRole("button", { name: "Dispatch" }).click();
+  await expect(page.getByText("Waybill dispatched.")).toBeVisible({ timeout: 25_000 });
   // Success UI: print buttons render for dispatched waybills (toast can dismiss quickly).
   await expect(page.getByRole("button", { name: "White copy" })).toBeVisible({ timeout: 30_000 });
 
