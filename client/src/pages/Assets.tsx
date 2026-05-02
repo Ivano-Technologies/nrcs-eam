@@ -1259,7 +1259,12 @@ export default function Assets() {
                         <td className="px-2 py-1">{row.branchCode?.trim() || EM_DASH}</td>
                         <td className="px-2 py-1">{row.itemCategoryCode?.trim() || EM_DASH}</td>
                         <td className="px-2 py-1">{row.assetNum ?? EM_DASH}</td>
-                        <td className="px-2 py-1 font-medium">{row.assetCode?.trim() || row.assetTag?.trim() || EM_DASH}</td>
+                        <td
+                          className="px-2 py-1 font-medium"
+                          data-testid={`asset-register-code-${row.id}`}
+                        >
+                          {row.assetCode?.trim() || row.assetTag?.trim() || EM_DASH}
+                        </td>
                         <td className="px-2 py-1">{row.serialNumber?.trim() || EM_DASH}</td>
                         <td className="px-2 py-1 text-right tabular-nums">{formatMoney(row.actualUnitValue != null ? Number(row.actualUnitValue) : unit)}</td>
                         <td className="px-2 py-1 text-right tabular-nums">{formatMoney(row.depreciatedValue != null ? Number(row.depreciatedValue) : dep)}</td>
