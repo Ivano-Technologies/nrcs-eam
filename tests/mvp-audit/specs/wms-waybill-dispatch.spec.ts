@@ -55,8 +55,21 @@ test("WMS waybill create -> multi-CTN dispatch -> print copies", async ({ page }
   await page.getByRole("button", { name: "Save as Draft" }).click();
   await expect(page.getByText("Waybill draft updated.")).toBeVisible({ timeout: 20_000 });
 
+  const dispatchRespPromise = page.waitForResponse(
+    (r) =>
+      r.request().method() === "POST" &&
+      (r.url().includes("inventoryV2.waybills.dispatch") || r.url().includes("waybills.dispatch")),
+    { timeout: 25_000 },
+  );
   await page.getByRole("button", { name: "Dispatch" }).click();
-  await expect(page.getByText("Waybill dispatched.")).toBeVisible({ timeout: 25_000 });
+  const dispatchResp = await dispatchRespPromise;
+  if (!dispatchResp.ok()) {
+    const body = await dispatchResp.text();
+    throw new Error(`waybills.dispatch failed: ${dispatchResp.status()} ${body.slice(0, 2000)}`);
+  }
+  await expect(
+    page.getByText(/waybill dispatched|dispatched successfully|dispatched\.?/i).first(),
+  ).toBeVisible({ timeout: 10_000 });
   // Success UI: print buttons render for dispatched waybills (toast can dismiss quickly).
   await expect(page.getByRole("button", { name: "White copy" })).toBeVisible({ timeout: 30_000 });
 
