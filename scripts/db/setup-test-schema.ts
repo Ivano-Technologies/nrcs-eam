@@ -43,8 +43,24 @@ async function syncPublicReferenceIntoTest(
     await sql.unsafe(`DELETE FROM ${s}.${quoteIdent("inventory_catalogue")}`);
     await sql.unsafe(`DELETE FROM ${s}.${quoteIdent("donors")}`);
 
+    // Deduplicate by `code` so a dirty public catalogue (duplicate donor codes) cannot
+    // abort the whole sync and leave `test` without inventory rows for Playwright.
     await sql.unsafe(`
-      INSERT INTO ${s}.${quoteIdent("donors")} SELECT * FROM public.${quoteIdent("donors")};
+      INSERT INTO ${s}.${quoteIdent("donors")} (id, name, code, type, country, notes, created_at)
+      SELECT id, name, code, type, country, notes, created_at
+      FROM (
+        SELECT
+          id,
+          name,
+          code,
+          type,
+          country,
+          notes,
+          created_at,
+          ROW_NUMBER() OVER (PARTITION BY code ORDER BY id) AS rn
+        FROM public.${quoteIdent("donors")}
+      ) d
+      WHERE d.rn = 1;
     `);
     await sql.unsafe(`
       INSERT INTO ${s}.${quoteIdent("sites")} SELECT * FROM public.${quoteIdent("sites")}
