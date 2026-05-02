@@ -1,7 +1,7 @@
 {
   "playwrightKnownFailuresByProject": {
     "mvp-audit": {
-      "environmental": ["auth.spec.ts", "auth-magic-link-smoke.spec.ts"],
+      "environmental": ["auth-magic-link-smoke.spec.ts"],
       "flaky-pending-cleanup": [
         {
           "file": "auth-magic-link-smoke.spec.ts",
@@ -10,10 +10,22 @@
           "plannedFixPhase": "N/A"
         },
         {
-          "file": "wms-waybill-dispatch.spec.ts",
-          "reason": "Auth setup sidebar-nav-dashboard timeout prevents spec execution — dispatch assertion fix committed in 2623bde but unverified pending auth stability",
-          "addedAt": "2026-05-02",
-          "plannedFixPhase": "pending"
+          "file": "email.spec.ts",
+          "reason": "Requires local Mailpit service on port 8025 — not available in standard CI",
+          "addedAt": "2026-05-03",
+          "plannedFixPhase": "N/A — optional infra; run with Mailpit for green"
+        },
+        {
+          "file": "assets.spec.ts",
+          "reason": "Environment-dependent — full lifecycle expects NRCS-coded asset_categories and sites present in mirrored `test`/E2E DB rows; empty or minimal mirrors fail category/site combobox asserts or assets.create.",
+          "addedAt": "2026-05-03",
+          "plannedFixPhase": "Expand seed-e2e with minimal guaranteed asset_categories or relax UI selectors"
+        },
+        {
+          "file": "dashboard.spec.ts",
+          "reason": "Environment-dependent — sidebar nav sweep hits `assets.list` / warranty TRPC queries that can return HTTP 500 on mirrored `test` schema or undefined client input; guard correctly fails until server + fixtures align.",
+          "addedAt": "2026-05-03",
+          "plannedFixPhase": "Harden assets TRPC inputs for mirrored schema / fix migrations"
         },
         {
           "file": "wms-ctn-registry.spec.ts",

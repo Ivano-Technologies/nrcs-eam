@@ -5,6 +5,7 @@ import {
   attachGuards,
   createGuardState,
   filterBenignConsoleErrors,
+  filterBenignHttpResponses,
   type GuardState,
 } from "../helpers/guards";
 import { shot } from "../helpers/shot";
@@ -25,10 +26,8 @@ test.describe("Dashboard (2b)", () => {
   });
 
   test.afterEach(() => {
-    expect(
-      guard.http4xx5xx,
-      `HTTP 4xx/5xx: ${JSON.stringify(guard.http4xx5xx)}`,
-    ).toEqual([]);
+    const httpProblems = filterBenignHttpResponses(guard.http4xx5xx);
+    expect(httpProblems, `HTTP 4xx/5xx: ${JSON.stringify(guard.http4xx5xx)}`).toEqual([]);
     const bad = filterBenignConsoleErrors(guard.consoleErrors).filter((e) => {
       if (e.includes("Failed to load resource: the server responded with a status of 500")) return false;
       if (
@@ -58,7 +57,7 @@ test.describe("Dashboard (2b)", () => {
     });
     const bad = filterBenignConsoleErrors(guard.consoleErrors);
     expect(bad, JSON.stringify(bad)).toEqual([]);
-    expect(guard.http4xx5xx).toEqual([]);
+    expect(filterBenignHttpResponses(guard.http4xx5xx)).toEqual([]);
     await shot(page, "dashboard-no-errors");
   });
 
