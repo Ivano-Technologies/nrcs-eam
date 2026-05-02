@@ -13,12 +13,12 @@ test.describe("Email — Mailpit (2f)", () => {
     await request.delete(`${MAILPIT}/messages`);
   });
 
-  test("magic-link request sends email", async ({ page, request }) => {
+  test("password reset request sends email (Supabase)", async ({ page, request }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto("/login");
     await page.getByTestId("login-email-input").fill(testUser.email);
-    await page.getByTestId("login-send-magic-link").click();
-    await expect(page.getByText(/Magic link sent to your email/i)).toBeVisible({
+    await page.getByTestId("login-forgot-password").click();
+    await expect(page.getByText(/password reset link has been sent/i)).toBeVisible({
       timeout: 25_000,
     });
 
@@ -28,12 +28,12 @@ test.describe("Email — Mailpit (2f)", () => {
     expect(messages.length).toBeGreaterThan(0);
     const msg = messages[0];
     expect(msg.To[0].Address.toLowerCase()).toContain(testUser.email.split("@")[0].toLowerCase());
-    expect(msg.Subject).toMatch(/sign in|nrcs/i);
+    expect(msg.Subject).toMatch(/reset|password|nrcs|supabase/i);
     expect(msg.Snippet || msg.Text || "").not.toBe("");
 
     await page.goto("http://127.0.0.1:8025");
     await page.waitForLoadState("networkidle");
-    await shot(page, "email-magic-link");
+    await shot(page, "email-password-reset");
   });
 
   test("admin bulk email notification", async ({ page, request }) => {

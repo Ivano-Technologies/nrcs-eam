@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 
-const BASE = "https://nrcseam.techivano.com";
+/** Default to local dev server (check:full + mvp-audit). Set `E2E_PROXY_DEBUG_BASE` to hit a deployed host. */
+const BASE = process.env.E2E_PROXY_DEBUG_BASE?.trim() || "http://127.0.0.1:3000";
 const EMAIL = process.env.E2E_USER_EMAIL ?? "playwright@nrcseam.techivano.com";
 
 test.describe.configure({ mode: "serial" });

@@ -11,6 +11,7 @@ import { createServer } from "http";
 import net from "net";
 import { createApiApp } from "./apiApp";
 import { serveStatic, setupVite } from "./vite";
+import { getPostHogClient, shutdownPostHog } from "../posthog";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -134,7 +135,17 @@ async function main() {
     }
   }
   logStartupSummary();
+  getPostHogClient();
   await startServer();
+
+  process.on("SIGTERM", async () => {
+    await shutdownPostHog();
+    process.exit(0);
+  });
+  process.on("SIGINT", async () => {
+    await shutdownPostHog();
+    process.exit(0);
+  });
 }
 
 main().catch(console.error);

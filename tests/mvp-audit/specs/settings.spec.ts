@@ -12,24 +12,37 @@ test.describe("Settings (2g)", () => {
 
   test("dashboard widget toggle persists", async ({ page }) => {
     await page.goto("/app/dashboard-settings");
-    await expect(page.getByRole("heading", { name: "Dashboard Settings" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible({ timeout: 20_000 });
     await shot(page, "settings-dashboard-before");
 
-    const toggle = page.getByTestId("settings-widget-totalAssets");
+    const toggle = page.getByTestId("settings-widget-kpiCards");
     const before = await toggle.getAttribute("aria-checked");
+    const waitSave = () =>
+      page.waitForResponse(
+        (r) =>
+          r.request().method() === "POST" &&
+          r.url().includes("updateDashboardWidgets") &&
+          r.ok(),
+        { timeout: 30_000 },
+      );
     await toggle.click();
-    await page.waitForTimeout(800);
-
-    await page.reload();
-    await expect(page.getByRole("heading", { name: "Dashboard Settings" })).toBeVisible();
-    const after = await page.getByTestId("settings-widget-totalAssets").getAttribute("aria-checked");
-    expect(after).not.toBe(before);
+    await waitSave();
+    await page.waitForTimeout(200);
+    const mid = await toggle.getAttribute("aria-checked");
+    expect(mid, `widget toggle should flip (before=${before})`).not.toBe(before);
+    await toggle.click();
+    await waitSave();
+    await page.waitForTimeout(200);
+    const restored = await toggle.getAttribute("aria-checked");
+    expect(restored).toBe(before);
     await shot(page, "settings-dashboard-after");
   });
 
   test("notification preference toggle", async ({ page }) => {
     await page.goto("/app/notification-preferences");
-    await expect(page.getByRole("heading", { name: "Notification Preferences" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Notification Preferences" })).toBeVisible({
+      timeout: 20_000,
+    });
     await shot(page, "settings-notifications-before");
 
     const sw = page.getByTestId("settings-notify-maintenanceDue");

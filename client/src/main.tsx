@@ -10,7 +10,9 @@ import { registerSW } from "virtual:pwa-register";
 import App from "./App";
 import { getLoginUrl } from "./const";
 import "./index.css";
+import { initPostHog } from "./lib/posthog";
 
+initPostHog();
 initAnalytics();
 
 const queryClient = new QueryClient();

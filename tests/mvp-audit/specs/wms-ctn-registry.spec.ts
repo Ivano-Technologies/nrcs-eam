@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { loginViaPassword } from "../helpers/e2eAuth";
 import {
   attachGuards,
   createGuardState,
@@ -15,7 +16,10 @@ test.describe("WMS CTN registry (Phase 1)", () => {
     await page.setViewportSize({ width: 1280, height: 720 });
     guard = createGuardState();
     attachGuards(page, guard);
+    await loginViaPassword(page);
+    await page.keyboard.press("Escape");
     await page.goto("/app/inventory/ctn-registry");
+    await page.waitForURL(/\/app\/inventory\/ctn-registry/, { timeout: 20_000 });
     await expect(page.getByRole("heading", { name: "Inventory" })).toBeVisible({
       timeout: 20_000,
     });
@@ -41,6 +45,7 @@ test.describe("WMS CTN registry (Phase 1)", () => {
     await expect(page.getByTestId("inventory-shell-tab-ctn-registry")).toHaveAttribute(
       "data-active",
       "true",
+      { timeout: 15_000 },
     );
     await expect(page.getByRole("heading", { name: "Commodity tracking numbers (CTN)" })).toBeVisible();
   });

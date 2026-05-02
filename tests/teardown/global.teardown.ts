@@ -25,20 +25,31 @@ export default async function globalTeardown(): Promise<void> {
     ...(ssl !== undefined ? { ssl } : {}),
   });
 
+  // Waybill E2E posts `source_type=waybill` ledger rows. Removing only those restores CTN balances for the
+  // next run; truncating all `stock_movements` wipes GRN opening balances and leaves CTNs at net 0.
   try {
+    await sql.unsafe(`DELETE FROM ${schema}.stock_movements WHERE source_type = 'waybill'`);
+    console.log(`[teardown] deleted ${schema}.stock_movements where source_type=waybill`);
+  } catch {
+    // Mirror schema may use different names in some environments.
+  }
+
+  try {
+    // Do not TRUNCATE `users`: CASCADE would also truncate `stock_movements` (FK from created_by),
+    // wiping GRN opening balances and leaving WMS CTNs at net 0 for the next E2E run.
     await sql.unsafe(`
       TRUNCATE TABLE ${schema}.movements, ${schema}.grns, ${schema}.waybills,
-        ${schema}.requisitions, ${schema}.assets, ${schema}.users CASCADE;
+        ${schema}.requisitions, ${schema}.assets CASCADE;
     `);
   } catch {
-    // Fallback to current table names in this schema.
+    // Fallback to current table names in this schema (do not truncate all stock_movements — see above).
     await sql.unsafe(`
-      TRUNCATE TABLE ${schema}.stock_movements, ${schema}.goods_received_notes, ${schema}.waybills,
-        ${schema}.requisitions, ${schema}.assets, ${schema}.users CASCADE;
+      TRUNCATE TABLE ${schema}.goods_received_notes, ${schema}.waybills,
+        ${schema}.requisitions, ${schema}.assets CASCADE;
     `);
   }
 
-  for (const table of ["users", "assets", "requisitions", "waybills", "goods_received_notes", "stock_movements"]) {
+  for (const table of ["assets", "requisitions", "waybills", "goods_received_notes"]) {
     console.log(`[teardown] truncated ${schema}.${table}`);
   }
 

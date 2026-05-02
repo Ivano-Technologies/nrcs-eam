@@ -12,12 +12,65 @@
  * This script no longer writes legacy magic-link tables; auth is Supabase session-based.
  */
 import "dotenv/config";
-import { eq, sql } from "drizzle-orm";
+import { eq, ilike, sql } from "drizzle-orm";
 import { createClient } from "@supabase/supabase-js";
-import { donors, sites, users } from "../../drizzle/schema";
+import { commodityTrackingNumbers, donors, sites, stockMovements, users } from "../../drizzle/schema";
 import { WMS_DONOR_SEED } from "../../shared/wmsDonors";
 import { getDb } from "../../server/db";
+import { ensureStockCardForCtnAtLocation, insertGrnReceiptMovement } from "../../server/wms/grnStockLedger";
 import { applySupabaseTestSchema, getPlaywrightTestSchema } from "../../tests/helpers/testSchema";
+
+type Db = NonNullable<Awaited<ReturnType<typeof getDb>>>;
+
+/**
+ * Global Playwright teardown used to TRUNCATE `stock_movements` (now fixed), which could leave
+ * `E2E-CTN%` rows at net 0. Top up GRN ledger rows so waybill dispatch E2E stays deterministic.
+ */
+async function topUpE2eWmsCtnStockForPlaywright(db: Db) {
+  // Waybill dispatch validates stock per (CTN × warehouse). The UI balance is global across locations,
+  // so topping up only the first warehouse leaves other warehouses at 0 while the test picks
+  // "first" warehouse in the dropdown (name order) — dispatch then fails with no status change.
+  const warehouses = await db
+    .select({ id: sites.id })
+    .from(sites)
+    .where(eq(sites.facilityType, "warehouse"));
+  if (warehouses.length === 0) return;
+
+  const [actor] = await db.select({ id: users.id }).from(users).where(eq(users.email, E2E_EMAIL)).limit(1);
+  const createdBy = actor?.id ?? null;
+
+  const ctns = await db
+    .select({ id: commodityTrackingNumbers.id })
+    .from(commodityTrackingNumbers)
+    .where(ilike(commodityTrackingNumbers.ctnCode, "E2E-CTN%"))
+    .limit(8);
+
+  const TARGET = 30;
+  for (const { id: warehouseId } of warehouses) {
+    for (const { id: ctnId } of ctns) {
+      const stockCardId = await ensureStockCardForCtnAtLocation(db, { ctnId, locationId: warehouseId });
+      const [agg] = await db
+        .select({
+          net: sql<number>`coalesce(sum(${stockMovements.quantityIn} - ${stockMovements.quantityOut}), 0)`.mapWith(
+            Number,
+          ),
+        })
+        .from(stockMovements)
+        .where(eq(stockMovements.stockCardId, stockCardId));
+      const net = Number(agg?.net ?? 0);
+      const need = Math.max(0, TARGET - net);
+      if (need <= 0) continue;
+      await insertGrnReceiptMovement(db, {
+        stockCardId,
+        quantityIn: need,
+        documentNumber: "E2E-SEED-REBALANCE",
+        fromTo: "E2E seed top-up",
+        remarks: "seed-e2e: restore CTN stock for Playwright after ledger teardown",
+        createdBy,
+      });
+    }
+  }
+}
 
 export const E2E_OPENID = "PLW_E2E_ADMIN_OPENID";
 export const E2E_EMAIL =
@@ -72,10 +125,15 @@ async function withSeedRetry<T>(operation: () => Promise<T>): Promise<T> {
 }
 
 export async function runSeedE2e() {
+  // `getDb()` bakes `search_path` into each pooled connection from this env. A post-connect
+  // `SET search_path` is not reliable with `max > 1`, and `.env.e2e` often omits the key.
+  const testSchema = getPlaywrightTestSchema();
+  if (!process.env.SUPABASE_TEST_SCHEMA?.trim()) {
+    process.env.SUPABASE_TEST_SCHEMA = testSchema;
+  }
+
   const db = await getDb();
   if (!db) throw new Error("DB unavailable");
-  const testSchema = getPlaywrightTestSchema();
-  await db.execute(sql.raw(`SET search_path TO "${testSchema}";`));
   const existingSite = await db.select({ id: sites.id }).from(sites).limit(1);
   const seedSiteId = existingSite[0]?.id ?? null;
 
@@ -197,6 +255,12 @@ export async function runSeedE2e() {
       loginMethod: "supabase",
     })
     .where(eq(users.email, E2E_EMAIL));
+
+  try {
+    await topUpE2eWmsCtnStockForPlaywright(db);
+  } catch (error) {
+    console.warn("[seed-e2e] WMS CTN stock top-up skipped:", error instanceof Error ? error.message : error);
+  }
 }
 
 runSeedE2e()
