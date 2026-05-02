@@ -272,15 +272,12 @@ html.dark {
     }
   }
 
-  /* Frozen table container */
   .frozen-table-wrap {
     overflow: auto;
     max-height: calc(100vh - 320px);
     width: 100%;
     position: relative;
     display: block;
-    --col1-width: 60px;
-    --col2-width: 60px;
   }
 
   .frozen-table-wrap > table {
@@ -289,98 +286,27 @@ html.dark {
     border-collapse: collapse;
   }
 
-  /* When using shadcn Table component inside frozen-table-wrap, its internal
-     table-container sets overflow-x-auto, which creates an ancestor overflow
-     context and breaks sticky header behavior on vertical scroll. */
-  .frozen-table-wrap [data-slot="table-container"] {
-    overflow: visible !important;
-  }
-
-  .frozen-table-wrap [data-slot="table-container"] > table {
-    display: table;
-    width: 100%;
-    border-collapse: collapse;
-  }
-
-  /* Frozen header row */
+  /* Freeze header row only */
   .frozen-table-wrap table thead th {
     position: sticky !important;
     top: 0 !important;
-    z-index: 30;
-    background-color: var(--color-background-primary);
-  }
-
-  /* Frozen first 3 columns - body cells */
-  .frozen-table-wrap table tbody td:nth-child(1),
-  .frozen-table-wrap table tbody td:nth-child(2),
-  .frozen-table-wrap table tbody td:nth-child(3) {
-    position: sticky;
-    background-color: var(--color-background-primary);
-    z-index: 10;
-  }
-
-  /* Frozen first 3 columns - header cells (corner intersection) */
-  .frozen-table-wrap table thead th:nth-child(1),
-  .frozen-table-wrap table thead th:nth-child(2),
-  .frozen-table-wrap table thead th:nth-child(3) {
-    z-index: 40;
-  }
-
-  /* Column left offsets */
-  .frozen-table-wrap table th:nth-child(1),
-  .frozen-table-wrap table td:nth-child(1) { left: 0; }
-
-  .frozen-table-wrap table th:nth-child(2),
-  .frozen-table-wrap table td:nth-child(2) { left: var(--col1-width); }
-
-  .frozen-table-wrap table th:nth-child(3),
-  .frozen-table-wrap table td:nth-child(3) {
-    left: calc(var(--col1-width) + var(--col2-width));
-    box-shadow: 2px 0 4px rgba(0,0,0,0.08);
-  }
-
-  /* Sticky cell background hardening to prevent bleed-through */
-  .frozen-table-wrap table tbody tr td:nth-child(1),
-  .frozen-table-wrap table tbody tr td:nth-child(2),
-  .frozen-table-wrap table tbody tr td:nth-child(3) {
+    z-index: 20;
     background-color: var(--color-background-primary) !important;
   }
 
-  .frozen-table-wrap table tbody tr:nth-child(even) td:nth-child(1),
-  .frozen-table-wrap table tbody tr:nth-child(even) td:nth-child(2),
-  .frozen-table-wrap table tbody tr:nth-child(even) td:nth-child(3) {
-    background-color: var(--color-background-secondary) !important;
-  }
-
+  /* Asset register double header — second row */
   .frozen-table-double-header thead tr:nth-child(1) th {
-    position: sticky;
-    top: 0;
-    z-index: 30;
-    background-color: var(--color-background-primary);
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 20;
+    background-color: var(--color-background-primary) !important;
   }
 
   .frozen-table-double-header thead tr:nth-child(2) th {
-    position: sticky;
-    top: 40px;
-    z-index: 30;
-    background-color: var(--color-background-primary);
-  }
-
-  .frozen-table-double-header thead tr:nth-child(1) th:nth-child(1),
-  .frozen-table-double-header thead tr:nth-child(1) th:nth-child(2),
-  .frozen-table-double-header thead tr:nth-child(1) th:nth-child(3),
-  .frozen-table-double-header thead tr:nth-child(2) th:nth-child(1),
-  .frozen-table-double-header thead tr:nth-child(2) th:nth-child(2),
-  .frozen-table-double-header thead tr:nth-child(2) th:nth-child(3) {
-    z-index: 40;
-  }
-
-  /* Dark mode */
-  .dark .frozen-table-wrap table thead th,
-  .dark .frozen-table-wrap table tbody td:nth-child(1),
-  .dark .frozen-table-wrap table tbody td:nth-child(2),
-  .dark .frozen-table-wrap table tbody td:nth-child(3) {
-    background-color: var(--color-background-primary);
+    position: sticky !important;
+    top: 40px !important;
+    z-index: 20;
+    background-color: var(--color-background-primary) !important;
   }
 }
 
