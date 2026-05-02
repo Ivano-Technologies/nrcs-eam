@@ -33,3 +33,17 @@ export function filterBenignConsoleErrors(errors: string[]): string[] {
     return true;
   });
 }
+
+/**
+ * Drops dev-only noise from `attachGuards` HTTP lists (still fails on TRPC/API 5xx etc.).
+ */
+export function filterBenignHttpResponses(entries: string[]): string[] {
+  return entries.filter((line) => {
+    if (/ 404 /.test(line) && /(?:favicon|apple-touch-icon|site\.webmanifest)(?:[\s?]|$)/i.test(line)) {
+      return false;
+    }
+    if (/ 404 /.test(line) && /\.(?:woff2?|ico|png|jpg|jpeg|gif|svg|webp)(\?|$|")/i.test(line)) return false;
+    if (/ 404 /.test(line) && /\/_next\/(?:static|webpack|image)/i.test(line)) return false;
+    return true;
+  });
+}

@@ -12,7 +12,7 @@
  * This script no longer writes legacy magic-link tables; auth is Supabase session-based.
  */
 import "dotenv/config";
-import { eq, ilike, sql } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import { createClient } from "@supabase/supabase-js";
 import { commodityTrackingNumbers, donors, sites, stockMovements, users } from "../../drizzle/schema";
 import { WMS_DONOR_SEED } from "../../shared/wmsDonors";
@@ -23,8 +23,8 @@ import { applySupabaseTestSchema, getPlaywrightTestSchema } from "../../tests/he
 type Db = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 
 /**
- * Global Playwright teardown used to TRUNCATE `stock_movements` (now fixed), which could leave
- * `E2E-CTN%` rows at net 0. Top up GRN ledger rows so waybill dispatch E2E stays deterministic.
+ * Global Playwright teardown deletes waybill ledger rows without restoring every CTN variant.
+ * Top up GRN movements for each warehouse × CTN (first chunk of rows) so waybill picks any UI CTNs.
  */
 async function topUpE2eWmsCtnStockForPlaywright(db: Db) {
   // Waybill dispatch validates stock per (CTN × warehouse). The UI balance is global across locations,
@@ -42,8 +42,8 @@ async function topUpE2eWmsCtnStockForPlaywright(db: Db) {
   const ctns = await db
     .select({ id: commodityTrackingNumbers.id })
     .from(commodityTrackingNumbers)
-    .where(ilike(commodityTrackingNumbers.ctnCode, "E2E-CTN%"))
-    .limit(8);
+    .orderBy(asc(commodityTrackingNumbers.id))
+    .limit(48);
 
   const TARGET = 30;
   for (const { id: warehouseId } of warehouses) {

@@ -53,8 +53,15 @@ test.describe("Authentication (2a)", () => {
   });
 
   test("protected route redirects when logged out", async ({ page }) => {
-    await page.goto("/app/assets");
-    await page.waitForURL(/\/login/, { timeout: 15_000 });
+    // `beforeEach` skips `loginViaPassword`, but Playwright still applies project `storageState` — drop session explicitly.
+    await page.context().clearCookies();
+    await page.goto("/login", { waitUntil: "domcontentloaded", timeout: 60_000 });
+    await page.evaluate(() => {
+      localStorage.clear();
+      sessionStorage.clear();
+    });
+    await page.goto("/app/assets", { waitUntil: "domcontentloaded", timeout: 60_000 });
+    await expect(page.getByTestId("login-email-input")).toBeVisible({ timeout: 45_000 });
     await expect(page).toHaveURL(/\/login/);
   });
 });

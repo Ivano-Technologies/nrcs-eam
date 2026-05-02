@@ -26,15 +26,18 @@ test("WMS waybill create -> multi-CTN dispatch -> print copies", async ({ page }
   await page.getByRole("button", { name: "Add another CTN" }).first().click();
   // Draft create requires valid ctnSources (positive ctnId + qty) summing to line qty — empty rows fail Zod / TRPC.
   await page.getByTestId("waybill-line-0-ctn-0-trigger").click();
-  await page.getByRole("option").first().click();
+  const e2eCtnOpts = page.getByRole("option").filter({ hasText: /E2E-CTN/i });
+  await expect(e2eCtnOpts.first()).toBeVisible({ timeout: 15_000 });
+  await e2eCtnOpts.nth(0).click();
   // Per-CTN balances must cover each source qty (server dispatch validates stock per CTN, not only line total).
   await page.getByTestId("waybill-line-0-ctn-0-qty").fill("3");
   await page.getByTestId("waybill-line-0-ctn-1-trigger").click();
-  {
-    const opts = page.getByRole("option");
-    const n = await opts.count();
-    await opts.nth(n > 1 ? 1 : 0).click();
+  const e2eSecond = page.getByRole("option").filter({ hasText: /E2E-CTN/i });
+  const e2eCount = await e2eSecond.count();
+  if (e2eCount < 2) {
+    throw new Error(`Need ≥2 seeded E2E-CTN options for dual-source dispatch; saw ${e2eCount}`);
   }
+  await e2eSecond.nth(1).click();
   await page.getByTestId("waybill-line-0-ctn-1-qty").fill("2");
   await expect(page.getByText("Line total check: OK")).toBeVisible({ timeout: 15_000 });
 
