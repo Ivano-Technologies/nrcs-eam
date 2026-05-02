@@ -68,6 +68,7 @@ function runPlaywrightWithKnownFailures() {
 
   const env = {
     ...process.env,
+    CI: "true",
     PLAYWRIGHT_JSON_OUTPUT_NAME: path.basename(reportPath),
     PLAYWRIGHT_JSON_OUTPUT_DIR: repoRoot,
   };

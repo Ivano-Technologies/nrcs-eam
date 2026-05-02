@@ -14,10 +14,13 @@ export function SignatureBlock({
   title,
   value,
   onChange,
+  nameTestId,
 }: {
   title: string;
   value: SignatureValue;
   onChange: (next: SignatureValue) => void;
+  /** Stable hook for E2E (Name is otherwise ambiguous among several textboxes). */
+  nameTestId?: string;
 }) {
   return (
     <div className="space-y-2 rounded-md border p-3">
@@ -40,7 +43,12 @@ export function SignatureBlock({
         </div>
         <div className="space-y-1">
           <Label>Name</Label>
-          <Input className="h-9" value={value.name} onChange={(e) => onChange({ ...value, name: e.target.value })} />
+          <Input
+            className="h-9"
+            data-testid={nameTestId}
+            value={value.name}
+            onChange={(e) => onChange({ ...value, name: e.target.value })}
+          />
         </div>
         <div className="space-y-1">
           <Label>Date</Label>

@@ -1,16 +1,7 @@
 {
   "playwrightKnownFailuresByProject": {
     "mvp-audit": {
-      "environmental": [
-        "assets.spec.ts",
-        "auth.spec.ts",
-        "auth-magic-link-smoke.spec.ts",
-        "dashboard.spec.ts",
-        "email.spec.ts",
-        "pdf.spec.ts",
-        "proxy-debug.spec.ts",
-        "settings.spec.ts"
-      ],
+      "environmental": ["auth.spec.ts", "auth-magic-link-smoke.spec.ts"],
       "flaky-pending-cleanup": [
         {
           "file": "auth-magic-link-smoke.spec.ts",

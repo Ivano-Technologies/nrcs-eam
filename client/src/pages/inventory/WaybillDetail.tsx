@@ -129,17 +129,19 @@ export default function WaybillDetail() {
       transportedByName: wb.transportedByName ?? "",
       comments: wb.comments ?? "",
     });
+    // Avoid clobbering in-progress edits when a refetch briefly returns stale/null signature fields
+    // (e.g. right after save — dispatch calls saveDraft again and must not persist empty names).
     setLoadedBy((prev) => ({
       ...prev,
-      name: wb.loadedByName ?? "",
-      date: wb.loadedByDate ?? "",
-      functionTitle: wb.loadedByFunction ?? "",
+      name: wb.loadedByName?.trim() ? wb.loadedByName : prev.name,
+      date: wb.loadedByDate?.trim() ? wb.loadedByDate : prev.date,
+      functionTitle: wb.loadedByFunction?.trim() ? wb.loadedByFunction : prev.functionTitle,
     }));
     setTransportedBy((prev) => ({
       ...prev,
-      name: wb.transportedByName ?? "",
-      date: wb.transportedByDate ?? "",
-      functionTitle: wb.transportedByFunction ?? "",
+      name: wb.transportedByName?.trim() ? wb.transportedByName : prev.name,
+      date: wb.transportedByDate?.trim() ? wb.transportedByDate : prev.date,
+      functionTitle: wb.transportedByFunction?.trim() ? wb.transportedByFunction : prev.functionTitle,
     }));
     setLines(
       wb.lines.map((line) => ({
@@ -242,17 +244,24 @@ export default function WaybillDetail() {
         <CardContent className="space-y-4">
           <div className="grid gap-3 md:grid-cols-2">
             <div className="space-y-1">
-              <Label>WB number</Label>
-              <Input value={header.wbNumber} onChange={(e) => setHeader((p) => ({ ...p, wbNumber: e.target.value }))} />
+              <Label htmlFor="waybill-wb-number">WB number</Label>
+              <Input
+                id="waybill-wb-number"
+                data-testid="waybill-wb-number"
+                value={header.wbNumber}
+                onChange={(e) => setHeader((p) => ({ ...p, wbNumber: e.target.value }))}
+              />
             </div>
             <div className="space-y-1">
               <Label>Date</Label>
               <Input type="date" value={header.date} onChange={(e) => setHeader((p) => ({ ...p, date: e.target.value }))} />
             </div>
             <div className="space-y-1">
-              <Label>Source warehouse</Label>
+              <Label htmlFor="waybill-warehouse">Source warehouse</Label>
               <Select value={header.warehouseId || undefined} onValueChange={(v) => setHeader((p) => ({ ...p, warehouseId: v }))}>
-                <SelectTrigger className="h-9"><SelectValue placeholder="Select warehouse" /></SelectTrigger>
+                <SelectTrigger id="waybill-warehouse" className="h-9" data-testid="waybill-warehouse">
+                  <SelectValue placeholder="Select warehouse" />
+                </SelectTrigger>
                 <SelectContent>
                   {warehouses.map((warehouse) => (
                     <SelectItem key={warehouse.id} value={String(warehouse.id)}>
@@ -274,8 +283,13 @@ export default function WaybillDetail() {
               </Select>
             </div>
             <div className="space-y-1">
-              <Label>Destination name</Label>
-              <Input value={header.destinationBeneficiary} onChange={(e) => setHeader((p) => ({ ...p, destinationBeneficiary: e.target.value }))} />
+              <Label htmlFor="waybill-destination-name">Destination name</Label>
+              <Input
+                id="waybill-destination-name"
+                data-testid="waybill-destination-name"
+                value={header.destinationBeneficiary}
+                onChange={(e) => setHeader((p) => ({ ...p, destinationBeneficiary: e.target.value }))}
+              />
             </div>
             <div className="space-y-1">
               <Label>Destination location</Label>
@@ -337,7 +351,12 @@ export default function WaybillDetail() {
                           )
                         }
                       >
-                        <SelectTrigger className="h-9"><SelectValue placeholder="Select item" /></SelectTrigger>
+                        <SelectTrigger
+                          className="h-9"
+                          data-testid={lineIdx === 0 ? "waybill-line-0-item" : undefined}
+                        >
+                          <SelectValue placeholder="Select item" />
+                        </SelectTrigger>
                         <SelectContent>
                           {(catalogue ?? []).map((item) => (
                             <SelectItem key={item.id} value={String(item.id)}>
@@ -353,7 +372,13 @@ export default function WaybillDetail() {
                     </div>
                     <div className="space-y-1">
                       <Label>Total quantity</Label>
-                      <Input value={line.nbOfUnits} onChange={(e) => setLines((prev) => prev.map((row, idx) => (idx === lineIdx ? { ...row, nbOfUnits: e.target.value } : row)))} />
+                      <Input
+                        value={line.nbOfUnits}
+                        data-testid={lineIdx === 0 ? "waybill-line-0-quantity" : undefined}
+                        onChange={(e) =>
+                          setLines((prev) => prev.map((row, idx) => (idx === lineIdx ? { ...row, nbOfUnits: e.target.value } : row)))
+                        }
+                      />
                     </div>
                     <div className="space-y-1">
                       <Label>Unit</Label>
@@ -383,7 +408,12 @@ export default function WaybillDetail() {
                               )
                             }
                           >
-                            <SelectTrigger className="h-9 md:col-span-2"><SelectValue placeholder="CTN" /></SelectTrigger>
+                            <SelectTrigger
+                              className="h-9 md:col-span-2"
+                              data-testid={`waybill-line-${lineIdx}-ctn-${sourceIdx}-trigger`}
+                            >
+                              <SelectValue placeholder="CTN" />
+                            </SelectTrigger>
                             <SelectContent>
                               {ctnOptions
                                 .filter((entry) => !line.itemId || String(entry.itemId) === line.itemId)
@@ -397,6 +427,7 @@ export default function WaybillDetail() {
                           <Input
                             className="h-9"
                             placeholder="Qty"
+                            data-testid={`waybill-line-${lineIdx}-ctn-${sourceIdx}-qty`}
                             value={source.quantity}
                             onChange={(e) =>
                               setLines((prev) =>
@@ -484,8 +515,8 @@ export default function WaybillDetail() {
           ) : null}
 
           <div className="grid gap-3 md:grid-cols-2">
-            <SignatureBlock title="Loaded by" value={loadedBy} onChange={setLoadedBy} />
-            <SignatureBlock title="Transported by" value={transportedBy} onChange={setTransportedBy} />
+            <SignatureBlock title="Loaded by" value={loadedBy} onChange={setLoadedBy} nameTestId="waybill-signature-loaded-name" />
+            <SignatureBlock title="Transported by" value={transportedBy} onChange={setTransportedBy} nameTestId="waybill-signature-transported-name" />
           </div>
           <div className="space-y-1">
             <Label>Comments</Label>

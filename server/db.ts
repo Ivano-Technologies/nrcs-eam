@@ -45,11 +45,21 @@ export async function getDb() {
     try {
       const url = process.env.DATABASE_URL;
       const ssl = getPostgresJsSslOption();
+      const e2eSchema = process.env.SUPABASE_TEST_SCHEMA?.trim();
       const options: Parameters<typeof postgres>[1] = {
         max: 10,
         idle_timeout: 20,
         connect_timeout: 30,
         prepare: false,
+        // Playwright seeds and tears down the mirrored schema (default `test`). Without this, the API
+        // reads `public` while seed-e2e writes CTN ledger rows to `test`, so WMS balances stay at 0.
+        ...(e2eSchema
+          ? {
+              connection: {
+                search_path: `${e2eSchema},public`,
+              },
+            }
+          : {}),
       };
       if (ssl !== undefined && ssl !== false) {
         options.ssl = ssl;

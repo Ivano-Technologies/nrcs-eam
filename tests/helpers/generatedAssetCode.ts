@@ -13,7 +13,8 @@ export async function readGeneratedAssetCodeFromRegister(
   await page.getByTestId("asset-search-input").fill(itemDescription);
   const row = page.locator(`[data-testid^="asset-row-"]`).filter({ hasText: itemDescription }).first();
   await expect(row).toBeVisible({ timeout: 30_000 });
-  const code = (await row.locator("td").nth(8).innerText()).trim();
-  expect(code).toMatch(GENERATED_ASSET_CODE_RE);
+  const codeCell = row.locator("td").nth(8);
+  await expect(codeCell).toHaveText(GENERATED_ASSET_CODE_RE, { timeout: 60_000 });
+  const code = (await codeCell.innerText()).trim();
   return code;
 }

@@ -84,7 +84,8 @@ export default defineConfig({
     : {
         command: "pnpm run dev:e2e",
         url: "http://127.0.0.1:3000/health",
-        reuseExistingServer: true,
+        // When true, a pre-existing `dev:e2e` process keeps running old server code (e.g. missing DB search_path for `test` schema).
+        reuseExistingServer: !process.env.CI,
         timeout: 120_000,
         env: {
           ...process.env,
