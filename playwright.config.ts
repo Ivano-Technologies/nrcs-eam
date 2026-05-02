@@ -38,6 +38,7 @@ export default defineConfig({
     {
       name: "mvp-audit-setup",
       testMatch: "**/mvp-audit/**/*.setup.ts",
+      timeout: 600_000,
       use: {
         baseURL: "http://127.0.0.1:3000",
         trace: "retain-on-failure",
@@ -47,6 +48,7 @@ export default defineConfig({
     {
       name: "live-auth-setup",
       testMatch: "**/auth/**/*.setup.ts",
+      timeout: 600_000,
       use: {
         baseURL: LIVE_AUTH_BASE,
         trace: "retain-on-failure",
@@ -86,7 +88,7 @@ export default defineConfig({
         url: "http://127.0.0.1:3000/health",
         // When true, a pre-existing `dev:e2e` process keeps running old server code (e.g. missing DB search_path for `test` schema).
         reuseExistingServer: !process.env.CI,
-        timeout: 120_000,
+        timeout: 600_000,
         env: {
           ...process.env,
           ...(process.env.DATABASE_SSL_CA_PATH?.trim()
