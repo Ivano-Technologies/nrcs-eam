@@ -63,8 +63,8 @@ async function seed() {
   }
 
   const categoryData = [
-    { name: "Vehicles", description: "Cars, trucks, ambulances, and other vehicles" },
-    { name: "Buildings", description: "Office buildings, warehouses, and facilities" },
+    { name: "Vehicle", description: "Cars, trucks, ambulances, and other vehicles" },
+    { name: "Building", description: "Office buildings, warehouses, and facilities" },
     { name: "Machinery", description: "Generators, pumps, and industrial equipment" },
     { name: "Medical Equipment", description: "Medical devices and healthcare equipment" },
     { name: "IT Equipment", description: "Computers, servers, and networking devices" },

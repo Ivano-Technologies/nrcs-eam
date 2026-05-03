@@ -1,3 +1,8 @@
+/**
+ * NRCS two-letter codes by register item category name (`assetCategories.name` / `item_category`).
+ * Do not add duplicate plural/wrong labels here: `Buildings`, `Vehicles`, `Communications Equipment`
+ * (use `Building`, `Vehicle`, `Communication Equipment` in data and seeds instead).
+ */
 export const ITEM_CATEGORY_CODE_MAP: Record<string, string> = {
   Computer: "CO",
   "Furniture & Fixtures": "FF",

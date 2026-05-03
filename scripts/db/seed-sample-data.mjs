@@ -22,7 +22,7 @@ console.log("🌱 Starting sample data population...\n");
 
 const assetCategoryData = [
   { name: "Medical Equipment", description: "Medical and healthcare equipment" },
-  { name: "Vehicles", description: "Transportation vehicles and ambulances" },
+  { name: "Vehicle", description: "Transportation vehicles and ambulances" },
   { name: "IT Equipment", description: "Computers, servers, and IT infrastructure" },
   { name: "Generators", description: "Power generation equipment" },
   { name: "Office Equipment", description: "Office furniture and equipment" },
@@ -82,10 +82,10 @@ for (const v of vendors) {
   console.log(`✓ Created vendor: ${v.name}`);
 }
 
-const assetCategoryNames = ["Medical Equipment", "Vehicles", "IT Equipment", "Generators", "Office Equipment", "Communication Equipment"];
+const assetCategoryNames = ["Medical Equipment", "Vehicle", "IT Equipment", "Generators", "Office Equipment", "Communication Equipment"];
 const assetTypes = {
   "Medical Equipment": ["Ambulance Stretcher", "First Aid Kit", "Medical Refrigerator", "Blood Pressure Monitor", "Oxygen Concentrator"],
-  Vehicles: ["Ambulance", "Pickup Truck", "SUV", "Van", "Motorcycle"],
+  Vehicle: ["Ambulance", "Pickup Truck", "SUV", "Van", "Motorcycle"],
   "IT Equipment": ["Desktop Computer", "Laptop", "Printer", "Server", "Network Router"],
   Generators: ["5KVA Generator", "10KVA Generator", "15KVA Generator", "20KVA Generator"],
   "Office Equipment": ["Office Desk", "Filing Cabinet", "Conference Table", "Air Conditioner", "Projector"],

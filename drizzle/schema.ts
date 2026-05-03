@@ -257,7 +257,7 @@ export const sites = pgTable("sites", {
 });
 
 /**
- * Asset Categories (e.g., Machinery, Buildings, Vehicles, Equipment)
+ * Asset Categories (e.g., Machinery, Building, Vehicle, Equipment)
  */
 export const assetCategories = pgTable("assetCategories", {
   id: serial("id").primaryKey(),
