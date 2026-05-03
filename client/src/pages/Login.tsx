@@ -17,13 +17,15 @@ import { appPath } from "@/lib/routes";
 
 export default function Login() {
   const [, setLocation] = useLocation();
+  const utils = trpc.useUtils();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [resetMessage, setResetMessage] = useState<string | null>(null);
 
   const loginMutation = trpc.auth.loginWithPassword.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
+      await utils.auth.me.refetch();
       setLocation(appPath("/"));
     },
     onError: (error: { message?: string }) => {

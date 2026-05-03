@@ -46,16 +46,22 @@ export function useAuth(options?: UseAuthOptions) {
       "manus-runtime-user-info",
       JSON.stringify(meQuery.data)
     );
+    /** After login, `me` can be cached `null` while refetching; `isLoading` stays false in TanStack Query v5. */
+    const loading =
+      meQuery.isPending ||
+      logoutMutation.isPending ||
+      (meQuery.fetchStatus === "fetching" && meQuery.data == null);
     return {
       user: meQuery.data ?? null,
-      loading: meQuery.isLoading || logoutMutation.isPending,
+      loading,
       error: meQuery.error ?? logoutMutation.error ?? null,
       isAuthenticated: Boolean(meQuery.data),
     };
   }, [
     meQuery.data,
     meQuery.error,
-    meQuery.isLoading,
+    meQuery.isPending,
+    meQuery.fetchStatus,
     logoutMutation.error,
     logoutMutation.isPending,
   ]);
