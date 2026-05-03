@@ -58,7 +58,7 @@ function assetsSvg(width, height) {
   <text x="1020" y="168" fill="#E2E8F0" font-family="Arial, sans-serif" font-size="16">Facility</text>
 
   <g fill="#0F172A" font-family="Arial, sans-serif" font-size="15">
-    <text x="66" y="222">1</text><text x="144" y="222">AST-00123</text><text x="310" y="222">Toyota Hilux Utility Vehicle</text><text x="670" y="222">Vehicles</text><text x="860" y="222">Operational</text><text x="1020" y="222">Abuja Warehouse</text>
+    <text x="66" y="222">1</text><text x="144" y="222">AST-00123</text><text x="310" y="222">Toyota Hilux Utility Vehicle</text><text x="670" y="222">Vehicle</text><text x="860" y="222">Operational</text><text x="1020" y="222">Abuja Warehouse</text>
     <text x="66" y="272">2</text><text x="144" y="272">AST-00124</text><text x="310" y="272">Generator 55kVA</text><text x="670" y="272">Power</text><text x="860" y="272">Maintenance</text><text x="1020" y="272">Lagos Depot</text>
     <text x="66" y="322">3</text><text x="144" y="322">AST-00125</text><text x="310" y="322">Cold Chain Refrigerator</text><text x="670" y="322">Medical</text><text x="860" y="322">Operational</text><text x="1020" y="322">Kano Branch</text>
     <text x="66" y="372">4</text><text x="144" y="372">AST-00126</text><text x="310" y="372">Mobile Water Tank</text><text x="670" y="372">Relief</text><text x="860" y="372">Operational</text><text x="1020" y="372">Maiduguri Hub</text>

@@ -17,7 +17,7 @@ const ASSET_CATEGORY_NAMES = [
   "Land & Building",
   "Medical Equipment",
   "Office Equipment",
-  "Communications Equipment",
+  "Communication Equipment",
   "Computer Equipment",
   "IT Equipment",
   "Other Equipment",
