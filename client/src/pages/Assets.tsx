@@ -51,7 +51,19 @@ import {
   METHOD_OF_ACQUISITION_OPTIONS,
   SUB_ITEM_CATEGORIES,
   YEAR_ACQUIRED_OPTIONS,
+  canonicalItemCategoryForRegisterLabel,
+  registerItemCategoryOptionsForItemType,
+  registerLabelHintForCanonical,
 } from "@/lib/assetRegisterOptions";
+
+function categoryIdForCanonicalName(
+  categories: { id: number; name: string }[] | undefined,
+  canonical: string | null
+): string {
+  if (!canonical || !categories?.length) return "";
+  const row = categories.find((c) => c.name === canonical);
+  return row ? String(row.id) : "";
+}
 
 const REGISTER_STATUS_FILTER = [
   { value: "all", label: "All statuses" },
@@ -449,6 +461,7 @@ export default function Assets() {
       name: "",
       description: "",
       categoryId: "",
+      registerItemCategory: "",
       siteId: "",
       itemType: "asset",
       registerItemType: "Asset",
@@ -488,6 +501,7 @@ export default function Assets() {
     name: "",
     description: "",
     categoryId: "",
+    registerItemCategory: "",
     siteId: "",
     itemType: "asset" as "asset" | "inventory",
     registerItemType: "Asset" as "Asset" | "Inventory",
@@ -521,14 +535,23 @@ export default function Assets() {
     remarksRegister: "",
   });
 
-  const selectedCategoryName =
-    categories?.find((cat) => cat.id.toString() === newAsset.categoryId)?.name ?? "";
-  const selectedCategoryCode = ITEM_CATEGORY_CODE_MAP[selectedCategoryName] ?? "";
+  const canonicalForNewAsset =
+    canonicalItemCategoryForRegisterLabel(newAsset.registerItemCategory, newAsset.itemType) ?? "";
+  const selectedCategoryCode = ITEM_CATEGORY_CODE_MAP[canonicalForNewAsset] ?? "";
+
+  useEffect(() => {
+    if (!categories?.length || !newAsset.registerItemCategory.trim()) return;
+    const canon = canonicalItemCategoryForRegisterLabel(newAsset.registerItemCategory, newAsset.itemType);
+    const id = categoryIdForCanonicalName(categories, canon);
+    if (id && newAsset.categoryId !== id) {
+      setNewAsset((p) => ({ ...p, categoryId: id }));
+    }
+  }, [categories, newAsset.registerItemCategory, newAsset.itemType]);
 
   const computedCreateDepreciation = useMemo(() => {
     const actual = Number(newAsset.actualUnitValue);
     const year = newAsset.yearAcquired ? Number(newAsset.yearAcquired) : NaN;
-    const cat = selectedCategoryName.trim();
+    const cat = canonicalForNewAsset.trim();
     if (
       !createDepreciationOverride &&
       Number.isFinite(actual) &&
@@ -540,17 +563,32 @@ export default function Assets() {
       return calculateDepreciatedValue(actual, cat, year);
     }
     return null;
-  }, [createDepreciationOverride, newAsset.actualUnitValue, newAsset.yearAcquired, selectedCategoryName]);
+  }, [createDepreciationOverride, newAsset.actualUnitValue, newAsset.yearAcquired, canonicalForNewAsset]);
 
   const editingCategoryName =
     editingAsset && categories?.find((c) => c.id.toString() === String(editingAsset.categoryId))?.name;
+  const editRegisterCategorySelectValue = useMemo(() => {
+    if (!editingAsset) return "";
+    const opts = registerItemCategoryOptionsForItemType(editingAsset.itemType as "asset" | "inventory");
+    const raw = (editingAsset.itemCategoryLabel || "").trim();
+    if (raw && (opts as readonly string[]).includes(raw)) return raw;
+    const n = (editingCategoryName || "").trim();
+    if (!n) return "";
+    return registerLabelHintForCanonical(n, editingAsset.itemType as "asset" | "inventory");
+  }, [editingAsset, editingCategoryName]);
   const computedEditDepreciation = useMemo(() => {
     if (!editingAsset || !isEditDialogOpen) return null;
     const actual = Number(editingAsset.actualUnitValue);
     const year = editingAsset.yearAcquiredRegister
       ? Number(editingAsset.yearAcquiredRegister)
       : NaN;
-    const cat = (editingAsset.itemCategoryLabel ?? editingCategoryName ?? "").trim();
+    const cat =
+      (
+        canonicalItemCategoryForRegisterLabel(
+          (editingAsset.itemCategoryLabel || "").trim(),
+          editingAsset.itemType as "asset" | "inventory"
+        ) ?? editingCategoryName ?? ""
+      ).trim();
     if (
       !editingAsset.depreciationManualOverride &&
       Number.isFinite(actual) &&
@@ -576,8 +614,14 @@ export default function Assets() {
 
   const handleCreateAsset = () => {
     setCreateFormError("");
-    if (!newAsset.name || !newAsset.categoryId || !newAsset.siteId) {
-      const msg = "Please fill in required fields (description, category, facility)";
+    if (!newAsset.name || !newAsset.registerItemCategory.trim() || !newAsset.categoryId || !newAsset.siteId) {
+      const msg = "Please fill in required fields (description, item category, facility)";
+      setCreateFormError(msg);
+      toast.error(msg);
+      return;
+    }
+    if (!canonicalForNewAsset.trim()) {
+      const msg = "Item category could not be mapped to an official NRCS category";
       setCreateFormError(msg);
       toast.error(msg);
       return;
@@ -598,7 +642,7 @@ export default function Assets() {
       siteId: Number(newAsset.siteId),
       itemType: newAsset.itemType,
       registerItemType: newAsset.itemType === "inventory" ? "Inventory" : "Asset",
-      itemCategory: selectedCategoryName || undefined,
+      itemCategory: canonicalForNewAsset || undefined,
       itemCategoryCode: selectedCategoryCode || undefined,
       subCategory: newAsset.subCategory || undefined,
       subItemCategory: newAsset.subItemCategory || undefined,
@@ -697,12 +741,26 @@ export default function Assets() {
       toast.error("Please fill in all required fields");
       return;
     }
+    const canonForSave =
+      (
+        canonicalItemCategoryForRegisterLabel(
+          (editingAsset.itemCategoryLabel || "").trim(),
+          editingAsset.itemType as "asset" | "inventory"
+        ) ?? editingCategoryName ?? ""
+      ).trim() || null;
+    if (!canonForSave) {
+      toast.error("Select a valid item category");
+      return;
+    }
+    const resolvedCategoryId = Number(
+      categoryIdForCanonicalName(categories, canonForSave) || editingAsset.categoryId
+    );
     updateAssetMutation.mutate({
       id: editingAsset.id,
       assetTag: editingAsset.assetTag,
       name: editingAsset.name,
       description: editingAsset.description || undefined,
-      categoryId: Number(editingAsset.categoryId),
+      categoryId: resolvedCategoryId,
       siteId: Number(editingAsset.siteId),
       manufacturer: editingAsset.manufacturer || undefined,
       model: editingAsset.model || undefined,
@@ -722,7 +780,7 @@ export default function Assets() {
       yearAcquiredRegister: editingAsset.yearAcquiredRegister
         ? Number(editingAsset.yearAcquiredRegister)
         : undefined,
-      itemCategory: (editingAsset.itemCategoryLabel || editingCategoryName || "").trim() || undefined,
+      itemCategory: canonForSave || undefined,
       depreciatedValueManualOverride: editingAsset.depreciationManualOverride === true,
       depreciatedValue:
         editingAsset.depreciationManualOverride === true ? editingAsset.depreciatedValue || undefined : undefined,
@@ -792,9 +850,19 @@ export default function Assets() {
                       <Label>Item Type *</Label>
                       <Select
                         value={newAsset.itemType}
-                        onValueChange={(v) =>
-                          setNewAsset({ ...newAsset, itemType: v as "asset" | "inventory" })
-                        }
+                        onValueChange={(v) => {
+                          const nt = v as "asset" | "inventory";
+                          const opts = registerItemCategoryOptionsForItemType(nt);
+                          const next: typeof newAsset = { ...newAsset, itemType: nt };
+                          if (
+                            newAsset.registerItemCategory &&
+                            !(opts as readonly string[]).includes(newAsset.registerItemCategory)
+                          ) {
+                            next.registerItemCategory = "";
+                            next.categoryId = "";
+                          }
+                          setNewAsset(next);
+                        }}
                       >
                         <SelectTrigger data-testid="asset-form-item-type">
                           <SelectValue />
@@ -808,25 +876,24 @@ export default function Assets() {
                     <div className="space-y-2">
                       <Label>Item Category *</Label>
                       <Select
-                        value={
-                          newAsset.categoryId
-                            ? categoryGroups.find((g) => g.ids.includes(Number(newAsset.categoryId)))?.value ??
-                              newAsset.categoryId
-                            : ""
-                        }
+                        value={newAsset.registerItemCategory}
                         onValueChange={(value) => {
-                          const ids = value.split(",").map(Number).filter((n) => Number.isFinite(n));
-                          if (!ids.length) return;
-                          setNewAsset({ ...newAsset, categoryId: String(Math.min(...ids)) });
+                          const canon = canonicalItemCategoryForRegisterLabel(value, newAsset.itemType);
+                          const id = categoryIdForCanonicalName(categories, canon);
+                          setNewAsset({
+                            ...newAsset,
+                            registerItemCategory: value,
+                            categoryId: id,
+                          });
                         }}
                       >
                         <SelectTrigger data-testid="asset-form-category">
-                          <SelectValue placeholder="Select category" />
+                          <SelectValue placeholder="Select item category" />
                         </SelectTrigger>
                         <SelectContent>
-                          {categoryGroups.map((g) => (
-                            <SelectItem key={g.value} value={g.value}>
-                              {g.label}
+                          {registerItemCategoryOptionsForItemType(newAsset.itemType).map((label) => (
+                            <SelectItem key={label} value={label}>
+                              {label}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -1563,29 +1630,32 @@ export default function Assets() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Category *</Label>
+                  <Label>Item Category *</Label>
                   <Select
-                    value={
-                      editingAsset.categoryId
-                        ? categoryGroups.find((g) => g.ids.includes(Number(editingAsset.categoryId)))?.value ??
-                          String(editingAsset.categoryId)
-                        : ""
-                    }
+                    value={editRegisterCategorySelectValue}
                     onValueChange={(value) => {
-                      const ids = value.split(",").map(Number).filter((n) => Number.isFinite(n));
-                      if (!ids.length || !editingAsset) return;
-                      const cur = Number(editingAsset.categoryId);
-                      const nextId = ids.includes(cur) ? cur : Math.min(...ids);
-                      setEditingAsset({ ...editingAsset, categoryId: String(nextId) });
+                      if (!editingAsset) return;
+                      const canon = canonicalItemCategoryForRegisterLabel(
+                        value,
+                        editingAsset.itemType as "asset" | "inventory"
+                      );
+                      const id = categoryIdForCanonicalName(categories, canon);
+                      setEditingAsset({
+                        ...editingAsset,
+                        itemCategoryLabel: value,
+                        categoryId: id || editingAsset.categoryId,
+                      });
                     }}
                   >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Select item category" />
                     </SelectTrigger>
                     <SelectContent>
-                      {categoryGroups.map((g) => (
-                        <SelectItem key={g.value} value={g.value}>
-                          {g.label}
+                      {registerItemCategoryOptionsForItemType(
+                        editingAsset.itemType as "asset" | "inventory"
+                      ).map((label) => (
+                        <SelectItem key={label} value={label}>
+                          {label}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1633,7 +1703,21 @@ export default function Assets() {
                   <Label>Item Type</Label>
                   <Select
                     value={editingAsset.itemType}
-                    onValueChange={(v) => setEditingAsset({ ...editingAsset, itemType: v })}
+                    onValueChange={(v) => {
+                      const nt = v as "asset" | "inventory";
+                      const opts = registerItemCategoryOptionsForItemType(nt);
+                      const raw = (editingAsset.itemCategoryLabel || "").trim();
+                      const next = { ...editingAsset, itemType: nt };
+                      if (raw && !(opts as readonly string[]).includes(raw)) {
+                        const n = (editingCategoryName || "").trim();
+                        next.itemCategoryLabel = n
+                          ? registerLabelHintForCanonical(n, nt)
+                          : "";
+                        const canon = canonicalItemCategoryForRegisterLabel(next.itemCategoryLabel, nt);
+                        next.categoryId = categoryIdForCanonicalName(categories, canon) || next.categoryId;
+                      }
+                      setEditingAsset(next);
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -1703,16 +1787,6 @@ export default function Assets() {
                         }
                       />
                     </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Item category (register label)</Label>
-                    <Input
-                      value={editingAsset.itemCategoryLabel ?? ""}
-                      onChange={(e) =>
-                        setEditingAsset({ ...editingAsset, itemCategoryLabel: e.target.value })
-                      }
-                      placeholder="e.g. Computer — defaults from category if empty"
-                    />
                   </div>
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center justify-between gap-2">

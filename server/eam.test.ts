@@ -113,8 +113,7 @@ describe("Asset Categories", () => {
     const categories = await caller.assetCategories.list();
 
     expect(Array.isArray(categories)).toBe(true);
-    // After seeding, we should have at least 7 categories
-    expect(categories.length).toBeGreaterThanOrEqual(7);
+    expect(categories.length).toBeGreaterThanOrEqual(8);
   });
 });
 

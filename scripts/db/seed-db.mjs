@@ -63,13 +63,14 @@ async function seed() {
   }
 
   const categoryData = [
-    { name: "Vehicle", description: "Cars, trucks, ambulances, and other vehicles" },
-    { name: "Building", description: "Office buildings, warehouses, and facilities" },
-    { name: "Machinery", description: "Generators, pumps, and industrial equipment" },
+    { name: "Computer", description: "IT and computing equipment" },
+    { name: "Furniture & Fixtures", description: "Office furniture and fixtures" },
+    { name: "Generator", description: "Power generation equipment" },
+    { name: "Land", description: "Land assets" },
+    { name: "Land & Building", description: "Buildings and land & building" },
     { name: "Medical Equipment", description: "Medical devices and healthcare equipment" },
-    { name: "IT Equipment", description: "Computers, servers, and networking devices" },
-    { name: "Furniture", description: "Office furniture and fixtures" },
-    { name: "Communication Equipment", description: "Radios, phones, and communication devices" },
+    { name: "Office Equipment", description: "General office equipment" },
+    { name: "Vehicle", description: "Cars, trucks, ambulances, and other vehicles" },
   ];
 
   for (const category of categoryData) {

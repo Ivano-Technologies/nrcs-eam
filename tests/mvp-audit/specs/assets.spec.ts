@@ -32,12 +32,12 @@ test.describe("Assets CRUD (2c)", () => {
     await expect(createDialog).toBeVisible({ timeout: 15_000 });
     await createDialog.getByTestId("asset-form-description").fill(name);
     await createDialog.getByTestId("asset-form-category").click();
-    // Must be a category with an NRCS two-letter code (see `nrcs_item_category_code` / ITEM_CATEGORY_CODE_MAP).
+    // Register item category (Asset template); maps to canonical NRCS codes via `ITEM_CATEGORY_CODE_MAP`.
     await page
       .getByRole("option")
       .filter({
         hasText:
-          /Computer|Furniture & Fixtures|Generator|Land|Land & Building|Medical Equipment|Office Equipment|Vehicle/,
+          /Vehicle|Communications Equipment|Computer Equipment|Office Equipment|Other Equipment|Furniture|First Aid Equipment|Visibility|Other/,
       })
       .first()
       .click();

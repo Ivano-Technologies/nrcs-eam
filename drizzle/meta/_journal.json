@@ -239,6 +239,13 @@
       "when": 1777600000000,
       "tag": "0033_depreciated_value_manual_override",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1777700000000,
+      "tag": "0034_clean_asset_categories",
+      "breakpoints": true
     }
   ]
 }
