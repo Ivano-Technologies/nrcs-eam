@@ -12,6 +12,7 @@ import {
 } from "@/components/auth/AuthPageShell";
 import { AuthPageLayout } from "@/components/auth/AuthPageLayout";
 import { GlassCard } from "@/components/auth/GlassCard";
+import { PasswordInputWithToggle } from "@/components/auth/PasswordInputWithToggle";
 import { trpc } from "@/lib/trpc";
 import { appPath } from "@/lib/routes";
 
@@ -113,16 +114,14 @@ export default function Login() {
             <Label htmlFor="password" className="text-[15px] text-gray-800 dark:text-gray-200">
               Password
             </Label>
-            <Input
+            <PasswordInputWithToggle
               id="password"
               data-testid="login-password-input"
-              type="password"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={loginMutation.isPending}
               autoComplete="current-password"
-              className={authInputClass}
             />
           </div>
           <Button
