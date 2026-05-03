@@ -2293,6 +2293,20 @@ export const inventoryV2Router = router({
       return { success: true as const };
     }),
 
+    listMine: protectedProcedure
+      .input(z.object({ limit: z.number().min(1).max(50).default(25) }).optional())
+      .query(async ({ ctx, input }) => {
+        const database = await getDb();
+        if (!database) return [];
+        const lim = input?.limit ?? 25;
+        return database
+          .select()
+          .from(requisitions)
+          .where(eq(requisitions.requestedBy, ctx.user.id))
+          .orderBy(desc(requisitions.createdAt))
+          .limit(lim);
+      }),
+
     list: protectedProcedure
       .input(z.object({ status: z.string().optional(), priority: z.string().optional(), facilityId: z.number().optional(), search: z.string().optional() }).optional())
       .query(async ({ input }) => {
