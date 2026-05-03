@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { and, desc, eq, gte, ilike, lte, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, lte, or, sql } from "drizzle-orm";
 import { toPublicUser } from "./_core/sanitizeUser";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
@@ -61,6 +61,15 @@ function normalizeAssetItemType(
   value: z.infer<typeof assetItemTypeInputZod> | undefined
 ): "Asset" | "Inventory" {
   return value?.toLowerCase() === "inventory" ? "Inventory" : "Asset";
+}
+
+/** Staff/Field see only their assigned facility; admin/manager see org-wide. */
+function dashboardDataScope(ctx: { user: { role: string; siteId: number | null } }): { mode: "all" } | { mode: "site"; siteId: number } | { mode: "empty" } {
+  const r = ctx.user.role;
+  if (r === "admin" || r === "manager") return { mode: "all" };
+  if ((r === "staff" || r === "field") && ctx.user.siteId != null) return { mode: "site", siteId: ctx.user.siteId };
+  if (r === "staff" || r === "field") return { mode: "empty" };
+  return { mode: "all" };
 }
 
 function parseMoneyString(v: string | undefined | null): number | null {
@@ -1566,8 +1575,36 @@ export const appRouter = router({
           period: z.enum(["Today", "Week", "Month", "Quarter", "Year"]),
         })
       )
-      .query(async ({ input }) => {
-        const stats = await db.getDashboardStats();
+      .query(async ({ input, ctx }) => {
+        const scope = dashboardDataScope(ctx);
+        if (scope.mode === "empty") {
+          return {
+            lowStockItems: {
+              value: 0,
+              delta: undefined,
+              direction: "flat" as const,
+              goodWhen: "down" as const,
+            },
+            activeFacilities: { value: 0, total: 0, offline: 0, goodWhen: "up" as const },
+            stockReadiness: {
+              adequate: 0,
+              total: 0,
+              delta: 0,
+              direction: "flat" as const,
+              tone: "red" as const,
+              goodWhen: "up" as const,
+            },
+            distributionVelocity: {
+              value: 0,
+              deltaPercent: 0,
+              direction: "flat" as const,
+              hasData: false,
+              goodWhen: "up" as const,
+            },
+          };
+        }
+        const siteId = scope.mode === "site" ? scope.siteId : undefined;
+        const stats = await db.getDashboardStats(siteId != null ? { siteId } : undefined);
         const database = await db.getDb();
 
         let stockReadiness: {
@@ -1602,6 +1639,12 @@ export const appRouter = router({
 
         if (database) {
           const window = getPeriodWindow(input.period);
+          const activeSiteWhere =
+            siteId != null ? and(eq(sites.isActive, true), eq(sites.id, siteId)) : eq(sites.isActive, true);
+          const totalSiteWhere = siteId != null ? eq(sites.id, siteId) : undefined;
+          const inactiveSiteWhere =
+            siteId != null ? and(eq(sites.isActive, false), eq(sites.id, siteId)) : eq(sites.isActive, false);
+          const cardSiteFilter = siteId != null ? eq(stockCards.locationId, siteId) : undefined;
           const [
             activeFacilities,
             totalFacilities,
@@ -1613,15 +1656,17 @@ export const appRouter = router({
             historicalDist,
           ] =
             await Promise.all([
-              database
-                .select({ id: sites.id })
-                .from(sites)
-                .where(eq(sites.isActive, true)),
-              database.select({ total: sql<number>`count(*)`.mapWith(Number) }).from(sites),
+              database.select({ id: sites.id }).from(sites).where(activeSiteWhere),
+              siteId != null
+                ? database
+                    .select({ total: sql<number>`count(*)`.mapWith(Number) })
+                    .from(sites)
+                    .where(eq(sites.id, siteId))
+                : database.select({ total: sql<number>`count(*)`.mapWith(Number) }).from(sites),
               database
                 .select({ total: sql<number>`count(*)`.mapWith(Number) })
                 .from(sites)
-                .where(eq(sites.isActive, false)),
+                .where(inactiveSiteWhere),
               database
                 .selectDistinct({ locationId: stockCards.locationId })
                 .from(stockMovements)
@@ -1635,7 +1680,13 @@ export const appRouter = router({
                   )
                 )
                 .innerJoin(sites, eq(stockCards.locationId, sites.id))
-                .where(and(eq(sites.isActive, true), sql`(${stockMovements.quantityIn} - ${stockMovements.quantityOut}) > coalesce(${stockSettings.minLevel}, 0)`)),
+                .where(
+                  and(
+                    eq(sites.isActive, true),
+                    cardSiteFilter ?? sql`true`,
+                    sql`(${stockMovements.quantityIn} - ${stockMovements.quantityOut}) > coalesce(${stockSettings.minLevel}, 0)`
+                  )
+                ),
               database
                 .selectDistinct({ locationId: stockCards.locationId })
                 .from(stockMovements)
@@ -1648,38 +1699,50 @@ export const appRouter = router({
                 .where(
                   and(
                     lte(stockMovements.date, window.previousEndIso),
+                    cardSiteFilter ?? sql`true`,
                     sql`(${stockMovements.quantityIn} - ${stockMovements.quantityOut}) > coalesce(${stockSettings.minLevel}, 0)`
                   )
                 ),
               database
                 .select({ total: sql<number>`coalesce(sum(${stockMovements.quantityOut}),0)`.mapWith(Number) })
                 .from(stockMovements)
+                .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
                 .innerJoin(waybills, eq(stockMovements.documentRef, waybills.wbNumber))
                 .where(
                   and(
                     eq(stockMovements.sourceType, "waybill"),
                     eq(waybills.destinationType, "distribution_point"),
                     gte(stockMovements.date, window.currentStartIso),
-                    lte(stockMovements.date, window.currentEndIso)
+                    lte(stockMovements.date, window.currentEndIso),
+                    cardSiteFilter ?? sql`true`
                   )
                 ),
               database
                 .select({ total: sql<number>`coalesce(sum(${stockMovements.quantityOut}),0)`.mapWith(Number) })
                 .from(stockMovements)
+                .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
                 .innerJoin(waybills, eq(stockMovements.documentRef, waybills.wbNumber))
                 .where(
                   and(
                     eq(stockMovements.sourceType, "waybill"),
                     eq(waybills.destinationType, "distribution_point"),
                     gte(stockMovements.date, window.previousStartIso),
-                    lte(stockMovements.date, window.previousEndIso)
+                    lte(stockMovements.date, window.previousEndIso),
+                    cardSiteFilter ?? sql`true`
                   )
                 ),
               database
                 .select({ total: sql<number>`coalesce(sum(${stockMovements.quantityOut}),0)`.mapWith(Number) })
                 .from(stockMovements)
+                .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
                 .innerJoin(waybills, eq(stockMovements.documentRef, waybills.wbNumber))
-                .where(and(eq(stockMovements.sourceType, "waybill"), eq(waybills.destinationType, "distribution_point"))),
+                .where(
+                  and(
+                    eq(stockMovements.sourceType, "waybill"),
+                    eq(waybills.destinationType, "distribution_point"),
+                    cardSiteFilter ?? sql`true`
+                  )
+                ),
             ]);
 
           const adequate = currentAdequateRows.length;
@@ -1690,11 +1753,20 @@ export const appRouter = router({
           const currentValue = Number(currentDist[0]?.total ?? 0);
           const previousValue = Number(previousDist[0]?.total ?? 0);
           const historicalValue = Number(historicalDist[0]?.total ?? 0);
-          distributionVelocity = buildDistributionVelocity({
-            current: currentValue,
-            previous: previousValue,
-            historicalTotal: historicalValue,
-          });
+          distributionVelocity =
+            siteId != null && currentValue === 0 && previousValue === 0 && historicalValue === 0
+              ? {
+                  value: 0,
+                  deltaPercent: 0,
+                  direction: "flat" as const,
+                  hasData: false,
+                  goodWhen: "up" as const,
+                }
+              : buildDistributionVelocity({
+                  current: currentValue,
+                  previous: previousValue,
+                  historicalTotal: historicalValue,
+                });
 
           activeFacilitiesKpi = {
             value: activeFacilities.length,
@@ -1718,7 +1790,10 @@ export const appRouter = router({
       }),
     stockMovement: protectedProcedure
       .input(z.object({ weeks: z.number().min(4).max(26).default(12) }).optional())
-      .query(async ({ input }) => {
+      .query(async ({ input, ctx }) => {
+        const scope = dashboardDataScope(ctx);
+        if (scope.mode === "empty") return [];
+        const siteId = scope.mode === "site" ? scope.siteId : undefined;
         const weeks = input?.weeks ?? 12;
         const database = await db.getDb();
         if (!database) return [];
@@ -1727,6 +1802,7 @@ export const appRouter = router({
         startDate.setUTCDate(startDate.getUTCDate() - (weeks * 7 - 1));
         const startDateIso = startDate.toISOString().slice(0, 10);
 
+        const siteCard = siteId != null ? eq(stockCards.locationId, siteId) : sql`true`;
         const rows = await database
           .select({
             weekStart: sql<string>`to_char(date_trunc('week', ${stockMovements.date}::timestamp), 'YYYY-MM-DD')`,
@@ -1734,7 +1810,8 @@ export const appRouter = router({
             outbound: sql<number>`coalesce(sum(${stockMovements.quantityOut}), 0)`.mapWith(Number),
           })
           .from(stockMovements)
-          .where(gte(stockMovements.date, startDateIso))
+          .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
+          .where(and(gte(stockMovements.date, startDateIso), siteCard))
           .groupBy(sql`date_trunc('week', ${stockMovements.date}::timestamp)`)
           .orderBy(sql`date_trunc('week', ${stockMovements.date}::timestamp) asc`);
 
@@ -1746,11 +1823,15 @@ export const appRouter = router({
       }),
     recentActivity: protectedProcedure
       .input(z.object({ limit: z.number().min(1).max(20).default(5) }).optional())
-      .query(async ({ input }) => {
+      .query(async ({ input, ctx }) => {
+        const scope = dashboardDataScope(ctx);
+        if (scope.mode === "empty") return [];
+        const siteId = scope.mode === "site" ? scope.siteId : undefined;
         const database = await db.getDb();
         if (!database) return [];
 
         const limit = input?.limit ?? 5;
+        const siteMove = siteId != null ? eq(stockCards.locationId, siteId) : sql`true`;
         const recentMovementRows = await database
           .select({
             type: stockMovements.sourceType,
@@ -1761,10 +1842,11 @@ export const appRouter = router({
           .from(stockMovements)
           .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
           .innerJoin(sites, eq(stockCards.locationId, sites.id))
-          .where(sql`${stockMovements.sourceType} in ('grn', 'waybill')`)
+          .where(and(sql`${stockMovements.sourceType} in ('grn', 'waybill')`, siteMove))
           .orderBy(sql`${stockMovements.createdAt} desc`)
           .limit(10);
 
+        const siteReq = siteId != null ? eq(requisitions.requestingFacility, siteId) : sql`true`;
         const recentRequisitionRows = await database
           .select({
             type: sql<string>`'requisition'`,
@@ -1777,10 +1859,11 @@ export const appRouter = router({
           })
           .from(requisitions)
           .innerJoin(sites, eq(requisitions.requestingFacility, sites.id))
-          .where(sql`${requisitions.status} in ('submitted', 'approved')`)
+          .where(and(sql`${requisitions.status} in ('submitted', 'approved')`, siteReq))
           .orderBy(sql`coalesce(${requisitions.approvedHqAt}, ${requisitions.approvedBranchAt}, ${requisitions.createdAt}) desc`)
           .limit(10);
 
+        const siteAsset = siteId != null ? eq(assets.siteId, siteId) : sql`true`;
         const recentAssetRows = await database
           .select({
             type: sql<string>`'asset'`,
@@ -1790,9 +1873,11 @@ export const appRouter = router({
           })
           .from(assets)
           .innerJoin(sites, eq(assets.siteId, sites.id))
+          .where(siteAsset)
           .orderBy(sql`${assets.createdAt} desc`)
           .limit(10);
 
+        const siteXfer = siteId != null ? eq(assetTransfers.toSiteId, siteId) : sql`true`;
         const recentTransferRows = await database
           .select({
             type: sql<string>`'asset_transfer'`,
@@ -1803,6 +1888,7 @@ export const appRouter = router({
           .from(assetTransfers)
           .innerJoin(assets, eq(assetTransfers.assetId, assets.id))
           .innerJoin(sites, eq(assetTransfers.toSiteId, sites.id))
+          .where(siteXfer)
           .orderBy(sql`coalesce(${assetTransfers.transferDate}, ${assetTransfers.createdAt}) desc`)
           .limit(10);
 
@@ -1823,7 +1909,10 @@ export const appRouter = router({
             facilityName: row.facilityName ?? "Unknown facility",
           }));
       }),
-    facilityStatus: protectedProcedure.query(async () => {
+    facilityStatus: protectedProcedure.query(async ({ ctx }) => {
+      const scope = dashboardDataScope(ctx);
+      if (scope.mode === "empty") return [];
+      const siteId = scope.mode === "site" ? scope.siteId : undefined;
       const database = await db.getDb();
       if (!database) return [];
 
@@ -1845,9 +1934,11 @@ export const appRouter = router({
           isActive: sites.isActive,
         })
         .from(sites)
+        .where(siteId != null ? eq(sites.id, siteId) : sql`true`)
         .orderBy(sql`${sites.facilityType} asc, ${sites.name} asc`)
-        .limit(10);
+        .limit(siteId != null ? 1 : 10);
 
+      const scoreSite = siteId != null ? eq(stockCards.locationId, siteId) : sql`true`;
       const scoreRows = await database
         .select({
           locationId: stockCards.locationId,
@@ -1864,6 +1955,7 @@ export const appRouter = router({
           )
         )
         .leftJoin(movementTotals, eq(movementTotals.stockCardId, stockCards.id))
+        .where(scoreSite)
         .groupBy(stockCards.locationId);
 
       const scoreByLocation = new Map<number, { total: number; adequate: number }>();
@@ -1896,10 +1988,14 @@ export const appRouter = router({
     }),
     pendingRequisitions: protectedProcedure
       .input(z.object({ limit: z.number().min(1).max(12).default(4) }).optional())
-      .query(async () => {
+      .query(async ({ ctx }) => {
+        const scope = dashboardDataScope(ctx);
+        if (scope.mode === "empty") return { total: 0, urgent: 0, oldestDaysAgo: null as number | null };
+        const siteId = scope.mode === "site" ? scope.siteId : undefined;
         const database = await db.getDb();
         if (!database) return { total: 0, urgent: 0, oldestDaysAgo: null as number | null };
 
+        const siteReq = siteId != null ? eq(requisitions.requestingFacility, siteId) : sql`true`;
         const rows = await database
           .select({
             total: sql<number>`count(*)`.mapWith(Number),
@@ -1907,7 +2003,7 @@ export const appRouter = router({
             oldest: sql<Date | null>`min(${requisitions.createdAt})`,
           })
           .from(requisitions)
-          .where(sql`${requisitions.status} in ('submitted', 'approved')`);
+          .where(and(sql`${requisitions.status} in ('submitted', 'approved')`, siteReq));
 
         const summary = rows[0];
         const total = Number(summary?.total ?? 0);
@@ -1918,11 +2014,77 @@ export const appRouter = router({
 
         return { total, urgent, oldestDaysAgo };
       }),
+
+    /** Per-branch stock readiness for Manager/Admin dashboards. */
+    branchPerformance: protectedProcedure.query(async ({ ctx }) => {
+      requireRole(ctx, ["admin", "manager"]);
+      const database = await db.getDb();
+      if (!database) return [];
+
+      const movementTotals = database
+        .select({
+          stockCardId: stockMovements.stockCardId,
+          netQuantity: sql<number>`coalesce(sum(${stockMovements.quantityIn} - ${stockMovements.quantityOut}), 0)`.mapWith(Number).as("netQuantity"),
+        })
+        .from(stockMovements)
+        .groupBy(stockMovements.stockCardId)
+        .as("movement_totals_bp");
+
+      const scoreRows = await database
+        .select({
+          locationId: stockCards.locationId,
+          total: sql<number>`count(distinct ${stockCards.id})`.mapWith(Number),
+          adequate: sql<number>`count(distinct ${stockCards.id}) filter (where coalesce(${movementTotals.netQuantity}, 0) > coalesce(${stockSettings.minLevel}, 0))`.mapWith(Number),
+        })
+        .from(stockCards)
+        .leftJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
+        .leftJoin(
+          stockSettings,
+          and(
+            eq(stockSettings.catalogueId, commodityTrackingNumbers.itemId),
+            eq(stockSettings.warehouseId, stockCards.locationId)
+          )
+        )
+        .leftJoin(movementTotals, eq(movementTotals.stockCardId, stockCards.id))
+        .groupBy(stockCards.locationId);
+
+      const scoreByLocation = new Map<number, { total: number; adequate: number }>();
+      for (const row of scoreRows) {
+        scoreByLocation.set(row.locationId, {
+          total: Number(row.total ?? 0),
+          adequate: Number(row.adequate ?? 0),
+        });
+      }
+
+      const branches = await database
+        .select({ id: sites.id, name: sites.name, code: sites.code, isActive: sites.isActive })
+        .from(sites)
+        .where(eq(sites.facilityType, "branch"))
+        .orderBy(asc(sites.name));
+
+      return branches.map((b) => {
+        const score = scoreByLocation.get(b.id);
+        const pct = score && score.total > 0 ? Math.round((score.adequate / score.total) * 100) : null;
+        return {
+          id: b.id,
+          name: b.name,
+          code: b.code,
+          isActive: b.isActive,
+          stockScorePercent: pct,
+          adequateCards: score?.adequate ?? 0,
+          totalCards: score?.total ?? 0,
+        };
+      });
+    }),
+
     attentionItems: protectedProcedure
       .input(z.object({ role: z.enum(["Admin", "Manager", "Staff", "Field"]) }))
-      .query(async ({ input }) => {
-        const database = await db.getDb();
+      .query(async ({ input, ctx }) => {
         const allClear = { icon: "CheckCircle2", tone: "green", label: "No action items right now", meta: "All clear" };
+        const scope = dashboardDataScope(ctx);
+        if (scope.mode === "empty") return [allClear];
+        const siteId = scope.mode === "site" ? scope.siteId : undefined;
+        const database = await db.getDb();
         if (!database) return [allClear];
 
         const safe = async <T>(label: string, query: () => Promise<T>): Promise<T | null> => {
@@ -1936,13 +2098,14 @@ export const appRouter = router({
 
         const requisitionSummary = () =>
           safe("requisitionSummary", async () => {
+            const siteReq = siteId != null ? eq(requisitions.requestingFacility, siteId) : sql`true`;
             const rows = await database
               .select({
                 total: sql<number>`count(*)`.mapWith(Number),
                 urgent: sql<number>`count(*) filter (where lower(${requisitions.priority}) = 'urgent')`.mapWith(Number),
               })
               .from(requisitions)
-              .where(eq(requisitions.status, "submitted"));
+              .where(and(eq(requisitions.status, "submitted"), siteReq));
             return {
               total: Number(rows[0]?.total ?? 0),
               urgent: Number(rows[0]?.urgent ?? 0),
@@ -1951,7 +2114,7 @@ export const appRouter = router({
 
         const lowStockItems = () =>
           safe("lowStockItems", async () => {
-            const stats = await db.getDashboardStats();
+            const stats = await db.getDashboardStats(siteId != null ? { siteId } : undefined);
             return Number(stats?.lowStockItems ?? 0);
           });
 
@@ -1966,6 +2129,7 @@ export const appRouter = router({
               .groupBy(stockMovements.stockCardId)
               .as("movement_totals_attention");
 
+            const siteCard = siteId != null ? eq(stockCards.locationId, siteId) : sql`true`;
             const rows = await database
               .select({
                 count: sql<number>`count(distinct ${stockCards.locationId}) filter (where coalesce(${movementTotals.netQuantity}, 0) < coalesce(${stockSettings.minLevel}, 0) and coalesce(${stockSettings.minLevel}, 0) > 0)`.mapWith(Number),
@@ -1979,7 +2143,8 @@ export const appRouter = router({
                   eq(stockSettings.catalogueId, commodityTrackingNumbers.itemId)
                 )
               )
-              .leftJoin(movementTotals, eq(movementTotals.stockCardId, stockCards.id));
+              .leftJoin(movementTotals, eq(movementTotals.stockCardId, stockCards.id))
+              .where(siteCard);
 
             return Number(rows[0]?.count ?? 0);
           });
@@ -2163,10 +2328,11 @@ export const appRouter = router({
               return Number(rows[0]?.count ?? 0);
             }),
             safe("submittedReqs", async () => {
+              const siteReq = siteId != null ? eq(requisitions.requestingFacility, siteId) : sql`true`;
               const rows = await database
                 .select({ count: sql<number>`count(*)`.mapWith(Number) })
                 .from(requisitions)
-                .where(eq(requisitions.status, "submitted"));
+                .where(and(eq(requisitions.status, "submitted"), siteReq));
               return Number(rows[0]?.count ?? 0);
             }),
           ]);
@@ -2217,10 +2383,11 @@ export const appRouter = router({
             return Number(rows[0]?.count ?? 0);
           }),
           safe("fieldPendingReqs", async () => {
+            const siteReq = siteId != null ? eq(requisitions.requestingFacility, siteId) : sql`true`;
             const rows = await database
               .select({ count: sql<number>`count(*)`.mapWith(Number) })
               .from(requisitions)
-              .where(sql`${requisitions.status} in ('submitted', 'draft')`);
+              .where(and(sql`${requisitions.status} in ('submitted', 'draft')`, siteReq));
             return Number(rows[0]?.count ?? 0);
           }),
           lowStockFacilities(),

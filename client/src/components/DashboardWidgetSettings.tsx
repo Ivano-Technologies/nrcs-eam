@@ -1,3 +1,4 @@
+import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -14,6 +15,7 @@ const DEFAULT_WIDGETS = {
 };
 
 export function DashboardWidgetSettings() {
+  const { user } = useAuth();
   const { data: prefs } = trpc.userPreferences.get.useQuery();
   const updateWidgets = trpc.userPreferences.updateDashboardWidgets.useMutation();
   
@@ -44,6 +46,10 @@ export function DashboardWidgetSettings() {
     facilityStatus: { title: "Facility Status", description: "Show facility readiness list" },
     requisitionsTable: { title: "Requisitions", description: "Show pending requisitions summary" },
   };
+
+  if (user?.role === "staff" || user?.role === "field") {
+    return null;
+  }
 
   return (
     <Card>

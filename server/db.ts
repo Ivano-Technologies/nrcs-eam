@@ -1184,18 +1184,42 @@ export async function getDocuments(entityType?: string, entityId?: number) {
 
 // ============= DASHBOARD STATISTICS =============
 
-export async function getDashboardStats() {
+export async function getDashboardStats(opts?: { siteId?: number }) {
   const db = await getDb();
   if (!db) return null;
-  
-  const [totalAssets] = await db.select({ count: sql<number>`count(*)` }).from(assets);
-  const [operationalAssets] = await db.select({ count: sql<number>`count(*)` }).from(assets).where(eq(assets.status, 'operational'));
-  const [maintenanceAssets] = await db.select({ count: sql<number>`count(*)` }).from(assets).where(eq(assets.status, 'maintenance'));
-  const [pendingWorkOrders] = await db.select({ count: sql<number>`count(*)` }).from(workOrders).where(eq(workOrders.status, 'pending'));
-  const [inProgressWorkOrders] = await db.select({ count: sql<number>`count(*)` }).from(workOrders).where(eq(workOrders.status, 'in_progress'));
-  const [lowStockCount] = await db.select({ count: sql<number>`count(*)` }).from(inventoryItems)
-    .where(sql`${inventoryItems.currentStock} < ${inventoryItems.minStockLevel}`);
-  
+
+  const siteId = opts?.siteId;
+  const assetScope = siteId != null ? eq(assets.siteId, siteId) : undefined;
+  const lowStockWhere =
+    siteId != null
+      ? and(
+          sql`${inventoryItems.currentStock} < ${inventoryItems.minStockLevel}`,
+          eq(inventoryItems.siteId, siteId)
+        )
+      : sql`${inventoryItems.currentStock} < ${inventoryItems.minStockLevel}`;
+
+  const [totalAssets] = assetScope
+    ? await db.select({ count: sql<number>`count(*)` }).from(assets).where(assetScope)
+    : await db.select({ count: sql<number>`count(*)` }).from(assets);
+  const [operationalAssets] = assetScope
+    ? await db
+        .select({ count: sql<number>`count(*)` })
+        .from(assets)
+        .where(and(eq(assets.status, "operational"), assetScope))
+    : await db.select({ count: sql<number>`count(*)` }).from(assets).where(eq(assets.status, "operational"));
+  const [maintenanceAssets] = assetScope
+    ? await db
+        .select({ count: sql<number>`count(*)` })
+        .from(assets)
+        .where(and(eq(assets.status, "maintenance"), assetScope))
+    : await db.select({ count: sql<number>`count(*)` }).from(assets).where(eq(assets.status, "maintenance"));
+  const [pendingWorkOrders] = await db.select({ count: sql<number>`count(*)` }).from(workOrders).where(eq(workOrders.status, "pending"));
+  const [inProgressWorkOrders] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(workOrders)
+    .where(eq(workOrders.status, "in_progress"));
+  const [lowStockCount] = await db.select({ count: sql<number>`count(*)` }).from(inventoryItems).where(lowStockWhere);
+
   return {
     totalAssets: Number(totalAssets?.count ?? 0),
     operationalAssets: Number(operationalAssets?.count ?? 0),

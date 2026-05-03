@@ -1,6 +1,7 @@
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 import { AttentionPanel } from "@/components/dashboard/AttentionPanel";
 import { FacilityStatusList } from "@/components/dashboard/FacilityStatusList";
+import { FieldDashboard } from "@/components/dashboard/FieldDashboard";
 import { KpiCard } from "@/components/dashboard/KpiCard";
 import { PeriodSelector } from "@/components/dashboard/PeriodSelector";
 import { RequisitionsTable } from "@/components/dashboard/RequisitionsTable";
@@ -9,6 +10,7 @@ import { useDashboardRolePreview } from "@/components/dashboard/rolePreviewConte
 import type { DashboardPeriod, UserRole } from "@/components/dashboard/types";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertTriangle, ClipboardList, MapPin, ShieldCheck, Truck } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -36,12 +38,19 @@ export default function Home() {
   }, [user?.role]);
 
   const effectiveRole = rolePreview?.effectiveRole ?? actualRole;
+  const rawRole = user?.role ?? "";
+  const fixedLayout = rawRole === "staff" || rawRole === "field";
 
   const { data: metrics, isLoading } = trpc.dashboard.metrics.useQuery({ period });
   const { data: pendingReqs } = trpc.dashboard.pendingRequisitions.useQuery();
   const { data: movement } = trpc.dashboard.stockMovement.useQuery({ weeks: period === "Today" ? 4 : 12 });
   const { data: userPreferences } = trpc.userPreferences.get.useQuery();
+  const { data: branchPerf } = trpc.dashboard.branchPerformance.useQuery(undefined, {
+    enabled: effectiveRole === "Manager" || effectiveRole === "Admin",
+  });
+
   const widgetVisibility = useMemo(() => {
+    if (fixedLayout) return DEFAULT_WIDGETS;
     if (!userPreferences?.dashboardWidgets) return DEFAULT_WIDGETS;
     try {
       const parsed = JSON.parse(userPreferences.dashboardWidgets) as Partial<typeof DEFAULT_WIDGETS>;
@@ -49,7 +58,8 @@ export default function Home() {
     } catch {
       return DEFAULT_WIDGETS;
     }
-  }, [userPreferences?.dashboardWidgets]);
+  }, [userPreferences?.dashboardWidgets, fixedLayout]);
+
   const normalizeDirection = (direction?: string): "up" | "down" | "flat" =>
     direction === "up" || direction === "down" ? direction : "flat";
 
@@ -60,6 +70,21 @@ export default function Home() {
       </div>
     );
   }
+
+  if (effectiveRole === "Field") {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+            <p className="mt-2 text-[#334155] dark:text-[hsl(0_0%_95%)]">Field view — your branch only</p>
+          </div>
+        </div>
+        <FieldDashboard />
+      </div>
+    );
+  }
+
   const periodLabel = period.toLowerCase();
   const readinessDelta = Number(metrics?.stockReadiness?.delta ?? 0);
   const readinessDeltaFormatted =
@@ -141,8 +166,11 @@ export default function Home() {
       goodWhen: "down" as const,
     },
   ];
-  const kpis =
-    effectiveRole === "Field" ? allKpis.filter((k) => ["lowStock", "facilities", "stock"].includes(k.key)) : allKpis;
+
+  const staffKpis = allKpis.filter((k) => ["lowStock", "requisitions", "approvals"].includes(k.key));
+  const kpis = effectiveRole === "Staff" ? staffKpis : allKpis;
+
+  const showWidgets = (key: keyof typeof DEFAULT_WIDGETS) => fixedLayout || widgetVisibility[key];
 
   return (
     <div className="space-y-6">
@@ -156,11 +184,36 @@ export default function Home() {
         </div>
       </div>
 
-      {effectiveRole === "Field" && widgetVisibility.attentionPanel ? (
-        <AttentionPanel role={effectiveRole} />
+      {(effectiveRole === "Manager" || effectiveRole === "Admin") && branchPerf?.length ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Branch Performance</CardTitle>
+            <CardDescription>Stock readiness by branch (warehouse stock cards)</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {branchPerf.slice(0, 12).map((b) => (
+                <div key={b.id} className="rounded-lg border px-3 py-2 text-sm">
+                  <p className="font-medium">{b.name}</p>
+                  <p className="text-muted-foreground">
+                    {b.stockScorePercent != null ? `${b.stockScorePercent}% ready` : "No stock data"}
+                    {b.totalCards ? ` · ${b.adequateCards}/${b.totalCards} cards` : ""}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       ) : null}
 
-      {widgetVisibility.kpiCards ? (
+      {effectiveRole === "Manager" && showWidgets("facilityStatus") ? (
+        <div className="space-y-2">
+          <h2 className="text-lg font-semibold">Facility status</h2>
+          <FacilityStatusList />
+        </div>
+      ) : null}
+
+      {showWidgets("kpiCards") ? (
         <div className="grid max-[359px]:grid-cols-1 grid-cols-2 gap-3 md:grid-cols-2 md:gap-4 xl:grid-cols-5">
           {kpis.map((kpi) => (
             <KpiCard
@@ -179,23 +232,27 @@ export default function Home() {
         </div>
       ) : null}
 
-      {effectiveRole === "Field" ? (
-        widgetVisibility.activityFeed ? <ActivityFeed /> : null
+      {effectiveRole === "Staff" ? (
+        showWidgets("stockMovement") ? (
+          <div className="grid gap-6">
+            <StockMovementChart data={movement ?? []} />
+          </div>
+        ) : null
       ) : (
         <>
-          {widgetVisibility.stockMovement || widgetVisibility.attentionPanel ? (
+          {showWidgets("stockMovement") || showWidgets("attentionPanel") ? (
             <div className="grid gap-6 md:grid-cols-1 xl:grid-cols-[1.55fr_1fr]">
-              {widgetVisibility.stockMovement ? <StockMovementChart data={movement ?? []} /> : null}
-              {widgetVisibility.attentionPanel ? <AttentionPanel role={effectiveRole} /> : null}
+              {showWidgets("stockMovement") ? <StockMovementChart data={movement ?? []} /> : null}
+              {showWidgets("attentionPanel") ? <AttentionPanel role={effectiveRole} /> : null}
             </div>
           ) : null}
-          {widgetVisibility.activityFeed || widgetVisibility.facilityStatus ? (
+          {showWidgets("activityFeed") || showWidgets("facilityStatus") ? (
             <div className="grid gap-6 md:grid-cols-2">
-              {widgetVisibility.activityFeed ? <ActivityFeed /> : null}
-              {widgetVisibility.facilityStatus ? <FacilityStatusList /> : null}
+              {showWidgets("activityFeed") ? <ActivityFeed /> : null}
+              {effectiveRole !== "Manager" && showWidgets("facilityStatus") ? <FacilityStatusList /> : null}
             </div>
           ) : null}
-          {widgetVisibility.requisitionsTable ? <RequisitionsTable /> : null}
+          {showWidgets("requisitionsTable") ? <RequisitionsTable /> : null}
         </>
       )}
     </div>

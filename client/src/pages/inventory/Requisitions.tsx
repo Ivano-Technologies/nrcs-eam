@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
 import { Card, CardContent } from "@/components/ui/card";
@@ -35,6 +36,7 @@ function priorityVariant(priority?: string) {
 }
 
 export default function Requisitions({ embedInShell = false }: { embedInShell?: boolean } = {}) {
+  const [location, setLocation] = useLocation();
   const { isAdmin } = usePermissions();
   const [viewMode, setViewMode] = useState<ViewMode>(() => (localStorage.getItem("viewMode_inventory_requisitions") as ViewMode) || "table");
   const [open, setOpen] = useState(false);
@@ -52,6 +54,18 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
   useEffect(() => {
     localStorage.setItem("viewMode_inventory_requisitions", viewMode);
   }, [viewMode]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const qs = new URLSearchParams(window.location.search);
+    if (qs.get("new") === "1") {
+      setOpen(true);
+      qs.delete("new");
+      const path = window.location.pathname;
+      const next = qs.toString() ? `${path}?${qs.toString()}` : path;
+      setLocation(next, { replace: true });
+    }
+  }, [location, setLocation]);
 
   const { data: facilities } = trpc.sites.list.useQuery();
   const { data: catalogue } = trpc.inventoryV2.catalogue.list.useQuery();
