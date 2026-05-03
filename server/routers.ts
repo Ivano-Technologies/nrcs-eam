@@ -3674,7 +3674,7 @@ export const appRouter = router({
             acquisitionCost: Number(asset.acquisitionCost),
             residualValue: Number(asset.residualValue || 0),
             usefulLifeYears: asset.usefulLifeYears || 5,
-            depreciationStartDate: new Date(asset.depreciationStartDate),
+            depreciationStartDate: new Date(asset.depreciationStartDate!),
             method: asset.depreciationMethod as 'straight-line' | 'declining-balance',
             decliningBalanceRate: 2,
           });
