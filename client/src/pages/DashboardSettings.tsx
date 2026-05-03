@@ -12,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { PasswordStrengthBar } from "@/components/auth/PasswordStrengthBar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -572,6 +573,7 @@ export default function DashboardSettings() {
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
               />
+              <PasswordStrengthBar password={newPassword} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="cf">Confirm new password</Label>
