@@ -2,13 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { PasswordInputWithToggle } from "@/components/auth/PasswordInputWithToggle";
 import { Label } from "@/components/ui/label";
 import {
   AuthBrandLogo,
   AuthSubtitle,
   AuthTitle,
-  authInputClass,
   authPrimaryButtonClass,
 } from "@/components/auth/AuthPageShell";
 import { AuthPageLayout } from "@/components/auth/AuthPageLayout";
@@ -152,26 +151,22 @@ export default function ResetPassword() {
 
             <div className="space-y-2">
               <Label htmlFor="new-password">New password</Label>
-              <Input
+              <PasswordInputWithToggle
                 id="new-password"
-                type="password"
                 autoComplete="new-password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className={authInputClass}
                 required
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="confirm-password">Confirm password</Label>
-              <Input
+              <PasswordInputWithToggle
                 id="confirm-password"
-                type="password"
                 autoComplete="new-password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className={authInputClass}
                 required
               />
             </div>
