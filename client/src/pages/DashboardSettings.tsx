@@ -80,6 +80,13 @@ export default function DashboardSettings() {
     onError: (e) => toast.error(e.message),
   });
 
+  const sendAssetCheckRemindersMutation = trpc.notifications.sendAssetCheckReminders.useMutation({
+    onSuccess: (r) => {
+      toast.success(`Asset check reminders: ${r.sent} sent, ${r.failed} failed, ${r.facilitiesProcessed} facilities`);
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
   const updateProfileMutation = trpc.auth.updateProfile.useMutation({
     onSuccess: async () => {
       toast.success("Profile saved");
@@ -497,6 +504,27 @@ export default function DashboardSettings() {
                 </Button>
               </>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {isAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Asset physical check reminders</CardTitle>
+            <CardDescription>
+              Email branch managers (or facility contact) for assets with no check or last check older than 6 months.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={sendAssetCheckRemindersMutation.isPending}
+              onClick={() => sendAssetCheckRemindersMutation.mutate()}
+            >
+              {sendAssetCheckRemindersMutation.isPending ? "Sending…" : "Send reminder emails now"}
+            </Button>
           </CardContent>
         </Card>
       )}
