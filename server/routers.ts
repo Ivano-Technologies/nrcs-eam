@@ -45,6 +45,8 @@ import { generateSupabaseCompliantTempPassword } from "./tempPassword";
 import { FACILITY_TYPE_VALUES, type FacilityType } from "../shared/facilities";
 import type { InsertUser } from "../drizzle/schema";
 import { validateFacilityHierarchy } from "./facilityHierarchy";
+import { calculateDepreciatedValue } from "./lib/depreciation";
+import type { DepreciationResult } from "./depreciation";
 
 const facilityTypeZod = z.enum(FACILITY_TYPE_VALUES);
 const facilityTypeNormalizingZod = z.preprocess(
@@ -59,6 +61,103 @@ function normalizeAssetItemType(
   value: z.infer<typeof assetItemTypeInputZod> | undefined
 ): "Asset" | "Inventory" {
   return value?.toLowerCase() === "inventory" ? "Inventory" : "Asset";
+}
+
+function parseMoneyString(v: string | undefined | null): number | null {
+  if (v == null || String(v).trim() === "") return null;
+  const n = Number(String(v).replace(/,/g, ""));
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Register-based auto depreciation vs manual override for asset create. */
+function buildRegisterDepreciationForCreate(input: {
+  depreciatedValueManualOverride?: boolean;
+  depreciatedValue?: string;
+  currentDepreciatedValue?: number;
+  actualUnitValue?: string;
+  acquisitionCost?: string;
+  itemCategory?: string;
+  yearAcquiredRegister?: number;
+  yearAcquired?: number;
+}): {
+  depreciatedValue?: string;
+  currentDepreciatedValue?: number;
+  depreciatedValueManualOverride: boolean;
+} {
+  if (input.depreciatedValueManualOverride === true) {
+    const raw = input.depreciatedValue ?? (input.currentDepreciatedValue != null ? String(input.currentDepreciatedValue) : "");
+    const trimmed = String(raw).trim();
+    if (trimmed !== "") {
+      const n = Number(trimmed);
+      if (Number.isFinite(n)) {
+        return {
+          depreciatedValue: String(n),
+          currentDepreciatedValue: n,
+          depreciatedValueManualOverride: true,
+        };
+      }
+    }
+    return { depreciatedValueManualOverride: true };
+  }
+  const actual =
+    parseMoneyString(input.actualUnitValue) ?? parseMoneyString(input.acquisitionCost);
+  const year = input.yearAcquiredRegister ?? input.yearAcquired;
+  const category = (input.itemCategory ?? "").trim();
+  if (actual != null && category && year != null && year >= 1900) {
+    const dv = calculateDepreciatedValue(actual, category, year);
+    return {
+      depreciatedValue: String(dv),
+      currentDepreciatedValue: dv,
+      depreciatedValueManualOverride: false,
+    };
+  }
+  const fallback = input.depreciatedValue ?? (input.currentDepreciatedValue != null ? String(input.currentDepreciatedValue) : "");
+  if (String(fallback).trim() !== "") {
+    const n = Number(String(fallback).replace(/,/g, ""));
+    if (Number.isFinite(n)) {
+      return {
+        depreciatedValue: String(n),
+        currentDepreciatedValue: n,
+        depreciatedValueManualOverride: false,
+      };
+    }
+  }
+  return { depreciatedValueManualOverride: false };
+}
+
+function buildRegisterDepreciationResultFromAsset(asset: {
+  actualUnitValue: string | null;
+  itemCategory: string | null;
+  yearAcquiredRegister: number | null;
+}): DepreciationResult {
+  const actual = Number(asset.actualUnitValue);
+  const year = asset.yearAcquiredRegister ?? new Date().getFullYear();
+  const category = (asset.itemCategory ?? "").trim();
+  const book = calculateDepreciatedValue(actual, category, year);
+  const accumulated = Math.max(0, Math.round((actual - book) * 100) / 100);
+  const age = Math.max(0, new Date().getFullYear() - year);
+  const pct = actual > 0 ? (accumulated / actual) * 100 : 0;
+  const annual = age > 0 ? accumulated / age : accumulated;
+  const today = new Date().toISOString().split("T")[0]!;
+  return {
+    method: "NRCS Register (category-based)",
+    annualDepreciation: Math.round(annual * 100) / 100,
+    accumulatedDepreciation: accumulated,
+    currentBookValue: book,
+    depreciationPercentage: Math.round(pct * 100) / 100,
+    yearsElapsed: age,
+    remainingYears: 0,
+    schedule: [
+      {
+        year: 1,
+        date: today,
+        beginningValue: Math.round(actual * 100) / 100,
+        depreciationExpense: accumulated,
+        accumulatedDepreciation: accumulated,
+        endingValue: book,
+      },
+    ],
+  };
 }
 
 function getFrontendOriginForUserEmails(): string {
@@ -377,6 +476,7 @@ export const appRouter = router({
         acquisitionCost: z.string().optional(),
         currentValue: z.string().optional(),
         currentDepreciatedValue: z.number().optional(),
+        depreciatedValueManualOverride: z.boolean().optional(),
         depreciationRate: z.string().optional(),
         warrantyExpiry: z.date().optional(),
         location: z.string().optional(),
@@ -394,6 +494,16 @@ export const appRouter = router({
           acquisitionDate = new Date(Date.UTC(input.yearAcquired, 5, 15));
         }
         const assetTag = (input.assetTag?.trim() || `NRCS-${nanoid(10)}`).toUpperCase();
+        const dep = buildRegisterDepreciationForCreate({
+          depreciatedValueManualOverride: input.depreciatedValueManualOverride,
+          depreciatedValue: input.depreciatedValue,
+          currentDepreciatedValue: input.currentDepreciatedValue,
+          actualUnitValue: input.actualUnitValue,
+          acquisitionCost: input.acquisitionCost,
+          itemCategory: input.itemCategory,
+          yearAcquiredRegister: input.yearAcquiredRegister ?? input.yearAcquired,
+          yearAcquired: input.yearAcquired,
+        });
         return await db.createAsset({
           assetTag,
           name: input.name,
@@ -427,7 +537,8 @@ export const appRouter = router({
           checkConductedBy: input.checkConductedBy ?? input.checkedBy,
           remarksRegister: input.remarksRegister ?? input.notes,
           actualUnitValue: input.actualUnitValue ?? input.acquisitionCost,
-          depreciatedValue: input.depreciatedValue ?? input.currentDepreciatedValue?.toString(),
+          depreciatedValue: dep.depreciatedValue ?? input.depreciatedValue ?? input.currentDepreciatedValue?.toString(),
+          depreciatedValueManualOverride: dep.depreciatedValueManualOverride,
           acquisitionCondition: input.acquisitionCondition,
           department: input.department,
           lastCheckedAt: input.lastCheckedAt,
@@ -440,7 +551,7 @@ export const appRouter = router({
           acquisitionDate,
           acquisitionCost: input.acquisitionCost,
           currentValue: input.currentValue,
-          currentDepreciatedValue: input.currentDepreciatedValue,
+          currentDepreciatedValue: dep.currentDepreciatedValue ?? input.currentDepreciatedValue,
           depreciationRate: input.depreciationRate,
           warrantyExpiry: input.warrantyExpiry,
           location: input.location,
@@ -585,6 +696,7 @@ export const appRouter = router({
         acquisitionCost: z.string().optional(),
         currentValue: z.string().optional(),
         currentDepreciatedValue: z.number().optional(),
+        depreciatedValueManualOverride: z.boolean().optional(),
         depreciationRate: z.string().optional(),
         warrantyExpiry: z.date().optional(),
         location: z.string().optional(),
@@ -596,6 +708,10 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         const { id, yearAcquired, registerStatus, status, ...rest } = input;
+        const existing = await db.getAssetById(id);
+        if (!existing) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Asset not found" });
+        }
         const data: Record<string, unknown> = { ...rest };
         if (rest.itemType !== undefined) {
           data.itemType = normalizeAssetItemType(rest.itemType);
@@ -609,6 +725,53 @@ export const appRouter = router({
         if (yearAcquired !== undefined) {
           data.acquisitionDate = new Date(Date.UTC(yearAcquired, 5, 15));
         }
+
+        const mergedActual =
+          (rest.actualUnitValue as string | undefined) ?? existing.actualUnitValue?.toString() ?? undefined;
+        const mergedCategory =
+          (rest.itemCategory as string | undefined) ?? existing.itemCategory ?? "";
+        const mergedYear =
+          (rest.yearAcquiredRegister as number | undefined) ?? existing.yearAcquiredRegister ?? undefined;
+
+        if (rest.depreciatedValueManualOverride === true && rest.depreciatedValue != null && String(rest.depreciatedValue).trim() !== "") {
+          const n = Number(String(rest.depreciatedValue).replace(/,/g, ""));
+          if (Number.isFinite(n)) {
+            data.depreciatedValue = String(n);
+            data.currentDepreciatedValue = n;
+            data.depreciatedValueManualOverride = true;
+          }
+        } else if (rest.depreciatedValueManualOverride === false) {
+          const dep = buildRegisterDepreciationForCreate({
+            depreciatedValueManualOverride: false,
+            actualUnitValue: mergedActual,
+            acquisitionCost: mergedActual,
+            itemCategory: mergedCategory,
+            yearAcquiredRegister: mergedYear,
+          });
+          if (dep.depreciatedValue !== undefined) {
+            data.depreciatedValue = dep.depreciatedValue;
+            data.currentDepreciatedValue = dep.currentDepreciatedValue;
+            data.depreciatedValueManualOverride = false;
+          } else {
+            data.depreciatedValueManualOverride = false;
+          }
+        } else if (!existing.depreciatedValueManualOverride) {
+          const dep = buildRegisterDepreciationForCreate({
+            depreciatedValueManualOverride: false,
+            actualUnitValue: mergedActual,
+            acquisitionCost: mergedActual,
+            itemCategory: mergedCategory,
+            yearAcquiredRegister: mergedYear,
+          });
+          if (dep.depreciatedValue !== undefined) {
+            data.depreciatedValue = dep.depreciatedValue;
+            data.currentDepreciatedValue = dep.currentDepreciatedValue;
+            data.depreciatedValueManualOverride = false;
+          }
+        }
+
+        delete data.depreciatedValueManualOverride;
+
         await db.logAuditEntry({
           userId: ctx.user.id,
           action: 'update',
@@ -618,6 +781,25 @@ export const appRouter = router({
         });
         return await db.updateAsset(id, data as Parameters<typeof db.updateAsset>[1]);
       }),
+
+    recalculateDepreciation: managerOrAdminProcedure.mutation(async () => {
+      const rows = await db.listAssetsEligibleForAutoDepreciation();
+      let updated = 0;
+      for (const row of rows) {
+        const actual = Number(row.actualUnitValue);
+        const year = row.yearAcquiredRegister!;
+        const cat = row.itemCategory!;
+        const dv = calculateDepreciatedValue(actual, cat, year);
+        await db.updateAsset(row.id, {
+          depreciatedValue: String(dv),
+          currentDepreciatedValue: dv,
+          depreciatedValueManualOverride: false,
+        });
+        updated++;
+      }
+      const total = await db.countAllAssets();
+      return { updated, skipped: Math.max(0, total - updated) };
+    }),
 
     getExpiringWarranties: protectedProcedure
       .query(async () => {
@@ -3159,35 +3341,53 @@ export const appRouter = router({
       .query(async ({ input }) => {
         const { calculateDepreciation } = require('./depreciation');
         const asset = await db.getAssetById(input.assetId);
-        
-        if (!asset || !asset.depreciationMethod || asset.depreciationMethod === 'none') {
-          return null;
+        if (!asset) return null;
+
+        const legacyReady =
+          asset.depreciationMethod &&
+          asset.depreciationMethod !== "none" &&
+          asset.acquisitionCost &&
+          asset.depreciationStartDate;
+
+        if (legacyReady) {
+          return calculateDepreciation({
+            acquisitionCost: Number(asset.acquisitionCost),
+            residualValue: Number(asset.residualValue || 0),
+            usefulLifeYears: asset.usefulLifeYears || 5,
+            depreciationStartDate: new Date(asset.depreciationStartDate!),
+            method: asset.depreciationMethod as "straight-line" | "declining-balance",
+            decliningBalanceRate: 2,
+          });
         }
-        
-        if (!asset.acquisitionCost || !asset.depreciationStartDate) {
-          return null;
+
+        const registerReady =
+          asset.actualUnitValue != null &&
+          String(asset.actualUnitValue).trim() !== "" &&
+          asset.itemCategory &&
+          String(asset.itemCategory).trim() !== "" &&
+          asset.yearAcquiredRegister != null;
+
+        if (registerReady) {
+          return buildRegisterDepreciationResultFromAsset({
+            actualUnitValue: asset.actualUnitValue,
+            itemCategory: asset.itemCategory,
+            yearAcquiredRegister: asset.yearAcquiredRegister,
+          });
         }
-        
-        return calculateDepreciation({
-          acquisitionCost: Number(asset.acquisitionCost),
-          residualValue: Number(asset.residualValue || 0),
-          usefulLifeYears: asset.usefulLifeYears || 5,
-          depreciationStartDate: new Date(asset.depreciationStartDate),
-          method: asset.depreciationMethod as 'straight-line' | 'declining-balance',
-          decliningBalanceRate: 2, // Double-declining balance
-        });
+
+        return null;
       }),
     
     summary: protectedProcedure.query(async () => {
       const { calculateDepreciation } = require('./depreciation');
-      const assets = await db.getAllAssets();
+      const allAssets = await db.getAllAssets();
       
       let totalAcquisitionCost = 0;
       let totalCurrentValue = 0;
       let totalAccumulatedDepreciation = 0;
       let assetsWithDepreciation = 0;
       
-      for (const asset of assets) {
+      for (const asset of allAssets) {
         if (asset.acquisitionCost) {
           totalAcquisitionCost += Number(asset.acquisitionCost);
         }
@@ -3207,6 +3407,21 @@ export const appRouter = router({
             totalCurrentValue += result.currentBookValue;
             totalAccumulatedDepreciation += result.accumulatedDepreciation;
           }
+        } else if (
+          asset.actualUnitValue != null &&
+          String(asset.actualUnitValue).trim() !== "" &&
+          asset.itemCategory &&
+          String(asset.itemCategory).trim() !== "" &&
+          asset.yearAcquiredRegister != null
+        ) {
+          assetsWithDepreciation++;
+          const reg = buildRegisterDepreciationResultFromAsset({
+            actualUnitValue: asset.actualUnitValue,
+            itemCategory: asset.itemCategory,
+            yearAcquiredRegister: asset.yearAcquiredRegister,
+          });
+          totalCurrentValue += reg.currentBookValue;
+          totalAccumulatedDepreciation += reg.accumulatedDepreciation;
         } else if (asset.currentValue) {
           totalCurrentValue += Number(asset.currentValue);
         } else if (asset.acquisitionCost) {
@@ -3222,7 +3437,7 @@ export const appRouter = router({
           ? Math.round((totalAccumulatedDepreciation / totalAcquisitionCost) * 10000) / 100 
           : 0,
         assetsWithDepreciation,
-        totalAssets: assets.length,
+        totalAssets: allAssets.length,
       };
     }),
   }),
