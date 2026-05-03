@@ -111,6 +111,7 @@
     "pdf-parse": "^2.4.5",
     "pdfkit": "^0.17.2",
     "postgres": "^3.4.5",
+    "posthog-js": "^1.372.6",
     "posthog-node": "^5.33.0",
     "qrcode": "^1.5.4",
     "react": "^19.2.1",
