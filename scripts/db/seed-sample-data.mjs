@@ -21,12 +21,14 @@ const db = drizzle(sql, { schema, mode: "default" });
 console.log("🌱 Starting sample data population...\n");
 
 const assetCategoryData = [
+  { name: "Computer", description: "IT and computing equipment" },
+  { name: "Furniture & Fixtures", description: "Office furniture and fixtures" },
+  { name: "Generator", description: "Power generation equipment" },
+  { name: "Land", description: "Land assets" },
+  { name: "Land & Building", description: "Buildings and land & building" },
   { name: "Medical Equipment", description: "Medical and healthcare equipment" },
-  { name: "Vehicle", description: "Transportation vehicles and ambulances" },
-  { name: "IT Equipment", description: "Computers, servers, and IT infrastructure" },
-  { name: "Generators", description: "Power generation equipment" },
   { name: "Office Equipment", description: "Office furniture and equipment" },
-  { name: "Communication Equipment", description: "Radios, phones, and communication devices" },
+  { name: "Vehicle", description: "Transportation vehicles and ambulances" },
 ];
 
 console.log("Inserting asset categories...");
@@ -82,14 +84,25 @@ for (const v of vendors) {
   console.log(`✓ Created vendor: ${v.name}`);
 }
 
-const assetCategoryNames = ["Medical Equipment", "Vehicle", "IT Equipment", "Generators", "Office Equipment", "Communication Equipment"];
+const assetCategoryNames = [
+  "Computer",
+  "Furniture & Fixtures",
+  "Generator",
+  "Land",
+  "Land & Building",
+  "Medical Equipment",
+  "Office Equipment",
+  "Vehicle",
+];
 const assetTypes = {
+  Computer: ["Desktop Computer", "Laptop", "Printer", "Server", "Network Router"],
+  "Furniture & Fixtures": ["Office Desk", "Filing Cabinet", "Conference Table", "Air Conditioner", "Projector"],
+  Generator: ["5KVA Generator", "10KVA Generator", "15KVA Generator", "20KVA Generator"],
+  Land: ["Plot A", "Plot B"],
+  "Land & Building": ["Office Building", "Warehouse"],
   "Medical Equipment": ["Ambulance Stretcher", "First Aid Kit", "Medical Refrigerator", "Blood Pressure Monitor", "Oxygen Concentrator"],
+  "Office Equipment": ["Two-Way Radio", "Satellite Phone", "Mobile Phone", "Walkie-Talkie"],
   Vehicle: ["Ambulance", "Pickup Truck", "SUV", "Van", "Motorcycle"],
-  "IT Equipment": ["Desktop Computer", "Laptop", "Printer", "Server", "Network Router"],
-  Generators: ["5KVA Generator", "10KVA Generator", "15KVA Generator", "20KVA Generator"],
-  "Office Equipment": ["Office Desk", "Filing Cabinet", "Conference Table", "Air Conditioner", "Projector"],
-  "Communication Equipment": ["Two-Way Radio", "Satellite Phone", "Mobile Phone", "Walkie-Talkie"],
 };
 
 const statuses = ["operational", "maintenance", "retired"];

@@ -9,22 +9,16 @@ import { eq } from "drizzle-orm";
 import { appSettings, assetCategories, emailTemplates } from "../../drizzle/schema";
 import { getDb, resetDbConnection } from "../../server/db";
 
+/** Official NRCS register — `assetCategories` names only (matches `ITEM_CATEGORY_CODE_MAP`). */
 const ASSET_CATEGORY_NAMES = [
-  "Vehicle",
+  "Computer",
   "Furniture & Fixtures",
   "Generator",
   "Land",
   "Land & Building",
   "Medical Equipment",
   "Office Equipment",
-  "Communication Equipment",
-  "Computer Equipment",
-  "IT Equipment",
-  "Other Equipment",
-  "Software",
-  "Visibility",
-  "Building",
-  "Power Source",
+  "Vehicle",
 ] as const;
 
 type TemplateRow = {
@@ -90,7 +84,7 @@ async function main(): Promise<void> {
       });
   }
 
-  console.log("Seeding asset categories…");
+  console.log("Seeding asset categories (NRCS canonical)…");
   let catAdded = 0;
   for (const name of ASSET_CATEGORY_NAMES) {
     const existing = await db.select({ id: assetCategories.id }).from(assetCategories).where(eq(assetCategories.name, name)).limit(1);
