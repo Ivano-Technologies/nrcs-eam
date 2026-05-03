@@ -34,6 +34,11 @@ async function syncPublicReferenceIntoTest(
     "stock_cards",
   ] as const;
 
+  const warn = (step: string, e: unknown) => {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.warn(`[setup-test-schema] public→${schema} ${step} skipped: ${msg}`);
+  };
+
   try {
     // Remove prior partial copies so INSERT…SELECT from public cannot hit unique (id) vs unique (code) skew.
     await sql.unsafe(`DELETE FROM ${s}.${quoteIdent("stock_movements")}`);
@@ -62,16 +67,67 @@ async function syncPublicReferenceIntoTest(
       ) d
       WHERE d.rn = 1;
     `);
-    await sql.unsafe(`
-      INSERT INTO ${s}.${quoteIdent("sites")} SELECT * FROM public.${quoteIdent("sites")}
-      ON CONFLICT (id) DO NOTHING;
-    `);
+  } catch (e) {
+    warn("donor wipe/insert", e);
+    return;
+  }
+
+  // Catalogue + CTNs must sync even when `sites` hits duplicate-code drift vs existing test rows
+  // (otherwise waybill E2E waits forever on an empty item Select).
+  try {
     await sql.unsafe(`
       INSERT INTO ${s}.${quoteIdent("inventory_catalogue")} SELECT * FROM public.${quoteIdent("inventory_catalogue")};
     `);
+  } catch (e) {
+    warn("inventory_catalogue copy", e);
+  }
+
+  try {
     await sql.unsafe(`
       INSERT INTO ${s}.${quoteIdent("commodity_tracking_numbers")} SELECT * FROM public.${quoteIdent("commodity_tracking_numbers")};
     `);
+  } catch (e) {
+    warn("commodity_tracking_numbers copy", e);
+  }
+
+  try {
+    // `sites.code` is UNIQUE. Stale `test` rows can share a facility code with `public` under a
+    // different `id`, which aborts the whole INSERT and leaves `stock_cards` (FK to `sites.id`)
+    // out of sync — waybill CTN dropdowns then miss E2E-CTN balances.
+    await sql.unsafe(`
+      WITH canon AS (
+        SELECT DISTINCT ON (COALESCE(NULLIF(trim(ps.code), ''), ps.id::text))
+          ps.id AS canon_id,
+          COALESCE(NULLIF(trim(ps.code), ''), ps.id::text) AS dedup_key
+        FROM public.${quoteIdent("sites")} ps
+        ORDER BY COALESCE(NULLIF(trim(ps.code), ''), ps.id::text), ps.id
+      ),
+      stale AS (
+        SELECT t.id AS stale_id, c.canon_id
+        FROM ${s}.${quoteIdent("sites")} t
+        INNER JOIN canon c ON c.dedup_key = COALESCE(NULLIF(trim(t.code), ''), t.id::text)
+        WHERE t.id <> c.canon_id
+      )
+      UPDATE ${s}.${quoteIdent("sites")} t
+      SET code = NULL
+      FROM stale st
+      WHERE t.id = st.stale_id;
+    `);
+    await sql.unsafe(`
+      INSERT INTO ${s}.${quoteIdent("sites")}
+      SELECT s.* FROM public.${quoteIdent("sites")} s
+      INNER JOIN (
+        SELECT DISTINCT ON (COALESCE(NULLIF(trim(code), ''), id::text)) id
+        FROM public.${quoteIdent("sites")}
+        ORDER BY COALESCE(NULLIF(trim(code), ''), id::text), id
+      ) pick ON pick.id = s.id
+      ON CONFLICT (id) DO NOTHING;
+    `);
+  } catch (e) {
+    warn("sites copy", e);
+  }
+
+  try {
     await sql.unsafe(`
       INSERT INTO ${s}.${quoteIdent("stock_cards")} SELECT sc.* FROM public.${quoteIdent("stock_cards")} sc
       WHERE EXISTS (
@@ -79,9 +135,7 @@ async function syncPublicReferenceIntoTest(
       );
     `);
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    console.warn(`[setup-test-schema] public→${schema} reference sync skipped: ${msg}`);
-    return;
+    warn("stock_cards copy", e);
   }
 
   for (const t of tablesToResync) {
