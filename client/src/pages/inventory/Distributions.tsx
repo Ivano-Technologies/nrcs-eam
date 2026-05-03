@@ -10,19 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { ViewToggle, type ViewMode } from "@/components/ViewToggle";
 import { toast } from "sonner";
-
-function downloadBase64File(data: string, filename: string, mimeType: string) {
-  const bytes = atob(data);
-  const arr = new Uint8Array(bytes.length);
-  for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
-  const blob = new Blob([arr], { type: mimeType });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(url);
-}
+import { downloadBase64File } from "@/lib/download";
 
 export default function Distributions({ embedInShell = false }: { embedInShell?: boolean } = {}) {
   const [viewMode, setViewMode] = useState<ViewMode>(() => (localStorage.getItem("viewMode_inventory_distributions") as ViewMode) || "table");

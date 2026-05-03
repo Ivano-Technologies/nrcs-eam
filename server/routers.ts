@@ -2930,6 +2930,36 @@ export const appRouter = router({
           };
         }
       }),
+
+    branchSummary: managerOrAdminProcedure
+      .input(z.object({ siteId: z.number(), consolidated: z.boolean().optional() }))
+      .query(async ({ input, ctx }) => {
+        const { buildBranchSummaryReport } = await import("./reports/branchSummary");
+        return await buildBranchSummaryReport({
+          siteId: input.siteId,
+          consolidated: input.consolidated,
+          user: ctx.user,
+        });
+      }),
+
+    branchSummaryPdf: managerOrAdminProcedure
+      .input(z.object({ siteId: z.number(), consolidated: z.boolean().optional() }))
+      .mutation(async ({ input, ctx }) => {
+        const { buildBranchSummaryReport } = await import("./reports/branchSummary");
+        const { renderBranchSummaryPdf } = await import("./reports/branchSummaryPdf");
+        const summary = await buildBranchSummaryReport({
+          siteId: input.siteId,
+          consolidated: input.consolidated,
+          user: ctx.user,
+        });
+        const buffer = await renderBranchSummaryPdf(summary);
+        const slug = summary.branchName.replace(/[^\w\-]+/g, "-").replace(/^-|-$/g, "").slice(0, 48) || "branch";
+        return {
+          data: buffer.toString("base64"),
+          filename: `branch-summary-${slug}-${summary.reportDate}.pdf`,
+          mimeType: "application/pdf",
+        };
+      }),
   }),
 
   // Asset Photos Management

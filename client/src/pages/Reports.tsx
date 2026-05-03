@@ -1,12 +1,16 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
+import { downloadBase64File } from "@/lib/download";
+import { usePermissions } from "@/_core/hooks/usePermissions";
 import { Download } from "lucide-react";
+import { toast } from "sonner";
 import {
   Bar,
   BarChart,
@@ -75,13 +79,36 @@ function downloadCsv(rows: Record<string, unknown>[], filename: string) {
 }
 
 export default function Reports() {
+  const { isManagerOrAdmin, isAdmin } = usePermissions();
   const [selectedReport, setSelectedReport] = useState("stockStatus");
   const [warehouseId, setWarehouseId] = useState("all");
   const [category, setCategory] = useState("all");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [branchSummarySiteId, setBranchSummarySiteId] = useState<string>("");
+  const [branchSummaryConsolidated, setBranchSummaryConsolidated] = useState(false);
 
   const { data: sites } = trpc.sites.list.useQuery();
+  const branchSummaryPdf = trpc.reports.branchSummaryPdf.useMutation();
+
+  const branchSummaryFacilityOptions = useMemo(() => {
+    const rows = sites ?? [];
+    if (isAdmin) return rows;
+    return rows.filter(
+      (s: { facilityType?: string }) => s.facilityType === "branch" || s.facilityType === "national_headquarters"
+    );
+  }, [sites, isAdmin]);
+
+  const selectedBranchSummarySite = useMemo(
+    () => branchSummaryFacilityOptions.find((s: { id: number }) => String(s.id) === branchSummarySiteId),
+    [branchSummaryFacilityOptions, branchSummarySiteId]
+  );
+
+  useEffect(() => {
+    if (selectedBranchSummarySite?.facilityType !== "national_headquarters") {
+      setBranchSummaryConsolidated(false);
+    }
+  }, [selectedBranchSummarySite?.facilityType]);
   const { data: stockStatus } = trpc.inventoryV2.reports.stockStatus.useQuery({
     warehouseId: warehouseId === "all" ? undefined : Number(warehouseId),
     category: category === "all" ? undefined : (category as any),
@@ -158,6 +185,65 @@ export default function Reports() {
           Inventory intelligence, VED/ABC/FNS analysis, and forecasting.
         </p>
       </div>
+
+      {isManagerOrAdmin ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Branch summary (management)</CardTitle>
+            <CardDescription>
+              One-page PDF: assets, stock readiness, requisitions, low stock, and recent activity for a branch or NHQ
+              consolidated view.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
+            <div className="space-y-1">
+              <Label>Facility</Label>
+              <Select value={branchSummarySiteId} onValueChange={setBranchSummarySiteId}>
+                <SelectTrigger className="w-[280px]" data-testid="branch-summary-site-select">
+                  <SelectValue placeholder="Select branch or NHQ" />
+                </SelectTrigger>
+                <SelectContent>
+                  {branchSummaryFacilityOptions.map((s: { id: number; name: string }) => (
+                    <SelectItem key={s.id} value={String(s.id)}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {selectedBranchSummarySite?.facilityType === "national_headquarters" ? (
+              <div className="flex items-center gap-2 pb-1">
+                <Checkbox
+                  id="branch-summary-consolidated"
+                  checked={branchSummaryConsolidated}
+                  onCheckedChange={(v) => setBranchSummaryConsolidated(v === true)}
+                />
+                <Label htmlFor="branch-summary-consolidated" className="cursor-pointer text-sm font-normal">
+                  Consolidated (all branches)
+                </Label>
+              </div>
+            ) : null}
+            <Button
+              disabled={!branchSummarySiteId || branchSummaryPdf.isPending}
+              onClick={async () => {
+                try {
+                  const file = await branchSummaryPdf.mutateAsync({
+                    siteId: Number(branchSummarySiteId),
+                    consolidated: branchSummaryConsolidated || undefined,
+                  });
+                  downloadBase64File(file.data, file.filename, file.mimeType);
+                  toast.success("Branch summary downloaded");
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : "Download failed");
+                }
+              }}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Download branch report
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader>
