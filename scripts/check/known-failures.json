@@ -26,12 +26,6 @@
           "reason": "Environment-dependent — sidebar nav sweep hits `assets.list` / warranty TRPC queries that can return HTTP 500 on mirrored `test` schema or undefined client input; guard correctly fails until server + fixtures align.",
           "addedAt": "2026-05-03",
           "plannedFixPhase": "Harden assets TRPC inputs for mirrored schema / fix migrations"
-        },
-        {
-          "file": "wms-ctn-registry.spec.ts",
-          "reason": "Pending investigation — CTN registry page load assertion failing",
-          "addedAt": "2026-05-02",
-          "plannedFixPhase": "pending"
         }
       ]
     },

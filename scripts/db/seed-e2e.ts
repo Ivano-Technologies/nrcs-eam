@@ -12,9 +12,16 @@
  * This script no longer writes legacy magic-link tables; auth is Supabase session-based.
  */
 import "dotenv/config";
-import { asc, eq, sql } from "drizzle-orm";
+import { asc, eq, inArray, sql } from "drizzle-orm";
 import { createClient } from "@supabase/supabase-js";
-import { commodityTrackingNumbers, donors, sites, stockMovements, users } from "../../drizzle/schema";
+import {
+  commodityTrackingNumbers,
+  donors,
+  inventoryCatalogue,
+  sites,
+  stockMovements,
+  users,
+} from "../../drizzle/schema";
 import { WMS_DONOR_SEED } from "../../shared/wmsDonors";
 import { getDb } from "../../server/db";
 import { ensureStockCardForCtnAtLocation, insertGrnReceiptMovement } from "../../server/wms/grnStockLedger";
@@ -26,6 +33,81 @@ type Db = NonNullable<Awaited<ReturnType<typeof getDb>>>;
  * Global Playwright teardown deletes waybill ledger rows without restoring every CTN variant.
  * Top up GRN movements for each warehouse × CTN (first chunk of rows) so waybill picks any UI CTNs.
  */
+/** Stable CTN codes for `wms-waybill-dispatch.spec.ts` (dual-source line); tied to first catalogue row as ordered in `catalogue.list`. */
+const WAYBILL_DUAL_SOURCE_CTN_CODES = ["E2E-CTN-WAYBILL-1", "E2E-CTN-WAYBILL-2"] as const;
+
+async function ensureDualSourceWaybillE2eCtns(db: Db) {
+  const [cat] = await db
+    .select({ id: inventoryCatalogue.id })
+    .from(inventoryCatalogue)
+    .orderBy(asc(inventoryCatalogue.category), asc(inventoryCatalogue.name))
+    .limit(1);
+  const [don] = await db.select({ id: donors.id }).from(donors).where(eq(donors.code, "IFRC")).limit(1);
+  const itemId = cat?.id;
+  const donorId = don?.id;
+  if (itemId == null || donorId == null) {
+    console.warn("[seed-e2e] skip waybill dual-source CTNs: missing catalogue or IFRC donor");
+    return;
+  }
+
+  for (const ctnCode of WAYBILL_DUAL_SOURCE_CTN_CODES) {
+    await db
+      .insert(commodityTrackingNumbers)
+      .values({
+        ctnCode,
+        donorId,
+        itemId,
+        unit: "piece",
+        originalQuantity: 999,
+        status: "active",
+        receivedDate: "2024-01-01",
+        expiryDate: "2030-12-31",
+        notes: "seed-e2e: dual CTN sources for Playwright waybill dispatch",
+      })
+      .onConflictDoNothing({ target: commodityTrackingNumbers.ctnCode });
+  }
+
+  const ctnRows = await db
+    .select({ id: commodityTrackingNumbers.id })
+    .from(commodityTrackingNumbers)
+    .where(inArray(commodityTrackingNumbers.ctnCode, [...WAYBILL_DUAL_SOURCE_CTN_CODES]));
+
+  const warehouses = await db
+    .select({ id: sites.id })
+    .from(sites)
+    .where(eq(sites.facilityType, "warehouse"));
+  if (warehouses.length === 0 || ctnRows.length === 0) return;
+
+  const [actor] = await db.select({ id: users.id }).from(users).where(eq(users.email, E2E_EMAIL)).limit(1);
+  const createdBy = actor?.id ?? null;
+  const targetQty = 40;
+
+  for (const { id: warehouseId } of warehouses) {
+    for (const { id: ctnId } of ctnRows) {
+      const stockCardId = await ensureStockCardForCtnAtLocation(db, { ctnId, locationId: warehouseId });
+      const [agg] = await db
+        .select({
+          net: sql<number>`coalesce(sum(${stockMovements.quantityIn} - ${stockMovements.quantityOut}), 0)`.mapWith(
+            Number,
+          ),
+        })
+        .from(stockMovements)
+        .where(eq(stockMovements.stockCardId, stockCardId));
+      const net = Number(agg?.net ?? 0);
+      const need = Math.max(0, targetQty - net);
+      if (need <= 0) continue;
+      await insertGrnReceiptMovement(db, {
+        stockCardId,
+        quantityIn: need,
+        documentNumber: "E2E-SEED-WAYBILL-CTN",
+        fromTo: "E2E seed waybill CTNs",
+        remarks: "seed-e2e: stock for waybill dual-source CTNs",
+        createdBy,
+      });
+    }
+  }
+}
+
 async function topUpE2eWmsCtnStockForPlaywright(db: Db) {
   // Waybill dispatch validates stock per (CTN × warehouse). The UI balance is global across locations,
   // so topping up only the first warehouse leaves other warehouses at 0 while the test picks
@@ -258,6 +340,7 @@ export async function runSeedE2e() {
 
   try {
     await topUpE2eWmsCtnStockForPlaywright(db);
+    await ensureDualSourceWaybillE2eCtns(db);
   } catch (error) {
     console.warn("[seed-e2e] WMS CTN stock top-up skipped:", error instanceof Error ? error.message : error);
   }

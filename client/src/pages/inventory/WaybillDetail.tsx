@@ -80,7 +80,7 @@ export default function WaybillDetail() {
   const { data: catalogue } = trpc.inventoryV2.catalogue.list.useQuery();
   const requisitions = trpc.inventoryV2.requisitions.list.useQuery({ status: "hq_approved" });
   const ctnList = trpc.wms.ctn.list.useQuery({
-    limit: 200,
+    limit: 500,
     offset: 0,
     search: undefined,
   });

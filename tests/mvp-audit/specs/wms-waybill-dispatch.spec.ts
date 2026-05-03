@@ -15,27 +15,34 @@ test("WMS waybill create -> multi-CTN dispatch -> print copies", async ({ page }
 
   const suffix = Date.now().toString().slice(-4);
   await page.getByTestId("waybill-warehouse").click();
-  await page.getByRole("option").first().click();
+  await expect(page.getByRole("listbox").last()).toBeVisible({ timeout: 30_000 });
+  await page.getByRole("listbox").last().getByRole("option").first().click();
   // Warehouse selection triggers auto-suggested WB number; overwrite with deterministic E2E value.
   await page.getByTestId("waybill-wb-number").fill(`NRCS-NHQ-2026-WB-${suffix}`);
   await page.getByTestId("waybill-destination-name").fill("E2E Destination");
+  // First row in the item dropdown matches `seed-e2e` dual-source CTNs (`E2E-CTN-WAYBILL-*`).
   await page.getByTestId("waybill-line-0-item").click();
-  await page.getByRole("option").first().click();
+  await expect(page.getByRole("listbox").last()).toBeVisible({ timeout: 90_000 });
+  await page.getByRole("listbox").last().getByRole("option").first().click();
   await page.getByTestId("waybill-line-0-quantity").fill("5");
 
   await page.getByRole("button", { name: "Add another CTN" }).first().click();
   // Draft create requires valid ctnSources (positive ctnId + qty) summing to line qty — empty rows fail Zod / TRPC.
   await page.getByTestId("waybill-line-0-ctn-0-trigger").click();
-  const e2eCtnOpts = page.getByRole("option").filter({ hasText: /E2E-CTN/i });
+  const ctnListbox = page.getByRole("listbox").last();
+  await expect(ctnListbox).toBeVisible({ timeout: 15_000 });
+  const e2eCtnOpts = ctnListbox.getByRole("option").filter({ hasText: /E2E-CTN-WAYBILL/i });
   await expect(e2eCtnOpts.first()).toBeVisible({ timeout: 15_000 });
   await e2eCtnOpts.nth(0).click();
   // Per-CTN balances must cover each source qty (server dispatch validates stock per CTN, not only line total).
   await page.getByTestId("waybill-line-0-ctn-0-qty").fill("3");
   await page.getByTestId("waybill-line-0-ctn-1-trigger").click();
-  const e2eSecond = page.getByRole("option").filter({ hasText: /E2E-CTN/i });
+  const ctnLb2 = page.getByRole("listbox").last();
+  await expect(ctnLb2).toBeVisible({ timeout: 15_000 });
+  const e2eSecond = ctnLb2.getByRole("option").filter({ hasText: /E2E-CTN-WAYBILL/i });
   const e2eCount = await e2eSecond.count();
   if (e2eCount < 2) {
-    throw new Error(`Need ≥2 seeded E2E-CTN options for dual-source dispatch; saw ${e2eCount}`);
+    throw new Error(`Need ≥2 seeded E2E-CTN-WAYBILL options for dual-source dispatch; saw ${e2eCount}`);
   }
   await e2eSecond.nth(1).click();
   await page.getByTestId("waybill-line-0-ctn-1-qty").fill("2");
