@@ -888,6 +888,27 @@ export async function getLowStockItems(siteId?: number) {
     .orderBy(asc(inventoryItems.currentStock));
 }
 
+/** Assets with no physical check or last check older than 6 months (for reminder emails). */
+export async function listAssetsForPhysicalCheckReminder() {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select({
+      id: assets.id,
+      siteId: assets.siteId,
+      assetTag: assets.assetTag,
+      name: assets.name,
+      lastPhysicalCheck: assets.lastPhysicalCheck,
+    })
+    .from(assets)
+    .where(
+      or(
+        isNull(assets.lastPhysicalCheck),
+        sql`${assets.lastPhysicalCheck} < (CURRENT_DATE - interval '6 months')`
+      )
+    );
+}
+
 export async function getInventoryItemById(id: number) {
   const db = await getDb();
   if (!db) return null;

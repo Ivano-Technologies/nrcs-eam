@@ -25,7 +25,7 @@ import {
   waybillLines,
   waybills,
 } from "../../drizzle/schema";
-import { getDb, getAllUsers, createNotification } from "../db";
+import { getDb, getAllUsers, createNotification, getUserById } from "../db";
 import { protectedProcedure, requireRole, router } from "../_core/trpc";
 import { checkStockThreshold } from "../_core/inventoryAlerts";
 import {
@@ -66,6 +66,42 @@ import {
 
 const vedEnum = z.enum(INVENTORY_VED_VALUES);
 const categoryEnum = z.enum(INVENTORY_CATEGORIES);
+
+async function sendRequisitionStatusEmailToSubmitter(opts: {
+  requisitionId: number;
+  statusRaw: string;
+  approver: { name: string | null; email: string | null };
+}) {
+  const database = await getDb();
+  if (!database) return;
+  const { requisitionStatusEmail, formatRequisitionStatusLabel, requisitionDetailLink } = await import(
+    "../notifications/emailTemplates"
+  );
+  const { createEmailService } = await import("../_core/createEmailService");
+  const [req] = await database.select().from(requisitions).where(eq(requisitions.id, opts.requisitionId)).limit(1);
+  if (!req) return;
+  const submitter = await getUserById(req.requestedBy);
+  const to = submitter?.email?.trim();
+  if (!to) return;
+
+  const rawItems = Array.isArray(req.items)
+    ? (req.items as Array<{ catalogueId: number; quantity: number; notes?: string }>)
+    : [];
+  const itemLines = rawItems.map(
+    (it) =>
+      `Catalogue item #${it.catalogueId} — quantity ${it.quantity}${it.notes ? ` (${it.notes})` : ""}`
+  );
+
+  const approverName = opts.approver.name?.trim() || opts.approver.email?.trim() || "Approver";
+  const { subject, html } = requisitionStatusEmail({
+    refNumber: req.reqNumber ?? `#${req.id}`,
+    status: formatRequisitionStatusLabel(opts.statusRaw),
+    items: itemLines,
+    approverName,
+    link: requisitionDetailLink(req.id),
+  });
+  await createEmailService().send({ type: "requisition_status", to, subject, html });
+}
 
 const stockStatusEnum = z.enum(["normal", "low", "critical", "out_of_stock"]);
 
@@ -2223,6 +2259,11 @@ export const inventoryV2Router = router({
         .update(requisitions)
         .set({ status: "branch_approved", approvedBranchBy: ctx.user.id, approvedBranchAt: new Date(), updatedAt: new Date() })
         .where(eq(requisitions.id, input.requisitionId));
+      await sendRequisitionStatusEmailToSubmitter({
+        requisitionId: input.requisitionId,
+        statusRaw: "branch_approved",
+        approver: { name: ctx.user.name, email: ctx.user.email },
+      });
       return { success: true as const };
     }),
 
@@ -2234,6 +2275,11 @@ export const inventoryV2Router = router({
         .update(requisitions)
         .set({ status: "hq_approved", approvedHqBy: ctx.user.id, approvedHqAt: new Date(), updatedAt: new Date() })
         .where(eq(requisitions.id, input.requisitionId));
+      await sendRequisitionStatusEmailToSubmitter({
+        requisitionId: input.requisitionId,
+        statusRaw: "hq_approved",
+        approver: { name: ctx.user.name, email: ctx.user.email },
+      });
       return { success: true as const };
     }),
 
@@ -2247,6 +2293,11 @@ export const inventoryV2Router = router({
           .update(requisitions)
           .set({ status: "rejected", rejectedBy: ctx.user.id, rejectionReason: input.reason, updatedAt: new Date() })
           .where(eq(requisitions.id, input.requisitionId));
+        await sendRequisitionStatusEmailToSubmitter({
+          requisitionId: input.requisitionId,
+          statusRaw: "rejected",
+          approver: { name: ctx.user.name, email: ctx.user.email },
+        });
         return { success: true as const };
       }),
 
@@ -2279,6 +2330,11 @@ export const inventoryV2Router = router({
           .update(requisitions)
           .set({ status: "fulfilled", fulfilledAt: new Date(), linkedWaybills: [doc.documentNumber], updatedAt: new Date() })
           .where(eq(requisitions.id, req.id));
+        await sendRequisitionStatusEmailToSubmitter({
+          requisitionId: req.id,
+          statusRaw: "fulfilled",
+          approver: { name: ctx.user.name, email: ctx.user.email },
+        });
         return { success: true as const, waybillNumber: doc.documentNumber };
       }),
 
@@ -2290,6 +2346,11 @@ export const inventoryV2Router = router({
       if (req.requestedBy !== ctx.user.id && ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
       if (["branch_approved", "hq_approved", "fulfilled"].includes(req.status ?? "")) throw new TRPCError({ code: "BAD_REQUEST" });
       await db.update(requisitions).set({ status: "cancelled", updatedAt: new Date() }).where(eq(requisitions.id, req.id));
+      await sendRequisitionStatusEmailToSubmitter({
+        requisitionId: req.id,
+        statusRaw: "cancelled",
+        approver: { name: ctx.user.name, email: ctx.user.email },
+      });
       return { success: true as const };
     }),
 

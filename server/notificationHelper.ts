@@ -1,4 +1,5 @@
 import * as db from "./db";
+import { createEmailService } from "./_core/createEmailService";
 
 /**
  * Helper functions to create notifications for various events
@@ -35,17 +36,46 @@ export async function notifyLowStock(userId: number, itemId: number, itemName: s
 /** Notify admins/managers when an item crosses from OK to below minimum (including min threshold increases). */
 export async function notifyManagersWhenInventoryBecomesLow(
   before: { currentStock: number; minStockLevel: number },
-  after: { id: number; name: string; currentStock: number; minStockLevel: number }
+  after: {
+    id: number;
+    name: string;
+    currentStock: number;
+    minStockLevel: number;
+    siteId: number;
+    reorderPoint?: number | null;
+  }
 ) {
   const wasOk = before.currentStock >= before.minStockLevel;
   const nowLow = after.currentStock < after.minStockLevel;
   if (!nowLow || !wasOk) return;
 
   const users = await db.getAllUsers();
+  const site = await db.getSiteById(after.siteId);
+  const facilityName = site?.name ?? `Facility ${after.siteId}`;
+  const reorderPoint = Number(after.reorderPoint ?? after.minStockLevel ?? 0);
+  const { lowStockEmail, inventoryLowStockLink } = await import("./notifications/emailTemplates");
+  const link = inventoryLowStockLink();
+
   for (const u of users) {
-    if (u.role === "admin" || u.role === "manager") {
-      await notifyLowStock(u.id, after.id, after.name, after.currentStock);
-    }
+    const scoped =
+      u.role === "admin" || (u.role === "manager" && u.siteId != null && u.siteId === after.siteId);
+    if (!scoped) continue;
+
+    await notifyLowStock(u.id, after.id, after.name, after.currentStock);
+
+    const prefs = await db.getUserNotificationPreferences(u.id);
+    if (prefs && !prefs.lowStock) continue;
+    const email = u.email?.trim();
+    if (!email) continue;
+
+    const { subject, html } = lowStockEmail({
+      itemName: after.name,
+      currentStock: after.currentStock,
+      reorderPoint,
+      facilityName,
+      link,
+    });
+    await createEmailService().send({ type: "low_stock", to: email, subject, html });
   }
 }
 
