@@ -232,6 +232,13 @@
       "when": 1777500200000,
       "tag": "0032_register_item_type_column",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1777600000000,
+      "tag": "0033_depreciated_value_manual_override",
+      "breakpoints": true
     }
   ]
 }

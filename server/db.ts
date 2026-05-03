@@ -570,6 +570,45 @@ export async function updateAsset(id: number, data: Partial<InsertAsset>) {
   return await getAssetById(id);
 }
 
+/** Assets eligible for automatic register depreciation (not manually overridden, required fields present). */
+export async function listAssetsEligibleForAutoDepreciation(): Promise<
+  Array<{
+    id: number;
+    actualUnitValue: string | null;
+    itemCategory: string | null;
+    yearAcquiredRegister: number | null;
+  }>
+> {
+  const database = await getDb();
+  if (!database) return [];
+  return await database
+    .select({
+      id: assets.id,
+      actualUnitValue: assets.actualUnitValue,
+      itemCategory: assets.itemCategory,
+      yearAcquiredRegister: assets.yearAcquiredRegister,
+    })
+    .from(assets)
+    .where(
+      and(
+        eq(assets.depreciatedValueManualOverride, false),
+        isNotNull(assets.actualUnitValue),
+        isNotNull(assets.itemCategory),
+        sql`trim(coalesce(${assets.itemCategory}, '')) <> ''`,
+        isNotNull(assets.yearAcquiredRegister)
+      )
+    );
+}
+
+export async function countAllAssets(): Promise<number> {
+  const database = await getDb();
+  if (!database) return 0;
+  const [row] = await database
+    .select({ c: sql<number>`count(*)::int` })
+    .from(assets);
+  return row?.c ?? 0;
+}
+
 export async function deleteAsset(id: number) {
   const db = await getDb();
   if (!db) return false;

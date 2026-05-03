@@ -32,9 +32,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { usePermissions } from "@/_core/hooks/usePermissions";
+import { calculateDepreciatedValue } from "@/lib/depreciation";
 import { appPath } from "@/lib/routes";
 import { formatNaira } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -175,7 +177,7 @@ const SORTABLE: Set<string> = new Set([
 
 export default function Assets() {
   const [location, setLocation] = useLocation();
-  const { canEditAssets } = usePermissions();
+  const { canEditAssets, isAdmin } = usePermissions();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -204,6 +206,8 @@ export default function Assets() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
   const [createFormError, setCreateFormError] = useState("");
+  /** When true, create payload sends manual depreciated value; when false, server auto-calculates. */
+  const [createDepreciationOverride, setCreateDepreciationOverride] = useState(false);
 
   const limit =
     pageSize === "all" ? 50_000 : Number.parseInt(pageSize, 10) || 50;
@@ -393,7 +397,18 @@ export default function Assets() {
     },
   });
 
+  const recalculateDepreciationMutation = trpc.assets.recalculateDepreciation.useMutation({
+    onSuccess: (res) => {
+      toast.success(`Recalculated ${res.updated} asset(s); ${res.skipped} skipped (manual or incomplete data).`);
+      refetch();
+    },
+    onError: (error: { message?: string }) => {
+      toast.error(error.message ?? "Recalculation failed");
+    },
+  });
+
   const resetNewAssetForm = () => {
+    setCreateDepreciationOverride(false);
     setNewAsset({
       assetTag: "",
       name: "",
@@ -474,6 +489,49 @@ export default function Assets() {
   const selectedCategoryName =
     categories?.find((cat) => cat.id.toString() === newAsset.categoryId)?.name ?? "";
   const selectedCategoryCode = ITEM_CATEGORY_CODE_MAP[selectedCategoryName] ?? "";
+
+  const computedCreateDepreciation = useMemo(() => {
+    const actual = Number(newAsset.actualUnitValue);
+    const year = newAsset.yearAcquired ? Number(newAsset.yearAcquired) : NaN;
+    const cat = selectedCategoryName.trim();
+    if (
+      !createDepreciationOverride &&
+      Number.isFinite(actual) &&
+      actual >= 0 &&
+      cat &&
+      Number.isFinite(year) &&
+      year >= 1900
+    ) {
+      return calculateDepreciatedValue(actual, cat, year);
+    }
+    return null;
+  }, [createDepreciationOverride, newAsset.actualUnitValue, newAsset.yearAcquired, selectedCategoryName]);
+
+  const editingCategoryName =
+    editingAsset && categories?.find((c) => c.id.toString() === String(editingAsset.categoryId))?.name;
+  const computedEditDepreciation = useMemo(() => {
+    if (!editingAsset || !isEditDialogOpen) return null;
+    const actual = Number(editingAsset.actualUnitValue);
+    const year = editingAsset.yearAcquiredRegister
+      ? Number(editingAsset.yearAcquiredRegister)
+      : NaN;
+    const cat = (editingAsset.itemCategoryLabel ?? editingCategoryName ?? "").trim();
+    if (
+      !editingAsset.depreciationManualOverride &&
+      Number.isFinite(actual) &&
+      actual >= 0 &&
+      cat &&
+      Number.isFinite(year) &&
+      year >= 1900
+    ) {
+      return calculateDepreciatedValue(actual, cat, year);
+    }
+    return null;
+  }, [
+    editingAsset,
+    editingCategoryName,
+    isEditDialogOpen,
+  ]);
   const selectedSiteCode =
     sites?.find((site) => site.id.toString() === newAsset.siteId)?.code ?? "";
   const generatedAssetCodePreview =
@@ -514,10 +572,12 @@ export default function Assets() {
       serialNumber: newAsset.serialNumber || undefined,
       acquisitionCost: newAsset.acquisitionCost || undefined,
       actualUnitValue: newAsset.actualUnitValue || undefined,
-      currentDepreciatedValue: newAsset.currentDepreciatedValue
-        ? Number(newAsset.currentDepreciatedValue)
-        : undefined,
-      depreciatedValue: newAsset.depreciatedValue || undefined,
+      depreciatedValueManualOverride: createDepreciationOverride,
+      currentDepreciatedValue:
+        createDepreciationOverride && newAsset.currentDepreciatedValue
+          ? Number(newAsset.currentDepreciatedValue)
+          : undefined,
+      depreciatedValue: createDepreciationOverride ? newAsset.depreciatedValue || undefined : undefined,
       acquisitionMethod: newAsset.acquisitionMethod || undefined,
       acquisitionOtherDetail:
         newAsset.acquisitionMethod === "Other" ? newAsset.acquisitionOtherDetail || undefined : undefined,
@@ -583,6 +643,16 @@ export default function Assets() {
       assignedToName: asset.assignedToName || "",
       physicalCondition: asset.physicalCondition || "Good",
       notes: asset.notes || "",
+      actualUnitValue: asset.actualUnitValue != null ? String(asset.actualUnitValue) : "",
+      yearAcquiredRegister: asset.yearAcquiredRegister != null ? String(asset.yearAcquiredRegister) : "",
+      itemCategoryLabel: (asset.itemCategory as string) || (asset.categoryName as string) || "",
+      depreciatedValue:
+        asset.depreciatedValue != null
+          ? String(asset.depreciatedValue)
+          : asset.currentDepreciatedValue != null
+            ? String(asset.currentDepreciatedValue)
+            : "",
+      depreciationManualOverride: Boolean(asset.depreciatedValueManualOverride),
     });
     setIsEditDialogOpen(true);
   };
@@ -613,6 +683,18 @@ export default function Assets() {
       assignedToName: editingAsset.assignedToName || undefined,
       physicalCondition: editingAsset.physicalCondition,
       notes: editingAsset.notes || undefined,
+      actualUnitValue: editingAsset.actualUnitValue || undefined,
+      yearAcquiredRegister: editingAsset.yearAcquiredRegister
+        ? Number(editingAsset.yearAcquiredRegister)
+        : undefined,
+      itemCategory: (editingAsset.itemCategoryLabel || editingCategoryName || "").trim() || undefined,
+      depreciatedValueManualOverride: editingAsset.depreciationManualOverride === true,
+      depreciatedValue:
+        editingAsset.depreciationManualOverride === true ? editingAsset.depreciatedValue || undefined : undefined,
+      currentDepreciatedValue:
+        editingAsset.depreciationManualOverride === true && editingAsset.depreciatedValue
+          ? Number(editingAsset.depreciatedValue)
+          : undefined,
     });
   };
 
@@ -791,20 +873,54 @@ export default function Assets() {
                         }
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label>Current Depreciated Value (NGN)</Label>
-                      <Input
-                        data-testid="asset-form-depreciated-value"
-                        type="number"
-                        value={newAsset.depreciatedValue || newAsset.currentDepreciatedValue}
-                        onChange={(e) =>
-                          setNewAsset({
-                            ...newAsset,
-                            depreciatedValue: e.target.value,
-                            currentDepreciatedValue: e.target.value,
-                          })
-                        }
-                      />
+                    <div className="space-y-2 col-span-2">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <Label>Current Depreciated Value (NGN)</Label>
+                        {canEditAssets ? (
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">Override</span>
+                            <Switch
+                              checked={createDepreciationOverride}
+                              onCheckedChange={(v) => {
+                                setCreateDepreciationOverride(v);
+                                if (!v) {
+                                  setNewAsset((prev) => ({
+                                    ...prev,
+                                    depreciatedValue: "",
+                                    currentDepreciatedValue: "",
+                                  }));
+                                }
+                              }}
+                              data-testid="asset-form-depreciation-override"
+                            />
+                          </div>
+                        ) : null}
+                      </div>
+                      {createDepreciationOverride ? (
+                        <Input
+                          data-testid="asset-form-depreciated-value"
+                          type="number"
+                          value={newAsset.depreciatedValue || newAsset.currentDepreciatedValue}
+                          onChange={(e) =>
+                            setNewAsset({
+                              ...newAsset,
+                              depreciatedValue: e.target.value,
+                              currentDepreciatedValue: e.target.value,
+                            })
+                          }
+                        />
+                      ) : (
+                        <Input
+                          data-testid="asset-form-depreciated-value"
+                          readOnly
+                          className="bg-muted"
+                          value={
+                            computedCreateDepreciation != null
+                              ? String(computedCreateDepreciation)
+                              : "— (set unit value, category, and year)"
+                          }
+                        />
+                      )}
                     </div>
                   </div>
                   <h3 className="mt-2 text-sm font-semibold text-[#1a2332]">Purchase / Acquisition Information</h3>
@@ -1117,6 +1233,17 @@ export default function Assets() {
                   Add Asset
                 </Button>
               </>
+            ) : null}
+            {isAdmin ? (
+              <Button
+                className="h-9"
+                variant="secondary"
+                disabled={recalculateDepreciationMutation.isPending}
+                onClick={() => recalculateDepreciationMutation.mutate()}
+                data-testid="asset-recalculate-depreciation-btn"
+              >
+                Recalculate All Depreciation
+              </Button>
             ) : null}
           </>
         }
@@ -1495,6 +1622,78 @@ export default function Assets() {
                   />
                 </div>
               </div>
+              {canEditAssets ? (
+                <>
+                  <h3 className="text-sm font-semibold text-[#1a2332]">Financial (register)</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Actual Unit Value (NGN)</Label>
+                      <Input
+                        type="number"
+                        value={editingAsset.actualUnitValue ?? ""}
+                        onChange={(e) =>
+                          setEditingAsset({ ...editingAsset, actualUnitValue: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Year Acquired</Label>
+                      <Input
+                        type="number"
+                        min={1900}
+                        max={2100}
+                        value={editingAsset.yearAcquiredRegister ?? ""}
+                        onChange={(e) =>
+                          setEditingAsset({ ...editingAsset, yearAcquiredRegister: e.target.value })
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Item category (register label)</Label>
+                    <Input
+                      value={editingAsset.itemCategoryLabel ?? ""}
+                      onChange={(e) =>
+                        setEditingAsset({ ...editingAsset, itemCategoryLabel: e.target.value })
+                      }
+                      placeholder="e.g. Computer — defaults from category if empty"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <Label>Current Depreciated Value (NGN)</Label>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">Override</span>
+                        <Switch
+                          checked={Boolean(editingAsset.depreciationManualOverride)}
+                          onCheckedChange={(v) =>
+                            setEditingAsset({ ...editingAsset, depreciationManualOverride: v })
+                          }
+                        />
+                      </div>
+                    </div>
+                    {editingAsset.depreciationManualOverride ? (
+                      <Input
+                        type="number"
+                        value={editingAsset.depreciatedValue ?? ""}
+                        onChange={(e) =>
+                          setEditingAsset({ ...editingAsset, depreciatedValue: e.target.value })
+                        }
+                      />
+                    ) : (
+                      <Input
+                        readOnly
+                        className="bg-muted"
+                        value={
+                          computedEditDepreciation != null
+                            ? String(computedEditDepreciation)
+                            : "— (set unit value, category label, and year)"
+                        }
+                      />
+                    )}
+                  </div>
+                </>
+              ) : null}
             </div>
           )}
           <DialogFooter>

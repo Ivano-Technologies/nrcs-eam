@@ -327,6 +327,10 @@ export const assets = pgTable("assets", {
   remarksRegister: text("remarks"),
   actualUnitValue: decimal("actual_unit_value", { precision: 15, scale: 2 }),
   depreciatedValue: decimal("depreciated_value", { precision: 15, scale: 2 }),
+  /** When true, `depreciatedValue` was set manually and must not be overwritten by auto-calc / bulk recalc. */
+  depreciatedValueManualOverride: boolean("depreciated_value_manual_override")
+    .default(false)
+    .notNull(),
   /** New / Used at acquisition */
   acquisitionCondition: varchar("acquisitionCondition", { length: 50 }),
   department: varchar("department", { length: 255 }),
