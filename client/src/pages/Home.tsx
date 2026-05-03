@@ -11,7 +11,7 @@ import type { DashboardPeriod, UserRole } from "@/components/dashboard/types";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertTriangle, ClipboardList, MapPin, ShieldCheck, Truck } from "lucide-react";
+import { AlertTriangle, Banknote, MapPin, ShieldCheck, Truck } from "lucide-react";
 import { useMemo, useState } from "react";
 
 const DEFAULT_WIDGETS = {
@@ -41,8 +41,8 @@ export default function Home() {
   const rawRole = user?.role ?? "";
   const fixedLayout = rawRole === "staff" || rawRole === "field";
 
-  const { data: metrics, isLoading } = trpc.dashboard.metrics.useQuery({ period });
-  const { data: pendingReqs } = trpc.dashboard.pendingRequisitions.useQuery();
+  const { data: metrics, isLoading: metricsLoading } = trpc.dashboard.metrics.useQuery({ period });
+  const { data: totalAssetValue, isLoading: totalAssetValueLoading } = trpc.dashboard.totalAssetValue.useQuery();
   const { data: movement } = trpc.dashboard.stockMovement.useQuery({ weeks: period === "Today" ? 4 : 12 });
   const { data: userPreferences } = trpc.userPreferences.get.useQuery();
   const { data: branchPerf } = trpc.dashboard.branchPerformance.useQuery(undefined, {
@@ -62,6 +62,8 @@ export default function Home() {
 
   const normalizeDirection = (direction?: string): "up" | "down" | "flat" =>
     direction === "up" || direction === "down" ? direction : "flat";
+
+  const isLoading = metricsLoading || totalAssetValueLoading;
 
   if (isLoading) {
     return (
@@ -147,27 +149,19 @@ export default function Home() {
       goodWhen: (metrics?.distributionVelocity?.goodWhen ?? "up") as "up" | "down",
     },
     {
-      key: "requisitions" as const,
-      label: "Pending Requisitions",
-      value: pendingReqs?.total ?? 0,
-      sub: (() => {
-        const u = pendingReqs?.urgent ?? 0;
-        const d = pendingReqs?.oldestDaysAgo;
-        if ((pendingReqs?.total ?? 0) === 0) return "No pending requisitions";
-        const parts: string[] = [];
-        if (u > 0) parts.push(`${u} urgent`);
-        if (d !== null && d !== undefined) parts.push(`oldest ${d}d`);
-        return parts.join(" · ") || "Pending review";
-      })(),
-      icon: ClipboardList,
-      tone: (pendingReqs?.urgent ?? 0) > 0 ? ("red" as const) : ("blue" as const),
+      key: "totalAssetValue" as const,
+      label: "Total Asset Value",
+      value: (totalAssetValue?.totalNgn ?? 0).toLocaleString("en-NG", { maximumFractionDigits: 0 }),
+      sub: `₦ ${(totalAssetValue?.totalNgn ?? 0).toLocaleString("en-NG", { maximumFractionDigits: 0 })}`,
+      icon: Banknote,
+      tone: "blue" as const,
       delta: undefined,
       deltaDirection: "flat" as const,
-      goodWhen: "down" as const,
+      goodWhen: "up" as const,
     },
   ];
 
-  const staffKpis = allKpis.filter((k) => ["lowStock", "requisitions", "approvals"].includes(k.key));
+  const staffKpis = allKpis.filter((k) => ["lowStock", "totalAssetValue", "approvals"].includes(k.key));
   const kpis = effectiveRole === "Staff" ? staffKpis : allKpis;
 
   const showWidgets = (key: keyof typeof DEFAULT_WIDGETS) => fixedLayout || widgetVisibility[key];
@@ -183,35 +177,6 @@ export default function Home() {
           <PeriodSelector value={period} onChange={setPeriod} />
         </div>
       </div>
-
-      {(effectiveRole === "Manager" || effectiveRole === "Admin") && branchPerf?.length ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Branch Performance</CardTitle>
-            <CardDescription>Stock readiness by branch (warehouse stock cards)</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {branchPerf.slice(0, 12).map((b) => (
-                <div key={b.id} className="rounded-lg border px-3 py-2 text-sm">
-                  <p className="font-medium">{b.name}</p>
-                  <p className="text-muted-foreground">
-                    {b.stockScorePercent != null ? `${b.stockScorePercent}% ready` : "No stock data"}
-                    {b.totalCards ? ` · ${b.adequateCards}/${b.totalCards} cards` : ""}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      ) : null}
-
-      {effectiveRole === "Manager" && showWidgets("facilityStatus") ? (
-        <div className="space-y-2">
-          <h2 className="text-lg font-semibold">Facility status</h2>
-          <FacilityStatusList />
-        </div>
-      ) : null}
 
       {showWidgets("kpiCards") ? (
         <div className="grid max-[359px]:grid-cols-1 grid-cols-2 gap-3 md:grid-cols-2 md:gap-4 xl:grid-cols-5">
@@ -239,22 +204,46 @@ export default function Home() {
           </div>
         ) : null
       ) : (
-        <>
-          {showWidgets("stockMovement") || showWidgets("attentionPanel") ? (
-            <div className="grid gap-6 md:grid-cols-1 xl:grid-cols-[1.55fr_1fr]">
-              {showWidgets("stockMovement") ? <StockMovementChart data={movement ?? []} /> : null}
-              {showWidgets("attentionPanel") ? <AttentionPanel role={effectiveRole} /> : null}
-            </div>
-          ) : null}
-          {showWidgets("activityFeed") || showWidgets("facilityStatus") ? (
-            <div className="grid gap-6 md:grid-cols-2">
-              {showWidgets("activityFeed") ? <ActivityFeed /> : null}
-              {effectiveRole !== "Manager" && showWidgets("facilityStatus") ? <FacilityStatusList /> : null}
-            </div>
-          ) : null}
-          {showWidgets("requisitionsTable") ? <RequisitionsTable /> : null}
-        </>
+        showWidgets("stockMovement") || showWidgets("attentionPanel") ? (
+          <div className="grid gap-6 md:grid-cols-1 xl:grid-cols-[1.55fr_1fr]">
+            {showWidgets("stockMovement") ? <StockMovementChart data={movement ?? []} /> : null}
+            {showWidgets("attentionPanel") ? <AttentionPanel role={effectiveRole} /> : null}
+          </div>
+        ) : null
       )}
+
+      {showWidgets("facilityStatus") ? (
+        <div className="space-y-2">
+          <h2 className="text-lg font-semibold">Facility status</h2>
+          <FacilityStatusList />
+        </div>
+      ) : null}
+
+      {showWidgets("requisitionsTable") ? <RequisitionsTable /> : null}
+
+      {(effectiveRole === "Manager" || effectiveRole === "Admin") && branchPerf?.length ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Branch Performance</CardTitle>
+            <CardDescription>Stock readiness by branch (warehouse stock cards)</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {branchPerf.slice(0, 12).map((b) => (
+                <div key={b.id} className="rounded-lg border px-3 py-2 text-sm">
+                  <p className="font-medium">{b.name}</p>
+                  <p className="text-muted-foreground">
+                    {b.stockScorePercent != null ? `${b.stockScorePercent}% ready` : "No stock data"}
+                    {b.totalCards ? ` · ${b.adequateCards}/${b.totalCards} cards` : ""}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {showWidgets("activityFeed") ? <ActivityFeed /> : null}
     </div>
   );
 }

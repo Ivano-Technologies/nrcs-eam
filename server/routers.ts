@@ -2015,6 +2015,22 @@ export const appRouter = router({
         return { total, urgent, oldestDaysAgo };
       }),
 
+    /** Sum of register `actual_unit_value` for assets the user can see (org-wide for admin/manager; home site for staff/field). */
+    totalAssetValue: protectedProcedure.query(async ({ ctx }) => {
+      const scope = dashboardDataScope(ctx);
+      if (scope.mode === "empty") return { totalNgn: 0 };
+      const database = await db.getDb();
+      if (!database) return { totalNgn: 0 };
+      const siteFilter = scope.mode === "site" ? eq(assets.siteId, scope.siteId) : undefined;
+      const [row] = await database
+        .select({
+          totalNgn: sql<number>`coalesce(sum(${assets.actualUnitValue}::numeric), 0)`.mapWith(Number),
+        })
+        .from(assets)
+        .where(siteFilter ?? sql`true`);
+      return { totalNgn: Number(row?.totalNgn ?? 0) };
+    }),
+
     /** Per-branch stock readiness for Manager/Admin dashboards. */
     branchPerformance: protectedProcedure.query(async ({ ctx }) => {
       requireRole(ctx, ["admin", "manager"]);
