@@ -3,6 +3,7 @@ import { Link, useLocation } from "wouter";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { PasswordInputWithToggle } from "@/components/auth/PasswordInputWithToggle";
+import { PasswordStrengthBar } from "@/components/auth/PasswordStrengthBar";
 import { Label } from "@/components/ui/label";
 import {
   AuthBrandLogo,
@@ -158,6 +159,7 @@ export default function ResetPassword() {
                 onChange={(e) => setNewPassword(e.target.value)}
                 required
               />
+              <PasswordStrengthBar password={newPassword} />
             </div>
 
             <div className="space-y-2">
