@@ -213,10 +213,41 @@ export default function Assets() {
     pageSize === "all" ? 50_000 : Number.parseInt(pageSize, 10) || 50;
   const offset = page * limit;
 
+  const { data: sites } = trpc.sites.list.useQuery();
+  const { data: categories } = trpc.assetCategories.list.useQuery();
+
+  /** One row per distinct category name; value is sorted ids joined by comma for filter + selects. */
+  const categoryGroups = useMemo(() => {
+    if (!categories?.length) return [] as { value: string; label: string; ids: number[] }[];
+    const map = new Map<string, { label: string; ids: number[] }>();
+    for (const c of categories) {
+      const k = c.name.trim().toLowerCase();
+      let g = map.get(k);
+      if (!g) {
+        g = { label: c.name.trim(), ids: [] };
+        map.set(k, g);
+      }
+      g.ids.push(c.id);
+    }
+    return [...map.values()]
+      .map((g) => {
+        const ids = g.ids.slice().sort((a, b) => a - b);
+        return { label: g.label, ids, value: ids.join(",") };
+      })
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [categories]);
+
   const listInput = useMemo(
     () => ({
       siteId: siteFilter !== "all" ? Number(siteFilter) : undefined,
-      categoryId: categoryFilter !== "all" ? Number(categoryFilter) : undefined,
+      categoryIds: (() => {
+        if (categoryFilter === "all") return undefined;
+        const ids = categoryFilter
+          .split(",")
+          .map((s) => Number(s.trim()))
+          .filter((n) => Number.isFinite(n) && n > 0);
+        return ids.length ? ids : undefined;
+      })(),
       registerStatus: statusFilter !== "all" ? statusFilter : undefined,
       itemType: itemTypeFilter !== "all" ? itemTypeFilter : undefined,
       search: searchTerm.trim() || undefined,
@@ -239,9 +270,6 @@ export default function Assets() {
   );
 
   const { data: registerData, isLoading, refetch } = trpc.assets.registerList.useQuery(listInput);
-
-  const { data: sites } = trpc.sites.list.useQuery();
-  const { data: categories } = trpc.assetCategories.list.useQuery();
 
   const [importFile, setImportFile] = useState<File | null>(null);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
@@ -298,9 +326,16 @@ export default function Assets() {
         siteFilter !== "all"
           ? sites?.find((s) => s.id === Number(siteFilter))?.name ?? "All_Sites"
           : "All_Sites";
+      const exportCategoryIds =
+        categoryFilter !== "all"
+          ? categoryFilter
+              .split(",")
+              .map((s) => Number(s.trim()))
+              .filter((n) => Number.isFinite(n) && n > 0)
+          : [];
       const result = await utils.client.bulkOperations.exportAssetRegister.query({
         siteId: siteFilter !== "all" ? Number(siteFilter) : undefined,
-        categoryId: categoryFilter !== "all" ? Number(categoryFilter) : undefined,
+        categoryIds: exportCategoryIds.length ? exportCategoryIds : undefined,
         registerStatus: statusFilter !== "all" ? statusFilter : undefined,
         itemType: itemTypeFilter !== "all" ? itemTypeFilter : undefined,
         search: searchTerm.trim() || undefined,
@@ -773,16 +808,25 @@ export default function Assets() {
                     <div className="space-y-2">
                       <Label>Item Category *</Label>
                       <Select
-                        value={newAsset.categoryId}
-                        onValueChange={(value) => setNewAsset({ ...newAsset, categoryId: value })}
+                        value={
+                          newAsset.categoryId
+                            ? categoryGroups.find((g) => g.ids.includes(Number(newAsset.categoryId)))?.value ??
+                              newAsset.categoryId
+                            : ""
+                        }
+                        onValueChange={(value) => {
+                          const ids = value.split(",").map(Number).filter((n) => Number.isFinite(n));
+                          if (!ids.length) return;
+                          setNewAsset({ ...newAsset, categoryId: String(Math.min(...ids)) });
+                        }}
                       >
                         <SelectTrigger data-testid="asset-form-category">
                           <SelectValue placeholder="Select category" />
                         </SelectTrigger>
                         <SelectContent>
-                          {categories?.map((cat) => (
-                            <SelectItem key={cat.id} value={cat.id.toString()}>
-                              {cat.name}
+                          {categoryGroups.map((g) => (
+                            <SelectItem key={g.value} value={g.value}>
+                              {g.label}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -1173,9 +1217,9 @@ export default function Assets() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All categories</SelectItem>
-                {categories?.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id.toString()}>
-                    {cat.name}
+                {categoryGroups.map((g) => (
+                  <SelectItem key={g.value} value={g.value}>
+                    {g.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -1521,16 +1565,27 @@ export default function Assets() {
                 <div className="space-y-2">
                   <Label>Category *</Label>
                   <Select
-                    value={editingAsset.categoryId}
-                    onValueChange={(value) => setEditingAsset({ ...editingAsset, categoryId: value })}
+                    value={
+                      editingAsset.categoryId
+                        ? categoryGroups.find((g) => g.ids.includes(Number(editingAsset.categoryId)))?.value ??
+                          String(editingAsset.categoryId)
+                        : ""
+                    }
+                    onValueChange={(value) => {
+                      const ids = value.split(",").map(Number).filter((n) => Number.isFinite(n));
+                      if (!ids.length || !editingAsset) return;
+                      const cur = Number(editingAsset.categoryId);
+                      const nextId = ids.includes(cur) ? cur : Math.min(...ids);
+                      setEditingAsset({ ...editingAsset, categoryId: String(nextId) });
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {categories?.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id.toString()}>
-                          {cat.name}
+                      {categoryGroups.map((g) => (
+                        <SelectItem key={g.value} value={g.value}>
+                          {g.label}
                         </SelectItem>
                       ))}
                     </SelectContent>

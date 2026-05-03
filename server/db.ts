@@ -14,6 +14,7 @@ import {
   ilike,
   getTableColumns,
   notInArray,
+  inArray,
   max,
 } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
@@ -539,7 +540,12 @@ export async function createAsset(asset: InsertAsset) {
   return await db.select().from(assets).where(eq(assets.id, insertId)).limit(1).then(r => r[0]);
 }
 
-export async function getAllAssets(filters?: { siteId?: number; status?: string; categoryId?: number }) {
+export async function getAllAssets(filters?: {
+  siteId?: number;
+  status?: string;
+  categoryId?: number;
+  categoryIds?: number[];
+}) {
   const db = await getDb();
   if (!db) return [];
   
@@ -548,7 +554,11 @@ export async function getAllAssets(filters?: { siteId?: number; status?: string;
   
   if (filters?.siteId) conditions.push(eq(assets.siteId, filters.siteId));
   if (filters?.status) conditions.push(eq(assets.status, filters.status as any));
-  if (filters?.categoryId) conditions.push(eq(assets.categoryId, filters.categoryId));
+  if (filters?.categoryIds?.length) {
+    conditions.push(inArray(assets.categoryId, filters.categoryIds));
+  } else if (filters?.categoryId) {
+    conditions.push(eq(assets.categoryId, filters.categoryId));
+  }
   
   if (conditions.length > 0) {
     query = query.where(and(...conditions)) as any;
@@ -633,6 +643,8 @@ const ASSET_REGISTER_MAX_LIMIT = 50_000;
 export type AssetRegisterListParams = {
   siteId?: number;
   categoryId?: number;
+  /** When set (non-empty), matches assets whose categoryId is any of these (e.g. duplicate category names). */
+  categoryIds?: number[];
   registerStatus?: string;
   itemType?: string;
   search?: string;
@@ -645,7 +657,11 @@ export type AssetRegisterListParams = {
 function assetRegisterWhere(params: AssetRegisterListParams) {
   const conditions = [];
   if (params.siteId) conditions.push(eq(assets.siteId, params.siteId));
-  if (params.categoryId) conditions.push(eq(assets.categoryId, params.categoryId));
+  if (params.categoryIds?.length) {
+    conditions.push(inArray(assets.categoryId, params.categoryIds));
+  } else if (params.categoryId) {
+    conditions.push(eq(assets.categoryId, params.categoryId));
+  }
   if (params.registerStatus && params.registerStatus !== "all") {
     conditions.push(eq(assets.registerStatus, params.registerStatus));
   }

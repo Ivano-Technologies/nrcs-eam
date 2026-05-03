@@ -395,6 +395,7 @@ export const appRouter = router({
         siteId: z.number().optional(),
         status: z.string().optional(),
         categoryId: z.number().optional(),
+        categoryIds: z.array(z.number().int().positive()).optional(),
       }).optional())
       .query(async ({ input }) => {
         return await db.getAllAssets(input);
@@ -424,6 +425,7 @@ export const appRouter = router({
           .object({
             siteId: z.number().optional(),
             categoryId: z.number().optional(),
+            categoryIds: z.array(z.number().int().positive()).optional(),
             registerStatus: z.string().optional(),
             itemType: z.string().optional(),
             search: z.string().optional(),
@@ -3234,6 +3236,7 @@ export const appRouter = router({
           .object({
             siteId: z.number().optional(),
             categoryId: z.number().optional(),
+            categoryIds: z.array(z.number().int().positive()).optional(),
             registerStatus: z.string().optional(),
             itemType: z.string().optional(),
             search: z.string().optional(),
@@ -3246,6 +3249,7 @@ export const appRouter = router({
         const { buffer, filename } = await buildNRCSAssetRegisterWorkbook({
           siteId: input?.siteId,
           categoryId: input?.categoryId,
+          categoryIds: input?.categoryIds,
           registerStatus: input?.registerStatus,
           itemType: input?.itemType,
           search: input?.search,
