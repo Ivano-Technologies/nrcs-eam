@@ -1,4 +1,5 @@
 import ExcelJS from "exceljs";
+import * as XLSX from "xlsx";
 import * as db from "./db";
 import {
   REGISTER_STATUS_LABELS,
@@ -8,6 +9,19 @@ import {
 import type { AssetRegisterListParams } from "./db";
 
 const NRCS_TITLE = "NIGERIA RED CROSS SOCIETY - ASSET REGISTER";
+
+/** Official NRCS workbook often uses `5. Asset Register-Ver…`; our export uses `Asset Register`. */
+const ASSET_REGISTER_SHEET_EXPORT = "Asset Register";
+
+function pickAssetRegisterSheetName(sheetNames: string[]): string | undefined {
+  if (!sheetNames.length) return undefined;
+  const versioned = sheetNames.find((n) => /^5\.\s*Asset Register/i.test(n.trim()));
+  if (versioned) return versioned;
+  if (sheetNames.includes(ASSET_REGISTER_SHEET_EXPORT)) return ASSET_REGISTER_SHEET_EXPORT;
+  const fuzzy = sheetNames.find((n) => /asset\s*register/i.test(n));
+  if (fuzzy) return fuzzy;
+  return sheetNames[0];
+}
 
 const HEADER_TITLES = [
   "S/No",
@@ -245,26 +259,23 @@ function normHeader(v: unknown): string {
     .replace(/\s+/g, " ");
 }
 
-function findHeaderMap(
-  worksheet: ExcelJS.Worksheet
+/** 1-based column index (matches prior ExcelJS `colNumber`). */
+function findHeaderMapFromMatrix(
+  matrix: unknown[][]
 ): { headerRow: number; map: Record<string, number> } | null {
   type Best = { headerRow: number; columnMap: Record<string, number>; score: number };
   let best: Best | null = null;
-  const maxRow = Math.min(worksheet.actualRowCount || 30, 30);
+  const maxRow = Math.min(matrix.length, 30);
   for (let rowNumber = 1; rowNumber <= maxRow; rowNumber++) {
-    const row = worksheet.getRow(rowNumber);
+    const row = matrix[rowNumber - 1];
+    if (!row?.length) continue;
     const columnMap: Record<string, number> = {};
-    row.eachCell({ includeEmpty: false }, (cell, colNumber) => {
-      const key = normHeader(cell.value);
+    row.forEach((cell, j) => {
+      const key = normHeader(cell);
       if (!key) return;
-      columnMap[key] = colNumber;
+      columnMap[key] = j + 1;
     });
-    const keys = [
-      "asset code",
-      "item description",
-      "item category",
-      "current location",
-    ];
+    const keys = ["asset code", "item description", "item category", "current location"];
     let score = 0;
     for (const k of keys) {
       if (columnMap[k]) score++;
@@ -277,21 +288,15 @@ function findHeaderMap(
   return { headerRow: best.headerRow, map: best.columnMap };
 }
 
-function cellAt(
-  row: ExcelJS.Row,
-  map: Record<string, number>,
-  ...aliases: string[]
-): ExcelJS.Cell | undefined {
+function matrixCell(row: unknown[], map: Record<string, number>, ...aliases: string[]): unknown {
   for (const a of aliases) {
     const col = map[normHeader(a)];
-    if (col) return row.getCell(col);
+    if (col) return row[col - 1];
   }
   return undefined;
 }
 
-function strCell(c: ExcelJS.Cell | undefined): string {
-  if (!c) return "";
-  const v = c.value;
+function strCell(v: unknown): string {
   if (v === null || v === undefined) return "";
   if (typeof v === "object" && v !== null && "text" in v && typeof (v as { text: string }).text === "string") {
     return (v as { text: string }).text;
@@ -319,16 +324,46 @@ export async function previewNRCSAssetImport(fileBuffer: Buffer): Promise<{
   headerRow: number;
   rows: NRCSImportPreviewRow[];
 }> {
-  const workbook = new ExcelJS.Workbook();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await workbook.xlsx.load(fileBuffer as any);
-  const worksheet = workbook.worksheets[0];
-  if (!worksheet) {
+  let wb: XLSX.WorkBook;
+  try {
+    wb = XLSX.read(fileBuffer, {
+      type: "buffer",
+      cellDates: true,
+      cellFormula: false,
+      cellHTML: false,
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Unknown error";
+    throw new Error(`Could not read Excel file: ${msg}`);
+  }
+
+  const sheetName = pickAssetRegisterSheetName(wb.SheetNames ?? []);
+  if (!sheetName) {
     return { headerRow: 0, rows: [] };
   }
-  const found = findHeaderMap(worksheet);
+  const sheet = wb.Sheets[sheetName];
+  if (!sheet) {
+    throw new Error(`Worksheet "${sheetName}" was not found in the workbook.`);
+  }
+
+  let matrix: unknown[][];
+  try {
+    matrix = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
+      header: 1,
+      defval: "",
+      raw: false,
+      blankrows: false,
+    }) as unknown[][];
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Unknown error";
+    throw new Error(`Could not parse worksheet "${sheetName}": ${msg}`);
+  }
+
+  const found = findHeaderMapFromMatrix(matrix);
   if (!found) {
-    return { headerRow: 0, rows: [] };
+    throw new Error(
+      `Could not find asset register column headers on sheet "${sheetName}". Use the NRCS template (or export) and ensure the header row includes Asset Code and Item Description.`
+    );
   }
   const { headerRow, map } = found;
 
@@ -342,37 +377,39 @@ export async function previewNRCSAssetImport(fileBuffer: Buffer): Promise<{
 
   const out: NRCSImportPreviewRow[] = [];
 
-  worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
-    if (rowNumber <= headerRow) return;
+  for (let i = headerRow; i < matrix.length; i++) {
+    const rowNumber = i + 1;
+    const row = matrix[i];
+    if (!row?.length) continue;
     const errors: string[] = [];
 
-    const itemTypeRaw = strCell(cellAt(row, map, "item type")).toLowerCase();
+    const itemTypeRaw = strCell(matrixCell(row, map, "item type")).toLowerCase();
     const itemType: "Asset" | "Inventory" =
       itemTypeRaw.includes("invent") ? "Inventory" : "Asset";
 
-    const categoryName = strCell(cellAt(row, map, "item category"));
-    const subCategory = strCell(cellAt(row, map, "sub-item category", "sub item category"));
-    const description = strCell(cellAt(row, map, "item description"));
-    const assetTag = strCell(cellAt(row, map, "asset code"));
-    const serialNumber = strCell(cellAt(row, map, "serial / product no.", "serial"));
-    const unitVal = strCell(cellAt(row, map, "actual unit value (ngn)", "actual unit value"));
+    const categoryName = strCell(matrixCell(row, map, "item category"));
+    const subCategory = strCell(matrixCell(row, map, "sub-item category", "sub item category"));
+    const description = strCell(matrixCell(row, map, "item description"));
+    const assetTag = strCell(matrixCell(row, map, "asset code"));
+    const serialNumber = strCell(matrixCell(row, map, "serial / product no.", "serial"));
+    const unitVal = strCell(matrixCell(row, map, "actual unit value (ngn)", "actual unit value"));
     const depVal = strCell(
-      cellAt(row, map, "current depreciated value (ngn)", "current depreciated value")
+      matrixCell(row, map, "current depreciated value (ngn)", "current depreciated value")
     );
-    const acquisitionMethod = strCell(cellAt(row, map, "method of acquisition"));
-    const projectRef = strCell(cellAt(row, map, "project ref / name", "project ref"));
-    const yearRaw = strCell(cellAt(row, map, "year acquired"));
-    const newOrUsed = strCell(cellAt(row, map, "new or used")).toLowerCase();
-    const statusLabel = strCell(cellAt(row, map, "current status"));
-    const assignedToName = strCell(cellAt(row, map, "assigned to"));
-    const department = strCell(cellAt(row, map, "department"));
-    const locationName = strCell(cellAt(row, map, "current location"));
-    const condition = strCell(cellAt(row, map, "condition"));
-    const lastCheckRaw = strCell(cellAt(row, map, "last physical check"));
-    const remarks = strCell(cellAt(row, map, "remarks"));
+    const acquisitionMethod = strCell(matrixCell(row, map, "method of acquisition"));
+    const projectRef = strCell(matrixCell(row, map, "project ref / name", "project ref"));
+    const yearRaw = strCell(matrixCell(row, map, "year acquired"));
+    const newOrUsed = strCell(matrixCell(row, map, "new or used")).toLowerCase();
+    const statusLabel = strCell(matrixCell(row, map, "current status"));
+    const assignedToName = strCell(matrixCell(row, map, "assigned to"));
+    const department = strCell(matrixCell(row, map, "department"));
+    const locationName = strCell(matrixCell(row, map, "current location"));
+    const condition = strCell(matrixCell(row, map, "condition"));
+    const lastCheckRaw = strCell(matrixCell(row, map, "last physical check"));
+    const remarks = strCell(matrixCell(row, map, "remarks"));
 
     if (!assetTag && !description) {
-      return;
+      continue;
     }
 
     if (!assetTag) errors.push("Asset Code is required");
@@ -454,7 +491,7 @@ export async function previewNRCSAssetImport(fileBuffer: Buffer): Promise<{
         : null;
 
     out.push({ sheetRow: rowNumber, errors, payload });
-  });
+  }
 
   return { headerRow, rows: out };
 }
