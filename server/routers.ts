@@ -3303,13 +3303,22 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input }) => {
-        const { confirmNRCSAssetImport } = await import("./nrcsAssetExcel");
-        return await confirmNRCSAssetImport(
-          input.rows.map((row) => ({
-            ...row,
-            itemType: normalizeAssetItemType(row.itemType),
-          }))
-        );
+        try {
+          const { confirmNRCSAssetImport } = await import("./nrcsAssetExcel");
+          return await confirmNRCSAssetImport(
+            input.rows.map((row) => ({
+              ...row,
+              itemType: normalizeAssetItemType(row.itemType),
+            }))
+          );
+        } catch (e) {
+          console.error("[bulkOperations.confirmAssetRegisterImport]", e);
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message:
+              "Import failed: the import could not be completed. Please contact your administrator if this persists.",
+          });
+        }
       }),
 
     exportSites: protectedProcedure
