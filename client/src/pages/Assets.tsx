@@ -44,6 +44,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ViewToggle, type ViewMode } from "@/components/ViewToggle";
 import { CardQrCode } from "@/components/CardQrCode";
 import { ModuleFiltersCard, ModuleFilterSearch } from "@/components/ModuleFiltersCard";
+import { useBulkImportFileInput } from "@/hooks/useBulkImportFileInput";
 import {
   CONDITION_OPTIONS,
   CURRENT_STATUS_OPTIONS,
@@ -241,9 +242,9 @@ export default function Assets() {
       }
       g.ids.push(c.id);
     }
-    return [...map.values()]
+    return Array.from(map.values())
       .map((g) => {
-        const ids = g.ids.slice().sort((a, b) => a - b);
+        const ids = g.ids.slice().sort((a: number, b: number) => a - b);
         return { label: g.label, ids, value: ids.join(",") };
       })
       .sort((a, b) => a.label.localeCompare(b.label));
@@ -282,10 +283,6 @@ export default function Assets() {
   );
 
   const { data: registerData, isLoading, refetch } = trpc.assets.registerList.useQuery(listInput);
-
-  const [importFile, setImportFile] = useState<File | null>(null);
-  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
-  const [importPreview, setImportPreview] = useState<any>(null);
 
   const utils = trpc.useUtils();
   const [isDownloading, setIsDownloading] = useState(false);
@@ -372,41 +369,45 @@ export default function Assets() {
     }
   };
 
-  const previewImportMutation = trpc.bulkOperations.previewAssetRegisterImport.useMutation({
-    onSuccess: (data) => {
-      setImportPreview(data);
-      toast.success("File parsed — review rows below");
-    },
-    onError: (e) => toast.error(e.message),
-  });
+  const previewImportMutation = trpc.bulkOperations.previewAssetRegisterImport.useMutation();
+  const confirmImportMutation = trpc.bulkOperations.confirmAssetRegisterImport.useMutation();
 
-  const confirmImportMutation = trpc.bulkOperations.confirmAssetRegisterImport.useMutation({
-    onSuccess: (res) => {
+  const assetRegisterImport = useBulkImportFileInput({
+    accept: ".xlsx,.xls",
+    isPending: previewImportMutation.isPending || confirmImportMutation.isPending,
+    prepareFile: "base64",
+    onError: (message) => toast.error(message),
+    run: async (fileData): Promise<void> => {
+      const data = await previewImportMutation.mutateAsync({ fileData });
+      const rows = (data.rows ?? []) as Array<{
+        sheetRow: number;
+        errors: string[];
+        payload: unknown;
+      }>;
+      const ok = rows
+        .filter((r) => r.payload && r.errors.length === 0)
+        .map((r) => r.payload);
+      if (!ok.length) {
+        const bad = rows.filter((r) => !r.payload || r.errors.length > 0).length;
+        toast.error(
+          bad ? `No valid rows to import (${bad} row(s) had errors).` : "No valid rows to import."
+        );
+        return;
+      }
+      const skipped = rows.length - ok.length;
+      const res = await confirmImportMutation.mutateAsync({ rows: ok as never });
       toast.success(`Imported ${res.imported}, skipped ${res.skipped}`);
       if (res.errors?.length) {
         toast.error(`${res.errors.length} row errors`);
       }
-      setIsImportDialogOpen(false);
-      setImportFile(null);
-      setImportPreview(null);
-      refetch();
+      if (skipped > 0) {
+        toast.warning(
+          `Imported ${ok.length} row(s); ${skipped} row(s) skipped due to validation errors.`
+        );
+      }
+      await refetch();
     },
-    onError: (e) => toast.error(e.message),
   });
-
-  const handleParseImport = () => {
-    if (!importFile) {
-      toast.error("Please select a file");
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const data = e.target?.result as string;
-      const base64Data = data.split(",")[1];
-      previewImportMutation.mutate({ fileData: base64Data });
-    };
-    reader.readAsDataURL(importFile);
-  };
 
   const createAssetMutation = trpc.assets.create.useMutation({
     onSuccess: () => {
@@ -1335,10 +1336,15 @@ export default function Assets() {
                   <Download className="mr-2 h-4 w-4" />
                   Template
                 </Button>
-                <Button className="h-9" variant="outline" onClick={() => setIsImportDialogOpen(true)}>
-                  <Upload className="mr-2 h-4 w-4" />
-                  Import
-                </Button>
+                <label className="inline-flex cursor-pointer">
+                  <Button className="h-9" asChild variant="outline">
+                    <span>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Import
+                    </span>
+                  </Button>
+                  <input {...assetRegisterImport.inputProps} />
+                </label>
                 <Button className="h-9" onClick={() => setIsCreateDialogOpen(true)} data-testid="asset-create-btn">
                   <Plus className="mr-2 h-4 w-4" />
                   Add Asset
@@ -1865,88 +1871,6 @@ export default function Assets() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <Dialog
-        open={isImportDialogOpen}
-        onOpenChange={(o) => {
-          setIsImportDialogOpen(o);
-          if (!o) {
-            setImportPreview(null);
-            setImportFile(null);
-          }
-        }}
-      >
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Import Asset Register</DialogTitle>
-            <DialogDescription>
-              Upload NRCS-format .xlsx — preview and confirm valid rows
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="import-file">Select Excel File</Label>
-              <Input
-                id="import-file"
-                type="file"
-                accept=".xlsx,.xls"
-                onChange={(e) => {
-                  setImportFile(e.target.files?.[0] || null);
-                  setImportPreview(null);
-                }}
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button variant="secondary" onClick={handleParseImport} disabled={!importFile || previewImportMutation.isPending}>
-                {previewImportMutation.isPending ? "Parsing..." : "Preview"}
-              </Button>
-              {importPreview?.rows?.length ? (
-                <Button
-                  onClick={() => {
-                    const ok = importPreview.rows
-                      .filter((r: { payload: unknown; errors: string[] }) => r.payload && r.errors.length === 0)
-                      .map((r: { payload: unknown }) => r.payload);
-                    if (!ok.length) {
-                      toast.error("No valid rows to import");
-                      return;
-                    }
-                    confirmImportMutation.mutate({ rows: ok });
-                  }}
-                  disabled={confirmImportMutation.isPending}
-                >
-                  {confirmImportMutation.isPending ? "Importing..." : "Confirm import"}
-                </Button>
-              ) : null}
-            </div>
-            {importPreview?.rows?.length ? (
-              <div className="border rounded-md overflow-auto max-h-64 text-xs">
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-muted">
-                      <th className="p-1 text-left">Row</th>
-                      <th className="p-1 text-left">OK</th>
-                      <th className="p-1 text-left">Errors</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {importPreview.rows.map((r: { sheetRow: number; errors: string[]; payload: unknown }) => (
-                      <tr key={r.sheetRow} className="border-t">
-                        <td className="p-1">{r.sheetRow}</td>
-                        <td className="p-1">{r.payload ? "Yes" : "No"}</td>
-                        <td className="p-1">{r.errors?.join("; ") || "—"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : null}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsImportDialogOpen(false)}>
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

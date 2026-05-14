@@ -40,6 +40,7 @@ import { InventorySecondaryNav } from "@/components/inventory/InventorySecondary
 import { ModuleFiltersCard, ModuleFilterSearch } from "@/components/ModuleFiltersCard";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { appPath } from "@/lib/routes";
+import { useBulkImportFileInput } from "@/hooks/useBulkImportFileInput";
 import { ITEM_CATEGORIES, isItemCategoryValue, itemCategoryLabel } from "@/lib/inventory";
 import type { ItemCategory } from "@shared/itemCategory";
 
@@ -83,6 +84,14 @@ function maxRef(row: StockOverviewRow): number {
   if ((row.maxLevel ?? 0) > 0) return row.maxLevel!;
   if ((row.minLevel ?? 0) > 0) return Math.max(row.minLevel * 2, row.quantityOnHand);
   return Math.max(1, row.quantityOnHand);
+}
+
+async function parseExcelFirstSheetRows(file: File): Promise<Record<string, unknown>[]> {
+  const XLSX = await import("xlsx");
+  const data = await file.arrayBuffer();
+  const wb = XLSX.read(data, { type: "array" });
+  const sheet = wb.Sheets[wb.SheetNames[0]];
+  return XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
 }
 
 type InventoryMainTab = "overview" | "catalogue" | "settings";
@@ -261,6 +270,47 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
   const movementDryRun = trpc.inventoryV2.adminData.importHistoricalMovementsDryRun.useMutation();
   const movementConfirm = trpc.inventoryV2.adminData.importHistoricalMovementsConfirm.useMutation();
 
+  const openingStockFile = useBulkImportFileInput({
+    prepareFile: "none",
+    accept: ".xlsx,.xls",
+    run: async (file) => {
+      const rawRows = await parseExcelFirstSheetRows(file);
+      const mapped = rawRows.map((r) => ({
+        warehouseCode: String(r.warehouseCode ?? ""),
+        itemCode: String(r.itemCode ?? ""),
+        quantityOnHand: Number(r.quantityOnHand ?? 0),
+        minLevel: Number(r.minLevel ?? 0),
+        maxLevel: r.maxLevel === "" ? null : Number(r.maxLevel),
+        safetyLevel: r.safetyLevel === "" ? null : Number(r.safetyLevel),
+        batchNumber: String(r.batchNumber ?? ""),
+        expiryDate: String(r.expiryDate ?? ""),
+      }));
+      setOpeningRows(mapped);
+      toast.success(`Loaded ${mapped.length} opening stock rows.`);
+    },
+    onError: (m) => toast.error(m),
+  });
+
+  const movementStockFile = useBulkImportFileInput({
+    prepareFile: "none",
+    accept: ".xlsx,.xls",
+    run: async (file) => {
+      const rawRows = await parseExcelFirstSheetRows(file);
+      const mapped = rawRows.map((r) => ({
+        date: String(r.date ?? ""),
+        warehouseCode: String(r.warehouseCode ?? ""),
+        itemCode: String(r.itemCode ?? ""),
+        movementType: String(r.movementType ?? "adjustment"),
+        quantity: Number(r.quantity ?? 0),
+        documentNumber: String(r.documentNumber ?? ""),
+        notes: String(r.notes ?? ""),
+      }));
+      setMovementRows(mapped);
+      toast.success(`Loaded ${mapped.length} historical movement rows.`);
+    },
+    onError: (m) => toast.error(m),
+  });
+
   const rows = overviewQuery.data ?? [];
   const rowsForChipCounts = overviewCountQueryEnabled ? (overviewCountQuery.data ?? []) : rows;
   const chipCounts = useMemo(() => {
@@ -279,14 +329,6 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
   }, [selectedItemDetail.data?.id, selectedItemDetail.data?.itemCategory]);
 
   const catalogueRows = catalogueQuery.data ?? [];
-
-  async function parseExcelRows(file: File) {
-    const XLSX = await import("xlsx");
-    const data = await file.arrayBuffer();
-    const wb = XLSX.read(data, { type: "array" });
-    const sheet = wb.Sheets[wb.SheetNames[0]];
-    return XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
-  }
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -844,31 +886,16 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                 <CardTitle>Opening Stock Balances Import</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Input
-                  type="file"
-                  accept=".xlsx,.xls"
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    try {
-                      const rawRows = await parseExcelRows(file);
-                      const mapped = rawRows.map((r) => ({
-                        warehouseCode: String(r.warehouseCode ?? ""),
-                        itemCode: String(r.itemCode ?? ""),
-                        quantityOnHand: Number(r.quantityOnHand ?? 0),
-                        minLevel: Number(r.minLevel ?? 0),
-                        maxLevel: r.maxLevel === "" ? null : Number(r.maxLevel),
-                        safetyLevel: r.safetyLevel === "" ? null : Number(r.safetyLevel),
-                        batchNumber: String(r.batchNumber ?? ""),
-                        expiryDate: String(r.expiryDate ?? ""),
-                      }));
-                      setOpeningRows(mapped);
-                      toast.success(`Loaded ${mapped.length} opening stock rows.`);
-                    } catch (err) {
-                      toast.error(err instanceof Error ? err.message : "Failed to parse file.");
-                    }
-                  }}
-                />
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => document.getElementById(openingStockFile.inputId)?.click()}
+                  >
+                    Choose Excel file
+                  </Button>
+                  <input {...openingStockFile.inputProps} />
+                </div>
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
@@ -922,30 +949,16 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                 <CardTitle>Historical Movements Import</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Input
-                  type="file"
-                  accept=".xlsx,.xls"
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    try {
-                      const rawRows = await parseExcelRows(file);
-                      const mapped = rawRows.map((r) => ({
-                        date: String(r.date ?? ""),
-                        warehouseCode: String(r.warehouseCode ?? ""),
-                        itemCode: String(r.itemCode ?? ""),
-                        movementType: String(r.movementType ?? "adjustment"),
-                        quantity: Number(r.quantity ?? 0),
-                        documentNumber: String(r.documentNumber ?? ""),
-                        notes: String(r.notes ?? ""),
-                      }));
-                      setMovementRows(mapped);
-                      toast.success(`Loaded ${mapped.length} historical movement rows.`);
-                    } catch (err) {
-                      toast.error(err instanceof Error ? err.message : "Failed to parse file.");
-                    }
-                  }}
-                />
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => document.getElementById(movementStockFile.inputId)?.click()}
+                  >
+                    Choose Excel file
+                  </Button>
+                  <input {...movementStockFile.inputProps} />
+                </div>
                 <div className="flex gap-2">
                   <Button
                     variant="outline"

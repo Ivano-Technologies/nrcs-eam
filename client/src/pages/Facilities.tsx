@@ -47,6 +47,7 @@ import { Download, Edit2, MapPin, Plus, Save, Trash2, Upload, X } from "lucide-r
 import { ViewToggle } from "@/components/ViewToggle";
 import { CardQrCode } from "@/components/CardQrCode";
 import { ModuleFiltersCard, ModuleFilterSearch } from "@/components/ModuleFiltersCard";
+import { useBulkImportFileInput } from "@/hooks/useBulkImportFileInput";
 
 type ViewMode = "table" | "card" | "map";
 type SortKey = "code" | "name" | "facilityType" | "parentFacilityName" | "state" | "isActive";
@@ -166,7 +167,15 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
       else toast.warning(`Imported ${result.imported} facilities, ${result.failed} failed`);
       await refetch();
     },
-    onError: (e) => toast.error(`Import failed: ${e.message}`),
+  });
+  const facilitiesImportFile = useBulkImportFileInput({
+    accept: ".xlsx,.xls",
+    isPending: importMutation.isPending,
+    prepareFile: "base64",
+    onError: (message) => toast.error(`Import failed: ${message}`),
+    run: async (fileData): Promise<void> => {
+      await importMutation.mutateAsync({ fileData });
+    },
   });
   const exportQuery = trpc.bulkOperations.exportSites.useQuery(undefined, { enabled: false });
   const templateQuery = trpc.bulkOperations.downloadSiteTemplate.useQuery(undefined, { enabled: false });
@@ -352,16 +361,6 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
     URL.revokeObjectURL(url);
   };
 
-  const handleImport = async (file?: File | null) => {
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const data = String(reader.result);
-      importMutation.mutate({ fileData: data.split(",")[1] ?? "" });
-    };
-    reader.readAsDataURL(file);
-  };
-
   if (isLoading) return <div className="h-96 animate-pulse rounded-md bg-muted" />;
 
   return (
@@ -458,12 +457,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
                   Import
                 </span>
               </Button>
-              <input
-                type="file"
-                className="hidden"
-                accept=".xlsx,.xls"
-                onChange={(e) => handleImport(e.target.files?.[0])}
-              />
+              <input {...facilitiesImportFile.inputProps} />
             </label>
             {canEditFacilities ? (
               <Button className="h-9" onClick={() => setIsCreateOpen(true)}>

@@ -2,22 +2,14 @@ import { useMemo, useState } from "react";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+import { useBulkImportFileInput } from "@/hooks/useBulkImportFileInput";
 
 type DocType = "grn" | "waybill" | "monthly_report" | "stock_card";
 type SourceType = "excel" | "pdf";
-
-async function toBase64(file: File): Promise<string> {
-  const buffer = await file.arrayBuffer();
-  let binary = "";
-  const bytes = new Uint8Array(buffer);
-  for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-  return btoa(binary);
-}
 
 export default function ImportPage({ embedInShell = false }: { embedInShell?: boolean } = {}) {
   const [docType, setDocType] = useState<DocType>("grn");
@@ -33,6 +25,24 @@ export default function ImportPage({ embedInShell = false }: { embedInShell?: bo
   });
 
   const hasError = useMemo(() => rows.some((r) => r.status === "error"), [rows]);
+
+  const pipelineFileImport = useBulkImportFileInput({
+    accept: source === "excel" ? ".xlsx" : ".pdf",
+    isPending: parseExcel.isPending || parsePdf.isPending,
+    prepareFile: "base64",
+    onError: (m) => toast.error(m),
+    run: async (base64, file): Promise<void> => {
+      setFileName(file.name);
+      const parsed =
+        source === "excel"
+          ? await parseExcel.mutateAsync({ type: docType, base64File: base64 })
+          : await parsePdf.mutateAsync({
+              type: docType === "waybill" ? "waybill" : "grn",
+              base64File: base64,
+            });
+      setRows(parsed);
+    },
+  });
 
   const downloadTemplate = () => {
     const data = templateQuery.data;
@@ -87,21 +97,21 @@ export default function ImportPage({ embedInShell = false }: { embedInShell?: bo
               <Button variant="outline" onClick={downloadTemplate}>Download template</Button>
             </div>
           </div>
-          <Input
-            type="file"
-            accept={source === "excel" ? ".xlsx" : ".pdf"}
-            onChange={async (e) => {
-              const file = e.target.files?.[0];
-              if (!file) return;
-              setFileName(file.name);
-              const base64 = await toBase64(file);
-              const parsed =
-                source === "excel"
-                  ? await parseExcel.mutateAsync({ type: docType, base64File: base64 })
-                  : await parsePdf.mutateAsync({ type: docType === "waybill" ? "waybill" : "grn", base64File: base64 });
-              setRows(parsed);
-            }}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => document.getElementById(pipelineFileImport.inputId)?.click()}
+            >
+              Choose file
+            </Button>
+            <input {...pipelineFileImport.inputProps} />
+            {fileName ? (
+              <span className="text-sm text-muted-foreground truncate max-w-[240px]" title={fileName}>
+                {fileName}
+              </span>
+            ) : null}
+          </div>
           <div className="flex gap-2">
             <Button
               disabled={!rows.length || hasError || createDraft.isPending}
@@ -141,4 +151,3 @@ export default function ImportPage({ embedInShell = false }: { embedInShell?: bo
     </div>
   );
 }
-

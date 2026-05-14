@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { ModuleFiltersCard, ModuleFilterSearch } from "@/components/ModuleFiltersCard";
 import { useLocation } from "wouter";
 import { downloadBase64File } from "@/lib/download";
+import { appPath } from "@/lib/routes";
 
 type Line = { catalogueId: string; ctnId: string; quantity: string; batchNumber: string; expiryDate: string; notes: string };
 
@@ -101,7 +102,9 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
           <>
             <Button variant="outline">Export</Button>
             <Button variant="outline">Template</Button>
-            <Button variant="outline">Import</Button>
+            <Button variant="outline" onClick={() => setLocation(appPath("/inventory/import"))}>
+              Import
+            </Button>
             {isStaffOrAbove ? (
               <Button data-testid="new-grn-btn" onClick={() => setLocation("/app/inventory/receipts/new")}>
                 New GRN
