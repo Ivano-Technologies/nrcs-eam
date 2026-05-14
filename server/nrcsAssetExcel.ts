@@ -7,9 +7,52 @@ import {
   type RegisterStatusKey,
 } from "./assetRegister";
 import type { AssetRegisterListParams } from "./db";
-import type { Site } from "../drizzle/schema";
+import type { InsertAsset, Site } from "../drizzle/schema";
 
 const NRCS_TITLE = "NIGERIA RED CROSS SOCIETY - ASSET REGISTER";
+
+/** Strip currency / commas so DECIMAL columns accept the value; blank or invalid → omit (undefined). */
+function sanitizeOptionalNumericDecimalString(value: string | undefined): string | undefined {
+  if (value === undefined || value === null) return undefined;
+  const trimmed = String(value).trim();
+  if (!trimmed) return undefined;
+  const normalized = trimmed.replace(/,/g, "").replace(/\s+/g, "").replace(/^NGN/i, "");
+  const digits = normalized.replace(/[^\d.\-]/g, "");
+  if (!digits || digits === "-" || digits === ".") return undefined;
+  const n = Number(digits);
+  if (!Number.isFinite(n)) return undefined;
+  return digits;
+}
+
+function getPostgresErrorCode(err: unknown): string | undefined {
+  let cur: unknown = err;
+  for (let depth = 0; depth < 8 && cur != null; depth++) {
+    if (typeof cur === "object" && "code" in cur) {
+      const c = (cur as { code: unknown }).code;
+      if (typeof c === "string" && /^[0-9A-Z]{5}$/.test(c)) return c;
+    }
+    cur = (cur as { cause?: unknown }).cause;
+  }
+  return undefined;
+}
+
+/** Safe for end users — never includes raw SQL or driver messages. */
+function publicMessageForImportDatabaseError(err: unknown): string {
+  const code = getPostgresErrorCode(err);
+  if (code === "23503") {
+    return "Import failed: invalid reference (facility, category, or linked record). Please contact your administrator if this persists.";
+  }
+  if (code === "23505") {
+    return "Import failed: a duplicate value conflicts with existing data. Please contact your administrator if this persists.";
+  }
+  if (code === "22P02" || code === "22003") {
+    return "Import failed: invalid numeric or date format in the import data. Please contact your administrator if this persists.";
+  }
+  if (code === "23502") {
+    return "Import failed: a required field was missing for the database. Please contact your administrator if this persists.";
+  }
+  return "Import failed: a database constraint or format error occurred. Please contact your administrator if this persists.";
+}
 
 /** Official NRCS workbook often uses `5. Asset Register-Ver…`; our export uses `Asset Register`. */
 const ASSET_REGISTER_SHEET_EXPORT = "Asset Register";
@@ -757,37 +800,54 @@ export async function confirmNRCSAssetImport(
         continue;
       }
       const status = legacyStatusFromRegister(p.registerStatus);
-      await db.createAsset({
+      const acquisitionCost = sanitizeOptionalNumericDecimalString(p.acquisitionCost);
+      const currentValue = sanitizeOptionalNumericDecimalString(p.currentValue);
+
+      const insert: InsertAsset = {
         assetTag: p.assetTag,
         name: p.name,
-        description: p.description,
+        description: p.description?.trim() ? p.description : undefined,
         categoryId: p.categoryId,
         siteId: p.siteId,
         status,
         registerStatus: p.registerStatus,
         itemType: p.itemType,
-        subCategory: p.subCategory,
-        serialNumber: p.serialNumber,
-        acquisitionCost: p.acquisitionCost,
-        currentValue: p.currentValue,
+        registerItemType: p.itemType,
+        itemDescription: p.name,
+        subCategory: p.subCategory ? p.subCategory.slice(0, 255) : undefined,
+        serialNumber: p.serialNumber ? p.serialNumber.slice(0, 255) : undefined,
+        acquisitionCost,
+        currentValue,
         currentDepreciatedValue: p.currentDepreciatedValue,
-        acquisitionMethod: p.acquisitionMethod,
-        projectRef: p.projectRef,
+        acquisitionMethod: p.acquisitionMethod ? p.acquisitionMethod.slice(0, 100) : undefined,
+        projectRef: p.projectRef ? p.projectRef.slice(0, 255) : undefined,
         acquisitionDate: p.acquisitionDate,
         acquisitionCondition: p.acquisitionCondition,
-        assignedToName: p.assignedToName,
-        department: p.department,
-        location: p.location,
+        assignedToName: p.assignedToName?.trim() || undefined,
+        department: p.department ? p.department.slice(0, 255) : undefined,
+        location: p.location ? p.location.slice(0, 255) : undefined,
         physicalCondition: p.physicalCondition,
         lastCheckedAt: p.lastCheckedAt,
-        notes: p.notes,
-      });
+        notes: p.notes?.trim() ? p.notes : undefined,
+      };
+
+      const created = await db.createAsset(insert);
+      if (!created) {
+        skipped++;
+        errors.push({
+          row: i + 1,
+          error:
+            "Import failed: database unavailable. Please contact your administrator if this persists.",
+        });
+        continue;
+      }
       imported++;
     } catch (e: unknown) {
+      console.error("[confirmNRCSAssetImport] row insert failed", { row: i + 1, assetTag: p.assetTag, err: e });
       skipped++;
       errors.push({
         row: i + 1,
-        error: e instanceof Error ? e.message : "Unknown error",
+        error: publicMessageForImportDatabaseError(e),
       });
     }
   }
