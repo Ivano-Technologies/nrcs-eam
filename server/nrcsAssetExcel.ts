@@ -259,43 +259,6 @@ function normHeader(v: unknown): string {
     .replace(/\s+/g, " ");
 }
 
-/** 1-based column index (matches prior ExcelJS `colNumber`). */
-function findHeaderMapFromMatrix(
-  matrix: unknown[][]
-): { headerRow: number; map: Record<string, number> } | null {
-  type Best = { headerRow: number; columnMap: Record<string, number>; score: number };
-  let best: Best | null = null;
-  const maxRow = Math.min(matrix.length, 30);
-  for (let rowNumber = 1; rowNumber <= maxRow; rowNumber++) {
-    const row = matrix[rowNumber - 1];
-    if (!row?.length) continue;
-    const columnMap: Record<string, number> = {};
-    row.forEach((cell, j) => {
-      const key = normHeader(cell);
-      if (!key) return;
-      columnMap[key] = j + 1;
-    });
-    const keys = ["asset code", "item description", "item category", "current location"];
-    let score = 0;
-    for (const k of keys) {
-      if (columnMap[k]) score++;
-    }
-    if (score >= 2 && (!best || score > best.score)) {
-      best = { headerRow: rowNumber, columnMap, score };
-    }
-  }
-  if (!best) return null;
-  return { headerRow: best.headerRow, map: best.columnMap };
-}
-
-function matrixCell(row: unknown[], map: Record<string, number>, ...aliases: string[]): unknown {
-  for (const a of aliases) {
-    const col = map[normHeader(a)];
-    if (col) return row[col - 1];
-  }
-  return undefined;
-}
-
 function strCell(v: unknown): string {
   if (v === null || v === undefined) return "";
   if (typeof v === "object" && v !== null && "text" in v && typeof (v as { text: string }).text === "string") {
@@ -304,6 +267,72 @@ function strCell(v: unknown): string {
   if (typeof v === "number") return String(v);
   if (v instanceof Date) return v.toISOString();
   return String(v).trim();
+}
+
+/** Zero-based indices for columns A–Y (25 columns). Same layout for app export and NRCS Ver 1.1.2.25. */
+const AR_COL = {
+  S_NO: 0,
+  ITEM_TYPE: 1,
+  ITEM_CATEGORY: 2,
+  SUB_ITEM_CATEGORY: 3,
+  ITEM_DESCRIPTION: 4,
+  BRANCH_CODE: 5,
+  CATEGORY_CODE: 6,
+  NUM: 7,
+  ASSET_CODE: 8,
+  SERIAL_NUMBER: 9,
+  ACTUAL_UNIT_VALUE: 10,
+  DEPRECIATED_VALUE: 11,
+  METHOD_OF_ACQUISITION: 12,
+  ACQUISITION_DETAIL: 13,
+  PROJECT_REF: 14,
+  YEAR_ACQUIRED: 15,
+  NEW_OR_USED: 16,
+  CURRENT_STATUS: 17,
+  ASSIGNED_TO: 18,
+  DEPARTMENT: 19,
+  LOCATION: 20,
+  CONDITION: 21,
+  LAST_CHECK_DATE: 22,
+  CHECK_CONDUCTED_BY: 23,
+  REMARKS: 24,
+} as const;
+
+function cellAtCol(row: unknown[] | undefined, colIdx: number): unknown {
+  if (!row || colIdx < 0) return undefined;
+  return colIdx < row.length ? row[colIdx] : undefined;
+}
+
+function strAtCol(row: unknown[] | undefined, colIdx: number): string {
+  return strCell(cellAtCol(row, colIdx));
+}
+
+/** Column A is `S/No` (export) or `S.No` (NRCS) — identifies the header row regardless of other labels. */
+function isSNoHeaderCell(val: unknown): boolean {
+  const h = normHeader(val);
+  if (!h) return false;
+  if (h === "s/no" || h === "s.no" || h === "s no") return true;
+  return /^s[./\s]*no\.?$/i.test(String(val ?? "").trim());
+}
+
+/**
+ * Header row for the 25-column grid (export: row 6, NRCS Ver 1.1.2.25: row 9).
+ * Prefer column A S/No; fall back to column I = Asset Code / ITEM CODE.
+ */
+function findAssetRegisterHeaderRow(matrix: unknown[][]): number | null {
+  const maxRow = Math.min(matrix.length, 45);
+  for (let rowNumber = 1; rowNumber <= maxRow; rowNumber++) {
+    const row = matrix[rowNumber - 1];
+    if (!row?.length) continue;
+    if (isSNoHeaderCell(row[AR_COL.S_NO])) return rowNumber;
+  }
+  for (let rowNumber = 1; rowNumber <= maxRow; rowNumber++) {
+    const row = matrix[rowNumber - 1];
+    if (!row?.length) continue;
+    const h = normHeader(row[AR_COL.ASSET_CODE]);
+    if (h === "asset code" || h === "item code" || h.startsWith("item code")) return rowNumber;
+  }
+  return null;
 }
 
 function parseDateFlexible(s: string): Date | undefined {
@@ -359,13 +388,12 @@ export async function previewNRCSAssetImport(fileBuffer: Buffer): Promise<{
     throw new Error(`Could not parse worksheet "${sheetName}": ${msg}`);
   }
 
-  const found = findHeaderMapFromMatrix(matrix);
-  if (!found) {
+  const headerRow = findAssetRegisterHeaderRow(matrix);
+  if (!headerRow) {
     throw new Error(
-      `Could not find asset register column headers on sheet "${sheetName}". Use the NRCS template (or export) and ensure the header row includes Asset Code and Item Description.`
+      `Could not find the asset register header row on sheet "${sheetName}". Expected "S/No" or "S.No" in column A (or "ITEM CODE" / "Asset Code" in column I).`
     );
   }
-  const { headerRow, map } = found;
 
   const categories = await db.getAllAssetCategories();
   const sites = await db.getAllSites();
@@ -383,30 +411,28 @@ export async function previewNRCSAssetImport(fileBuffer: Buffer): Promise<{
     if (!row?.length) continue;
     const errors: string[] = [];
 
-    const itemTypeRaw = strCell(matrixCell(row, map, "item type")).toLowerCase();
+    const itemTypeRaw = strAtCol(row, AR_COL.ITEM_TYPE).toLowerCase();
     const itemType: "Asset" | "Inventory" =
       itemTypeRaw.includes("invent") ? "Inventory" : "Asset";
 
-    const categoryName = strCell(matrixCell(row, map, "item category"));
-    const subCategory = strCell(matrixCell(row, map, "sub-item category", "sub item category"));
-    const description = strCell(matrixCell(row, map, "item description"));
-    const assetTag = strCell(matrixCell(row, map, "asset code"));
-    const serialNumber = strCell(matrixCell(row, map, "serial / product no.", "serial"));
-    const unitVal = strCell(matrixCell(row, map, "actual unit value (ngn)", "actual unit value"));
-    const depVal = strCell(
-      matrixCell(row, map, "current depreciated value (ngn)", "current depreciated value")
-    );
-    const acquisitionMethod = strCell(matrixCell(row, map, "method of acquisition"));
-    const projectRef = strCell(matrixCell(row, map, "project ref / name", "project ref"));
-    const yearRaw = strCell(matrixCell(row, map, "year acquired"));
-    const newOrUsed = strCell(matrixCell(row, map, "new or used")).toLowerCase();
-    const statusLabel = strCell(matrixCell(row, map, "current status"));
-    const assignedToName = strCell(matrixCell(row, map, "assigned to"));
-    const department = strCell(matrixCell(row, map, "department"));
-    const locationName = strCell(matrixCell(row, map, "current location"));
-    const condition = strCell(matrixCell(row, map, "condition"));
-    const lastCheckRaw = strCell(matrixCell(row, map, "last physical check"));
-    const remarks = strCell(matrixCell(row, map, "remarks"));
+    const categoryName = strAtCol(row, AR_COL.ITEM_CATEGORY);
+    const subCategory = strAtCol(row, AR_COL.SUB_ITEM_CATEGORY);
+    const description = strAtCol(row, AR_COL.ITEM_DESCRIPTION);
+    const assetTag = strAtCol(row, AR_COL.ASSET_CODE);
+    const serialNumber = strAtCol(row, AR_COL.SERIAL_NUMBER);
+    const unitVal = strAtCol(row, AR_COL.ACTUAL_UNIT_VALUE);
+    const depVal = strAtCol(row, AR_COL.DEPRECIATED_VALUE);
+    const acquisitionMethod = strAtCol(row, AR_COL.METHOD_OF_ACQUISITION);
+    const projectRef = strAtCol(row, AR_COL.PROJECT_REF);
+    const yearRaw = strAtCol(row, AR_COL.YEAR_ACQUIRED);
+    const newOrUsedRaw = strAtCol(row, AR_COL.NEW_OR_USED).trim().toLowerCase();
+    const statusLabel = strAtCol(row, AR_COL.CURRENT_STATUS);
+    const assignedToName = strAtCol(row, AR_COL.ASSIGNED_TO);
+    const department = strAtCol(row, AR_COL.DEPARTMENT);
+    const locationName = strAtCol(row, AR_COL.LOCATION);
+    const condition = strAtCol(row, AR_COL.CONDITION);
+    const lastCheckRaw = strAtCol(row, AR_COL.LAST_CHECK_DATE);
+    const remarks = strAtCol(row, AR_COL.REMARKS);
 
     if (!assetTag && !description) {
       continue;
@@ -429,9 +455,11 @@ export async function previewNRCSAssetImport(fileBuffer: Buffer): Promise<{
     }
 
     let acquisitionCondition: "New" | "Used" | undefined;
-    if (newOrUsed === "new") acquisitionCondition = "New";
-    else if (newOrUsed === "used") acquisitionCondition = "Used";
-    else if (newOrUsed) errors.push(`New or Used must be New or Used (got "${newOrUsed}")`);
+    if (newOrUsedRaw) {
+      if (/\bnew\b/.test(newOrUsedRaw) && !/\bused\b/.test(newOrUsedRaw)) acquisitionCondition = "New";
+      else if (/\bused\b/.test(newOrUsedRaw)) acquisitionCondition = "Used";
+      else errors.push(`New or Used must be New or Used (got "${newOrUsedRaw}")`);
+    }
 
     let physicalCondition: "Good" | "Fair" | "Damaged" | "Beyond Repair" | undefined;
     const c = condition.toLowerCase();
