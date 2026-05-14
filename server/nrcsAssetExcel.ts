@@ -227,6 +227,8 @@ export async function buildNRCSAssetRegisterWorkbook(
 export type NRCSImportPreviewRow = {
   sheetRow: number;
   errors: string[];
+  /** Non-blocking notices (e.g. auto-generated asset tag). */
+  warnings?: string[];
   payload: {
     assetTag: string;
     name: string;
@@ -308,6 +310,92 @@ function strAtCol(row: unknown[] | undefined, colIdx: number): string {
   return strCell(cellAtCol(row, colIdx));
 }
 
+/** Column I (Asset Code): prefer worksheet cell for correct `w` / formula metadata vs matrix row. */
+function readAssetCodeCellFromSheet(sheet: XLSX.WorkSheet, row0: number): { display: string } {
+  const addr = XLSX.utils.encode_cell({ r: row0, c: AR_COL.ASSET_CODE });
+  const cell = sheet[addr] as { v?: unknown; w?: string; f?: string } | undefined;
+  if (!cell) return { display: "" };
+  let display = "";
+  if (cell.w != null && String(cell.w).trim()) {
+    display = String(cell.w).trim();
+  } else if (cell.v != null && cell.v !== "") {
+    if (typeof cell.v === "number" && Number.isFinite(cell.v)) display = String(cell.v);
+    else if (cell.v instanceof Date) display = cell.v.toISOString();
+    else display = String(cell.v).trim();
+  }
+  return { display };
+}
+
+function normalizeSpacesUpperAssetTag(raw: string): string {
+  return raw.replace(/\s+/g, "").toUpperCase();
+}
+
+/** Keep only A–Z / 0–9 for generated NRCS_<branch><cat><####> segments. */
+function sanitizeAssetTagPart(s: string): string {
+  return s.replace(/\s+/g, "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+function parseNonNegativeIntLoose(s: string): number | undefined {
+  const t = s.trim().replace(/,/g, "");
+  if (!t) return undefined;
+  const n = parseInt(t, 10);
+  if (Number.isNaN(n) || n < 0) return undefined;
+  return n;
+}
+
+/**
+ * Resolve `assetTag` for import: (1) column I cached value, (2) NRCS_<F><G><H####>, (3) unique fallback + warning.
+ */
+function resolveImportAssetTag(input: {
+  sheet: XLSX.WorkSheet;
+  row0: number;
+  matrixRow: unknown[] | undefined;
+  sheetRow: number;
+  headerRow: number;
+}): { assetTag: string; warnings: string[] } {
+  const warnings: string[] = [];
+  const colI = readAssetCodeCellFromSheet(input.sheet, input.row0);
+  const iFromMatrix = strAtCol(input.matrixRow, AR_COL.ASSET_CODE).trim();
+  /** Cached formula result or literal; if Excel stored the formula as text it starts with "=" — then use F+G+H. */
+  const display = (colI.display || iFromMatrix).trim();
+
+  if (display.length > 0 && !display.startsWith("=")) {
+    const tag = normalizeSpacesUpperAssetTag(display);
+    if (tag.length > 0) {
+      return { assetTag: tag, warnings };
+    }
+  }
+
+  const branchRaw = strAtCol(input.matrixRow, AR_COL.BRANCH_CODE);
+  const categoryCodeRaw = strAtCol(input.matrixRow, AR_COL.CATEGORY_CODE);
+  const numRaw = strAtCol(input.matrixRow, AR_COL.NUM);
+  const br = sanitizeAssetTagPart(branchRaw);
+  const cc = sanitizeAssetTagPart(categoryCodeRaw);
+  const numT = numRaw.trim();
+  const hasFGH = Boolean(br || cc || numT);
+
+  if (hasFGH) {
+    const rowOffset = Math.max(1, input.sheetRow - input.headerRow);
+    const parsed = parseNonNegativeIntLoose(numT);
+    const seq = parsed !== undefined ? parsed : rowOffset;
+    if (parsed === undefined) {
+      warnings.push(
+        numT
+          ? `NUM (column H) was not a valid non-negative integer; used ${rowOffset} for the 4-digit suffix.`
+          : "NUM (column H) was blank; used the row's position in the register for the 4-digit suffix (may collide if another row matches)."
+      );
+    }
+    const tag = `NRCS_${br}${cc}${String(seq).padStart(4, "0")}`;
+    return { assetTag: tag, warnings };
+  }
+
+  const unique = `NRCS_IMP_${Date.now()}_${input.sheetRow}_${Math.random().toString(36).slice(2, 10)}`;
+  warnings.push(
+    "Asset tag was auto-generated (columns F–H had no branch/category/NUM and column I had no usable Asset Code)."
+  );
+  return { assetTag: unique, warnings };
+}
+
 /** Column A is `S/No` (export) or `S.No` (NRCS) — identifies the header row regardless of other labels. */
 function isSNoHeaderCell(val: unknown): boolean {
   const h = normHeader(val);
@@ -376,7 +464,7 @@ export async function previewNRCSAssetImport(fileBuffer: Buffer): Promise<{
     wb = XLSX.read(fileBuffer, {
       type: "buffer",
       cellDates: true,
-      cellFormula: false,
+      cellFormula: true,
       cellHTML: false,
     });
   } catch (e) {
@@ -422,6 +510,7 @@ export async function previewNRCSAssetImport(fileBuffer: Buffer): Promise<{
     sites.find((s) => s.name.trim().toLowerCase() === name.trim().toLowerCase());
 
   const out: NRCSImportPreviewRow[] = [];
+  let loggedFirstReject = false;
 
   for (let i = headerRow; i < matrix.length; i++) {
     const rowNumber = i + 1;
@@ -436,7 +525,25 @@ export async function previewNRCSAssetImport(fileBuffer: Buffer): Promise<{
     const categoryName = strAtCol(row, AR_COL.ITEM_CATEGORY);
     const subCategory = strAtCol(row, AR_COL.SUB_ITEM_CATEGORY);
     const description = strAtCol(row, AR_COL.ITEM_DESCRIPTION);
-    const assetTag = strAtCol(row, AR_COL.ASSET_CODE);
+    const nameTrimmed = description.trim();
+    const branchCode = strAtCol(row, AR_COL.BRANCH_CODE).trim();
+    const locationName = strAtCol(row, AR_COL.LOCATION).trim();
+    const colISheet = readAssetCodeCellFromSheet(sheet, i);
+    const iDisplayEarly = (colISheet.display || strAtCol(row, AR_COL.ASSET_CODE)).trim();
+
+    if (!nameTrimmed && !categoryName.trim() && !branchCode && !locationName && !iDisplayEarly) {
+      continue;
+    }
+
+    const { assetTag, warnings: tagWarnings } = resolveImportAssetTag({
+      sheet,
+      row0: i,
+      matrixRow: row,
+      sheetRow: rowNumber,
+      headerRow,
+    });
+    const warnings = [...tagWarnings];
+
     const serialNumber = strAtCol(row, AR_COL.SERIAL_NUMBER);
     const unitVal = strAtCol(row, AR_COL.ACTUAL_UNIT_VALUE);
     const depVal = strAtCol(row, AR_COL.DEPRECIATED_VALUE);
@@ -447,18 +554,11 @@ export async function previewNRCSAssetImport(fileBuffer: Buffer): Promise<{
     const statusLabel = strAtCol(row, AR_COL.CURRENT_STATUS);
     const assignedToName = strAtCol(row, AR_COL.ASSIGNED_TO);
     const department = strAtCol(row, AR_COL.DEPARTMENT);
-    const branchCode = strAtCol(row, AR_COL.BRANCH_CODE).trim();
-    const locationName = strAtCol(row, AR_COL.LOCATION).trim();
     const condition = strAtCol(row, AR_COL.CONDITION);
     const lastCheckRaw = strAtCol(row, AR_COL.LAST_CHECK_DATE);
     const remarks = strAtCol(row, AR_COL.REMARKS);
 
-    if (!assetTag && !description) {
-      continue;
-    }
-
-    if (!assetTag) errors.push("Asset Code is required");
-    if (!description) errors.push("Item Description is required");
+    if (!nameTrimmed) errors.push("Item Description is required");
 
     const cat = categoryName ? byCatName(categoryName) : undefined;
     if (!cat) errors.push(`Unknown Item Category: "${categoryName || ""}"`);
@@ -524,10 +624,10 @@ export async function previewNRCSAssetImport(fileBuffer: Buffer): Promise<{
     }
 
     const payload =
-      errors.length === 0 && cat && site && assetTag && description
+      errors.length === 0 && cat && site && nameTrimmed
         ? {
-            assetTag: assetTag.toUpperCase(),
-            name: description.slice(0, 255),
+            assetTag,
+            name: nameTrimmed.slice(0, 255),
             description: description.length > 255 ? description : undefined,
             categoryId: cat.id,
             siteId: site.id,
@@ -551,7 +651,42 @@ export async function previewNRCSAssetImport(fileBuffer: Buffer): Promise<{
           }
         : null;
 
-    out.push({ sheetRow: rowNumber, errors, payload });
+    if (!loggedFirstReject && errors.length > 0) {
+      loggedFirstReject = true;
+      console.error("[previewNRCSAssetImport] first rejected row", {
+        sheetRow: rowNumber,
+        errors,
+        knownCategoryNamesSample: categories.slice(0, 25).map((c) => c.name),
+        parsed: {
+          itemType,
+          itemTypeRaw,
+          categoryName,
+          subCategory,
+          assetTag,
+          nameTrimmed: nameTrimmed.slice(0, 200),
+          columnIDisplay: iDisplayEarly,
+          tagWarnings: warnings,
+          description: description.slice(0, 200),
+          serialNumber,
+          branchCode,
+          locationName,
+          statusLabel,
+          condition,
+          newOrUsedRaw,
+          yearRaw,
+          unitVal: unitVal.slice(0, 80),
+          depVal: depVal.slice(0, 80),
+          acquisitionMethod: acquisitionMethod.slice(0, 80),
+        },
+      });
+    }
+
+    out.push({
+      sheetRow: rowNumber,
+      errors,
+      warnings: warnings.length > 0 ? warnings : undefined,
+      payload,
+    });
   }
 
   return { headerRow, rows: out };

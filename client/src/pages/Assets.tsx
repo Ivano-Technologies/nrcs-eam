@@ -372,6 +372,20 @@ export default function Assets() {
   const previewImportMutation = trpc.bulkOperations.previewAssetRegisterImport.useMutation();
   const confirmImportMutation = trpc.bulkOperations.confirmAssetRegisterImport.useMutation();
 
+  const formatAssetImportPreviewSamples = (
+    rows: Array<{ sheetRow: number; errors: string[]; warnings?: string[] }>,
+    limit = 5
+  ): string =>
+    rows
+      .filter((r) => r.errors.length > 0)
+      .slice(0, limit)
+      .map((r) => {
+        const err = r.errors.join("; ");
+        const warn = r.warnings?.length ? `Warnings: ${r.warnings.join("; ")}` : "";
+        return warn ? `Row ${r.sheetRow}: ${err} | ${warn}` : `Row ${r.sheetRow}: ${err}`;
+      })
+      .join("\n");
+
   const assetRegisterImport = useBulkImportFileInput({
     accept: ".xlsx,.xls",
     isPending: previewImportMutation.isPending || confirmImportMutation.isPending,
@@ -382,6 +396,7 @@ export default function Assets() {
       const rows = (data.rows ?? []) as Array<{
         sheetRow: number;
         errors: string[];
+        warnings?: string[];
         payload: unknown;
       }>;
       const ok = rows
@@ -389,8 +404,10 @@ export default function Assets() {
         .map((r) => r.payload);
       if (!ok.length) {
         const bad = rows.filter((r) => !r.payload || r.errors.length > 0).length;
+        const sample = formatAssetImportPreviewSamples(rows, 5);
         toast.error(
-          bad ? `No valid rows to import (${bad} row(s) had errors).` : "No valid rows to import."
+          bad ? `No valid rows to import (${bad} row(s) had errors).` : "No valid rows to import.",
+          sample ? { description: sample, duration: 22_000 } : undefined
         );
         return;
       }
@@ -398,11 +415,17 @@ export default function Assets() {
       const res = await confirmImportMutation.mutateAsync({ rows: ok as never });
       toast.success(`Imported ${res.imported}, skipped ${res.skipped}`);
       if (res.errors?.length) {
-        toast.error(`${res.errors.length} row errors`);
+        const lines = res.errors.slice(0, 5).map((e) => `Row ${e.row}: ${e.error}`);
+        toast.error(`${res.errors.length} row error(s) during import`, {
+          description: lines.join("\n"),
+          duration: 22_000,
+        });
       }
       if (skipped > 0) {
+        const sample = formatAssetImportPreviewSamples(rows, 5);
         toast.warning(
-          `Imported ${ok.length} row(s); ${skipped} row(s) skipped due to validation errors.`
+          `Imported ${ok.length} row(s); ${skipped} row(s) skipped due to validation errors.`,
+          sample ? { description: sample, duration: 18_000 } : undefined
         );
       }
       await refetch();
