@@ -116,15 +116,63 @@ export async function generateNRCSAssetRegisterTemplateBuffer(): Promise<Buffer>
   return Buffer.from(await workbook.xlsx.writeBuffer());
 }
 
-function registerStatusKeyFromLabel(label: string): RegisterStatusKey | null {
-  const t = label.trim().toLowerCase();
-  for (const [k, v] of Object.entries(REGISTER_STATUS_LABELS)) {
-    if (v.toLowerCase() === t) return k as RegisterStatusKey;
+/** Collapse internal whitespace for NRCS template dropdown text (import). */
+function normalizeNrcsRegisterWhitespace(value: string): string {
+  return value.replace(/\s+/g, " ").trim().toLowerCase();
+}
+
+type PhysicalConditionImport = "Good" | "Fair" | "Damaged" | "Beyond Repair";
+
+/**
+ * Map NRCS Ver 1.1.2.25 Condition column text to internal physical condition.
+ * Normalizes whitespace, then uses case-insensitive substring rules for template variants
+ * (e.g. "Beyond Repair   (For Disposal)", "Out of Order (To be repaired)").
+ */
+function physicalConditionFromNRCSCondition(raw: string): PhysicalConditionImport | null {
+  const norm = normalizeNrcsRegisterWhitespace(raw);
+  if (!norm) return null;
+
+  if (norm.includes("beyond repair") || norm.includes("for disposal")) {
+    return "Beyond Repair";
   }
-  const underscored = t.replace(/\s+/g, "_");
+  if (norm.includes("out of order") || norm.includes("to be repaired")) {
+    return "Damaged";
+  }
+
+  if (/\bgood\b/.test(norm)) return "Good";
+  if (/\bfair\b/.test(norm)) return "Fair";
+  if (/\bdamaged\b/.test(norm)) return "Damaged";
+
+  return null;
+}
+
+function registerStatusKeyFromLabel(label: string): RegisterStatusKey | null {
+  const norm = normalizeNrcsRegisterWhitespace(label);
+  if (!norm) return null;
+
+  for (const [k, v] of Object.entries(REGISTER_STATUS_LABELS)) {
+    if (normalizeNrcsRegisterWhitespace(v) === norm) return k as RegisterStatusKey;
+  }
+  const underscored = norm.replace(/\s+/g, "_");
   if ((REGISTER_STATUS_LABELS as Record<string, string>)[underscored]) {
     return underscored as RegisterStatusKey;
   }
+
+  const entries = Object.entries(REGISTER_STATUS_LABELS) as [RegisterStatusKey, string][];
+  entries.sort(
+    (a, b) =>
+      normalizeNrcsRegisterWhitespace(b[1]).length - normalizeNrcsRegisterWhitespace(a[1]).length
+  );
+  for (const [k, v] of entries) {
+    const vl = normalizeNrcsRegisterWhitespace(v);
+    if (vl.length > 0 && norm.startsWith(vl)) {
+      const rest = norm.slice(vl.length);
+      if (rest === "" || /^[\s(—\-:]/.test(rest)) {
+        return k;
+      }
+    }
+  }
+
   return null;
 }
 
@@ -595,14 +643,10 @@ export async function previewNRCSAssetImport(fileBuffer: Buffer): Promise<{
     }
 
     let physicalCondition: "Good" | "Fair" | "Damaged" | "Beyond Repair" | undefined;
-    const c = condition.toLowerCase();
-    if (["good", "fair", "damaged", "beyond repair"].includes(c)) {
-      physicalCondition =
-        c === "beyond repair"
-          ? "Beyond Repair"
-          : ((c.charAt(0).toUpperCase() + c.slice(1)) as "Good" | "Fair" | "Damaged");
-    } else if (condition) {
-      errors.push(`Unknown Condition: "${condition}"`);
+    if (condition.trim()) {
+      const pc = physicalConditionFromNRCSCondition(condition);
+      if (pc) physicalCondition = pc;
+      else errors.push(`Unknown Condition: "${condition}"`);
     }
 
     let acquisitionDate: Date | undefined;
