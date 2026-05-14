@@ -7,6 +7,7 @@ import {
   type RegisterStatusKey,
 } from "./assetRegister";
 import type { AssetRegisterListParams } from "./db";
+import type { Site } from "../drizzle/schema";
 
 const NRCS_TITLE = "NIGERIA RED CROSS SOCIETY - ASSET REGISTER";
 
@@ -335,6 +336,23 @@ function findAssetRegisterHeaderRow(matrix: unknown[][]): number | null {
   return null;
 }
 
+/**
+ * Match `sites.code`: exact `ABI` or `ABI-001`, or prefix `ABI` → `ABI-001` (equivalent to `code = $1 OR code LIKE $1 || '-%'`).
+ * When multiple rows match, returns the lowest code lexicographically.
+ */
+export function matchSiteByBranchCode(sitesList: Site[], raw: string): Site | undefined {
+  const q = raw.trim().toUpperCase();
+  if (!q) return undefined;
+  const matches = sitesList.filter((s) => {
+    const c = (s.code ?? "").trim().toUpperCase();
+    if (!c) return false;
+    return c === q || c.startsWith(`${q}-`);
+  });
+  if (!matches.length) return undefined;
+  matches.sort((a, b) => (a.code ?? "").localeCompare(b.code ?? "", undefined, { sensitivity: "base" }));
+  return matches[0];
+}
+
 function parseDateFlexible(s: string): Date | undefined {
   if (!s.trim()) return undefined;
   const d = new Date(s);
@@ -429,7 +447,8 @@ export async function previewNRCSAssetImport(fileBuffer: Buffer): Promise<{
     const statusLabel = strAtCol(row, AR_COL.CURRENT_STATUS);
     const assignedToName = strAtCol(row, AR_COL.ASSIGNED_TO);
     const department = strAtCol(row, AR_COL.DEPARTMENT);
-    const locationName = strAtCol(row, AR_COL.LOCATION);
+    const branchCode = strAtCol(row, AR_COL.BRANCH_CODE).trim();
+    const locationName = strAtCol(row, AR_COL.LOCATION).trim();
     const condition = strAtCol(row, AR_COL.CONDITION);
     const lastCheckRaw = strAtCol(row, AR_COL.LAST_CHECK_DATE);
     const remarks = strAtCol(row, AR_COL.REMARKS);
@@ -444,8 +463,22 @@ export async function previewNRCSAssetImport(fileBuffer: Buffer): Promise<{
     const cat = categoryName ? byCatName(categoryName) : undefined;
     if (!cat) errors.push(`Unknown Item Category: "${categoryName || ""}"`);
 
-    const site = locationName ? bySiteName(locationName) : undefined;
-    if (!site) errors.push(`Unknown Current Location (site): "${locationName || ""}"`);
+    const siteFromCode = branchCode ? matchSiteByBranchCode(sites, branchCode) : undefined;
+    const siteFromLoc = locationName ? bySiteName(locationName) : undefined;
+    const site = siteFromCode ?? siteFromLoc;
+    if (!site) {
+      if (branchCode && !siteFromCode) {
+        errors.push(
+          `Branch code '${branchCode}' not found — check the code or import facilities first.`
+        );
+      }
+      if (locationName && !siteFromLoc) {
+        errors.push(`Unknown Current Location (site): "${locationName}"`);
+      }
+      if (!branchCode && !locationName) {
+        errors.push("Branch code or Current Location is required to assign a facility.");
+      }
+    }
 
     let registerStatus: RegisterStatusKey = "in_use";
     if (statusLabel) {
