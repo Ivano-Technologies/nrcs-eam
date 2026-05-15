@@ -1,3 +1,5 @@
+import { KPI_VALUE_CLASS } from "@/lib/kpiTypography";
+import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingDown, DollarSign, Calendar, Percent } from "lucide-react";
@@ -61,7 +63,7 @@ export default function AssetDepreciation({ assetId }: AssetDepreciationProps) {
               <DollarSign className="h-4 w-4" />
               Current Book Value
             </div>
-            <div className="text-2xl font-bold text-green-600">
+            <div className={cn(KPI_VALUE_CLASS, "text-green-600")}>
               ₦{depreciation.currentBookValue.toLocaleString()}
             </div>
           </div>
@@ -71,7 +73,7 @@ export default function AssetDepreciation({ assetId }: AssetDepreciationProps) {
               <TrendingDown className="h-4 w-4" />
               Accumulated Depreciation
             </div>
-            <div className="text-2xl font-bold text-red-600">
+            <div className={cn(KPI_VALUE_CLASS, "text-red-600")}>
               ₦{depreciation.accumulatedDepreciation.toLocaleString()}
             </div>
           </div>
@@ -81,7 +83,7 @@ export default function AssetDepreciation({ assetId }: AssetDepreciationProps) {
               <Percent className="h-4 w-4" />
               Depreciation %
             </div>
-            <div className="text-2xl font-bold">
+            <div className={KPI_VALUE_CLASS}>
               {depreciation.depreciationPercentage}%
             </div>
           </div>
@@ -91,7 +93,7 @@ export default function AssetDepreciation({ assetId }: AssetDepreciationProps) {
               <Calendar className="h-4 w-4" />
               Years Remaining
             </div>
-            <div className="text-2xl font-bold">
+            <div className={KPI_VALUE_CLASS}>
               {depreciation.remainingYears.toFixed(1)}
             </div>
           </div>

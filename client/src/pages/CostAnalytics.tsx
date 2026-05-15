@@ -2,6 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
 import { formatNaira } from "@/lib/format";
+import { KPI_VALUE_CLASS } from "@/lib/kpiTypography";
 import { DollarSign, TrendingUp, Wrench, Building2, Users } from "lucide-react";
 import { useState } from "react";
 import { ModuleFiltersCard } from "@/components/ModuleFiltersCard";
@@ -57,7 +58,7 @@ export default function CostAnalytics() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className={KPI_VALUE_CLASS}>
               {formatNaira(analytics?.totalCost ?? 0)}
             </div>
             <p className="text-xs text-muted-foreground">
@@ -72,7 +73,7 @@ export default function CostAnalytics() {
             <Wrench className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className={KPI_VALUE_CLASS}>
               {formatNaira(analytics?.maintenanceCost ?? 0)}
             </div>
             <p className="text-xs text-muted-foreground">
@@ -87,7 +88,7 @@ export default function CostAnalytics() {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className={KPI_VALUE_CLASS}>
               {formatNaira(analytics?.repairCost ?? 0)}
             </div>
             <p className="text-xs text-muted-foreground">

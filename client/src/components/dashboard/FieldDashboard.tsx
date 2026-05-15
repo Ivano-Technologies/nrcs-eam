@@ -1,5 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { KPI_VALUE_CLASS } from "@/lib/kpiTypography";
+import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
 import { appPath } from "@/lib/routes";
 import { Link } from "wouter";
@@ -41,7 +43,7 @@ export function FieldDashboard() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-end gap-4">
-            <div className="text-5xl font-bold tabular-nums text-primary">{pct}%</div>
+            <div className={cn(KPI_VALUE_CLASS, "text-primary")}>{pct}%</div>
             <p className="text-muted-foreground pb-1">
               {adequate} of {total} readiness buckets adequately stocked
             </p>

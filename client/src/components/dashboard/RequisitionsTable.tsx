@@ -1,6 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { KPI_VALUE_CLASS } from "@/lib/kpiTypography";
 import { appPath } from "@/lib/routes";
+import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
 import { Link } from "wouter";
 
@@ -21,19 +23,27 @@ export function RequisitionsTable() {
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="rounded-xl border border-[var(--color-border)] p-4 shadow-[var(--shadow-card)]">
             <p className="text-sm text-[#334155] dark:text-[hsl(0_0%_95%)]">Open requisitions</p>
-            <p className="mt-2 text-[1.75rem] font-bold text-[#1a2332] dark:text-[hsl(0_0%_95%)]">{data?.total ?? 0}</p>
+            <p className={cn("mt-1", KPI_VALUE_CLASS, "text-[#1a2332] dark:text-[hsl(0_0%_95%)]")}>
+              {data?.total ?? 0}
+            </p>
           </div>
           <div className="rounded-xl border border-[var(--color-border)] p-4 shadow-[var(--shadow-card)]">
             <p className="text-sm text-[#334155] dark:text-[hsl(0_0%_95%)]">Urgent</p>
             <p
-              className={`mt-2 text-[1.75rem] font-bold ${(data?.urgent ?? 0) > 0 ? "text-[#DC2626] dark:text-[#EE1C25]" : "text-[#1a2332] dark:text-[hsl(0_0%_95%)]"}`}
+              className={cn(
+                "mt-1",
+                KPI_VALUE_CLASS,
+                (data?.urgent ?? 0) > 0
+                  ? "text-[#DC2626] dark:text-[#EE1C25]"
+                  : "text-[#1a2332] dark:text-[hsl(0_0%_95%)]"
+              )}
             >
               {data?.urgent ?? 0}
             </p>
           </div>
           <div className="rounded-xl border border-[var(--color-border)] p-4 shadow-[var(--shadow-card)]">
             <p className="text-sm text-[#334155] dark:text-[hsl(0_0%_95%)]">Oldest pending</p>
-            <p className="mt-2 text-[1.75rem] font-bold text-[#1a2332] dark:text-[hsl(0_0%_95%)]">
+            <p className={cn("mt-1", KPI_VALUE_CLASS, "text-[#1a2332] dark:text-[hsl(0_0%_95%)]")}>
               {data?.oldestDaysAgo === null || data?.oldestDaysAgo === undefined ? "None" : `${data.oldestDaysAgo}d`}
             </p>
           </div>

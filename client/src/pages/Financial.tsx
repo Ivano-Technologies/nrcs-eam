@@ -10,6 +10,8 @@ import { DollarSign, Plus, TrendingUp, TrendingDown, ArrowUpCircle, ArrowDownCir
 import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { formatNaira } from "@/lib/format";
+import { KPI_VALUE_CLASS } from "@/lib/kpiTypography";
+import { cn } from "@/lib/utils";
 import { ModuleFiltersCard, ModuleFilterSearch } from "@/components/ModuleFiltersCard";
 
 export default function Financial() {
@@ -267,7 +269,7 @@ export default function Financial() {
             <ArrowUpCircle className="h-5 w-5 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{formatNaira(totalRevenue)}</div>
+            <div className={cn(KPI_VALUE_CLASS, "text-green-600")}>{formatNaira(totalRevenue)}</div>
             <p className="text-xs text-muted-foreground mt-1">{revenueTransactions.length} transactions</p>
           </CardContent>
         </Card>
@@ -278,7 +280,7 @@ export default function Financial() {
             <ArrowDownCircle className="h-5 w-5 text-red-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{formatNaira(totalExpenses)}</div>
+            <div className={cn(KPI_VALUE_CLASS, "text-red-600")}>{formatNaira(totalExpenses)}</div>
             <p className="text-xs text-muted-foreground mt-1">{expenseTransactions.length} transactions</p>
           </CardContent>
         </Card>
@@ -293,7 +295,7 @@ export default function Financial() {
             )}
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${netProfit >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
+            <div className={cn(KPI_VALUE_CLASS, netProfit >= 0 ? 'text-blue-600' : 'text-orange-600')}>
               {formatNaira(netProfit)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
