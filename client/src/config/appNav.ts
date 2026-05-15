@@ -74,7 +74,6 @@ export const SIDEBAR_GROUPS: AppNavGroup[] = [
         icon: BadgeDollarSign,
         managerOrAdminOnly: true,
       },
-      { label: "Maintenance", path: appPath("/maintenance"), icon: Wrench },
     ],
   },
   {
