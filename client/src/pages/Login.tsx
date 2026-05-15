@@ -25,8 +25,12 @@ export default function Login() {
   const [resetMessage, setResetMessage] = useState<string | null>(null);
 
   const loginMutation = trpc.auth.loginWithPassword.useMutation({
-    onSuccess: async () => {
+    onSuccess: async (data) => {
       await utils.auth.me.refetch();
+      if (data.mustChangePasswordOnLogin) {
+        setLocation(`${appPath("/dashboard-settings")}?changePassword=required`);
+        return;
+      }
       setLocation(appPath("/"));
     },
     onError: (error: { message?: string }) => {

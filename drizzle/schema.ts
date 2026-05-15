@@ -214,6 +214,10 @@ export const users = pgTable("users", {
   hasCompletedOnboarding: boolean("has_completed_onboarding")
     .default(false)
     .notNull(),
+  /** When true, user must change password before using the app (bulk invite / temp password). */
+  mustChangePasswordOnLogin: boolean("must_change_password_on_login")
+    .default(false)
+    .notNull(),
   /** Supabase Auth user id (`auth.users.id`). */
   authUserId: uuid("auth_user_id").unique(),
   /** Public URL for profile photo (e.g. from app upload or external HTTPS URL). */

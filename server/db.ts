@@ -276,6 +276,7 @@ export async function insertAppUserLinkedToAuth(params: {
   role: "admin" | "manager" | "staff" | "user" | "field";
   siteId?: number | null;
   status?: "active" | "inactive" | "pending";
+  mustChangePasswordOnLogin?: boolean;
 }): Promise<number> {
   const database = await getDb();
   if (!database) throw new Error("Database not available");
@@ -291,6 +292,7 @@ export async function insertAppUserLinkedToAuth(params: {
       siteId: params.siteId ?? null,
       status: params.status ?? "active",
       hasCompletedOnboarding: true,
+      mustChangePasswordOnLogin: params.mustChangePasswordOnLogin ?? false,
       lastSignedIn: new Date(),
     })
     .returning({ id: users.id });
@@ -299,6 +301,15 @@ export async function insertAppUserLinkedToAuth(params: {
     throw new Error("Failed to create app user row");
   }
   return userId;
+}
+
+export async function clearMustChangePasswordOnLogin(userId: number) {
+  const database = await getDb();
+  if (!database) throw new Error("Database not available");
+  await database
+    .update(users)
+    .set({ mustChangePasswordOnLogin: false, updatedAt: new Date() })
+    .where(eq(users.id, userId));
 }
 
 // ============= SITES MANAGEMENT =============
@@ -2091,6 +2102,7 @@ export async function getLoginUserByEmailLowercase(email: string): Promise<{
   email: string | null;
   authUserId: string | null;
   status: string | null;
+  mustChangePasswordOnLogin: boolean;
 } | undefined> {
   const normalized = email.trim().toLowerCase();
   const database = await getDb();
@@ -2102,6 +2114,7 @@ export async function getLoginUserByEmailLowercase(email: string): Promise<{
         email: users.email,
         authUserId: users.authUserId,
         status: users.status,
+        mustChangePasswordOnLogin: users.mustChangePasswordOnLogin,
       })
       .from(users)
       .where(sql`LOWER(${users.email}) = ${normalized}`)

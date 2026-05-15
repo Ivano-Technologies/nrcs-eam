@@ -1,6 +1,9 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { DashboardLayoutSkeleton } from "@/components/DashboardLayoutSkeleton";
-import { Redirect } from "wouter";
+import { appPath } from "@/lib/routes";
+import { Redirect, useLocation } from "wouter";
+
+const CHANGE_PASSWORD_SETTINGS = `${appPath("/dashboard-settings")}?changePassword=required`;
 
 export default function ProtectedRoute({
   children,
@@ -8,6 +11,7 @@ export default function ProtectedRoute({
   children: React.ReactNode;
 }) {
   const { user, loading } = useAuth();
+  const [location] = useLocation();
 
   if (loading) {
     return <DashboardLayoutSkeleton />;
@@ -15,6 +19,10 @@ export default function ProtectedRoute({
 
   if (!user) {
     return <Redirect to="/login" />;
+  }
+
+  if (user.mustChangePasswordOnLogin && location !== CHANGE_PASSWORD_SETTINGS) {
+    return <Redirect to={CHANGE_PASSWORD_SETTINGS} />;
   }
 
   return <>{children}</>;
