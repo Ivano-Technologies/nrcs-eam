@@ -256,6 +256,27 @@ export const sites = pgTable("sites", {
   updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
 });
 
+/** Formal land/property valuations linked to facilities (NRCS register). */
+export const siteValuations = pgTable(
+  "site_valuations",
+  {
+    id: serial("id").primaryKey(),
+    siteId: integer("siteId")
+      .notNull()
+      .references(() => sites.id, { onDelete: "cascade" }),
+    valuationDate: date("valuationDate", { mode: "date" }).notNull(),
+    landAreaSqm: decimal("landAreaSqm", { precision: 18, scale: 4 }),
+    marketValue: decimal("marketValue", { precision: 18, scale: 2 }).notNull(),
+    certifiedValue: decimal("certifiedValue", { precision: 18, scale: 2 }).notNull(),
+    valuationReference: text("valuationReference"),
+    valuedBy: text("valuedBy"),
+    notes: text("notes"),
+    createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
+  },
+  (t) => [index("site_valuations_siteId_idx").on(t.siteId)]
+);
+
 /**
  * Asset Categories (e.g., Machinery, Building, Vehicle, Equipment)
  */

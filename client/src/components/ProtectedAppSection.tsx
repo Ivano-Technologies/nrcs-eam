@@ -8,6 +8,7 @@ import Assets from "@/pages/Assets";
 import AuditTrail from "@/pages/AuditTrail";
 import Compliance from "@/pages/Compliance";
 import CostAnalytics from "@/pages/CostAnalytics";
+import AssetValuation from "@/pages/AssetValuation";
 import DashboardSettings from "@/pages/DashboardSettings";
 import EmailNotifications from "@/pages/EmailNotifications";
 import FacilityDetail from "@/pages/FacilityDetail";
@@ -129,6 +130,7 @@ export default function ProtectedAppSection() {
           <Route path="/app/asset-map" component={AssetMap} />
           <Route path="/app/warranty-alerts" component={WarrantyAlerts} />
           <Route path="/app/cost-analytics" component={CostAnalytics} />
+          <Route path="/app/finance/asset-valuation" component={AssetValuation} />
           <Route path="/app/audit-trail" component={AuditTrail} />
           <Route path="/app/activity-log" component={ActivityLog} />
           <Route path="/app/administration/activity-log" component={ActivityLog} />
