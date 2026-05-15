@@ -1001,6 +1001,25 @@ function buildImportUpdatePatch(p: NRCSImportPayload, status: LegacyAssetStatus)
 export async function confirmNRCSAssetImport(rows: NRCSImportPayload[]): Promise<NRCSImportConfirmResult> {
   const { duplicateIndices } = computeIntraBatchDuplicateRowIndexes(rows);
 
+  const siteCoordCache = new Map<number, { latitude: string; longitude: string } | null>();
+
+  async function coordsForSite(
+    siteId: number
+  ): Promise<{ latitude: string; longitude: string } | undefined> {
+    if (siteCoordCache.has(siteId)) {
+      const c = siteCoordCache.get(siteId);
+      return c ?? undefined;
+    }
+    const site = await db.getSiteById(siteId);
+    if (site?.latitude == null || site?.longitude == null) {
+      siteCoordCache.set(siteId, null);
+      return undefined;
+    }
+    const pair = { latitude: String(site.latitude), longitude: String(site.longitude) };
+    siteCoordCache.set(siteId, pair);
+    return pair;
+  }
+
   let imported = 0;
   let updated = 0;
   let skippedIntraBatchDuplicate = 0;
@@ -1014,8 +1033,9 @@ export async function confirmNRCSAssetImport(rows: NRCSImportPayload[]): Promise
 
     const p = rows[i]!;
     const status = legacyStatusFromRegister(p.registerStatus);
-    const insert = buildImportInsertAsset(p, status);
-    const updatePatch = buildImportUpdatePatch(p, status);
+    const coordFields = (await coordsForSite(p.siteId)) ?? {};
+    const insert = { ...buildImportInsertAsset(p, status), ...coordFields };
+    const updatePatch = { ...buildImportUpdatePatch(p, status), ...coordFields };
 
     try {
       const existingTag = await db.getAssetByTag(p.assetTag);

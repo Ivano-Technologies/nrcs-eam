@@ -7,8 +7,12 @@ import { Button } from "@/components/ui/button";
 import { appPath } from "@/lib/routes";
 import { Link } from "wouter";
 import { FACILITY_TYPE_LABELS } from "@shared/facilities";
+import { usePermissions } from "@/_core/hooks/usePermissions";
+import { toast } from "sonner";
+import { MapPin } from "lucide-react";
 
 export default function FacilityDetail() {
+  const { isManagerOrAdmin } = usePermissions();
   const [match, params] = useRoute("/app/facilities/:id");
   const id = match ? Number(params.id) : NaN;
   const enabled = Number.isFinite(id);
@@ -19,6 +23,15 @@ export default function FacilityDetail() {
   const { data: workOrders } = trpc.workOrders.list.useQuery({ siteId: id }, { enabled });
   const { data: movements } = trpc.inventory.movements.useQuery({ siteId: id }, { enabled });
   const { data: transfers } = trpc.transfers.list.useQuery({ siteId: id }, { enabled });
+
+  const utils = trpc.useUtils();
+  const syncCoordsMutation = trpc.assets.syncCoordinatesForSite.useMutation({
+    onSuccess: (res) => {
+      toast.success(`Updated coordinates on ${res.updated} asset(s) at this facility.`);
+      void utils.assets.list.invalidate();
+    },
+    onError: (e) => toast.error(e.message ?? "Sync failed"),
+  });
 
   const childFacilities = useMemo(
     () => (allFacilities ?? []).filter((f) => f.parentFacilityId === id),
@@ -53,11 +66,23 @@ export default function FacilityDetail() {
   return (
     <div className="space-y-4">
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+        <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-2 space-y-0">
+          <CardTitle className="flex flex-wrap items-center gap-2">
             {facility.name}
             <Badge variant="outline">{FACILITY_TYPE_LABELS[facility.facilityType]}</Badge>
           </CardTitle>
+          {isManagerOrAdmin ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={syncCoordsMutation.isPending}
+              onClick={() => syncCoordsMutation.mutate({ siteId: facility.id })}
+            >
+              <MapPin className="mr-2 h-4 w-4" />
+              Sync asset coordinates from facility
+            </Button>
+          ) : null}
         </CardHeader>
         <CardContent className="grid gap-2 text-sm md:grid-cols-2">
           <p><span className="font-medium">Code:</span> {facility.code ?? "—"}</p>

@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Download, Upload, Edit2, Trash2 } from "lucide-react";
+import { Plus, Download, Upload, Edit2, Trash2, MapPin } from "lucide-react";
 import { useLocation } from "wouter";
 import {
   AlertDialog,
@@ -483,6 +483,16 @@ export default function Assets() {
     },
   });
 
+  const backfillCoordinatesMutation = trpc.assets.backfillCoordinatesFromFacilities.useMutation({
+    onSuccess: (res) => {
+      toast.success(`Synced coordinates for ${res.updated} asset(s) from their facilities.`);
+      refetch();
+    },
+    onError: (error: { message?: string }) => {
+      toast.error(error.message ?? "Coordinate sync failed");
+    },
+  });
+
   const resetNewAssetForm = () => {
     setCreateDepreciationOverride(false);
     setNewAsset({
@@ -743,13 +753,26 @@ export default function Assets() {
       status: asset.status,
       registerStatus: asset.registerStatus || "in_use",
       itemType: asset.itemType || "asset",
+      registerItemType: asset.registerItemType || "Asset",
+      itemDescription: asset.itemDescription || "",
       subCategory: asset.subCategory || "",
+      subItemCategory: asset.subItemCategory || "",
+      branchCode: asset.branchCode || "",
+      itemCategoryCode: asset.itemCategoryCode || "",
+      assetNum: asset.assetNum != null ? String(asset.assetNum) : "",
       acquisitionMethod: asset.acquisitionMethod || "",
+      acquisitionOtherDetail: asset.acquisitionOtherDetail || "",
       projectRef: asset.projectRef || "",
       acquisitionCondition: asset.acquisitionCondition || "New",
+      acquiredNewOrUsed: asset.acquiredNewOrUsed || asset.acquisitionCondition || "New",
+      currentStatus: asset.currentStatus || "In Use",
       department: asset.department || "",
       assignedToName: asset.assignedToName || "",
       physicalCondition: asset.physicalCondition || "Good",
+      conditionRegister: asset.conditionRegister || "Good",
+      lastPhysicalCheck: asset.lastPhysicalCheck ? String(asset.lastPhysicalCheck).slice(0, 10) : "",
+      checkConductedBy: asset.checkConductedBy || "",
+      remarksRegister: asset.remarksRegister || "",
       notes: asset.notes || "",
       actualUnitValue: asset.actualUnitValue != null ? String(asset.actualUnitValue) : "",
       yearAcquiredRegister: asset.yearAcquiredRegister != null ? String(asset.yearAcquiredRegister) : "",
@@ -761,6 +784,14 @@ export default function Assets() {
             ? String(asset.currentDepreciatedValue)
             : "",
       depreciationManualOverride: Boolean(asset.depreciatedValueManualOverride),
+      depreciationMethod: asset.depreciationMethod || "",
+      usefulLifeYears: asset.usefulLifeYears != null ? String(asset.usefulLifeYears) : "",
+      residualValue: asset.residualValue != null ? String(asset.residualValue) : "",
+      depreciationStartDate: asset.depreciationStartDate
+        ? new Date(asset.depreciationStartDate).toISOString().slice(0, 10)
+        : "",
+      latitude: asset.latitude != null ? String(asset.latitude) : "",
+      longitude: asset.longitude != null ? String(asset.longitude) : "",
     });
     setIsEditDialogOpen(true);
   };
@@ -784,6 +815,11 @@ export default function Assets() {
     const resolvedCategoryId = Number(
       categoryIdForCanonicalName(categories, canonForSave) || editingAsset.categoryId
     );
+    const currentStatusVal =
+      editingAsset.currentStatus &&
+      (CURRENT_STATUS_OPTIONS as readonly string[]).includes(editingAsset.currentStatus)
+        ? editingAsset.currentStatus
+        : undefined;
     updateAssetMutation.mutate({
       id: editingAsset.id,
       assetTag: editingAsset.assetTag,
@@ -797,26 +833,52 @@ export default function Assets() {
       location: editingAsset.location || undefined,
       registerStatus: editingAsset.registerStatus,
       itemType: editingAsset.itemType,
+      registerItemType: editingAsset.registerItemType || undefined,
+      itemDescription: editingAsset.itemDescription || undefined,
       subCategory: editingAsset.subCategory || undefined,
+      subItemCategory: editingAsset.subItemCategory || undefined,
+      branchCode: editingAsset.branchCode || undefined,
+      itemCategoryCode:
+        editingAsset.itemCategoryCode && String(editingAsset.itemCategoryCode).trim().length === 2
+          ? String(editingAsset.itemCategoryCode).trim().toUpperCase()
+          : undefined,
+      assetNum: editingAsset.assetNum ? Number(editingAsset.assetNum) : undefined,
       acquisitionMethod: editingAsset.acquisitionMethod || undefined,
+      acquisitionOtherDetail: editingAsset.acquisitionOtherDetail || undefined,
       projectRef: editingAsset.projectRef || undefined,
       acquisitionCondition: editingAsset.acquisitionCondition,
+      acquiredNewOrUsed: editingAsset.acquiredNewOrUsed || undefined,
+      currentStatus: currentStatusVal,
       department: editingAsset.department || undefined,
       assignedToName: editingAsset.assignedToName || undefined,
-      physicalCondition: editingAsset.physicalCondition,
+      physicalCondition: editingAsset.physicalCondition || undefined,
+      conditionRegister: editingAsset.conditionRegister || undefined,
+      lastPhysicalCheck: editingAsset.lastPhysicalCheck
+        ? new Date(`${editingAsset.lastPhysicalCheck}T12:00:00`)
+        : undefined,
+      checkConductedBy: editingAsset.checkConductedBy || undefined,
+      remarksRegister: editingAsset.remarksRegister || undefined,
       notes: editingAsset.notes || undefined,
       actualUnitValue: editingAsset.actualUnitValue || undefined,
+      depreciatedValue:
+        editingAsset.depreciationManualOverride === true ? editingAsset.depreciatedValue || undefined : undefined,
+      depreciationMethod: editingAsset.depreciationMethod || undefined,
+      usefulLifeYears: editingAsset.usefulLifeYears ? Number(editingAsset.usefulLifeYears) : undefined,
+      residualValue: editingAsset.residualValue || undefined,
+      depreciationStartDate: editingAsset.depreciationStartDate
+        ? new Date(`${editingAsset.depreciationStartDate}T12:00:00`)
+        : undefined,
       yearAcquiredRegister: editingAsset.yearAcquiredRegister
         ? Number(editingAsset.yearAcquiredRegister)
         : undefined,
       itemCategory: canonForSave || undefined,
       depreciatedValueManualOverride: editingAsset.depreciationManualOverride === true,
-      depreciatedValue:
-        editingAsset.depreciationManualOverride === true ? editingAsset.depreciatedValue || undefined : undefined,
       currentDepreciatedValue:
         editingAsset.depreciationManualOverride === true && editingAsset.depreciatedValue
           ? Number(editingAsset.depreciatedValue)
           : undefined,
+      latitude: editingAsset.latitude?.trim() || undefined,
+      longitude: editingAsset.longitude?.trim() || undefined,
     });
   };
 
@@ -1390,6 +1452,18 @@ export default function Assets() {
                 Recalculate All Depreciation
               </Button>
             ) : null}
+            {isAdmin ? (
+              <Button
+                className="h-9"
+                variant="secondary"
+                disabled={backfillCoordinatesMutation.isPending}
+                onClick={() => backfillCoordinatesMutation.mutate()}
+                data-testid="asset-sync-coordinates-from-facilities-btn"
+              >
+                <MapPin className="mr-2 h-4 w-4" />
+                Sync coordinates from facilities
+              </Button>
+            ) : null}
           </>
         }
       />
@@ -1429,14 +1503,14 @@ export default function Assets() {
           ))}
         </div>
       ) : (
-      <div data-testid="asset-list-table" className="rounded-md border bg-card overflow-hidden px-2 md:px-3">
+      <div data-testid="asset-list-table" className="rounded-md border bg-card overflow-x-auto overflow-y-visible px-2 md:px-3">
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
           </div>
         ) : (
           <div
-            className="frozen-table-wrap frozen-table-double-header"
+            className="frozen-table-wrap frozen-table-double-header frozen-table-wrap-page-scroll"
             style={
               {
                 "--col1-width": "4rem",
@@ -1514,7 +1588,7 @@ export default function Assets() {
                         key={row.id}
                         data-testid={`asset-row-${row.id}`}
                         className={cn(
-                          "relative z-10 border-b cursor-pointer hover:bg-muted/50",
+                          "border-b cursor-pointer hover:bg-muted/50",
                           rowBgClass
                         )}
                         onClick={() => setLocation(appPath(`/assets/${row.id}`))}
@@ -1797,6 +1871,265 @@ export default function Assets() {
               </div>
               {canEditAssets ? (
                 <>
+                  <h3 className="text-sm font-semibold text-[#1a2332]">Item details (register)</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Register item type</Label>
+                      <Select
+                        value={editingAsset.registerItemType || "Asset"}
+                        onValueChange={(v) =>
+                          setEditingAsset({ ...editingAsset, registerItemType: v as "Asset" | "Inventory" })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Asset">Asset</SelectItem>
+                          <SelectItem value="Inventory">Inventory</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Item description (register)</Label>
+                      <Input
+                        value={editingAsset.itemDescription ?? ""}
+                        onChange={(e) => setEditingAsset({ ...editingAsset, itemDescription: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Sub-item category</Label>
+                      <Select
+                        value={editingAsset.subItemCategory || "__none__"}
+                        onValueChange={(v) =>
+                          setEditingAsset({
+                            ...editingAsset,
+                            subItemCategory: v === "__none__" ? "" : v,
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">None</SelectItem>
+                          {SUB_ITEM_CATEGORIES.map((c) => (
+                            <SelectItem key={c} value={c}>
+                              {c}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Branch code</Label>
+                      <Input
+                        value={editingAsset.branchCode ?? ""}
+                        onChange={(e) => setEditingAsset({ ...editingAsset, branchCode: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Item category code (2 letters)</Label>
+                      <Input
+                        maxLength={2}
+                        value={editingAsset.itemCategoryCode ?? ""}
+                        onChange={(e) =>
+                          setEditingAsset({
+                            ...editingAsset,
+                            itemCategoryCode: e.target.value.toUpperCase(),
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Asset #</Label>
+                      <Input
+                        type="number"
+                        value={editingAsset.assetNum ?? ""}
+                        onChange={(e) => setEditingAsset({ ...editingAsset, assetNum: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <h3 className="text-sm font-semibold text-[#1a2332]">Acquisition</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2 md:col-span-2">
+                      <Label>Method of acquisition</Label>
+                      <Select
+                        value={editingAsset.acquisitionMethod || "__none__"}
+                        onValueChange={(v) =>
+                          setEditingAsset({
+                            ...editingAsset,
+                            acquisitionMethod: v === "__none__" ? "" : v,
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">None</SelectItem>
+                          {METHOD_OF_ACQUISITION_OPTIONS.map((m) => (
+                            <SelectItem key={m} value={m}>
+                              {m}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {editingAsset.acquisitionMethod === "Other" ? (
+                      <div className="space-y-2 md:col-span-2">
+                        <Label>Other acquisition detail</Label>
+                        <Input
+                          value={editingAsset.acquisitionOtherDetail ?? ""}
+                          onChange={(e) =>
+                            setEditingAsset({ ...editingAsset, acquisitionOtherDetail: e.target.value })
+                          }
+                        />
+                      </div>
+                    ) : null}
+                    <div className="space-y-2 md:col-span-2">
+                      <Label>Project reference</Label>
+                      <Input
+                        value={editingAsset.projectRef ?? ""}
+                        onChange={(e) => setEditingAsset({ ...editingAsset, projectRef: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Acquired new / used</Label>
+                      <Select
+                        value={editingAsset.acquiredNewOrUsed || "New"}
+                        onValueChange={(v) =>
+                          setEditingAsset({
+                            ...editingAsset,
+                            acquiredNewOrUsed: v,
+                            acquisitionCondition: v as "New" | "Used",
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="New">New</SelectItem>
+                          <SelectItem value="Used">Used</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <h3 className="text-sm font-semibold text-[#1a2332]">Condition (register)</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Current status</Label>
+                      <Select
+                        value={editingAsset.currentStatus || "In Use"}
+                        onValueChange={(v) => setEditingAsset({ ...editingAsset, currentStatus: v })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {CURRENT_STATUS_OPTIONS.map((s) => (
+                            <SelectItem key={s} value={s}>
+                              {s}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Condition (register)</Label>
+                      <Select
+                        value={editingAsset.conditionRegister || "Good"}
+                        onValueChange={(v) =>
+                          setEditingAsset({
+                            ...editingAsset,
+                            conditionRegister: v,
+                            physicalCondition:
+                              v === "Beyond Repair (For Disposal)"
+                                ? "Beyond Repair"
+                                : v === "Out of Order (To be repaired)"
+                                  ? "Damaged"
+                                  : (v as "Good" | "Fair" | "Damaged" | "Beyond Repair"),
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {CONDITION_OPTIONS.map((c) => (
+                            <SelectItem key={c} value={c}>
+                              {c}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Last physical check</Label>
+                      <Input
+                        type="date"
+                        value={editingAsset.lastPhysicalCheck ?? ""}
+                        onChange={(e) =>
+                          setEditingAsset({ ...editingAsset, lastPhysicalCheck: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Check conducted by</Label>
+                      <Input
+                        value={editingAsset.checkConductedBy ?? ""}
+                        onChange={(e) =>
+                          setEditingAsset({ ...editingAsset, checkConductedBy: e.target.value })
+                        }
+                      />
+                    </div>
+                  </div>
+                  <h3 className="text-sm font-semibold text-[#1a2332]">Admin</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2 md:col-span-2">
+                      <Label>Remarks (register)</Label>
+                      <Textarea
+                        value={editingAsset.remarksRegister ?? ""}
+                        onChange={(e) => setEditingAsset({ ...editingAsset, remarksRegister: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Assigned to (name)</Label>
+                      <Input
+                        value={editingAsset.assignedToName ?? ""}
+                        onChange={(e) => setEditingAsset({ ...editingAsset, assignedToName: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Department</Label>
+                      <Input
+                        value={editingAsset.department ?? ""}
+                        onChange={(e) => setEditingAsset({ ...editingAsset, department: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <h3 className="text-sm font-semibold text-[#1a2332]">Map coordinates (optional)</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Leave blank to inherit from the selected facility on save (via server). Enter values to
+                    override.
+                  </p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Latitude</Label>
+                      <Input
+                        value={editingAsset.latitude ?? ""}
+                        onChange={(e) => setEditingAsset({ ...editingAsset, latitude: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Longitude</Label>
+                      <Input
+                        value={editingAsset.longitude ?? ""}
+                        onChange={(e) => setEditingAsset({ ...editingAsset, longitude: e.target.value })}
+                      />
+                    </div>
+                  </div>
                   <h3 className="text-sm font-semibold text-[#1a2332]">Financial (register)</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -1818,6 +2151,48 @@ export default function Assets() {
                         value={editingAsset.yearAcquiredRegister ?? ""}
                         onChange={(e) =>
                           setEditingAsset({ ...editingAsset, yearAcquiredRegister: e.target.value })
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Depreciation method</Label>
+                      <Input
+                        placeholder="e.g. straight_line"
+                        value={editingAsset.depreciationMethod ?? ""}
+                        onChange={(e) =>
+                          setEditingAsset({ ...editingAsset, depreciationMethod: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Useful life (years)</Label>
+                      <Input
+                        type="number"
+                        value={editingAsset.usefulLifeYears ?? ""}
+                        onChange={(e) =>
+                          setEditingAsset({ ...editingAsset, usefulLifeYears: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Residual value (NGN)</Label>
+                      <Input
+                        type="number"
+                        value={editingAsset.residualValue ?? ""}
+                        onChange={(e) =>
+                          setEditingAsset({ ...editingAsset, residualValue: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Depreciation start date</Label>
+                      <Input
+                        type="date"
+                        value={editingAsset.depreciationStartDate ?? ""}
+                        onChange={(e) =>
+                          setEditingAsset({ ...editingAsset, depreciationStartDate: e.target.value })
                         }
                       />
                     </div>
