@@ -4,11 +4,12 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Download, X } from "lucide-react";
-
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
-}
+import {
+  isPwaInstallable,
+  isPwaStandalone,
+  promptPwaInstall,
+  subscribeInstallPrompt,
+} from "@/lib/pwaInstall";
 
 /**
  * PWA install UI — only when logged in and on `/app/*` (mounted from ProtectedAppSection).
@@ -18,8 +19,8 @@ export function PWAInstallPrompt() {
   const [location] = useLocation();
   const allowInstallUi = !!user && location.startsWith("/app");
 
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
+  const [installable, setInstallable] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {
@@ -27,71 +28,42 @@ export function PWAInstallPrompt() {
       return;
     }
 
-    if (
-      window.matchMedia("(display-mode: standalone)").matches ||
-      (window.navigator as unknown as { standalone?: boolean }).standalone === true
-    ) {
-      setIsInstalled(true);
+    const sync = () => {
+      setIsInstalled(isPwaStandalone());
+      setInstallable(isPwaInstallable());
+    };
+    sync();
+    return subscribeInstallPrompt(sync);
+  }, [allowInstallUi]);
+
+  useEffect(() => {
+    if (!allowInstallUi || isInstalled || !installable) {
       return;
     }
 
     const dismissed = localStorage.getItem("pwa-install-dismissed");
     if (dismissed) {
       const dismissedDate = new Date(dismissed);
-      const now = new Date();
       const daysSinceDismissed =
-        (now.getTime() - dismissedDate.getTime()) / (1000 * 60 * 60 * 24);
-
+        (Date.now() - dismissedDate.getTime()) / (1000 * 60 * 60 * 24);
       if (daysSinceDismissed < 7) {
         return;
       }
     }
 
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
+    const timer = window.setTimeout(() => setShowPrompt(true), 3000);
+    return () => window.clearTimeout(timer);
+  }, [allowInstallUi, isInstalled, installable]);
 
-      setTimeout(() => {
-        setShowPrompt(true);
-      }, 3000);
-    };
-
-    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-
-    const handleAppInstalled = () => {
-      setIsInstalled(true);
-      setShowPrompt(false);
-      setDeferredPrompt(null);
-    };
-    window.addEventListener("appinstalled", handleAppInstalled);
-
-    return () => {
-      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-      window.removeEventListener("appinstalled", handleAppInstalled);
-    };
-  }, [allowInstallUi]);
-
-  if (!allowInstallUi || isInstalled || !showPrompt || !deferredPrompt) {
+  if (!allowInstallUi || isInstalled || !showPrompt || !installable) {
     return null;
   }
 
   const handleInstallClick = async () => {
-    if (!deferredPrompt) {
-      return;
+    const outcome = await promptPwaInstall();
+    if (outcome === "accepted" || outcome === "dismissed") {
+      setShowPrompt(false);
     }
-
-    await deferredPrompt.prompt();
-
-    const { outcome } = await deferredPrompt.userChoice;
-
-    if (outcome === "accepted") {
-      console.log("User accepted the install prompt");
-    } else {
-      console.log("User dismissed the install prompt");
-    }
-
-    setDeferredPrompt(null);
-    setShowPrompt(false);
   };
 
   const handleDismiss = () => {

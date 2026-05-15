@@ -2546,30 +2546,22 @@ export async function getAssetValuationReport(): Promise<AssetValuationReport> {
           .where(notInArray(sites.id, ids))
           .orderBy(asc(sites.state), asc(sites.name));
 
-  const pendingBranches =
-    ids.length === 0
-      ? await database
-          .select({
-            siteId: sites.id,
-            facilityCode: sites.code,
-            facilityName: sites.name,
-            state: sites.state,
-            facilityType: sites.facilityType,
-          })
-          .from(sites)
-          .where(pendingBranchBase)
-          .orderBy(asc(sites.state), asc(sites.name))
-      : await database
-          .select({
-            siteId: sites.id,
-            facilityCode: sites.code,
-            facilityName: sites.name,
-            state: sites.state,
-            facilityType: sites.facilityType,
-          })
-          .from(sites)
-          .where(and(notInArray(sites.id, ids), pendingBranchBase))
-          .orderBy(asc(sites.state), asc(sites.name));
+  const branchWithoutValuationSql = and(
+    pendingBranchBase,
+    sql`not exists (select 1 from ${siteValuations} where ${siteValuations.siteId} = ${sites.id})`
+  );
+
+  const pendingBranches = await database
+    .select({
+      siteId: sites.id,
+      facilityCode: sites.code,
+      facilityName: sites.name,
+      state: sites.state,
+      facilityType: sites.facilityType,
+    })
+    .from(sites)
+    .where(branchWithoutValuationSql)
+    .orderBy(asc(sites.state), asc(sites.name));
 
   const propRows = await database
     .select({

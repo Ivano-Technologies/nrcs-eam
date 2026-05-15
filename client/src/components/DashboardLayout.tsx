@@ -32,6 +32,8 @@ import { GlobalSearch } from "./GlobalSearch";
 import { flattenNavItems } from "@/config/appNav";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { Link } from "wouter";
+import { InstallPWABanner } from "./InstallPWABanner";
+import { ConnectivityIndicator } from "./ConnectivityIndicator";
 import { RoleSwitcher } from "./dashboard/RoleSwitcher";
 import { DashboardRolePreviewProvider } from "./dashboard/rolePreviewContext";
 import type { UserRole } from "./dashboard/types";
@@ -389,6 +391,7 @@ function DashboardLayoutContent({
       </div>
 
       <SidebarInset className="min-h-svh bg-background dark:bg-[#232323] transition-[margin,padding] duration-200 ease-in-out">
+        <InstallPWABanner />
         {isMobile && (
           <div className="flex border-b h-14 items-center justify-between bg-background/95 dark:bg-[#232323]/95 px-2 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
             <div className="flex items-center gap-2">
@@ -402,6 +405,7 @@ function DashboardLayoutContent({
               </div>
             </div>
             <div className="flex items-center gap-1 shrink-0">
+              <ConnectivityIndicator />
               <GlobalSearch />
               <ThemeToggle />
               <NotificationCenter />
@@ -416,6 +420,7 @@ function DashboardLayoutContent({
               <div className="[&_[data-slot='select-trigger']]:border-[rgba(0,0,0,0.15)] [&_[data-slot='select-trigger']]:bg-white/70 [&_[data-slot='select-trigger']]:text-[#1a2332] [&_[data-slot='select-trigger']]:hover:bg-white/85 [&_[data-slot='select-trigger']_[data-slot='select-value']]:text-[#1a2332] [&_[data-slot='select-trigger']_svg]:text-[#1a2332] dark:[&_[data-slot='select-trigger']]:border-white/20 dark:[&_[data-slot='select-trigger']]:bg-white/10 dark:[&_[data-slot='select-trigger']]:text-[hsl(0_0%_95%)] dark:[&_[data-slot='select-trigger']]:hover:bg-white/15 dark:[&_[data-slot='select-trigger']_[data-slot='select-value']]:text-[hsl(0_0%_95%)] dark:[&_[data-slot='select-trigger']_svg]:text-[hsl(0_0%_95%)] [&_.text-muted-foreground]:text-[#1a2332] dark:[&_.text-muted-foreground]:text-[hsl(0_0%_95%)]">
                 <RoleSwitcher actualRole={actualRole} value={effectiveRole} onChange={setEffectiveRole} />
               </div>
+              <ConnectivityIndicator />
               <ThemeToggle className="text-[#1a2332] hover:bg-black/5 dark:text-[hsl(0_0%_95%)] dark:hover:bg-white/10" />
               <NotificationCenter triggerClassName="text-[#1a2332] hover:bg-black/5 dark:text-[hsl(0_0%_95%)] dark:hover:bg-white/10" />
             </div>

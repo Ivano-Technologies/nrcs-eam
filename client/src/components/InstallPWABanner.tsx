@@ -1,47 +1,36 @@
 import { useEffect, useMemo, useState } from "react";
 import { Download, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
-}
+import {
+  isPwaInstallable,
+  isPwaStandalone,
+  promptPwaInstall,
+  subscribeInstallPrompt,
+} from "@/lib/pwaInstall";
 
 const DISMISS_KEY = "pwa_install_banner_dismissed";
 
 export function InstallPWABanner() {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [isInstallable, setIsInstallable] = useState(false);
+  const [installable, setInstallable] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
     setDismissed(localStorage.getItem(DISMISS_KEY) === "1");
-    if (window.matchMedia("(display-mode: standalone)").matches) {
-      setIsInstalled(true);
-      return;
-    }
 
-    const onBeforeInstall = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
-      setIsInstallable(true);
+    const sync = () => {
+      setIsInstalled(isPwaStandalone());
+      setInstallable(isPwaInstallable());
     };
-    const onInstalled = () => {
-      setIsInstalled(true);
-      setIsInstallable(false);
-      setDeferredPrompt(null);
-    };
-
-    window.addEventListener("beforeinstallprompt", onBeforeInstall);
-    window.addEventListener("appinstalled", onInstalled);
-    return () => {
-      window.removeEventListener("beforeinstallprompt", onBeforeInstall);
-      window.removeEventListener("appinstalled", onInstalled);
-    };
+    sync();
+    return subscribeInstallPrompt(sync);
   }, []);
 
-  const visible = useMemo(() => isInstallable && !isInstalled && !dismissed, [isInstallable, isInstalled, dismissed]);
+  const visible = useMemo(
+    () => installable && !isInstalled && !dismissed,
+    [installable, isInstalled, dismissed]
+  );
+
   if (!visible) return null;
 
   return (
@@ -54,13 +43,10 @@ export function InstallPWABanner() {
           <Button
             size="sm"
             onClick={async () => {
-              if (!deferredPrompt) return;
-              await deferredPrompt.prompt();
-              const result = await deferredPrompt.userChoice;
-              if (result.outcome === "accepted") {
+              const outcome = await promptPwaInstall();
+              if (outcome === "accepted") {
                 setIsInstalled(true);
               }
-              setDeferredPrompt(null);
             }}
           >
             <Download className="mr-2 h-4 w-4" />
