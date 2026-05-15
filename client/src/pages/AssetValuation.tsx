@@ -1,4 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -9,15 +10,64 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { downloadBase64File } from "@/lib/download";
-import { formatNaira } from "@/lib/format";
+import { formatNaira, formatNairaSummaryCard } from "@/lib/format";
 import { trpc } from "@/lib/trpc";
 import { AlertTriangle, ArrowDown, ArrowUp, Download, FileSpreadsheet } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 type SortKey = "state" | "code" | "name" | "land" | "market" | "certified" | "date";
+type PendingSortKey = "state" | "code";
 type SortDir = "asc" | "desc";
+
+const PENDING_PAGE_SIZE = 10;
+
+function SummaryMetricCard({
+  label,
+  amount,
+  value,
+  subtext,
+}: {
+  label: string;
+  amount?: number;
+  value?: string | number;
+  subtext?: string;
+}) {
+  const amountFmt = amount != null ? formatNairaSummaryCard(amount) : null;
+  const showTooltip = amountFmt != null && amountFmt.display !== amountFmt.full;
+
+  return (
+    <Card className="min-w-0 overflow-hidden">
+      <CardHeader className="min-w-0 space-y-1.5 pb-2">
+        <CardDescription className="line-clamp-2 text-xs leading-tight">{label}</CardDescription>
+        {amountFmt ? (
+          showTooltip ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <p
+                  className="break-words text-lg font-bold tabular-nums leading-snug"
+                  title={amountFmt.full}
+                >
+                  {amountFmt.display}
+                </p>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs">{amountFmt.full}</TooltipContent>
+            </Tooltip>
+          ) : (
+            <p className="break-words text-lg font-bold tabular-nums leading-snug" title={amountFmt.full}>
+              {amountFmt.display}
+            </p>
+          )
+        ) : (
+          <p className="break-words text-lg font-bold tabular-nums leading-snug">{value}</p>
+        )}
+        {subtext ? <p className="text-xs leading-tight text-muted-foreground">{subtext}</p> : null}
+      </CardHeader>
+    </Card>
+  );
+}
 
 function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
   if (!active) return <span className="inline-block w-4" />;
@@ -63,6 +113,9 @@ export default function AssetValuation() {
 
   const [sortKey, setSortKey] = useState<SortKey>("state");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [pendingSortKey, setPendingSortKey] = useState<PendingSortKey>("state");
+  const [pendingSortDir, setPendingSortDir] = useState<SortDir>("asc");
+  const [pendingPage, setPendingPage] = useState(1);
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -70,6 +123,15 @@ export default function AssetValuation() {
     } else {
       setSortKey(key);
       setSortDir(key === "certified" || key === "market" || key === "land" ? "desc" : "asc");
+    }
+  };
+
+  const togglePendingSort = (key: PendingSortKey) => {
+    if (pendingSortKey === key) {
+      setPendingSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setPendingSortKey(key);
+      setPendingSortDir("asc");
     }
   };
 
@@ -111,6 +173,37 @@ export default function AssetValuation() {
     return { byState, states };
   }, [reportQuery.data?.propertyRegister, sortKey, sortDir]);
 
+  const pendingBranches = reportQuery.data?.pendingBranchValuation ?? [];
+
+  const sortedPendingBranches = useMemo(() => {
+    const rows = [...pendingBranches];
+    const dir = pendingSortDir === "asc" ? 1 : -1;
+    rows.sort((a, b) => {
+      if (pendingSortKey === "state") {
+        return dir * String(a.state ?? "").localeCompare(String(b.state ?? ""));
+      }
+      return dir * String(a.facilityCode ?? "").localeCompare(String(b.facilityCode ?? ""));
+    });
+    return rows;
+  }, [pendingBranches, pendingSortKey, pendingSortDir]);
+
+  const pendingTotalPages = Math.max(1, Math.ceil(sortedPendingBranches.length / PENDING_PAGE_SIZE));
+
+  useEffect(() => {
+    setPendingPage(1);
+  }, [pendingSortKey, pendingSortDir, pendingBranches.length]);
+
+  useEffect(() => {
+    if (pendingPage > pendingTotalPages) {
+      setPendingPage(pendingTotalPages);
+    }
+  }, [pendingPage, pendingTotalPages]);
+
+  const pendingPageRows = useMemo(() => {
+    const start = (pendingPage - 1) * PENDING_PAGE_SIZE;
+    return sortedPendingBranches.slice(start, start + PENDING_PAGE_SIZE);
+  }, [sortedPendingBranches, pendingPage]);
+
   if (!allowed) {
     return (
       <div className="container mx-auto max-w-lg space-y-4 p-6">
@@ -132,8 +225,8 @@ export default function AssetValuation() {
       <div className="container mx-auto p-6">
         <div className="animate-pulse space-y-4">
           <div className="h-8 w-1/3 rounded bg-muted" />
-          <div className="grid gap-3 md:grid-cols-3">
-            {[1, 2, 3, 4].map((i) => (
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
+            {[1, 2, 3, 4, 5].map((i) => (
               <div key={i} className="h-24 rounded bg-muted" />
             ))}
           </div>
@@ -156,7 +249,6 @@ export default function AssetValuation() {
   }
 
   const r = reportQuery.data;
-  const pendingBranches = r.pendingBranchValuation;
   const movableCount = r.movableByCategory.reduce((s, x) => s + x.count, 0);
 
   return (
@@ -194,66 +286,131 @@ export default function AssetValuation() {
       {/* Section 1 — Summary */}
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Summary</h2>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Total certified property value</CardDescription>
-              <CardTitle className="text-xl tabular-nums">{formatNaira(r.totalCertifiedPropertyNgn)}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Total movable asset value (acquisition)</CardDescription>
-              <CardTitle className="text-xl tabular-nums">{formatNaira(r.totalMovableAcquisitionNgn)}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Combined total asset value</CardDescription>
-              <CardTitle className="text-xl tabular-nums">{formatNaira(r.combinedTotalNgn)}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Valued properties (register)</CardDescription>
-              <CardTitle className="text-xl tabular-nums">{r.valuationRowCount}</CardTitle>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {r.distinctSitesWithValuation} sites · {r.totalFacilityCount} facilities total
-              </p>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Branch offices pending valuation</CardDescription>
-              <CardTitle className="text-xl tabular-nums">{pendingBranches.length}</CardTitle>
-              <p className="mt-1 text-sm text-muted-foreground">of {r.activeBranchCount} active branches</p>
-            </CardHeader>
-          </Card>
+        <div className="grid min-w-0 grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
+          <SummaryMetricCard
+            label="Total certified property value"
+            amount={r.totalCertifiedPropertyNgn}
+          />
+          <SummaryMetricCard
+            label="Total movable asset value (acquisition)"
+            amount={r.totalMovableAcquisitionNgn}
+          />
+          <SummaryMetricCard label="Combined total asset value" amount={r.combinedTotalNgn} />
+          <SummaryMetricCard
+            label="Valued properties (register)"
+            value={r.valuationRowCount}
+            subtext={`${r.distinctSitesWithValuation} sites · ${r.totalFacilityCount} facilities total`}
+          />
+          <SummaryMetricCard
+            label="Branch offices pending valuation"
+            value={pendingBranches.length}
+            subtext={`of ${r.activeBranchCount} active branches`}
+          />
         </div>
 
-        <Card>
+        <Card className="min-w-0 overflow-hidden">
           <CardHeader>
             <CardTitle className="text-base">Branches not yet valued (property register)</CardTitle>
-            <CardDescription>
-              {pendingBranches.length === 0
-                ? "All branches have at least one linked property valuation row."
-                : `${pendingBranches.length} branch office${pendingBranches.length === 1 ? "" : "es"} pending formal land/building valuation.`}
+            <CardDescription className="text-sm leading-relaxed">
+              These branches have no formal land or building valuation on record. Coordinate with branch
+              secretaries to commission valuations.
+              {pendingBranches.length > 0
+                ? ` ${pendingBranches.length} branch office${pendingBranches.length === 1 ? "" : "es"} pending.`
+                : " All active branches are covered in the register."}
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0">
             {pendingBranches.length === 0 ? (
-              <p className="text-sm text-muted-foreground">—</p>
+              <p className="px-6 pb-6 text-sm text-muted-foreground">—</p>
             ) : (
-              <ul className="max-h-48 list-inside list-disc overflow-y-auto text-sm text-muted-foreground md:columns-2">
-                {pendingBranches.map((b) => (
-                  <li key={b.siteId}>
-                    <span className="font-medium text-foreground">{b.state ?? "—"}</span>
-                    {": "}
-                    {b.facilityName}
-                    {b.facilityCode ? ` (${b.facilityCode})` : ""}
-                  </li>
-                ))}
-              </ul>
+              <>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-14">S/No</TableHead>
+                        <TableHead>
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1 font-medium hover:underline"
+                            onClick={() => togglePendingSort("code")}
+                          >
+                            Facility code
+                            <SortIcon active={pendingSortKey === "code"} dir={pendingSortDir} />
+                          </button>
+                        </TableHead>
+                        <TableHead>Branch name</TableHead>
+                        <TableHead>
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1 font-medium hover:underline"
+                            onClick={() => togglePendingSort("state")}
+                          >
+                            State
+                            <SortIcon active={pendingSortKey === "state"} dir={pendingSortDir} />
+                          </button>
+                        </TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {pendingPageRows.map((b, idx) => (
+                        <TableRow
+                          key={b.siteId}
+                          className={idx % 2 === 1 ? "bg-muted/30" : undefined}
+                        >
+                          <TableCell className="tabular-nums text-muted-foreground">
+                            {(pendingPage - 1) * PENDING_PAGE_SIZE + idx + 1}
+                          </TableCell>
+                          <TableCell className="font-mono text-sm">{b.facilityCode ?? "—"}</TableCell>
+                          <TableCell>{b.facilityName}</TableCell>
+                          <TableCell>{b.state ?? "—"}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="outline"
+                              className="border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-100"
+                            >
+                              Pending Valuation
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+                {sortedPendingBranches.length > PENDING_PAGE_SIZE ? (
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-t px-4 py-3">
+                    <p className="text-sm text-muted-foreground">
+                      Showing {(pendingPage - 1) * PENDING_PAGE_SIZE + 1}–
+                      {Math.min(pendingPage * PENDING_PAGE_SIZE, sortedPendingBranches.length)} of{" "}
+                      {sortedPendingBranches.length}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={pendingPage <= 1}
+                        onClick={() => setPendingPage((p) => p - 1)}
+                      >
+                        Previous
+                      </Button>
+                      <span className="text-sm tabular-nums">
+                        Page {pendingPage} of {pendingTotalPages}
+                      </span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={pendingPage >= pendingTotalPages}
+                        onClick={() => setPendingPage((p) => p + 1)}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
+              </>
             )}
           </CardContent>
         </Card>

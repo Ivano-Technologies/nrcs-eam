@@ -14,6 +14,7 @@ import { GrnLineItemsTable, type GrnLineItem } from "@/components/wms/GrnLineIte
 import { SignatureBlock, type SignatureValue } from "@/components/wms/SignatureBlock";
 import { CtnInlineCreator } from "@/components/wms/CtnInlineCreator";
 import { applyGrnSuggestion, looksLikeGrnNumber } from "@/lib/grnNumberSuggest";
+import { enqueueGrnOperation } from "@/lib/offlineSyncQueue";
 
 const emptyLine = (): GrnLineItem => ({
   consignmentNumber: "",
@@ -213,6 +214,21 @@ export default function ReceiptDetail() {
   );
 
   const saveDraft = async () => {
+    if (!navigator.onLine) {
+      if (savedId == null) {
+        enqueueGrnOperation({ kind: "createDraft", payload: payload as unknown });
+        toast.info("GRN draft saved offline — will sync when you are back online.");
+      } else {
+        enqueueGrnOperation({
+          kind: "updateDraft",
+          documentId: savedId,
+          payload: payload as unknown,
+        });
+        toast.info("GRN draft saved offline — will sync when you are back online.");
+      }
+      setDirty(false);
+      return;
+    }
     if (savedId == null) {
       const created = await createDraft.mutateAsync(payload as any);
       setSavedId(created.id);

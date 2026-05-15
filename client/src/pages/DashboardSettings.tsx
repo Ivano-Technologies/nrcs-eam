@@ -460,7 +460,7 @@ export default function DashboardSettings() {
               <li>Full-screen experience without browser UI</li>
               <li>Faster load times</li>
               <li>Native app feel on mobile and desktop</li>
-              <li>Offline access (coming soon)</li>
+              <li>Offline access for key pages (assets, stock, GRN drafts sync when back online)</li>
             </ul>
           </div>
         </CardContent>

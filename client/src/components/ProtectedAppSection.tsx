@@ -1,4 +1,5 @@
 import DashboardLayout from "@/components/DashboardLayout";
+import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import ActivityLog from "@/pages/ActivityLog";
 import AssetDetail from "@/pages/AssetDetail";
@@ -237,6 +238,7 @@ export default function ProtectedAppSection() {
           <Route component={NotFound} />
         </Switch>
         </DashboardLayout>
+        <PWAInstallPrompt />
       </>
     </ProtectedRoute>
   );

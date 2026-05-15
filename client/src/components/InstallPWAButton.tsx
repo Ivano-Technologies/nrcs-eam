@@ -1,64 +1,41 @@
 import { useEffect, useState } from "react";
 import { Check, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
-}
+import {
+  getDeferredInstallPrompt,
+  isPwaInstallable,
+  isPwaStandalone,
+  promptPwaInstall,
+  subscribeInstallPrompt,
+} from "@/lib/pwaInstall";
 
 export function InstallPWAButton() {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [installable, setInstallable] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
-  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    if (
-      window.matchMedia("(display-mode: standalone)").matches ||
-      (window.navigator as any).standalone === true
-    ) {
-      setIsInstalled(true);
-      return;
-    }
-
-    const handler = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
-      setIsReady(true);
+    const sync = () => {
+      setIsInstalled(isPwaStandalone());
+      setInstallable(isPwaInstallable());
     };
-    const installedHandler = () => {
-      setIsInstalled(true);
-      setIsReady(false);
-      setDeferredPrompt(null);
-    };
-
-    window.addEventListener("beforeinstallprompt", handler);
-    window.addEventListener("appinstalled", installedHandler);
-    setIsReady(true);
-
-    return () => {
-      window.removeEventListener("beforeinstallprompt", handler);
-      window.removeEventListener("appinstalled", installedHandler);
-    };
+    sync();
+    return subscribeInstallPrompt(sync);
   }, []);
 
   const handleInstall = async () => {
-    if (deferredPrompt) {
-      try {
-        await deferredPrompt.prompt();
-        const choice = await deferredPrompt.userChoice;
-        if (choice.outcome === "accepted") {
-          setIsInstalled(true);
-        }
-        setDeferredPrompt(null);
-      } catch (err) {
-        console.error("Install prompt failed:", err);
+    if (getDeferredInstallPrompt()) {
+      const outcome = await promptPwaInstall();
+      if (outcome === "accepted") {
+        setIsInstalled(true);
+        setInstallable(false);
       }
       return;
     }
 
     const ua = navigator.userAgent;
-    const isIOS = /iPad|iPhone|iPod/.test(ua) && !(window as any).MSStream;
+    const isIOS =
+      /iPad|iPhone|iPod/.test(ua) &&
+      !(navigator as Navigator & { MSStream?: unknown }).MSStream;
     const isAndroid = /Android/.test(ua);
 
     let message = "";
@@ -76,13 +53,11 @@ export function InstallPWAButton() {
         "3. Confirm installation";
     } else {
       message =
-        "To install NRCS EAM on your desktop:\n\n" +
-        "Chrome / Edge:\n" +
-        "- Look for the install icon in the address bar (right side)\n" +
-        "- Or click the three-dot menu -> 'Install NRCS EAM'\n\n" +
-        "Safari (Mac):\n" +
-        "- Click File -> Add to Dock\n\n" +
-        "If the option isn't showing, interact with the app for a few minutes first - browsers require engagement before offering install.";
+        "Chrome has not offered install yet. Check that:\n\n" +
+        "- You are on HTTPS (not localhost unless testing)\n" +
+        "- The site is not already installed\n" +
+        "- DevTools → Application → Manifest shows no install errors\n\n" +
+        "When installable, use the install icon in the address bar or click Install here again.";
     }
     alert(message);
   };
@@ -91,15 +66,20 @@ export function InstallPWAButton() {
     return (
       <div className="flex items-center gap-2 text-sm text-green-600" data-testid="install-pwa-installed">
         <Check className="h-4 w-4" />
-        App installed - open from your home screen or desktop
+        App installed — open from your home screen or desktop
       </div>
     );
   }
 
   return (
-    <Button onClick={handleInstall} variant="default" data-testid="install-pwa-btn" disabled={!isReady}>
+    <Button
+      onClick={handleInstall}
+      variant="default"
+      data-testid="install-pwa-btn"
+      disabled={!installable}
+    >
       <Download className="mr-2 h-4 w-4" />
-      Install NRCS EAM App
+      {installable ? "Install NRCS EAM App" : "Install (waiting for browser…)"}
     </Button>
   );
 }

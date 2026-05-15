@@ -18,11 +18,12 @@ const plugins = [
     registerType: "autoUpdate",
     includeAssets: ["favicon.ico", "apple-touch-icon.png"],
     manifest: {
+      id: "/",
       name: "NRCS Enterprise Asset Management",
       short_name: "NRCS EAM",
       description: "Nigerian Red Cross Society Enterprise Asset Management System",
-      theme_color: "#DC2626",
-      background_color: "#0A1628",
+      theme_color: "#C8102E",
+      background_color: "#ffffff",
       display: "standalone",
       orientation: "portrait-primary",
       scope: "/",
@@ -68,6 +69,9 @@ const plugins = [
     workbox: {
       globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
       maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+      /** SPA client routes (/app/*) fall back to cached shell when offline. */
+      navigateFallback: "/index.html",
+      navigateFallbackDenylist: [/^\/api\//, /^\/login/, /^\/signup/, /^\/reset-password/],
       runtimeCaching: [
         {
           urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -81,15 +85,28 @@ const plugins = [
           },
         },
         {
+          /** tRPC read queries for field/dashboard pages (GET only). `sites` = facilities register. */
+          urlPattern:
+            /\/api\/trpc\/.*(assets|sites|inventoryV2|inventory|dashboard|auth)\./i,
+          handler: "StaleWhileRevalidate",
+          method: "GET",
+          options: {
+            cacheName: "nrcs-eam-api-cache",
+            expiration: { maxEntries: 100, maxAgeSeconds: 86400 },
+            cacheableResponse: { statuses: [0, 200] },
+          },
+        },
+        {
           urlPattern: /^https:\/\/nrcseam\.techivano\.com\/api\/.*/i,
           handler: "NetworkFirst",
           options: {
-            cacheName: "api-cache",
+            cacheName: "api-cache-legacy",
             networkTimeoutSeconds: 10,
             expiration: {
-              maxEntries: 100,
+              maxEntries: 50,
               maxAgeSeconds: 60 * 60 * 24,
             },
+            cacheableResponse: { statuses: [0, 200] },
           },
         },
       ],

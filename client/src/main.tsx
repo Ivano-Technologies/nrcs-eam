@@ -1,3 +1,4 @@
+import "@/lib/pwaInstall";
 import { initAnalytics } from "@/lib/analytics";
 import { getTrpcUrl } from "@/lib/apiBase";
 import { trpc } from "@/lib/trpc";
@@ -8,6 +9,7 @@ import { createRoot } from "react-dom/client";
 import superjson from "superjson";
 import { registerSW } from "virtual:pwa-register";
 import App from "./App";
+import { OfflineSyncProvider } from "./components/OfflineSyncProvider";
 import { getLoginUrl } from "./const";
 import "./index.css";
 import { initPostHog } from "./lib/posthog";
@@ -64,7 +66,9 @@ registerSW({ immediate: true });
 createRoot(document.getElementById("root")!).render(
   <trpc.Provider client={trpcClient} queryClient={queryClient}>
     <QueryClientProvider client={queryClient}>
-      <App />
+      <OfflineSyncProvider>
+        <App />
+      </OfflineSyncProvider>
     </QueryClientProvider>
   </trpc.Provider>
 );
