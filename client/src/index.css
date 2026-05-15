@@ -280,6 +280,16 @@ html.dark {
     display: block;
   }
 
+  /**
+   * Asset register (and similar): horizontal scroll only; vertical scroll stays on the page
+   * so thead position:sticky stacks against the main scroll container.
+   */
+  .frozen-table-wrap.frozen-table-wrap-page-scroll {
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: visible;
+  }
+
   .frozen-table-wrap > table {
     display: table;
     width: 100%;
@@ -294,19 +304,32 @@ html.dark {
     background-color: var(--color-background-primary) !important;
   }
 
-  /* Asset register double header — second row */
+  /**
+   * NRCS-style double header: row1 (group) + row2 (columns) must stack with no gap.
+   * Row2 `top` must equal row1 total height or body rows show between them while scrolling.
+   */
+  .frozen-table-double-header {
+    --frozen-group-header-height: 2.25rem;
+  }
+
   .frozen-table-double-header thead tr:nth-child(1) th {
     position: sticky !important;
     top: 0 !important;
-    z-index: 20;
+    z-index: 30 !important;
+    height: var(--frozen-group-header-height);
+    min-height: var(--frozen-group-header-height);
+    box-sizing: border-box !important;
     background-color: var(--color-background-primary) !important;
+    box-shadow: 0 1px 0 0 var(--color-border);
   }
 
   .frozen-table-double-header thead tr:nth-child(2) th {
     position: sticky !important;
-    top: 40px !important;
-    z-index: 20;
+    top: var(--frozen-group-header-height) !important;
+    z-index: 29 !important;
+    box-sizing: border-box !important;
     background-color: var(--color-background-primary) !important;
+    box-shadow: 0 1px 0 0 var(--color-border);
   }
 }
 

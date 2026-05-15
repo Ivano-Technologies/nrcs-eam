@@ -1,26 +1,96 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRoute, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Edit, Package, MapPin, Calendar, DollarSign, QrCode, Download, Upload, Image as ImageIcon, X } from "lucide-react";
+import {
+  ArrowLeft,
+  Edit,
+  Package,
+  MapPin,
+  Calendar,
+  DollarSign,
+  QrCode,
+  Download,
+  Upload,
+  Image as ImageIcon,
+  X,
+  ChevronDown,
+} from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import AssetDepreciation from "@/components/AssetDepreciation";
 import { AssetMaintenanceTimeline } from "@/components/AssetMaintenanceTimeline";
 import { formatNaira } from "@/lib/format";
+import { calculateDepreciatedValue } from "@/lib/depreciation";
+import {
+  CONDITION_OPTIONS,
+  CURRENT_STATUS_OPTIONS,
+  METHOD_OF_ACQUISITION_OPTIONS,
+  SUB_ITEM_CATEGORIES,
+} from "@/lib/assetRegisterOptions";
+
+function categoryIdForCanonicalName(
+  categories: { id: number; name: string }[] | undefined,
+  canonical: string | null
+): string {
+  if (!canonical || !categories?.length) return "";
+  const row = categories.find((c) => c.name === canonical);
+  return row ? String(row.id) : "";
+}
+
+function parseAssetEditChanges(raw: string | null | undefined): {
+  before: Record<string, unknown>;
+  after: Record<string, unknown>;
+  changedFields: string[];
+} | null {
+  if (!raw) return null;
+  try {
+    const o = JSON.parse(raw) as { before?: unknown; after?: unknown; changedFields?: unknown };
+    const before =
+      typeof o.before === "object" && o.before !== null ? (o.before as Record<string, unknown>) : {};
+    const after =
+      typeof o.after === "object" && o.after !== null ? (o.after as Record<string, unknown>) : {};
+    const changedFields = Array.isArray(o.changedFields)
+      ? o.changedFields.filter((x): x is string => typeof x === "string")
+      : [];
+    return { before, after, changedFields };
+  } catch {
+    return null;
+  }
+}
+
+function formatAuditCell(v: unknown): string {
+  if (v === null || v === undefined) return "—";
+  if (typeof v === "object") return JSON.stringify(v);
+  return String(v);
+}
+
+const REGISTER_STATUS_EDIT_OPTIONS = [
+  { value: "in_use", label: "In Use" },
+  { value: "in_store", label: "In Store" },
+  { value: "under_maintenance", label: "Under Maintenance" },
+  { value: "disposed", label: "Disposed" },
+  { value: "to_be_disposed", label: "To be Disposed" },
+  { value: "out_of_order", label: "Out of Order" },
+  { value: "beyond_repair", label: "Beyond Repair" },
+] as const;
 
 export default function AssetDetail() {
   const [, params] = useRoute("/app/assets/:id");
   const [, setLocation] = useLocation();
   const { canEditAssets } = usePermissions();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
@@ -30,6 +100,14 @@ export default function AssetDetail() {
   const assetId = params?.id ? Number(params.id) : 0;
   const { data: asset, isLoading, refetch } = trpc.assets.getById.useQuery({ id: assetId });
   const { data: photos, refetch: refetchPhotos } = trpc.photos.listByAsset.useQuery({ assetId }, { enabled: !!assetId });
+  const { data: categories } = trpc.assetCategories.list.useQuery();
+  const { data: sites } = trpc.sites.list.useQuery();
+  const { data: editHistory } = trpc.assets.listAssetEditHistory.useQuery(
+    { assetId },
+    { enabled: !!assetId && canEditAssets && historyOpen }
+  );
+
+  const utils = trpc.useUtils();
 
   const generateQRCodeMutation = trpc.assets.generateQRCode.useMutation({
     onSuccess: () => {
@@ -45,6 +123,7 @@ export default function AssetDetail() {
     onSuccess: () => {
       toast.success("Asset updated successfully");
       setIsEditDialogOpen(false);
+      void utils.assets.listAssetEditHistory.invalidate({ assetId });
       refetch();
     },
     onError: (error) => {
@@ -141,40 +220,208 @@ export default function AssetDetail() {
     name: "",
     description: "",
     status: "",
+    categoryId: "",
+    siteId: "",
+    registerStatus: "in_use",
+    itemType: "asset" as "asset" | "inventory",
+    registerItemType: "Asset" as "Asset" | "Inventory",
+    itemDescription: "",
+    subCategory: "",
+    subItemCategory: "",
+    branchCode: "",
+    itemCategoryCode: "",
+    assetNum: "",
     manufacturer: "",
     model: "",
     serialNumber: "",
     location: "",
     notes: "",
+    acquisitionMethod: "",
+    acquisitionOtherDetail: "",
+    projectRef: "",
+    acquisitionCondition: "New" as "New" | "Used",
+    acquiredNewOrUsed: "New" as "New" | "Used",
+    currentStatus: "In Use",
+    department: "",
+    assignedToName: "",
+    physicalCondition: "Good" as "Good" | "Fair" | "Damaged" | "Beyond Repair",
+    conditionRegister: "Good",
+    lastPhysicalCheck: "",
+    checkConductedBy: "",
+    remarksRegister: "",
+    actualUnitValue: "",
+    yearAcquiredRegister: "",
+    depreciatedValue: "",
+    depreciationManualOverride: false,
+    depreciationMethod: "",
+    usefulLifeYears: "",
+    residualValue: "",
+    depreciationStartDate: "",
+    latitude: "",
+    longitude: "",
   });
 
+  const computedEditDepreciation = useMemo(() => {
+    if (editForm.depreciationManualOverride) return null;
+    const actual = Number(editForm.actualUnitValue);
+    const year = editForm.yearAcquiredRegister ? Number(editForm.yearAcquiredRegister) : NaN;
+    const catName = categories?.find((c) => String(c.id) === editForm.categoryId)?.name?.trim() || "";
+    if (!Number.isFinite(actual) || !Number.isFinite(year) || !catName) return null;
+    return calculateDepreciatedValue(actual, catName, year);
+  }, [
+    editForm.depreciationManualOverride,
+    editForm.actualUnitValue,
+    editForm.yearAcquiredRegister,
+    editForm.categoryId,
+    categories,
+  ]);
+
   const handleEdit = () => {
-    if (asset) {
-      setEditForm({
-        name: asset.name,
-        description: asset.description || "",
-        status: asset.status,
-        manufacturer: asset.manufacturer || "",
-        model: asset.model || "",
-        serialNumber: asset.serialNumber || "",
-        location: asset.location || "",
-        notes: asset.notes || "",
-      });
-      setIsEditDialogOpen(true);
-    }
+    if (!asset) return;
+    setEditForm({
+      name: asset.name,
+      description: asset.description || "",
+      status: asset.status,
+      categoryId: asset.categoryId != null ? String(asset.categoryId) : "",
+      siteId: asset.siteId != null ? String(asset.siteId) : "",
+      registerStatus: asset.registerStatus || "in_use",
+      itemType: (asset.itemType as "asset" | "inventory") || "asset",
+      registerItemType: (asset.registerItemType as "Asset" | "Inventory") || "Asset",
+      itemDescription: asset.itemDescription || "",
+      subCategory: asset.subCategory || "",
+      subItemCategory: asset.subItemCategory || "",
+      branchCode: asset.branchCode || "",
+      itemCategoryCode: asset.itemCategoryCode || "",
+      assetNum: asset.assetNum != null ? String(asset.assetNum) : "",
+      manufacturer: asset.manufacturer || "",
+      model: asset.model || "",
+      serialNumber: asset.serialNumber || "",
+      location: asset.location || "",
+      notes: asset.notes || "",
+      acquisitionMethod: asset.acquisitionMethod || "",
+      acquisitionOtherDetail: asset.acquisitionOtherDetail || "",
+      projectRef: asset.projectRef || "",
+      acquisitionCondition: (asset.acquisitionCondition as "New" | "Used") || "New",
+      acquiredNewOrUsed: (asset.acquiredNewOrUsed as "New" | "Used") || (asset.acquisitionCondition as "New" | "Used") || "New",
+      currentStatus: asset.currentStatus || "In Use",
+      department: asset.department || "",
+      assignedToName: asset.assignedToName || "",
+      physicalCondition: (asset.physicalCondition as typeof editForm.physicalCondition) || "Good",
+      conditionRegister: asset.conditionRegister || "Good",
+      lastPhysicalCheck: asset.lastPhysicalCheck ? String(asset.lastPhysicalCheck).slice(0, 10) : "",
+      checkConductedBy: asset.checkConductedBy || "",
+      remarksRegister: asset.remarksRegister || "",
+      actualUnitValue: asset.actualUnitValue != null ? String(asset.actualUnitValue) : "",
+      yearAcquiredRegister: asset.yearAcquiredRegister != null ? String(asset.yearAcquiredRegister) : "",
+      depreciatedValue:
+        asset.depreciatedValue != null
+          ? String(asset.depreciatedValue)
+          : asset.currentDepreciatedValue != null
+            ? String(asset.currentDepreciatedValue)
+            : "",
+      depreciationManualOverride: Boolean(asset.depreciatedValueManualOverride),
+      depreciationMethod: asset.depreciationMethod || "",
+      usefulLifeYears: asset.usefulLifeYears != null ? String(asset.usefulLifeYears) : "",
+      residualValue: asset.residualValue != null ? String(asset.residualValue) : "",
+      depreciationStartDate: asset.depreciationStartDate
+        ? new Date(asset.depreciationStartDate).toISOString().slice(0, 10)
+        : "",
+      latitude: asset.latitude != null ? String(asset.latitude) : "",
+      longitude: asset.longitude != null ? String(asset.longitude) : "",
+    });
+    setIsEditDialogOpen(true);
   };
 
   const handleUpdate = () => {
+    if (!editForm.name.trim() || !editForm.categoryId || !editForm.siteId) {
+      toast.error("Name, category, and facility are required.");
+      return;
+    }
+    const cat = categories?.find((c) => String(c.id) === editForm.categoryId);
+    if (!cat?.name?.trim()) {
+      toast.error("Select a valid category.");
+      return;
+    }
+    let currentStatusVal: (typeof CURRENT_STATUS_OPTIONS)[number] | undefined;
+    if (
+      editForm.currentStatus &&
+      (CURRENT_STATUS_OPTIONS as readonly string[]).includes(editForm.currentStatus)
+    ) {
+      currentStatusVal = editForm.currentStatus as (typeof CURRENT_STATUS_OPTIONS)[number];
+    } else {
+      currentStatusVal = undefined;
+    }
     updateAssetMutation.mutate({
       id: assetId,
-      name: editForm.name || undefined,
+      name: editForm.name,
       description: editForm.description || undefined,
-      status: editForm.status as any,
+      status: editForm.status as "operational" | "maintenance" | "repair" | "retired" | "disposed",
+      categoryId: Number(editForm.categoryId),
+      siteId: Number(editForm.siteId),
+      registerStatus: editForm.registerStatus as
+        | "in_use"
+        | "in_store"
+        | "under_maintenance"
+        | "disposed"
+        | "to_be_disposed"
+        | "out_of_order"
+        | "beyond_repair",
+      itemType: editForm.itemType,
+      registerItemType: editForm.registerItemType,
+      itemDescription: editForm.itemDescription || undefined,
+      itemCategory: cat.name.trim(),
+      subCategory: editForm.subCategory || undefined,
+      subItemCategory: editForm.subItemCategory || undefined,
+      branchCode: editForm.branchCode || undefined,
+      itemCategoryCode:
+        editForm.itemCategoryCode && String(editForm.itemCategoryCode).trim().length === 2
+          ? String(editForm.itemCategoryCode).trim().toUpperCase()
+          : undefined,
+      assetNum: editForm.assetNum ? Number(editForm.assetNum) : undefined,
       manufacturer: editForm.manufacturer || undefined,
       model: editForm.model || undefined,
       serialNumber: editForm.serialNumber || undefined,
       location: editForm.location || undefined,
       notes: editForm.notes || undefined,
+      acquisitionMethod: editForm.acquisitionMethod || undefined,
+      acquisitionOtherDetail: editForm.acquisitionOtherDetail || undefined,
+      projectRef: editForm.projectRef || undefined,
+      acquisitionCondition: editForm.acquisitionCondition,
+      acquiredNewOrUsed: editForm.acquiredNewOrUsed,
+      currentStatus: currentStatusVal,
+      department: editForm.department || undefined,
+      assignedToName: editForm.assignedToName || undefined,
+      physicalCondition: editForm.physicalCondition,
+      conditionRegister: editForm.conditionRegister as
+        | "Good"
+        | "Fair"
+        | "Damaged"
+        | "Beyond Repair (For Disposal)"
+        | "Out of Order (To be repaired)",
+      lastPhysicalCheck: editForm.lastPhysicalCheck
+        ? new Date(`${editForm.lastPhysicalCheck}T12:00:00`)
+        : undefined,
+      checkConductedBy: editForm.checkConductedBy || undefined,
+      remarksRegister: editForm.remarksRegister || undefined,
+      actualUnitValue: editForm.actualUnitValue || undefined,
+      yearAcquiredRegister: editForm.yearAcquiredRegister
+        ? Number(editForm.yearAcquiredRegister)
+        : undefined,
+      depreciatedValue:
+        editForm.depreciationManualOverride === true ? editForm.depreciatedValue || undefined : undefined,
+      depreciatedValueManualOverride: editForm.depreciationManualOverride,
+      currentDepreciatedValue:
+        editForm.depreciationManualOverride === true && editForm.depreciatedValue
+          ? Number(editForm.depreciatedValue)
+          : undefined,
+      depreciationMethod: editForm.depreciationMethod || undefined,
+      usefulLifeYears: editForm.usefulLifeYears ? Number(editForm.usefulLifeYears) : undefined,
+      residualValue: editForm.residualValue || undefined,
+      depreciationStartDate: editForm.depreciationStartDate
+        ? new Date(`${editForm.depreciationStartDate}T12:00:00`)
+        : undefined,
+      latitude: editForm.latitude?.trim() || undefined,
+      longitude: editForm.longitude?.trim() || undefined,
     });
   };
 
@@ -514,6 +761,78 @@ export default function AssetDetail() {
         <AssetDepreciation assetId={assetId} />
       )}
 
+      {canEdit ? (
+        <Card>
+          <Collapsible open={historyOpen} onOpenChange={setHistoryOpen}>
+            <CardHeader className="py-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <CardTitle className="text-base">Edit History</CardTitle>
+                  <CardDescription>
+                    Register edits with field-level diffs (visible to Admin and Manager).
+                  </CardDescription>
+                </div>
+                <CollapsibleTrigger asChild>
+                  <Button variant="outline" size="sm" type="button">
+                    {historyOpen ? "Hide" : "Show"}
+                    <ChevronDown className={`ml-1 h-4 w-4 transition-transform ${historyOpen ? "rotate-180" : ""}`} />
+                  </Button>
+                </CollapsibleTrigger>
+              </div>
+            </CardHeader>
+            <CollapsibleContent>
+              <CardContent className="pt-0 text-sm">
+                {!editHistory?.length ? (
+                  <p className="text-muted-foreground">No edit history recorded yet.</p>
+                ) : (
+                  <div className="space-y-4">
+                    {editHistory.map((entry) => {
+                      const parsed = parseAssetEditChanges(entry.changes);
+                      return (
+                        <div key={entry.id} className="rounded-md border p-3 space-y-2">
+                          <div className="flex flex-wrap justify-between gap-2 text-xs text-muted-foreground">
+                            <span className="font-medium text-foreground">{entry.userLabel}</span>
+                            <span>{new Date(entry.timestamp).toLocaleString()}</span>
+                          </div>
+                          {!parsed || parsed.changedFields.length === 0 ? (
+                            <p className="text-xs text-muted-foreground">No field diff stored for this entry.</p>
+                          ) : (
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-xs">
+                                <thead>
+                                  <tr className="text-left border-b">
+                                    <th className="py-1 pr-2">Field</th>
+                                    <th className="py-1 pr-2">Before</th>
+                                    <th className="py-1">After</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {parsed.changedFields.map((f) => (
+                                    <tr key={f} className="border-b border-border/50 align-top">
+                                      <td className="py-1 pr-2 font-mono whitespace-nowrap">{f}</td>
+                                      <td className="py-1 pr-2 break-all max-w-[200px]">
+                                        {formatAuditCell(parsed.before[f])}
+                                      </td>
+                                      <td className="py-1 break-all max-w-[200px]">
+                                        {formatAuditCell(parsed.after[f])}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </CollapsibleContent>
+          </Collapsible>
+        </Card>
+      ) : null}
+
       {/* Maintenance Timeline */}
       <AssetMaintenanceTimeline assetId={assetId} />
 
@@ -564,12 +883,15 @@ export default function AssetDetail() {
       </Dialog>
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col gap-0 p-6">
           <DialogHeader>
             <DialogTitle>Edit Asset</DialogTitle>
-            <DialogDescription>Update asset information</DialogDescription>
+            <DialogDescription>
+              Update operational fields and the full NRCS register record (Admin / Manager).
+            </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
+          <ScrollArea className="max-h-[calc(90vh-8rem)] pr-3">
+            <div className="grid gap-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="edit-name">Asset Name</Label>
               <Input
@@ -645,8 +967,417 @@ export default function AssetDetail() {
                 onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
               />
             </div>
-          </div>
-          <DialogFooter>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Category *</Label>
+                <Select
+                  value={editForm.categoryId}
+                  onValueChange={(v) => setEditForm({ ...editForm, categoryId: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(categories ?? []).map((c) => (
+                      <SelectItem key={c.id} value={String(c.id)}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Facility *</Label>
+                <Select
+                  value={editForm.siteId}
+                  onValueChange={(v) => setEditForm({ ...editForm, siteId: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select facility" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(sites ?? []).map((s) => (
+                      <SelectItem key={s.id} value={String(s.id)}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Register status</Label>
+                <Select
+                  value={editForm.registerStatus}
+                  onValueChange={(v) => setEditForm({ ...editForm, registerStatus: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {REGISTER_STATUS_EDIT_OPTIONS.map((s) => (
+                      <SelectItem key={s.value} value={s.value}>
+                        {s.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Item type</Label>
+                <Select
+                  value={editForm.itemType}
+                  onValueChange={(v) =>
+                    setEditForm({ ...editForm, itemType: v as "asset" | "inventory" })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="asset">Asset</SelectItem>
+                    <SelectItem value="inventory">Inventory</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Register item type</Label>
+              <Select
+                value={editForm.registerItemType}
+                onValueChange={(v) =>
+                  setEditForm({ ...editForm, registerItemType: v as "Asset" | "Inventory" })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Asset">Asset</SelectItem>
+                  <SelectItem value="Inventory">Inventory</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Item description (register)</Label>
+              <Input
+                value={editForm.itemDescription}
+                onChange={(e) => setEditForm({ ...editForm, itemDescription: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Sub-category</Label>
+              <Input
+                value={editForm.subCategory}
+                onChange={(e) => setEditForm({ ...editForm, subCategory: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Sub-item category</Label>
+                <Select
+                  value={editForm.subItemCategory || "__none__"}
+                  onValueChange={(v) =>
+                    setEditForm({ ...editForm, subItemCategory: v === "__none__" ? "" : v })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">None</SelectItem>
+                    {SUB_ITEM_CATEGORIES.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Branch code</Label>
+                <Input
+                  value={editForm.branchCode}
+                  onChange={(e) => setEditForm({ ...editForm, branchCode: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Item category code</Label>
+                <Input
+                  maxLength={2}
+                  value={editForm.itemCategoryCode}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, itemCategoryCode: e.target.value.toUpperCase() })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Asset #</Label>
+                <Input
+                  type="number"
+                  value={editForm.assetNum}
+                  onChange={(e) => setEditForm({ ...editForm, assetNum: e.target.value })}
+                />
+              </div>
+            </div>
+            <h3 className="text-sm font-semibold pt-2">Acquisition</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2 md:col-span-2">
+                <Label>Method of acquisition</Label>
+                <Select
+                  value={editForm.acquisitionMethod || "__none__"}
+                  onValueChange={(v) =>
+                    setEditForm({ ...editForm, acquisitionMethod: v === "__none__" ? "" : v })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">None</SelectItem>
+                    {METHOD_OF_ACQUISITION_OPTIONS.map((m) => (
+                      <SelectItem key={m} value={m}>
+                        {m}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {editForm.acquisitionMethod === "Other" ? (
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Other acquisition detail</Label>
+                  <Input
+                    value={editForm.acquisitionOtherDetail}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, acquisitionOtherDetail: e.target.value })
+                    }
+                  />
+                </div>
+              ) : null}
+              <div className="space-y-2 md:col-span-2">
+                <Label>Project reference</Label>
+                <Input
+                  value={editForm.projectRef}
+                  onChange={(e) => setEditForm({ ...editForm, projectRef: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Acquired new / used</Label>
+                <Select
+                  value={editForm.acquiredNewOrUsed}
+                  onValueChange={(v) =>
+                    setEditForm({
+                      ...editForm,
+                      acquiredNewOrUsed: v as "New" | "Used",
+                      acquisitionCondition: v as "New" | "Used",
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="New">New</SelectItem>
+                    <SelectItem value="Used">Used</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <h3 className="text-sm font-semibold pt-2">Condition</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Current status</Label>
+                <Select
+                  value={editForm.currentStatus}
+                  onValueChange={(v) => setEditForm({ ...editForm, currentStatus: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CURRENT_STATUS_OPTIONS.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {s}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Condition (register)</Label>
+                <Select
+                  value={editForm.conditionRegister}
+                  onValueChange={(v) =>
+                    setEditForm({
+                      ...editForm,
+                      conditionRegister: v,
+                      physicalCondition:
+                        v === "Beyond Repair (For Disposal)"
+                          ? "Beyond Repair"
+                          : v === "Out of Order (To be repaired)"
+                            ? "Damaged"
+                            : (v as "Good" | "Fair" | "Damaged" | "Beyond Repair"),
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CONDITION_OPTIONS.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Last physical check</Label>
+                <Input
+                  type="date"
+                  value={editForm.lastPhysicalCheck}
+                  onChange={(e) => setEditForm({ ...editForm, lastPhysicalCheck: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Check conducted by</Label>
+                <Input
+                  value={editForm.checkConductedBy}
+                  onChange={(e) => setEditForm({ ...editForm, checkConductedBy: e.target.value })}
+                />
+              </div>
+            </div>
+            <h3 className="text-sm font-semibold pt-2">Admin</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2 md:col-span-2">
+                <Label>Remarks (register)</Label>
+                <Textarea
+                  value={editForm.remarksRegister}
+                  onChange={(e) => setEditForm({ ...editForm, remarksRegister: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Assigned to (name)</Label>
+                <Input
+                  value={editForm.assignedToName}
+                  onChange={(e) => setEditForm({ ...editForm, assignedToName: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Department</Label>
+                <Input
+                  value={editForm.department}
+                  onChange={(e) => setEditForm({ ...editForm, department: e.target.value })}
+                />
+              </div>
+            </div>
+            <h3 className="text-sm font-semibold pt-2">Map coordinates (optional)</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Latitude</Label>
+                <Input
+                  value={editForm.latitude}
+                  onChange={(e) => setEditForm({ ...editForm, latitude: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Longitude</Label>
+                <Input
+                  value={editForm.longitude}
+                  onChange={(e) => setEditForm({ ...editForm, longitude: e.target.value })}
+                />
+              </div>
+            </div>
+            <h3 className="text-sm font-semibold pt-2">Financial (register)</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Actual unit value (NGN)</Label>
+                <Input
+                  type="number"
+                  value={editForm.actualUnitValue}
+                  onChange={(e) => setEditForm({ ...editForm, actualUnitValue: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Year acquired</Label>
+                <Input
+                  type="number"
+                  min={1900}
+                  max={2100}
+                  value={editForm.yearAcquiredRegister}
+                  onChange={(e) => setEditForm({ ...editForm, yearAcquiredRegister: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Depreciation method</Label>
+                <Input
+                  value={editForm.depreciationMethod}
+                  onChange={(e) => setEditForm({ ...editForm, depreciationMethod: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Useful life (years)</Label>
+                <Input
+                  type="number"
+                  value={editForm.usefulLifeYears}
+                  onChange={(e) => setEditForm({ ...editForm, usefulLifeYears: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Residual value</Label>
+                <Input
+                  type="number"
+                  value={editForm.residualValue}
+                  onChange={(e) => setEditForm({ ...editForm, residualValue: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Depreciation start</Label>
+                <Input
+                  type="date"
+                  value={editForm.depreciationStartDate}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, depreciationStartDate: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <Label>Depreciated value override</Label>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Manual</span>
+                  <Switch
+                    checked={editForm.depreciationManualOverride}
+                    onCheckedChange={(v) => setEditForm({ ...editForm, depreciationManualOverride: v })}
+                  />
+                </div>
+              </div>
+              {editForm.depreciationManualOverride ? (
+                <Input
+                  type="number"
+                  value={editForm.depreciatedValue}
+                  onChange={(e) => setEditForm({ ...editForm, depreciatedValue: e.target.value })}
+                />
+              ) : (
+                <Input
+                  readOnly
+                  className="bg-muted"
+                  value={
+                    computedEditDepreciation != null
+                      ? String(computedEditDepreciation)
+                      : "— (set unit value, category, year)"
+                  }
+                />
+              )}
+            </div>
+            </div>
+          </ScrollArea>
+          <DialogFooter className="mt-2">
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
               Cancel
             </Button>

@@ -91,11 +91,15 @@ export default function AssetMap() {
 
     if (!assets || assets.length === 0) return;
 
-    // Filter assets based on selection
-    const filteredAssets = assets.filter(asset => {
+    // Filter assets based on selection (include rows that can be placed via asset coords or facility fallback)
+    const filteredAssets = assets.filter((asset) => {
       const siteMatch = selectedSite === "all" || asset.siteId === parseInt(selectedSite);
       const categoryMatch = selectedCategory === "all" || asset.categoryId === parseInt(selectedCategory);
-      return siteMatch && categoryMatch && asset.latitude && asset.longitude;
+      if (!siteMatch || !categoryMatch) return false;
+      const site = sites?.find((s) => s.id === asset.siteId);
+      const hasCoords = Boolean(asset.latitude && asset.longitude);
+      const hasSiteCoords = Boolean(site?.latitude && site?.longitude);
+      return hasCoords || hasSiteCoords;
     });
 
     if (filteredAssets.length === 0) {
@@ -114,11 +118,14 @@ export default function AssetMap() {
       if (pos) bounds.extend(pos);
     });
 
-    filteredAssets.forEach(asset => {
-      if (!asset.latitude || !asset.longitude) return;
+    filteredAssets.forEach((asset) => {
+      const site = sites?.find((s) => s.id === asset.siteId);
+      const latStr = asset.latitude ?? site?.latitude;
+      const lngStr = asset.longitude ?? site?.longitude;
+      if (!latStr || !lngStr) return;
 
-      const lat = parseFloat(asset.latitude);
-      const lng = parseFloat(asset.longitude);
+      const lat = parseFloat(String(latStr));
+      const lng = parseFloat(String(lngStr));
       const position = { lat, lng };
 
       const marker = new google.maps.Marker({
@@ -142,7 +149,8 @@ export default function AssetMap() {
             <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600;">${asset.name}</h3>
             <p style="margin: 4px 0; font-size: 14px;"><strong>Tag:</strong> ${asset.assetTag}</p>
             <p style="margin: 4px 0; font-size: 14px;"><strong>Status:</strong> ${asset.status}</p>
-            <p style="margin: 4px 0; font-size: 14px;"><strong>Location:</strong> ${asset.location || 'N/A'}</p>
+            <p style="margin: 4px 0; font-size: 14px;"><strong>Facility:</strong> ${site?.name || "N/A"}</p>
+            <p style="margin: 4px 0; font-size: 12px; color: #666;"><strong>Pin:</strong> ${asset.latitude && asset.longitude ? "Asset coordinates" : "Facility coordinates"}</p>
             <a href="/app/assets/${asset.id}" style="display: inline-block; margin-top: 8px; color: #DC2626; text-decoration: none; font-weight: 500;">View Details →</a>
           </div>
         `,
