@@ -16,6 +16,9 @@ const plugins = [
   vitePluginManusRuntime(),
   VitePWA({
     registerType: "autoUpdate",
+    injectRegister: "auto",
+    scope: "/",
+    base: "/",
     includeAssets: ["favicon.ico", "apple-touch-icon.png"],
     manifest: {
       id: "/",
@@ -87,7 +90,7 @@ const plugins = [
         {
           /** tRPC read queries for field/dashboard/finance pages (GET only). `sites` = facilities register. */
           urlPattern:
-            /\/api\/trpc\/.*(assets|sites|inventoryV2|inventory|dashboard|auth|assetValuation|financial|quickbooks)\./i,
+            /\/api\/trpc\/.*(assets|sites|inventoryV2|inventory|dashboard|auth|assetValuation|financial|quickbooks|costManagement|depreciationReport|insuranceRecords|annualFinanceReport)\./i,
           handler: "StaleWhileRevalidate",
           method: "GET",
           options: {

@@ -1,204 +1,160 @@
-import fs from "node:fs";
-import path from "node:path";
+import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import type { AssetValuationReport } from "./db";
 
-let logoBuffer: Buffer | null | undefined;
-
-function getLogoBuffer(): Buffer | null {
-  if (logoBuffer !== undefined) return logoBuffer;
-  const candidates = [
-    path.join(process.cwd(), "client", "public", "nrcs-logo-source.png"),
-    path.join(process.cwd(), "..", "client", "public", "nrcs-logo-source.png"),
-  ];
-  for (const p of candidates) {
-    try {
-      if (fs.existsSync(p)) {
-        logoBuffer = fs.readFileSync(p);
-        return logoBuffer;
-      }
-    } catch {
-      /* ignore */
-    }
-  }
-  logoBuffer = null;
-  return null;
-}
+const FOOTER =
+  "Confidential — Nigerian Red Cross Society — Prepared by Ivano Technologies Ltd";
+const NRCS_RED = rgb(200 / 255, 16 / 255, 46 / 255);
+const WHITE = rgb(1, 1, 1);
+const MUTED = rgb(0.42, 0.42, 0.42);
+const BODY = rgb(0.12, 0.12, 0.12);
+const SECTION = rgb(0.22, 0.22, 0.22);
 
 function ngn(n: number): string {
   return `₦${Math.round(n).toLocaleString("en-NG")}`;
 }
 
-const FOOTER =
-  "Confidential — Nigerian Red Cross Society — Prepared by Ivano Technologies Ltd";
-
-/** Executive PDF for board / donor reporting (serverless-safe pdfkit). */
 export async function buildAssetValuationExecutivePdf(report: AssetValuationReport): Promise<Buffer> {
-  const PDFDocument = (await import("pdfkit")).default;
-  const doc = new PDFDocument({
-    size: "A4",
-    margin: 44,
-    bufferPages: true,
-    autoFirstPage: true,
-  });
-  const chunks: Buffer[] = [];
+  const pdfDoc = await PDFDocument.create();
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-  return new Promise((resolve, reject) => {
-    doc.on("data", (c) => chunks.push(c as Buffer));
-    doc.on("end", () => resolve(Buffer.concat(chunks)));
-    doc.on("error", reject);
+  const pageW = 595;
+  const pageH = 842;
+  const margin = 44;
+  const contentW = pageW - margin * 2;
+  const lineH = 12;
+  const headerH = 72;
 
-    const margin = 44;
-    const pageW = doc.page.width;
-    const contentW = pageW - margin * 2;
-    let y = margin;
+  let page = pdfDoc.addPage([pageW, pageH]);
+  let y = pageH - margin - headerH;
 
-    const ensureSpace = (needed: number) => {
-      if (y + needed > doc.page.height - margin - 28) {
-        doc.addPage();
-        y = margin;
-      }
-    };
+  const footerWidth = font.widthOfTextAtSize(FOOTER, 7);
 
-    const paintFooter = () => {
-      const range = doc.bufferedPageRange();
-      for (let i = range.start; i < range.start + range.count; i++) {
-        doc.switchToPage(i);
-        doc
-          .fontSize(7)
-          .fillColor("#6B7280")
-          .text(FOOTER, margin, doc.page.height - 32, { width: contentW, align: "center" });
-      }
-    };
-
-    const logo = getLogoBuffer();
-    if (logo) {
-      try {
-        doc.image(logo, margin, y, { width: 42 });
-      } catch {
-        /* skip */
-      }
-    }
-
-    const textX = margin + (logo ? 50 : 0);
-    doc.fillColor("#1e3a8a").fontSize(14).text("Nigerian Red Cross Society", textX, y + 2, {
-      width: contentW - (logo ? 50 : 0),
+  const drawFooter = (p: typeof page) => {
+    p.drawText(FOOTER, {
+      x: (pageW - footerWidth) / 2,
+      y: 24,
+      size: 7,
+      font,
+      color: MUTED,
     });
-    y += 18;
-    doc.fillColor("#dc2626").fontSize(11).text("Enterprise Asset Management", textX, y, {
-      width: contentW - (logo ? 50 : 0),
+  };
+
+  const paintHeader = (p: typeof page) => {
+    p.drawRectangle({ x: 0, y: pageH - headerH, width: pageW, height: headerH, color: NRCS_RED });
+    p.drawText("Nigerian Red Cross Society", {
+      x: margin,
+      y: pageH - 28,
+      size: 10,
+      font,
+      color: WHITE,
     });
-    y += 22;
-    doc.fillColor("#000").fontSize(13).text("Asset Valuation Summary — May 2026", margin, y, {
-      width: contentW,
-      underline: true,
+    p.drawText("Asset Valuation Summary — May 2026", {
+      x: margin,
+      y: pageH - 48,
+      size: 14,
+      font: bold,
+      color: WHITE,
     });
-    y += 26;
+  };
 
-    doc.fontSize(9).fillColor("#444").text(`Generated ${new Date().toISOString().slice(0, 10)}`, margin, y);
-    y += 18;
-    doc.fillColor("#000");
+  const newPage = () => {
+    page = pdfDoc.addPage([pageW, pageH]);
+    paintHeader(page);
+    y = pageH - margin - headerH;
+  };
 
-    ensureSpace(70);
-    doc.fontSize(11).text("Summary", margin, y);
-    y += 16;
-    doc.fontSize(9);
-    const summaryLines = [
-      `Total certified property value: ${ngn(report.totalCertifiedPropertyNgn)}`,
-      `Total movable asset value: ${ngn(report.totalMovableAcquisitionNgn)}`,
-      `Combined total asset value: ${ngn(report.combinedTotalNgn)}`,
-      `Properties valued: ${report.valuationRowCount} register entries across ${report.distinctSitesWithValuation} sites (${report.totalFacilityCount} facilities total; ${report.activeBranchCount} active branch offices)`,
-      `Branch offices pending formal valuation: ${report.pendingBranchValuation.length}`,
-    ];
-    for (const line of summaryLines) {
-      ensureSpace(14);
-      doc.text(line, margin, y, { width: contentW });
-      y += 14;
+  const ensure = (needed: number) => {
+    if (y - needed < margin + 28) newPage();
+  };
+
+  const section = (title: string) => {
+    ensure(lineH * 2);
+    page.drawText(title, { x: margin, y, size: 11, font: bold, color: SECTION });
+    y -= lineH + 4;
+  };
+
+  const line = (text: string, size = 9) => {
+    ensure(lineH);
+    page.drawText(text, { x: margin, y, size, font, color: BODY, maxWidth: contentW });
+    y -= lineH;
+  };
+
+  paintHeader(page);
+  line(`Generated ${new Date().toISOString().slice(0, 10)}`, 8);
+  y -= 6;
+
+  section("Summary");
+  line(`Total certified property value: ${ngn(report.totalCertifiedPropertyNgn)}`);
+  line(`Total movable asset value: ${ngn(report.totalMovableAcquisitionNgn)}`);
+  line(`Combined total asset value: ${ngn(report.combinedTotalNgn)}`);
+  line(`Properties valued: ${report.valuationRowCount}`);
+  y -= 8;
+
+  section("Property valuation register");
+  const colCode = margin;
+  const colName = margin + 52;
+  const colLand = margin + 200;
+  const colMarket = margin + 258;
+  const colCert = margin + 328;
+
+  ensure(lineH);
+  page.drawText("Code", { x: colCode, y, size: 7, font: bold, color: MUTED });
+  page.drawText("Facility", { x: colName, y, size: 7, font: bold, color: MUTED });
+  page.drawText("Land (sqm)", { x: colLand, y, size: 7, font: bold, color: MUTED });
+  page.drawText("Market (₦)", { x: colMarket, y, size: 7, font: bold, color: MUTED });
+  page.drawText("Certified (₦)", { x: colCert, y, size: 7, font: bold, color: MUTED });
+  y -= lineH;
+
+  const byState = new Map<string, typeof report.propertyRegister>();
+  for (const row of report.propertyRegister) {
+    const st = row.state ?? "—";
+    if (!byState.has(st)) byState.set(st, []);
+    byState.get(st)!.push(row);
+  }
+
+  for (const state of Array.from(byState.keys()).sort((a, b) => a.localeCompare(b))) {
+    ensure(lineH * 2);
+    page.drawText(state, { x: margin, y, size: 8, font: bold, color: MUTED });
+    y -= lineH;
+    for (const row of byState.get(state) ?? []) {
+      ensure(lineH);
+      page.drawText(row.facilityCode ?? "—", { x: colCode, y, size: 7, font, color: BODY });
+      page.drawText(row.facilityName.slice(0, 36), { x: colName, y, size: 7, font, color: BODY });
+      const land =
+        row.landAreaSqm != null
+          ? Number(row.landAreaSqm).toLocaleString("en-NG", { maximumFractionDigits: 1 })
+          : "—";
+      page.drawText(land, { x: colLand, y, size: 7, font, color: BODY });
+      page.drawText(ngn(row.marketValueNgn), { x: colMarket, y, size: 7, font, color: BODY });
+      page.drawText(ngn(row.certifiedValueNgn), { x: colCert, y, size: 7, font, color: BODY });
+      y -= lineH;
     }
-    y += 10;
+    y -= 4;
+  }
 
-    ensureSpace(24);
-    doc.fontSize(11).text("Property valuation register", margin, y);
-    y += 14;
-    doc.fontSize(7).fillColor("#6B7280");
-    const colCode = margin;
-    const colName = margin + 52;
-    const colLand = margin + 200;
-    const colMarket = margin + 260;
-    const colCert = margin + 330;
-    doc.text("Code", colCode, y);
-    doc.text("Facility", colName, y, { width: 140 });
-    doc.text("sqm", colLand, y);
-    doc.text("Market", colMarket, y);
-    doc.text("Certified", colCert, y);
-    y += 12;
-    doc.fillColor("#000").fontSize(7);
+  y -= 6;
+  section("Movable asset breakdown by category");
+  for (const row of report.movableByCategory) {
+    line(
+      `${row.categoryName}: ${row.count} · ${ngn(row.totalAcquisitionNgn)} (depreciated ${ngn(row.totalDepreciatedNgn)})`,
+      8
+    );
+  }
 
-    const byState = new Map<string, typeof report.propertyRegister>();
-    for (const row of report.propertyRegister) {
-      const st = row.state ?? "—";
-      if (!byState.has(st)) byState.set(st, []);
-      byState.get(st)!.push(row);
+  y -= 6;
+  section("Pending branches");
+  if (report.pendingBranchValuation.length === 0) {
+    line("None — all active branches have a property valuation on the branch or a related facility.", 8);
+  } else {
+    for (const p of report.pendingBranchValuation) {
+      line(`• ${p.facilityCode ?? "—"} — ${p.facilityName} (${p.state ?? "—"})`, 8);
     }
-    const states = Array.from(byState.keys()).sort((a, b) => a.localeCompare(b));
+  }
 
-    for (const state of states) {
-      ensureSpace(16);
-      doc.fontSize(8).fillColor("#374151").text(state, margin, y, { width: contentW });
-      y += 11;
-      doc.fontSize(7).fillColor("#000");
-      for (const row of byState.get(state) ?? []) {
-        ensureSpace(12);
-        doc.text(row.facilityCode ?? "—", colCode, y, { width: 48 });
-        doc.text(row.facilityName.slice(0, 42), colName, y, { width: 140 });
-        doc.text(
-          row.landAreaSqm != null ? Number(row.landAreaSqm).toLocaleString("en-NG", { maximumFractionDigits: 1 }) : "—",
-          colLand,
-          y
-        );
-        doc.text(ngn(row.marketValueNgn), colMarket, y, { width: 64 });
-        doc.text(ngn(row.certifiedValueNgn), colCert, y, { width: 72 });
-        y += 11;
-      }
-      y += 4;
-    }
+  for (const p of pdfDoc.getPages()) {
+    drawFooter(p);
+  }
 
-    y += 8;
-    ensureSpace(24);
-    doc.fontSize(11).fillColor("#000").text("Movable assets by category (excl. LA / LB)", margin, y);
-    y += 14;
-    doc.fontSize(7);
-    for (const row of report.movableByCategory) {
-      ensureSpace(12);
-      doc.text(
-        `${row.categoryName}: ${row.count} items · ${ngn(row.totalAcquisitionNgn)} (depreciated ${ngn(row.totalDepreciatedNgn)})`,
-        margin,
-        y,
-        { width: contentW }
-      );
-      y += 11;
-    }
-
-    y += 10;
-    ensureSpace(24);
-    doc.fontSize(11).text("Active branch offices pending valuation", margin, y);
-    y += 14;
-    doc.fontSize(7);
-    if (report.pendingBranchValuation.length === 0) {
-      doc.text("None — all active branches have a property valuation row.", margin, y, { width: contentW });
-    } else {
-      for (const p of report.pendingBranchValuation) {
-        ensureSpace(11);
-        doc.text(
-          `• ${p.facilityCode ?? "—"} — ${p.facilityName} (${p.state ?? "—"})`,
-          margin,
-          y,
-          { width: contentW }
-        );
-        y += 10;
-      }
-    }
-
-    paintFooter();
-    doc.end();
-  });
+  return Buffer.from(await pdfDoc.save());
 }

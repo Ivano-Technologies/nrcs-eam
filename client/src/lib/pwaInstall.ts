@@ -23,6 +23,9 @@ export function isPwaInstallable(): boolean {
   return deferredPrompt != null;
 }
 
+/** Alias for installability checks (Chrome `beforeinstallprompt` captured). */
+export const isPwaInstallAvailable = isPwaInstallable;
+
 export function subscribeInstallPrompt(listener: () => void): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);

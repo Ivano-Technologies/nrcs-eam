@@ -317,11 +317,13 @@ export default function AssetValuation() {
           <CardHeader>
             <CardTitle className="text-base">Branches not yet valued (property register)</CardTitle>
             <CardDescription className="text-sm leading-relaxed">
-              These branches have no formal land or building valuation on record. Coordinate with branch
-              secretaries to commission valuations.
+              Active branch offices with no property valuation row on the branch site itself. The{" "}
+              {r.valuationRowCount} register entries include divisions, warehouses, and clinics — not every
+              entry maps to a branch code (e.g. ABI-002 vs ABI-001). Coordinate with branch secretaries to
+              commission branch-level valuations.
               {pendingBranches.length > 0
-                ? ` ${pendingBranches.length} branch office${pendingBranches.length === 1 ? "" : "es"} pending.`
-                : " All active branches are covered in the register."}
+                ? ` ${pendingBranches.length} of ${r.activeBranchCount} active branch offices pending.`
+                : " All active branches have a valuation on the branch site."}
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0">
