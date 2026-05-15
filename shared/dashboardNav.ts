@@ -17,6 +17,7 @@ export const DASHBOARD_NAV = {
   stockCountsInProgress: dashboardNavPath("/inventory/counts?status=in_progress"),
   maintenance: dashboardNavPath("/maintenance"),
   assetValuation: dashboardNavPath("/finance/asset-valuation"),
+  insuranceExpiring: dashboardNavPath("/compliance/insurance?status=expiring"),
   pendingUsers: dashboardNavPath("/settings/pending-users"),
   auditTrail: dashboardNavPath("/audit-trail"),
   activityLog: dashboardNavPath("/administration/activity-log"),

@@ -1473,3 +1473,74 @@ export type EmailNotification = typeof emailNotifications.$inferSelect;
 export type InsertEmailNotification = typeof emailNotifications.$inferInsert;
 export type NotificationLog = typeof notificationsLog.$inferSelect;
 export type FacilityNotificationSetting = typeof facilityNotificationSettings.$inferSelect;
+
+/** Branch / category annual budgets (calendar year in `period`). */
+export const budgets = pgTable(
+  "budgets",
+  {
+    id: serial("id").primaryKey(),
+    siteId: integer("siteId").references(() => sites.id, { onDelete: "cascade" }),
+    categoryId: integer("categoryId").references(() => assetCategories.id, { onDelete: "cascade" }),
+    period: integer("period").notNull(),
+    amount: decimal("amount", { precision: 18, scale: 2 }).notNull(),
+    createdBy: integer("createdBy").references(() => users.id),
+    createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
+  },
+  (t) => [
+    index("budgets_siteId_idx").on(t.siteId),
+    index("budgets_period_idx").on(t.period),
+  ]
+);
+
+export const maintenanceCosts = pgTable(
+  "maintenance_costs",
+  {
+    id: serial("id").primaryKey(),
+    assetId: integer("assetId")
+      .notNull()
+      .references(() => assets.id, { onDelete: "cascade" }),
+    maintenanceType: varchar("maintenanceType", { length: 64 }).notNull(),
+    date: date("date", { mode: "date" }).notNull(),
+    costNgn: decimal("costNgn", { precision: 18, scale: 2 }).notNull(),
+    description: text("description"),
+    referenceNumber: varchar("referenceNumber", { length: 128 }),
+    loggedBy: integer("loggedBy").references(() => users.id),
+    createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
+  },
+  (t) => [
+    index("maintenance_costs_assetId_idx").on(t.assetId),
+    index("maintenance_costs_date_idx").on(t.date),
+  ]
+);
+
+export const insuranceRecords = pgTable(
+  "insurance_records",
+  {
+    id: serial("id").primaryKey(),
+    assetId: integer("assetId").references(() => assets.id, { onDelete: "set null" }),
+    siteId: integer("siteId").references(() => sites.id, { onDelete: "set null" }),
+    insuranceType: varchar("insuranceType", { length: 64 }).notNull(),
+    insurer: varchar("insurer", { length: 255 }).notNull(),
+    policyNumber: varchar("policyNumber", { length: 128 }).notNull(),
+    insuredValueNgn: decimal("insuredValueNgn", { precision: 18, scale: 2 }),
+    annualPremiumNgn: decimal("annualPremiumNgn", { precision: 18, scale: 2 }),
+    policyStart: date("policyStart", { mode: "date" }).notNull(),
+    policyEnd: date("policyEnd", { mode: "date" }).notNull(),
+    notes: text("notes"),
+    createdBy: integer("createdBy").references(() => users.id),
+    createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
+  },
+  (t) => [
+    index("insurance_records_siteId_idx").on(t.siteId),
+    index("insurance_records_policyEnd_idx").on(t.policyEnd),
+  ]
+);
+
+export type Budget = typeof budgets.$inferSelect;
+export type InsertBudget = typeof budgets.$inferInsert;
+export type MaintenanceCost = typeof maintenanceCosts.$inferSelect;
+export type InsertMaintenanceCost = typeof maintenanceCosts.$inferInsert;
+export type InsuranceRecord = typeof insuranceRecords.$inferSelect;
+export type InsertInsuranceRecord = typeof insuranceRecords.$inferInsert;

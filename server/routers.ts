@@ -16,6 +16,13 @@ import {
 } from "./routers/roleProcedures";
 import { inventoryV2Router } from "./routers/inventoryRouter";
 import { wmsRouter } from "./routers/wmsRouter";
+import {
+  annualFinanceReportRouter,
+  costManagementRouter,
+  depreciationReportRouter,
+  insuranceRecordsRouter,
+} from "./financeRouters";
+import { countInsuranceExpiringSoon } from "./financeModulesDb";
 import { requireRole } from "./_core/trpc";
 import { getSupabaseServiceRole } from "./_core/supabase";
 import {
@@ -1524,6 +1531,11 @@ export const appRouter = router({
       }),
   }),
 
+  costManagement: costManagementRouter,
+  depreciationReport: depreciationReportRouter,
+  insuranceRecords: insuranceRecordsRouter,
+  annualFinanceReport: annualFinanceReportRouter,
+
   assetValuation: router({
     report: managerOrAdminProcedure.query(async () => {
       return await db.getAssetValuationReport();
@@ -2255,7 +2267,8 @@ export const appRouter = router({
           });
 
         if (input.role === "Admin") {
-          const [pendingUserCount, failedLoginsCount, reqSummary, inactiveFacilities, grnDrafts] = await Promise.all([
+          const [pendingUserCount, failedLoginsCount, reqSummary, inactiveFacilities, grnDrafts, insuranceExpiring] =
+            await Promise.all([
             safe("pendingUsers", async () => {
               const rows = await database
                 .select({ count: sql<number>`count(*)`.mapWith(Number) })
@@ -2286,6 +2299,7 @@ export const appRouter = router({
                 .where(eq(goodsReceivedNotes.status, "draft"));
               return Number(rows[0]?.count ?? 0);
             }),
+            safe("insuranceExpiring", () => countInsuranceExpiringSoon()),
           ]);
 
           const items: AttentionItem[] = [];
@@ -2337,11 +2351,21 @@ export const appRouter = router({
               href: DASHBOARD_NAV.receiptsDraft,
             });
           }
+          if ((insuranceExpiring ?? 0) > 0) {
+            items.push({
+              icon: "Shield",
+              tone: "amber",
+              label: `${insuranceExpiring} insurance polic${insuranceExpiring === 1 ? "y" : "ies"} expiring soon`,
+              meta: "Compliance",
+              href: DASHBOARD_NAV.insuranceExpiring,
+            });
+          }
           return (items.length > 0 ? items : [allClear]).slice(0, 4);
         }
 
         if (input.role === "Manager") {
-          const [reqSummary, lowStockCount, overdueMaintenanceCount, waybillDrafts, grnDrafts] = await Promise.all([
+          const [reqSummary, lowStockCount, overdueMaintenanceCount, waybillDrafts, grnDrafts, insuranceExpiring] =
+            await Promise.all([
             requisitionSummary(),
             lowStockItems(),
             safe("overdueMaintenance", async () => {
@@ -2365,6 +2389,7 @@ export const appRouter = router({
                 .where(eq(goodsReceivedNotes.status, "draft"));
               return Number(rows[0]?.count ?? 0);
             }),
+            safe("insuranceExpiring", () => countInsuranceExpiringSoon()),
           ]);
 
           const items: AttentionItem[] = [];
@@ -2378,6 +2403,15 @@ export const appRouter = router({
                   : "No pending requisitions",
               meta: reqSummary.urgent > 0 ? `${reqSummary.urgent} urgent` : "Up to date",
               href: reqSummary.total > 0 ? DASHBOARD_NAV.requisitionsSubmitted : DASHBOARD_NAV.requisitionsAll,
+            });
+          }
+          if ((insuranceExpiring ?? 0) > 0) {
+            items.push({
+              icon: "Shield",
+              tone: "amber",
+              label: `${insuranceExpiring} insurance polic${insuranceExpiring === 1 ? "y" : "ies"} expiring soon`,
+              meta: "Compliance",
+              href: DASHBOARD_NAV.insuranceExpiring,
             });
           }
           if ((lowStockCount ?? 0) > 0) {
