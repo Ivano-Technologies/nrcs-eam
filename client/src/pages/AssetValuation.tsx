@@ -43,13 +43,12 @@ function SummaryMetricCard({
   const valueClass = cn("mt-1 break-words", KPI_VALUE_CLASS);
 
   return (
-    <Card className="min-w-0 overflow-hidden">
-      <CardContent className="flex min-w-0 flex-col justify-between p-4">
-        <div>
-          <div className="flex h-8 items-start">
-            <p className="line-clamp-2 text-xs leading-tight text-muted-foreground">{label}</p>
-          </div>
-          {amountFmt ? (
+    <Card className="h-full min-w-0 overflow-hidden">
+      <CardContent className="flex min-h-[120px] min-w-0 flex-col justify-between p-4">
+        <div className="h-8">
+          <p className="line-clamp-2 text-xs leading-tight text-muted-foreground">{label}</p>
+        </div>
+        {amountFmt ? (
             showTooltip ? (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -67,10 +66,9 @@ function SummaryMetricCard({
           ) : (
             <p className={valueClass}>{value}</p>
           )}
+        <div className="mt-2 h-4">
+          {subtext ? <p className="text-xs text-muted-foreground">{subtext}</p> : null}
         </div>
-        {subtext ? (
-          <p className="mt-2 text-xs leading-tight text-muted-foreground">{subtext}</p>
-        ) : null}
       </CardContent>
     </Card>
   );
@@ -293,7 +291,7 @@ export default function AssetValuation() {
       {/* Section 1 — Summary */}
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Summary</h2>
-        <div className="grid min-w-0 grid-cols-2 items-start gap-3 md:grid-cols-3 lg:grid-cols-5">
+        <div className="grid min-w-0 grid-cols-2 items-stretch gap-4 md:grid-cols-3 lg:grid-cols-5">
           <SummaryMetricCard
             label="Total certified property value"
             amount={r.totalCertifiedPropertyNgn}
