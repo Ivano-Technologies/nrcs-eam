@@ -102,11 +102,16 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
   const [mainTab, setMainTab] = useState<InventoryMainTab>("overview");
 
   useEffect(() => {
-    const t = new URLSearchParams(urlSearch).get("tab");
+    const params = new URLSearchParams(urlSearch);
+    const t = params.get("tab");
     if (t === "catalogue" || t === "settings" || t === "overview") {
       setMainTab(t as InventoryMainTab);
     } else {
       setMainTab("overview");
+    }
+    const st = params.get("status");
+    if (st && (STATUS_OPTIONS as readonly string[]).includes(st)) {
+      setStatus(st);
     }
   }, [urlSearch]);
   const [overviewViewMode, setOverviewViewMode] = useState<"table" | "card">(() => {

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +17,7 @@ import { appPath } from "@/lib/routes";
 type Line = { catalogueId: string; ctnId: string; quantity: string; batchNumber: string; expiryDate: string; notes: string };
 
 export default function Receipts({ embedInShell = false }: { embedInShell?: boolean } = {}) {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const { isManagerOrAdmin, isStaffOrAbove } = usePermissions();
   const [status, setStatus] = useState<"all" | "draft" | "finalized" | "claim_raised">("all");
   const [warehouseId, setWarehouseId] = useState("all");
@@ -31,6 +31,14 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
   const [lines, setLines] = useState<Line[]>([
     { catalogueId: "", ctnId: "", quantity: "", batchNumber: "", expiryDate: "", notes: "" },
   ]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const st = new URLSearchParams(window.location.search).get("status");
+    if (st === "all" || st === "draft" || st === "finalized" || st === "claim_raised") {
+      setStatus(st);
+    }
+  }, [location]);
 
   const { data: warehouses } = trpc.sites.list.useQuery();
   const wh = useMemo(() => (warehouses ?? []).filter((x) => x.facilityType === "warehouse"), [warehouses]);

@@ -46,6 +46,10 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const qs = new URLSearchParams(window.location.search);
+    const st = qs.get("status");
+    if (st && ["all", "submitted", "approved", "rejected", "fulfilled", "draft"].includes(st)) {
+      setStatus(st);
+    }
     if (qs.get("new") === "1") {
       setOpen(true);
       qs.delete("new");
