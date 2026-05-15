@@ -413,7 +413,12 @@ export default function Assets() {
       }
       const skipped = rows.length - ok.length;
       const res = await confirmImportMutation.mutateAsync({ rows: ok as never });
-      toast.success(`Imported ${res.imported}, skipped ${res.skipped}`);
+      const parts: string[] = [`Imported ${res.imported} row(s)`];
+      if (res.updated > 0) parts.push(`${res.updated} updated`);
+      if (res.skippedIntraBatchDuplicate > 0) {
+        parts.push(`${res.skippedIntraBatchDuplicate} skipped (duplicate within import file)`);
+      }
+      toast.success(parts.join("; "));
       if (res.errors?.length) {
         const lines = res.errors.slice(0, 5).map((e) => `Row ${e.row}: ${e.error}`);
         toast.error(`${res.errors.length} row error(s) during import`, {
