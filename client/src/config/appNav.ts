@@ -20,6 +20,7 @@ import {
   PackagePlus,
   Truck,
   ScanSearch,
+  Scale,
 } from "lucide-react";
 import { NairaIcon } from "@/components/icons/NairaIcon";
 
@@ -31,6 +32,8 @@ export type AppNavItem = {
   navCountBadge?: string;
   /** When true, item is shown only to admins (e.g. Settings → Users). */
   adminOnly?: boolean;
+  /** When true, item is shown only to managers and admins. */
+  managerOrAdminOnly?: boolean;
 };
 
 export type AppNavGroup = {
@@ -160,6 +163,12 @@ export const SIDEBAR_GROUPS: AppNavGroup[] = [
     icon: NairaIcon,
     items: [
       { label: "Cost Analytics", path: appPath("/cost-analytics"), icon: NairaIcon },
+      {
+        label: "Asset Valuation",
+        path: appPath("/finance/asset-valuation"),
+        icon: Scale,
+        managerOrAdminOnly: true,
+      },
       { label: "Financial Transactions", path: appPath("/financial"), icon: NairaIcon },
       { label: "QuickBooks", path: appPath("/quickbooks"), icon: NairaIcon },
     ],
@@ -247,6 +256,7 @@ const GROUP_PREFIXES: { groupId: string; pathPrefix: string }[] = [
   { groupId: "maintenance", pathPrefix: appPath("/mobile-work-orders") },
   { groupId: "maintenance", pathPrefix: appPath("/mobile-work-order") },
   { groupId: "finance", pathPrefix: appPath("/cost-analytics") },
+  { groupId: "finance", pathPrefix: appPath("/finance/asset-valuation") },
   { groupId: "finance", pathPrefix: appPath("/financial") },
   { groupId: "finance", pathPrefix: appPath("/quickbooks") },
   { groupId: "compliance", pathPrefix: appPath("/compliance") },
@@ -281,9 +291,10 @@ export function groupIdForPath(pathname: string): string | null {
 
 export function flattenNavItems(role: string | undefined): AppNavItem[] {
   const isAdmin = role === "admin";
+  const isManagerOrAdmin = role === "admin" || role === "manager";
   const items: AppNavItem[] = [...SIDEBAR_TOP];
   for (const g of SIDEBAR_GROUPS) {
-    items.push(...g.items);
+    items.push(...g.items.filter((i) => !i.managerOrAdminOnly || isManagerOrAdmin));
   }
   items.push(...SIDEBAR_STANDALONE_MID);
   for (const g of SIDEBAR_GROUPS_ADMIN) {

@@ -515,6 +515,15 @@ export const appRouter = router({
           yearAcquiredRegister: input.yearAcquiredRegister ?? input.yearAcquired,
           yearAcquired: input.yearAcquired,
         });
+        let latitude = input.latitude?.trim();
+        let longitude = input.longitude?.trim();
+        if (!latitude || !longitude) {
+          const site = await db.getSiteById(input.siteId);
+          if (site?.latitude != null && site?.longitude != null) {
+            if (!latitude) latitude = String(site.latitude);
+            if (!longitude) longitude = String(site.longitude);
+          }
+        }
         return await db.createAsset({
           assetTag,
           name: input.name,
@@ -569,8 +578,8 @@ export const appRouter = router({
           assignedTo: input.assignedTo,
           imageUrl: input.imageUrl,
           notes: input.notes,
-          latitude: input.latitude,
-          longitude: input.longitude,
+          latitude: latitude || undefined,
+          longitude: longitude || undefined,
         });
       }),
     
@@ -716,6 +725,10 @@ export const appRouter = router({
         notes: z.string().optional(),
         latitude: z.string().optional(),
         longitude: z.string().optional(),
+        depreciationMethod: z.string().optional(),
+        usefulLifeYears: z.number().optional(),
+        residualValue: z.string().optional(),
+        depreciationStartDate: z.date().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         const { id, yearAcquired, registerStatus, status, ...rest } = input;
@@ -783,14 +796,22 @@ export const appRouter = router({
 
         delete data.depreciatedValueManualOverride;
 
-        await db.logAuditEntry({
-          userId: ctx.user.id,
-          action: 'update',
-          entityType: 'asset',
-          entityId: id,
-          changes: JSON.stringify(data),
-        });
-        return await db.updateAsset(id, data as Parameters<typeof db.updateAsset>[1]);
+        try {
+          const updated = await db.updateAssetWithAssetEditAudit(
+            id,
+            data as Parameters<typeof db.updateAsset>[1],
+            ctx.user.id
+          );
+          if (!updated) {
+            throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+          }
+          return updated;
+        } catch (e: unknown) {
+          if (e instanceof Error && e.message === "Asset not found") {
+            throw new TRPCError({ code: "NOT_FOUND", message: "Asset not found" });
+          }
+          throw e;
+        }
       }),
 
     recalculateDepreciation: managerOrAdminProcedure.mutation(async () => {
@@ -811,6 +832,29 @@ export const appRouter = router({
       const total = await db.countAllAssets();
       return { updated, skipped: Math.max(0, total - updated) };
     }),
+
+    backfillCoordinatesFromFacilities: adminProcedure.mutation(async () => {
+      const updated = await db.backfillAssetCoordinatesFromSites();
+      return { updated };
+    }),
+
+    syncCoordinatesForSite: managerOrAdminProcedure
+      .input(z.object({ siteId: z.number() }))
+      .mutation(async ({ input }) => {
+        const updated = await db.syncAssetCoordinatesForSiteId(input.siteId);
+        return { updated };
+      }),
+
+    listAssetEditHistory: managerOrAdminProcedure
+      .input(
+        z.object({
+          assetId: z.number(),
+          limit: z.number().min(1).max(200).optional(),
+        })
+      )
+      .query(async ({ input }) => {
+        return await db.getAssetEditAuditLogs(input.assetId, input.limit ?? 50);
+      }),
 
     getExpiringWarranties: protectedProcedure
       .query(async () => {
@@ -1479,6 +1523,32 @@ export const appRouter = router({
       }),
   }),
 
+  assetValuation: router({
+    report: managerOrAdminProcedure.query(async () => {
+      return await db.getAssetValuationReport();
+    }),
+    exportExecutivePdf: managerOrAdminProcedure.mutation(async () => {
+      const report = await db.getAssetValuationReport();
+      const { buildAssetValuationExecutivePdf } = await import("./assetValuationPdf");
+      const buffer = await buildAssetValuationExecutivePdf(report);
+      return {
+        filename: `nrcs-asset-valuation-executive-${new Date().toISOString().slice(0, 10)}.pdf`,
+        mimeType: "application/pdf",
+        base64: buffer.toString("base64"),
+      };
+    }),
+    exportRegisterExcel: managerOrAdminProcedure.mutation(async () => {
+      const report = await db.getAssetValuationReport();
+      const { buildAssetValuationRegisterWorkbook } = await import("./assetValuationExcel");
+      const { buffer, filename } = await buildAssetValuationRegisterWorkbook(report);
+      return {
+        filename,
+        mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        base64: buffer.toString("base64"),
+      };
+    }),
+  }),
+
   // ============= COMPLIANCE =============
   compliance: router({
     list: protectedProcedure
@@ -2020,17 +2090,14 @@ export const appRouter = router({
     /** Sum of register `actual_unit_value` for assets the user can see (org-wide for admin/manager; home site for staff/field). */
     totalAssetValue: protectedProcedure.query(async ({ ctx }) => {
       const scope = dashboardDataScope(ctx);
-      if (scope.mode === "empty") return { totalNgn: 0 };
+      if (scope.mode === "empty") return { totalNgn: 0, propertyNgn: 0, movableNgn: 0 };
       const database = await db.getDb();
-      if (!database) return { totalNgn: 0 };
-      const siteFilter = scope.mode === "site" ? eq(assets.siteId, scope.siteId) : undefined;
-      const [row] = await database
-        .select({
-          totalNgn: sql<number>`coalesce(sum(${assets.actualUnitValue}::numeric), 0)`.mapWith(Number),
-        })
-        .from(assets)
-        .where(siteFilter ?? sql`true`);
-      return { totalNgn: Number(row?.totalNgn ?? 0) };
+      if (!database) return { totalNgn: 0, propertyNgn: 0, movableNgn: 0 };
+      const breakdown =
+        scope.mode === "all"
+          ? await db.getDashboardTotalAssetValue({ mode: "all" })
+          : await db.getDashboardTotalAssetValue({ mode: "site", siteId: scope.siteId });
+      return breakdown;
     }),
 
     /** Per-branch stock readiness for Manager/Admin dashboards. */

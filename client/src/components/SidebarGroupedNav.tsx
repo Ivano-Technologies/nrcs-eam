@@ -92,6 +92,10 @@ export function SidebarGroupedNav({
 }: SidebarGroupedNavProps) {
   const isNarrow = sidebarWidth <= NARROW_PX;
   const isAdmin = userRole === "admin";
+  const isManagerOrAdmin = userRole === "admin" || userRole === "manager";
+
+  const filterByRole = (items: AppNavItem[]) =>
+    items.filter((i) => !i.managerOrAdminOnly || isManagerOrAdmin);
 
   const [groupOpen, setGroupOpen] = useState<Record<string, boolean>>(() => {
     try {
@@ -135,9 +139,10 @@ export function SidebarGroupedNav({
 
   const q = searchQuery.trim();
   const groupsMain = useMemo(() => {
-    if (!q) return SIDEBAR_GROUPS;
-    return SIDEBAR_GROUPS.map((g) => filterGroup(g, q)).filter(Boolean) as AppNavGroup[];
-  }, [q]);
+    const base = SIDEBAR_GROUPS.map((g) => ({ ...g, items: filterByRole(g.items) }));
+    if (!q) return base;
+    return base.map((g) => filterGroup(g, q)).filter(Boolean) as AppNavGroup[];
+  }, [q, isManagerOrAdmin]);
 
   const groupsTail = useMemo(() => {
     const raw = SIDEBAR_GROUPS_ADMIN.filter((g) => !g.adminOnly || isAdmin);

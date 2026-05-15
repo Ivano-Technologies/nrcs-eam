@@ -9,6 +9,7 @@ import { StockMovementChart } from "@/components/dashboard/StockMovementChart";
 import { useDashboardRolePreview } from "@/components/dashboard/rolePreviewContext";
 import type { DashboardPeriod, UserRole } from "@/components/dashboard/types";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { formatNaira } from "@/lib/format";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertTriangle, Banknote, MapPin, ShieldCheck, Truck } from "lucide-react";
@@ -151,8 +152,8 @@ export default function Home() {
     {
       key: "totalAssetValue" as const,
       label: "Total Asset Value",
-      value: (totalAssetValue?.totalNgn ?? 0).toLocaleString("en-NG", { maximumFractionDigits: 0 }),
-      sub: `₦ ${(totalAssetValue?.totalNgn ?? 0).toLocaleString("en-NG", { maximumFractionDigits: 0 })}`,
+      value: formatNaira(totalAssetValue?.totalNgn ?? 0, { compact: true }),
+      sub: `Property: ${formatNaira(totalAssetValue?.propertyNgn ?? 0, { compact: true })} · Movable: ${formatNaira(totalAssetValue?.movableNgn ?? 0, { compact: true })}`,
       icon: Banknote,
       tone: "blue" as const,
       delta: undefined,

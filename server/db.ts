@@ -21,7 +21,7 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import {
   appSettings,
-  InsertUser, users, sites, InsertSite, type Site, assetCategories, assets, InsertAsset,
+  InsertUser, users, sites, InsertSite, type Site, siteValuations, assetCategories, assets, InsertAsset,
   workOrders, InsertWorkOrder, maintenanceSchedules, InsertMaintenanceSchedule,
   inventoryItems, InsertInventoryItem, inventoryTransactions, vendors, InsertVendor,
   financialTransactions, complianceRecords, auditLogs, documents,
@@ -576,8 +576,132 @@ export async function getAssetById(id: number) {
 export async function updateAsset(id: number, data: Partial<InsertAsset>) {
   const db = await getDb();
   if (!db) return null;
-  await db.update(assets).set(data).where(eq(assets.id, id));
+  const cleaned = Object.fromEntries(
+    Object.entries(data).filter(([, v]) => v !== undefined)
+  ) as Partial<InsertAsset>;
+  await db.update(assets).set({ ...cleaned, updatedAt: new Date() }).where(eq(assets.id, id));
   return await getAssetById(id);
+}
+
+function serializeAuditScalar(v: unknown): unknown {
+  if (v instanceof Date) return v.toISOString();
+  if (typeof v === "bigint") return Number(v);
+  if (v === null || v === undefined) return null;
+  return v;
+}
+
+/** JSON-serializable snapshot of an asset row for audit diffs. */
+export function serializeAssetForAudit(row: typeof assets.$inferSelect): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(row)) {
+    out[k] = serializeAuditScalar(v);
+  }
+  return out;
+}
+
+const ASSET_AUDIT_IGNORE_FIELDS = new Set(["updatedAt"]);
+
+export function diffAssetSnapshotKeys(
+  before: Record<string, unknown>,
+  after: Record<string, unknown>
+): string[] {
+  const keys = new Set([...Object.keys(before), ...Object.keys(after)]);
+  const changed: string[] = [];
+  for (const k of Array.from(keys)) {
+    if (ASSET_AUDIT_IGNORE_FIELDS.has(k)) continue;
+    if (JSON.stringify(before[k]) !== JSON.stringify(after[k])) changed.push(k);
+  }
+  return changed;
+}
+
+/**
+ * Updates an asset and writes `asset_edit` audit in the same transaction.
+ * Rolls back the update if the audit insert fails.
+ */
+export async function updateAssetWithAssetEditAudit(
+  id: number,
+  data: Partial<InsertAsset>,
+  userId: number
+): Promise<typeof assets.$inferSelect | null> {
+  const database = await getDb();
+  if (!database) return null;
+
+  const cleaned = Object.fromEntries(
+    Object.entries(data).filter(([, v]) => v !== undefined)
+  ) as Partial<InsertAsset>;
+  if (Object.keys(cleaned).length === 0) {
+    return await getAssetById(id);
+  }
+
+  return await database.transaction(async (tx) => {
+    const [before] = await tx.select().from(assets).where(eq(assets.id, id)).limit(1);
+    if (!before) {
+      throw new Error("Asset not found");
+    }
+
+    await tx.update(assets).set({ ...cleaned, updatedAt: new Date() }).where(eq(assets.id, id));
+
+    const [after] = await tx.select().from(assets).where(eq(assets.id, id)).limit(1);
+    if (!after) {
+      throw new Error("Asset not found after update");
+    }
+
+    const b = serializeAssetForAudit(before);
+    const a = serializeAssetForAudit(after);
+    const changedFields = diffAssetSnapshotKeys(b, a);
+
+    await tx.insert(auditLogs).values({
+      userId,
+      action: "asset_edit",
+      entityType: "asset",
+      entityId: id,
+      changes: JSON.stringify({ before: b, after: a, changedFields }),
+      ipAddress: null,
+      userAgent: null,
+    });
+
+    return after;
+  });
+}
+
+/** Backfill asset lat/long from linked facility when either coordinate is null. */
+export async function backfillAssetCoordinatesFromSites(): Promise<number> {
+  const database = await getDb();
+  if (!database) return 0;
+  const rows = await database.execute(sql`
+    UPDATE assets AS a
+    SET
+      latitude = s.latitude,
+      longitude = s.longitude,
+      "updatedAt" = NOW()
+    FROM sites AS s
+    WHERE a."siteId" = s.id
+      AND s.latitude IS NOT NULL
+      AND s.longitude IS NOT NULL
+      AND (a.latitude IS NULL OR a.longitude IS NULL)
+    RETURNING a.id
+  `);
+  return Array.isArray(rows) ? rows.length : 0;
+}
+
+/** Overwrite coordinates for every asset at the facility from the site's current lat/long. */
+export async function syncAssetCoordinatesForSiteId(siteId: number): Promise<number> {
+  const database = await getDb();
+  if (!database) return 0;
+  const rows = await database.execute(sql`
+    UPDATE assets AS a
+    SET
+      latitude = s.latitude,
+      longitude = s.longitude,
+      "updatedAt" = NOW()
+    FROM sites AS s
+    WHERE a."siteId" = s.id
+      AND s.id = ${siteId}
+      AND s.latitude IS NOT NULL
+      AND s.longitude IS NOT NULL
+    RETURNING a.id
+  `);
+  return Array.isArray(rows) ? rows.length : 0;
 }
 
 /** Assets eligible for automatic register depreciation (not manually overridden, required fields present). */
@@ -1193,6 +1317,32 @@ export async function getAuditLogs(filters?: { userId?: number; entityType?: str
   }
   
   return await result;
+}
+
+/** Asset register edit history (`action = asset_edit`) with editor display name. */
+export async function getAssetEditAuditLogs(assetId: number, limit = 100) {
+  const database = await getDb();
+  if (!database) return [];
+
+  return await database
+    .select({
+      id: auditLogs.id,
+      timestamp: auditLogs.timestamp,
+      userId: auditLogs.userId,
+      changes: auditLogs.changes,
+      userLabel: sql<string>`coalesce(${users.name}, ${users.email}, 'User #' || ${auditLogs.userId}::text)`,
+    })
+    .from(auditLogs)
+    .leftJoin(users, eq(auditLogs.userId, users.id))
+    .where(
+      and(
+        eq(auditLogs.entityType, "asset"),
+        eq(auditLogs.entityId, assetId),
+        eq(auditLogs.action, "asset_edit")
+      )
+    )
+    .orderBy(desc(auditLogs.timestamp))
+    .limit(limit);
 }
 
 // ============= DOCUMENTS =============
@@ -2211,4 +2361,266 @@ export async function getVendorById(id: number) {
   
   const result = await db.select().from(vendors).where(eq(vendors.id, id)).limit(1);
   return result.length > 0 ? result[0] : undefined;
+}
+
+const movableNonLandSql = sql`coalesce(upper(trim(${assets.itemCategoryCode})), '') not in ('LA', 'LB')`;
+
+export type DashboardAssetValueBreakdown = {
+  propertyNgn: number;
+  movableNgn: number;
+  totalNgn: number;
+};
+
+/**
+ * Dashboard KPI: certified property valuations + movable register values (excludes LA/LB so land/buildings are not double-counted).
+ */
+export async function getDashboardTotalAssetValue(
+  scope: { mode: "all" } | { mode: "site"; siteId: number }
+): Promise<DashboardAssetValueBreakdown> {
+  const database = await getDb();
+  if (!database) return { propertyNgn: 0, movableNgn: 0, totalNgn: 0 };
+
+  const siteValFilter = scope.mode === "site" ? eq(siteValuations.siteId, scope.siteId) : undefined;
+  const [propRow] = await database
+    .select({
+      propertyNgn: sql<number>`coalesce(sum(${siteValuations.certifiedValue}::numeric), 0)`.mapWith(Number),
+    })
+    .from(siteValuations)
+    .where(siteValFilter ?? sql`true`);
+
+  const assetSiteFilter = scope.mode === "site" ? eq(assets.siteId, scope.siteId) : undefined;
+  const [movRow] = await database
+    .select({
+      movableNgn: sql<number>`coalesce(sum(${assets.actualUnitValue}::numeric), 0)`.mapWith(Number),
+    })
+    .from(assets)
+    .where(
+      and(isNotNull(assets.actualUnitValue), movableNonLandSql, assetSiteFilter ?? sql`true`)
+    );
+
+  const propertyNgn = Number(propRow?.propertyNgn ?? 0);
+  const movableNgn = Number(movRow?.movableNgn ?? 0);
+  return { propertyNgn, movableNgn, totalNgn: propertyNgn + movableNgn };
+}
+
+export type AssetValuationPropertyRow = {
+  valuationId: number;
+  siteId: number;
+  facilityCode: string | null;
+  facilityName: string;
+  state: string | null;
+  landAreaSqm: string | null;
+  marketValueNgn: number;
+  certifiedValueNgn: number;
+  valuationDate: string;
+  valuationReference: string | null;
+  notes: string | null;
+};
+
+export type AssetValuationPendingRow = {
+  siteId: number;
+  facilityCode: string | null;
+  facilityName: string;
+  state: string | null;
+  facilityType: string;
+};
+
+export type AssetValuationMovableCategoryRow = {
+  categoryName: string;
+  count: number;
+  totalAcquisitionNgn: number;
+  totalDepreciatedNgn: number;
+};
+
+export type AssetValuationReport = {
+  totalCertifiedPropertyNgn: number;
+  totalMovableAcquisitionNgn: number;
+  combinedTotalNgn: number;
+  valuationRowCount: number;
+  distinctSitesWithValuation: number;
+  totalFacilityCount: number;
+  propertyRegister: AssetValuationPropertyRow[];
+  pendingValuation: AssetValuationPendingRow[];
+  /** Branch facilities (state offices) with no property valuation — summary narrative. */
+  pendingBranchValuation: AssetValuationPendingRow[];
+  movableByCategory: AssetValuationMovableCategoryRow[];
+};
+
+function numFromDb(v: string | number | null | undefined): number {
+  if (v == null) return 0;
+  const n = typeof v === "number" ? v : Number(String(v).replace(/,/g, ""));
+  return Number.isFinite(n) ? n : 0;
+}
+
+function formatIsoDate(d: Date | string | null | undefined): string {
+  if (d == null) return "";
+  if (typeof d === "string") return d.slice(0, 10);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Full Asset Valuation register + summaries (manager/admin Finance page). */
+export async function getAssetValuationReport(): Promise<AssetValuationReport> {
+  const empty: AssetValuationReport = {
+    totalCertifiedPropertyNgn: 0,
+    totalMovableAcquisitionNgn: 0,
+    combinedTotalNgn: 0,
+    valuationRowCount: 0,
+    distinctSitesWithValuation: 0,
+    totalFacilityCount: 0,
+    propertyRegister: [],
+    pendingValuation: [],
+    pendingBranchValuation: [],
+    movableByCategory: [],
+  };
+
+  const database = await getDb();
+  if (!database) return empty;
+
+  const [sumCert] = await database
+    .select({
+      total: sql<number>`coalesce(sum(${siteValuations.certifiedValue}::numeric), 0)`.mapWith(Number),
+      rows: sql<number>`count(*)::int`.mapWith(Number),
+      distinctSites: sql<number>`count(distinct ${siteValuations.siteId})::int`.mapWith(Number),
+    })
+    .from(siteValuations);
+
+  const [movSum] = await database
+    .select({
+      total: sql<number>`coalesce(sum(${assets.actualUnitValue}::numeric), 0)`.mapWith(Number),
+    })
+    .from(assets)
+    .where(and(isNotNull(assets.actualUnitValue), movableNonLandSql));
+
+  const [facCount] = await database
+    .select({ n: sql<number>`count(*)::int`.mapWith(Number) })
+    .from(sites);
+
+  const valuedSiteIds = await database.selectDistinct({ siteId: siteValuations.siteId }).from(siteValuations);
+  const ids = valuedSiteIds.map((r) => r.siteId).filter((id): id is number => id != null);
+  const branchFilter = eq(sites.facilityType, "branch");
+
+  const pending =
+    ids.length === 0
+      ? await database
+          .select({
+            siteId: sites.id,
+            facilityCode: sites.code,
+            facilityName: sites.name,
+            state: sites.state,
+            facilityType: sites.facilityType,
+          })
+          .from(sites)
+          .orderBy(asc(sites.state), asc(sites.name))
+      : await database
+          .select({
+            siteId: sites.id,
+            facilityCode: sites.code,
+            facilityName: sites.name,
+            state: sites.state,
+            facilityType: sites.facilityType,
+          })
+          .from(sites)
+          .where(notInArray(sites.id, ids))
+          .orderBy(asc(sites.state), asc(sites.name));
+
+  const pendingBranches =
+    ids.length === 0
+      ? await database
+          .select({
+            siteId: sites.id,
+            facilityCode: sites.code,
+            facilityName: sites.name,
+            state: sites.state,
+            facilityType: sites.facilityType,
+          })
+          .from(sites)
+          .where(branchFilter)
+          .orderBy(asc(sites.state), asc(sites.name))
+      : await database
+          .select({
+            siteId: sites.id,
+            facilityCode: sites.code,
+            facilityName: sites.name,
+            state: sites.state,
+            facilityType: sites.facilityType,
+          })
+          .from(sites)
+          .where(and(notInArray(sites.id, ids), branchFilter))
+          .orderBy(asc(sites.state), asc(sites.name));
+
+  const propRows = await database
+    .select({
+      valuationId: siteValuations.id,
+      siteId: siteValuations.siteId,
+      facilityCode: sites.code,
+      facilityName: sites.name,
+      state: sites.state,
+      landAreaSqm: siteValuations.landAreaSqm,
+      marketValue: siteValuations.marketValue,
+      certifiedValue: siteValuations.certifiedValue,
+      valuationDate: siteValuations.valuationDate,
+      valuationReference: siteValuations.valuationReference,
+      notes: siteValuations.notes,
+    })
+    .from(siteValuations)
+    .innerJoin(sites, eq(siteValuations.siteId, sites.id))
+    .orderBy(asc(sites.state), asc(sites.code), asc(siteValuations.id));
+
+  const movableRows = await database
+    .select({
+      categoryName: sql<string>`coalesce(${assetCategories.name}, 'Uncategorized')`,
+      count: sql<number>`count(*)::int`.mapWith(Number),
+      totalAcquisition: sql<number>`coalesce(sum(${assets.actualUnitValue}::numeric), 0)`.mapWith(Number),
+      totalDep: sql<number>`coalesce(sum(coalesce(${assets.depreciatedValue}::numeric, ${assets.currentDepreciatedValue}::numeric, 0)), 0)`.mapWith(Number),
+    })
+    .from(assets)
+    .innerJoin(assetCategories, eq(assets.categoryId, assetCategories.id))
+    .where(and(isNotNull(assets.actualUnitValue), movableNonLandSql))
+    .groupBy(assetCategories.id, assetCategories.name)
+    .orderBy(asc(assetCategories.name));
+
+  const totalCertifiedPropertyNgn = Number(sumCert?.total ?? 0);
+  const totalMovableAcquisitionNgn = Number(movSum?.total ?? 0);
+
+  return {
+    totalCertifiedPropertyNgn,
+    totalMovableAcquisitionNgn,
+    combinedTotalNgn: totalCertifiedPropertyNgn + totalMovableAcquisitionNgn,
+    valuationRowCount: Number(sumCert?.rows ?? 0),
+    distinctSitesWithValuation: Number(sumCert?.distinctSites ?? 0),
+    totalFacilityCount: Number(facCount?.n ?? 0),
+    propertyRegister: propRows.map((r) => ({
+      valuationId: r.valuationId,
+      siteId: r.siteId,
+      facilityCode: r.facilityCode,
+      facilityName: r.facilityName,
+      state: r.state,
+      landAreaSqm: r.landAreaSqm != null ? String(r.landAreaSqm) : null,
+      marketValueNgn: numFromDb(r.marketValue),
+      certifiedValueNgn: numFromDb(r.certifiedValue),
+      valuationDate: formatIsoDate(r.valuationDate),
+      valuationReference: r.valuationReference,
+      notes: r.notes,
+    })),
+    pendingValuation: pending.map((r) => ({
+      siteId: r.siteId,
+      facilityCode: r.facilityCode,
+      facilityName: r.facilityName,
+      state: r.state,
+      facilityType: String(r.facilityType),
+    })),
+    pendingBranchValuation: pendingBranches.map((r) => ({
+      siteId: r.siteId,
+      facilityCode: r.facilityCode,
+      facilityName: r.facilityName,
+      state: r.state,
+      facilityType: String(r.facilityType),
+    })),
+    movableByCategory: movableRows.map((r) => ({
+      categoryName: r.categoryName,
+      count: Number(r.count ?? 0),
+      totalAcquisitionNgn: Number(r.totalAcquisition ?? 0),
+      totalDepreciatedNgn: Number(r.totalDep ?? 0),
+    })),
+  };
 }
