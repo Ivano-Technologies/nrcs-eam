@@ -1700,6 +1700,31 @@ export async function getAssetByTag(assetTag: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
+/** Match unique index (branch_code, item_category_code, asset_num) for NRCS register imports. */
+export async function getAssetByBranchCategoryNum(
+  branchCode: string,
+  itemCategoryCode: string,
+  assetNum: number
+) {
+  const database = await getDb();
+  if (!database) return undefined;
+  const bc = branchCode.trim();
+  const cc = itemCategoryCode.trim().toUpperCase();
+  if (!bc || !cc || !Number.isFinite(assetNum) || assetNum <= 0) return undefined;
+  const [row] = await database
+    .select()
+    .from(assets)
+    .where(
+      and(
+        eq(assets.branchCode, bc),
+        eq(assets.itemCategoryCode, cc),
+        eq(assets.assetNum, assetNum)
+      )
+    )
+    .limit(1);
+  return row ?? undefined;
+}
+
 
 export async function getFinancialTransactionById(id: number) {
   const db = await getDb();

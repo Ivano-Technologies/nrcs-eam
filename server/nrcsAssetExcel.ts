@@ -4,6 +4,7 @@ import * as db from "./db";
 import {
   REGISTER_STATUS_LABELS,
   legacyStatusFromRegister,
+  type LegacyAssetStatus,
   type RegisterStatusKey,
 } from "./assetRegister";
 import type { AssetRegisterListParams } from "./db";
@@ -326,6 +327,14 @@ export type NRCSImportPreviewRow = {
     description?: string;
     categoryId: number;
     siteId: number;
+    /** Resolved facility `sites.code` for register trigger / FK (required when site has a code). */
+    branchCode: string;
+    /** NRCS Item Category column text (must match trigger CASE for code derivation). */
+    itemCategory: string;
+    /** Two-letter NRCS category code (CO, FF, …) from column G or derived from category name. */
+    itemCategoryCode: string;
+    /** Register sequence from column H when present and positive. */
+    assetNum?: number;
     itemType: "Asset" | "Inventory";
     subCategory?: string;
     serialNumber?: string;
@@ -532,6 +541,117 @@ export function matchSiteByBranchCode(sitesList: Site[], raw: string): Site | un
   return matches[0];
 }
 
+/** Matches `public.nrcs_item_category_code` in Postgres (trigger / unique BCN). */
+const NRCS_ITEM_CATEGORY_CODES = new Set(["CO", "FF", "GE", "LA", "LB", "ME", "OE", "VE"]);
+
+function nrcsItemCategoryCodeFromName(categoryName: string): string | null {
+  const t = categoryName.trim();
+  switch (t) {
+    case "Computer":
+      return "CO";
+    case "Furniture & Fixtures":
+      return "FF";
+    case "Generator":
+      return "GE";
+    case "Land":
+      return "LA";
+    case "Land & Building":
+      return "LB";
+    case "Medical Equipment":
+      return "ME";
+    case "Office Equipment":
+      return "OE";
+    case "Vehicle":
+      return "VE";
+    default:
+      return null;
+  }
+}
+
+/** Column G (2-letter code) if valid; otherwise derive from NRCS category name. */
+function itemCategoryCodeForImport(categoryCodeCol: string, categoryName: string): string | null {
+  const g = sanitizeAssetTagPart(categoryCodeCol).slice(0, 2);
+  if (g.length === 2 && NRCS_ITEM_CATEGORY_CODES.has(g)) return g;
+  return nrcsItemCategoryCodeFromName(categoryName);
+}
+
+function normalizeAssetTagForDedup(tag: string): string {
+  return tag.replace(/\s+/g, "").toUpperCase();
+}
+
+export type NRCSImportConfirmResult = {
+  imported: number;
+  updated: number;
+  skippedIntraBatchDuplicate: number;
+  errors: Array<{ row: number; error: string }>;
+};
+
+/**
+ * Rows later in the array that repeat the same asset tag / asset code, or the same
+ * (branch_code, item_category_code, asset_num) when all three are present, are marked duplicate.
+ */
+function computeIntraBatchDuplicateRowIndexes(
+  rows: NonNullable<NRCSImportPreviewRow["payload"]>[]
+): { duplicateIndices: Set<number>; logPayload: Record<string, unknown> } {
+  const tagFirst = new Map<string, number>();
+  const bcnFirst = new Map<string, number>();
+  const duplicateIndices = new Set<number>();
+  const dupTags: Array<{ rowIndex1Based: number; assetTag: string; firstRowIndex1Based: number }> = [];
+  const dupBcns: Array<{
+    rowIndex1Based: number;
+    key: string;
+    firstRowIndex1Based: number;
+  }> = [];
+
+  for (let i = 0; i < rows.length; i++) {
+    const p = rows[i]!;
+    const tagK = normalizeAssetTagForDedup(p.assetTag);
+    if (tagK) {
+      const prev = tagFirst.get(tagK);
+      if (prev !== undefined) {
+        duplicateIndices.add(i);
+        dupTags.push({
+          rowIndex1Based: i + 1,
+          assetTag: p.assetTag,
+          firstRowIndex1Based: prev + 1,
+        });
+      } else {
+        tagFirst.set(tagK, i);
+      }
+    }
+
+    const bc = p.branchCode?.trim();
+    const ic = p.itemCategoryCode?.trim().toUpperCase();
+    const n = p.assetNum;
+    if (bc && ic && n != null && n > 0) {
+      const bcnKey = `${bc.toUpperCase()}|${ic}|${n}`;
+      const prevB = bcnFirst.get(bcnKey);
+      if (prevB !== undefined) {
+        duplicateIndices.add(i);
+        dupBcns.push({
+          rowIndex1Based: i + 1,
+          key: bcnKey,
+          firstRowIndex1Based: prevB + 1,
+        });
+      } else {
+        bcnFirst.set(bcnKey, i);
+      }
+    }
+  }
+
+  const logPayload = {
+    duplicateRowCount: duplicateIndices.size,
+    duplicateAssetTags: dupTags.slice(0, 50),
+    duplicateBranchCategoryNum: dupBcns.slice(0, 50),
+  };
+
+  if (duplicateIndices.size > 0) {
+    console.warn("[confirmNRCSAssetImport] intra-batch duplicate keys (first occurrences kept)", logPayload);
+  }
+
+  return { duplicateIndices, logPayload };
+}
+
 function parseDateFlexible(s: string): Date | undefined {
   if (!s.trim()) return undefined;
   const d = new Date(s);
@@ -710,14 +830,42 @@ export async function previewNRCSAssetImport(fileBuffer: Buffer): Promise<{
       if (!Number.isNaN(n)) currentDepreciatedValue = n;
     }
 
+    const siteBranchCode = site ? (site.code ?? "").trim() : "";
+    if (site && !siteBranchCode) {
+      errors.push(
+        "Resolved facility has no branch code — set the facility code in Sites before importing the register."
+      );
+    }
+
+    const categoryCodeCol = strAtCol(row, AR_COL.CATEGORY_CODE);
+    const numRaw = strAtCol(row, AR_COL.NUM);
+    const assetNumParsed = parseNonNegativeIntLoose(numRaw);
+    const assetNumForPayload =
+      assetNumParsed !== undefined && assetNumParsed > 0 ? assetNumParsed : undefined;
+    const itemCategoryCodeResolved = itemCategoryCodeForImport(categoryCodeCol, categoryName);
+    if (categoryName.trim() && !itemCategoryCodeResolved) {
+      errors.push(
+        `Item Category "${categoryName.trim()}" could not be mapped to an NRCS 2-letter code (column G: "${categoryCodeCol.trim() || ""}").`
+      );
+    }
+
     const payload =
-      errors.length === 0 && cat && site && nameTrimmed
+      errors.length === 0 &&
+      cat &&
+      site &&
+      nameTrimmed &&
+      itemCategoryCodeResolved &&
+      siteBranchCode
         ? {
             assetTag,
             name: nameTrimmed.slice(0, 255),
             description: description.length > 255 ? description : undefined,
             categoryId: cat.id,
             siteId: site.id,
+            branchCode: siteBranchCode,
+            itemCategory: categoryName.trim(),
+            itemCategoryCode: itemCategoryCodeResolved,
+            assetNum: assetNumForPayload,
             itemType,
             subCategory: subCategory || undefined,
             serialNumber: serialNumber || undefined,
@@ -779,61 +927,135 @@ export async function previewNRCSAssetImport(fileBuffer: Buffer): Promise<{
   return { headerRow, rows: out };
 }
 
-export async function confirmNRCSAssetImport(
-  rows: NonNullable<NRCSImportPreviewRow["payload"]>[]
-): Promise<{
-  imported: number;
-  skipped: number;
-  errors: Array<{ row: number; error: string }>;
-}> {
+type NRCSImportPayload = NonNullable<NRCSImportPreviewRow["payload"]>;
+
+function buildImportInsertAsset(p: NRCSImportPayload, status: LegacyAssetStatus): InsertAsset {
+  const acquisitionCost = sanitizeOptionalNumericDecimalString(p.acquisitionCost);
+  const currentValue = sanitizeOptionalNumericDecimalString(p.currentValue);
+  return {
+    assetTag: p.assetTag,
+    assetCode: p.assetTag,
+    branchCode: p.branchCode,
+    itemCategory: p.itemCategory,
+    itemCategoryCode: p.itemCategoryCode,
+    assetNum: p.assetNum,
+    name: p.name,
+    description: p.description?.trim() ? p.description : undefined,
+    categoryId: p.categoryId,
+    siteId: p.siteId,
+    status,
+    registerStatus: p.registerStatus,
+    itemType: p.itemType,
+    registerItemType: p.itemType,
+    itemDescription: p.name,
+    subCategory: p.subCategory ? p.subCategory.slice(0, 255) : undefined,
+    serialNumber: p.serialNumber ? p.serialNumber.slice(0, 255) : undefined,
+    acquisitionCost,
+    currentValue,
+    currentDepreciatedValue: p.currentDepreciatedValue,
+    acquisitionMethod: p.acquisitionMethod ? p.acquisitionMethod.slice(0, 100) : undefined,
+    projectRef: p.projectRef ? p.projectRef.slice(0, 255) : undefined,
+    acquisitionDate: p.acquisitionDate,
+    acquisitionCondition: p.acquisitionCondition,
+    assignedToName: p.assignedToName?.trim() || undefined,
+    department: p.department ? p.department.slice(0, 255) : undefined,
+    location: p.location ? p.location.slice(0, 255) : undefined,
+    physicalCondition: p.physicalCondition,
+    lastCheckedAt: p.lastCheckedAt,
+    notes: p.notes?.trim() ? p.notes : undefined,
+  };
+}
+
+function buildImportUpdatePatch(p: NRCSImportPayload, status: LegacyAssetStatus): Partial<InsertAsset> {
+  const acquisitionCost = sanitizeOptionalNumericDecimalString(p.acquisitionCost);
+  const currentValue = sanitizeOptionalNumericDecimalString(p.currentValue);
+  return {
+    name: p.name,
+    description: p.description?.trim() ? p.description : undefined,
+    categoryId: p.categoryId,
+    siteId: p.siteId,
+    status,
+    registerStatus: p.registerStatus,
+    itemType: p.itemType,
+    registerItemType: p.itemType,
+    itemDescription: p.name,
+    subCategory: p.subCategory ? p.subCategory.slice(0, 255) : undefined,
+    serialNumber: p.serialNumber ? p.serialNumber.slice(0, 255) : undefined,
+    acquisitionCost,
+    currentValue,
+    currentDepreciatedValue: p.currentDepreciatedValue,
+    acquisitionMethod: p.acquisitionMethod ? p.acquisitionMethod.slice(0, 100) : undefined,
+    projectRef: p.projectRef ? p.projectRef.slice(0, 255) : undefined,
+    acquisitionDate: p.acquisitionDate,
+    acquisitionCondition: p.acquisitionCondition,
+    assignedToName: p.assignedToName?.trim() || undefined,
+    department: p.department ? p.department.slice(0, 255) : undefined,
+    location: p.location ? p.location.slice(0, 255) : undefined,
+    physicalCondition: p.physicalCondition,
+    lastCheckedAt: p.lastCheckedAt,
+    notes: p.notes?.trim() ? p.notes : undefined,
+    itemCategory: p.itemCategory,
+  };
+}
+
+export async function confirmNRCSAssetImport(rows: NRCSImportPayload[]): Promise<NRCSImportConfirmResult> {
+  const { duplicateIndices } = computeIntraBatchDuplicateRowIndexes(rows);
+
   let imported = 0;
-  let skipped = 0;
+  let updated = 0;
+  let skippedIntraBatchDuplicate = 0;
   const errors: Array<{ row: number; error: string }> = [];
 
   for (let i = 0; i < rows.length; i++) {
+    if (duplicateIndices.has(i)) {
+      skippedIntraBatchDuplicate++;
+      continue;
+    }
+
     const p = rows[i]!;
+    const status = legacyStatusFromRegister(p.registerStatus);
+    const insert = buildImportInsertAsset(p, status);
+    const updatePatch = buildImportUpdatePatch(p, status);
+
     try {
-      const existing = await db.getAssetByTag(p.assetTag);
-      if (existing) {
-        skipped++;
-        errors.push({ row: i + 1, error: `Duplicate asset code ${p.assetTag}` });
+      const existingTag = await db.getAssetByTag(p.assetTag);
+      if (existingTag) {
+        const updatedRow = await db.updateAsset(existingTag.id, updatePatch);
+        if (!updatedRow) {
+          errors.push({
+            row: i + 1,
+            error:
+              "Import failed: database unavailable. Please contact your administrator if this persists.",
+          });
+          continue;
+        }
+        updated++;
         continue;
       }
-      const status = legacyStatusFromRegister(p.registerStatus);
-      const acquisitionCost = sanitizeOptionalNumericDecimalString(p.acquisitionCost);
-      const currentValue = sanitizeOptionalNumericDecimalString(p.currentValue);
 
-      const insert: InsertAsset = {
-        assetTag: p.assetTag,
-        name: p.name,
-        description: p.description?.trim() ? p.description : undefined,
-        categoryId: p.categoryId,
-        siteId: p.siteId,
-        status,
-        registerStatus: p.registerStatus,
-        itemType: p.itemType,
-        registerItemType: p.itemType,
-        itemDescription: p.name,
-        subCategory: p.subCategory ? p.subCategory.slice(0, 255) : undefined,
-        serialNumber: p.serialNumber ? p.serialNumber.slice(0, 255) : undefined,
-        acquisitionCost,
-        currentValue,
-        currentDepreciatedValue: p.currentDepreciatedValue,
-        acquisitionMethod: p.acquisitionMethod ? p.acquisitionMethod.slice(0, 100) : undefined,
-        projectRef: p.projectRef ? p.projectRef.slice(0, 255) : undefined,
-        acquisitionDate: p.acquisitionDate,
-        acquisitionCondition: p.acquisitionCondition,
-        assignedToName: p.assignedToName?.trim() || undefined,
-        department: p.department ? p.department.slice(0, 255) : undefined,
-        location: p.location ? p.location.slice(0, 255) : undefined,
-        physicalCondition: p.physicalCondition,
-        lastCheckedAt: p.lastCheckedAt,
-        notes: p.notes?.trim() ? p.notes : undefined,
-      };
+      if (p.branchCode && p.itemCategoryCode && p.assetNum != null && p.assetNum > 0) {
+        const existingBcn = await db.getAssetByBranchCategoryNum(
+          p.branchCode,
+          p.itemCategoryCode,
+          p.assetNum
+        );
+        if (existingBcn) {
+          const updatedRow = await db.updateAsset(existingBcn.id, updatePatch);
+          if (!updatedRow) {
+            errors.push({
+              row: i + 1,
+              error:
+                "Import failed: database unavailable. Please contact your administrator if this persists.",
+            });
+            continue;
+          }
+          updated++;
+          continue;
+        }
+      }
 
       const created = await db.createAsset(insert);
       if (!created) {
-        skipped++;
         errors.push({
           row: i + 1,
           error:
@@ -843,8 +1065,35 @@ export async function confirmNRCSAssetImport(
       }
       imported++;
     } catch (e: unknown) {
-      console.error("[confirmNRCSAssetImport] row insert failed", { row: i + 1, assetTag: p.assetTag, err: e });
-      skipped++;
+      if (getPostgresErrorCode(e) === "23505") {
+        try {
+          const exTag = await db.getAssetByTag(p.assetTag);
+          if (exTag) {
+            const u = await db.updateAsset(exTag.id, updatePatch);
+            if (u) {
+              updated++;
+              continue;
+            }
+          }
+          if (p.branchCode && p.itemCategoryCode && p.assetNum != null && p.assetNum > 0) {
+            const exBcn = await db.getAssetByBranchCategoryNum(
+              p.branchCode,
+              p.itemCategoryCode,
+              p.assetNum
+            );
+            if (exBcn) {
+              const u = await db.updateAsset(exBcn.id, updatePatch);
+              if (u) {
+                updated++;
+                continue;
+              }
+            }
+          }
+        } catch (e2) {
+          console.error("[confirmNRCSAssetImport] upsert-after-23505 failed", e2);
+        }
+      }
+      console.error("[confirmNRCSAssetImport] row failed", { row: i + 1, assetTag: p.assetTag, err: e });
       errors.push({
         row: i + 1,
         error: publicMessageForImportDatabaseError(e),
@@ -852,5 +1101,5 @@ export async function confirmNRCSAssetImport(
     }
   }
 
-  return { imported, skipped, errors };
+  return { imported, updated, skippedIntraBatchDuplicate, errors };
 }
