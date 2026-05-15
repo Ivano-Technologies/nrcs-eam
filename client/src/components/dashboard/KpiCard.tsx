@@ -1,7 +1,8 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { TrendingDown, TrendingUp, type LucideIcon } from "lucide-react";
+import { ChevronRight, TrendingDown, TrendingUp, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
+import { Link } from "wouter";
 
 type KpiTone = "red" | "blue" | "purple" | "orange" | "green";
 
@@ -24,10 +25,9 @@ type Props = {
   tone: KpiTone;
   delta?: string;
   deltaDirection?: DeltaDirection;
-  /** Whether an increase ("up") or decrease ("down") in the metric is desirable. */
   goodWhen?: GoodWhen;
-  /** Stable hook for E2E (dashboard KPI values). */
   valueTestId?: string;
+  href?: string;
 };
 
 function DeltaPill({
@@ -53,7 +53,7 @@ function DeltaPill({
   );
 }
 
-export function KpiCard({
+function KpiCardInner({
   label,
   value,
   sub,
@@ -63,36 +63,34 @@ export function KpiCard({
   deltaDirection = "flat",
   goodWhen = "up",
   valueTestId,
-}: Props) {
+  interactive,
+}: Props & { interactive: boolean }) {
   const showPill = Boolean(delta) && deltaDirection !== "flat";
 
   return (
     <Card
       className={cn(
-        "dashboard-card flex h-full min-h-[168px] flex-col border-l-[3px] border-l-[var(--color-accent-border)] transition-[transform,box-shadow] duration-150 ease-in-out hover:-translate-y-0.5 hover:shadow-[0_6px_24px_rgba(0,0,0,0.12)]"
+        "dashboard-card relative flex h-full min-h-[168px] flex-col border-l-[3px] border-l-[var(--color-accent-border)] transition-[transform,box-shadow,border-color] duration-150 ease-in-out",
+        interactive &&
+          "cursor-pointer hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-[0_6px_24px_rgba(0,0,0,0.12)] focus-within:ring-2 focus-within:ring-primary/30"
       )}
     >
       <CardContent className="flex flex-1 flex-col px-5 pb-4 pt-5">
         <header className="flex items-start justify-between gap-2">
           <span className="text-sm font-medium leading-snug text-[#1a2332] dark:text-[hsl(0_0%_95%)]">{label}</span>
-          <div
-            className={cn(
-              "kpi-icon-badge shrink-0 rounded-xl p-2.5",
-              iconToneClassMap[tone]
-            )}
-          >
+          <div className={cn("kpi-icon-badge shrink-0 rounded-xl p-2.5", iconToneClassMap[tone])}>
             <Icon className="h-5 w-5" />
           </div>
         </header>
 
-        <div
+        <div 
           className="mt-3 min-w-0 whitespace-nowrap text-[2rem] font-bold leading-snug tracking-tight tabular-nums text-[#1a2332] dark:text-[hsl(0_0%_95%)]"
           data-testid={valueTestId}
         >
           {value}
         </div>
 
-        <footer className="mt-auto flex flex-col items-start gap-2 pt-4">
+        <footer className="relative mt-auto flex flex-col items-start gap-2 pt-4 pr-6">
           {sub ? (
             <span className="w-full min-w-0 whitespace-normal break-words text-sm leading-relaxed text-[#334155] dark:text-[hsl(0_0%_95%)]">
               {sub}
@@ -103,8 +101,27 @@ export function KpiCard({
             </span>
           )}
           {showPill ? <DeltaPill delta={delta!} deltaDirection={deltaDirection} goodWhen={goodWhen} /> : null}
+          {interactive ? (
+            <ChevronRight
+              className="pointer-events-none absolute bottom-0 right-0 h-4 w-4 text-muted-foreground/80"
+              aria-hidden
+            />
+          ) : null}
         </footer>
       </CardContent>
     </Card>
+  );
+}
+
+export function KpiCard(props: Props) {
+  const { href, label, ...rest } = props;
+  if (!href) {
+    return <KpiCardInner {...props} interactive={false} />;
+  }
+
+  return (
+    <Link href={href} className="block h-full min-h-[168px] rounded-xl outline-none" aria-label={`View ${label}`}>
+      <KpiCardInner label={label} {...rest} interactive />
+    </Link>
   );
 }

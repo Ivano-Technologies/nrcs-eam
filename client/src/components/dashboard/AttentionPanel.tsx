@@ -1,5 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
+import { cn } from "@/lib/utils";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -15,7 +16,7 @@ import {
   Wrench,
   type LucideIcon,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { useLocation } from "wouter";
 import type { UserRole } from "./types";
 
 const ICON_MAP: Record<string, LucideIcon> = {
@@ -46,6 +47,7 @@ type Props = {
 };
 
 export function AttentionPanel({ role }: Props) {
+  const [, setLocation] = useLocation();
   const { data } = trpc.dashboard.attentionItems.useQuery({ role });
 
   return (
@@ -57,26 +59,38 @@ export function AttentionPanel({ role }: Props) {
       <CardContent className="space-y-1">
         {(data ?? []).map((item, idx) => {
           const Icon = ICON_MAP[item.icon] ?? AlertTriangle;
+          const clickable = Boolean(item.href);
+          const RowTag = clickable ? ("button" as const) : ("div" as const);
           return (
-            <button
+            <RowTag
               key={`${item.label}-${idx}`}
-              type="button"
+              type={clickable ? "button" : undefined}
               className={cn(
-                "w-full rounded-lg px-2 py-2 text-left transition-colors hover:bg-gray-50 dark:hover:bg-white/5",
+                "w-full rounded-lg px-2 py-2 text-left transition-colors",
+                clickable && "cursor-pointer hover:bg-gray-50 hover:ring-1 hover:ring-primary/20 dark:hover:bg-white/5",
                 idx !== (data?.length ?? 0) - 1 ? "border-b border-border/60" : ""
               )}
+              onClick={clickable ? () => setLocation(item.href!) : undefined}
+              disabled={!clickable}
             >
               <div className="flex items-center gap-3">
-                <span className={cn("inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg", TONE_MAP[item.tone] ?? TONE_MAP.blue)}>
+                <span
+                  className={cn(
+                    "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
+                    TONE_MAP[item.tone] ?? TONE_MAP.blue
+                  )}
+                >
                   <Icon className="h-4 w-4" />
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-[#1a2332] dark:text-[hsl(0_0%_95%)]">{item.label}</p>
                   <p className="text-xs text-[#334155] dark:text-[hsl(0_0%_95%)]">{item.meta}</p>
                 </div>
-                <ChevronRight className="h-4 w-4 text-[#334155] dark:text-[hsl(0_0%_95%)]" />
+                {clickable ? (
+                  <ChevronRight className="h-4 w-4 shrink-0 text-[#334155] dark:text-[hsl(0_0%_95%)]" aria-hidden />
+                ) : null}
               </div>
-            </button>
+            </RowTag>
           );
         })}
       </CardContent>

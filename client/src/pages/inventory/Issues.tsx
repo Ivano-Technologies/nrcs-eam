@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,16 +6,29 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
 import { Badge } from "@/components/ui/badge";
 import { ModuleFiltersCard, ModuleFilterSearch } from "@/components/ModuleFiltersCard";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 
 export default function Issues({ embedInShell = false }: { embedInShell?: boolean } = {}) {
   const [, setLocation] = useLocation();
+  const urlSearch = useSearch();
   const [status, setStatus] = useState<"all" | "draft" | "dispatched" | "received" | "claim_raised">("all");
   const [warehouseId, setWarehouseId] = useState("all");
   const [destinationType, setDestinationType] = useState<"all" | "beneficiary" | "branch_store" | "other">("all");
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+
+  useEffect(() => {
+    const qs = new URLSearchParams(urlSearch);
+    const st = qs.get("status");
+    if (st === "all" || st === "draft" || st === "dispatched" || st === "received" || st === "claim_raised") {
+      setStatus(st);
+    }
+    const from = qs.get("dateFrom");
+    const to = qs.get("dateTo");
+    if (from) setDateFrom(from);
+    if (to) setDateTo(to);
+  }, [urlSearch]);
 
   const { data: warehouses } = trpc.sites.list.useQuery();
   const waybills = trpc.inventoryV2.waybills.list.useQuery({

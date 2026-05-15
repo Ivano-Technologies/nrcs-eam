@@ -2,27 +2,35 @@ import { appPath } from "@/lib/routes";
 import type { LucideIcon } from "lucide-react";
 import {
   LayoutDashboard,
-  Package,
-  Map,
+  Landmark,
+  MapPin,
   Scan,
   Wrench,
-  FileText,
   Boxes,
-  Warehouse,
+  Package,
+  PackageCheck,
+  Truck,
+  LayoutList,
+  ClipboardList,
+  ScanLine,
+  ArrowLeftRight,
+  FileUp,
+  Building2,
+  BarChart3,
+  BadgeDollarSign,
+  FileBarChart,
+  Receipt,
+  BookOpen,
   Shield,
   ShieldCheck,
-  FileBarChart,
-  MapPin,
   Users,
   History,
-  Settings,
-  ClipboardList,
-  PackagePlus,
-  Truck,
-  ScanSearch,
-  Scale,
+  SlidersHorizontal,
+  ListChecks,
+  AlertTriangle,
+  UserPlus,
+  Store,
 } from "lucide-react";
-import { NairaIcon } from "@/components/icons/NairaIcon";
 
 export type AppNavItem = {
   label: string;
@@ -56,50 +64,50 @@ export const SIDEBAR_GROUPS: AppNavGroup[] = [
     label: "Assets",
     icon: Boxes,
     items: [
-      { label: "Asset Register", path: appPath("/assets"), icon: Package },
-      { label: "Asset Map", path: appPath("/asset-map"), icon: Map },
+      { label: "Asset Register", path: appPath("/assets"), icon: Landmark },
+      { label: "Asset Map", path: appPath("/asset-map"), icon: MapPin },
       { label: "Asset Scanner", path: appPath("/scanner"), icon: Scan },
     ],
   },
   {
     id: "facilities",
     label: "Facilities",
-    icon: MapPin,
+    icon: Building2,
     items: [
       {
         label: "All Facilities",
         path: appPath("/facilities/all"),
-        icon: MapPin,
+        icon: Building2,
         navCountBadge: "facilities.all",
       },
       {
         label: "National HQ",
         path: appPath("/facilities/national-hq"),
-        icon: MapPin,
+        icon: Building2,
         navCountBadge: "facilities.nationalHq",
       },
       {
         label: "Branches",
         path: appPath("/facilities/branches"),
-        icon: MapPin,
+        icon: Building2,
         navCountBadge: "facilities.branches",
       },
       {
         label: "Divisions",
         path: appPath("/facilities/divisions"),
-        icon: MapPin,
+        icon: Building2,
         navCountBadge: "facilities.divisions",
       },
       {
         label: "Clinics",
         path: appPath("/facilities/clinics"),
-        icon: MapPin,
+        icon: Building2,
         navCountBadge: "facilities.clinics",
       },
       {
         label: "Warehouses",
         path: appPath("/facilities/warehouses"),
-        icon: MapPin,
+        icon: Building2,
         navCountBadge: "facilities.warehouses",
       },
     ],
@@ -107,18 +115,18 @@ export const SIDEBAR_GROUPS: AppNavGroup[] = [
   {
     id: "inventory",
     label: "Inventory",
-    icon: Warehouse,
+    icon: Package,
     items: [
       {
         label: "Stock overview",
         path: appPath("/inventory/stock-overview"),
-        icon: Warehouse,
+        icon: Package,
         navCountBadge: "inventory.stockOverview",
       },
       {
         label: "Inventory tracking",
         path: appPath("/inventory/tracking"),
-        icon: ScanSearch,
+        icon: LayoutList,
         navCountBadge: "inventory.tracking",
       },
       {
@@ -130,7 +138,7 @@ export const SIDEBAR_GROUPS: AppNavGroup[] = [
       {
         label: "Receiving",
         path: appPath("/inventory/receipts"),
-        icon: PackagePlus,
+        icon: PackageCheck,
         navCountBadge: "inventory.receipts",
       },
       {
@@ -142,7 +150,7 @@ export const SIDEBAR_GROUPS: AppNavGroup[] = [
       {
         label: "Import",
         path: appPath("/inventory/import"),
-        icon: FileText,
+        icon: FileUp,
       },
     ],
   },
@@ -152,25 +160,25 @@ export const SIDEBAR_GROUPS: AppNavGroup[] = [
     icon: Wrench,
     items: [
       { label: "Maintenance", path: appPath("/maintenance"), icon: Wrench },
-      { label: "Work Orders", path: appPath("/work-orders"), icon: FileText },
-      { label: "Work Order Templates", path: appPath("/work-order-templates"), icon: FileText },
-      { label: "Warranty Alerts", path: appPath("/warranty-alerts"), icon: FileText },
+      { label: "Work Orders", path: appPath("/work-orders"), icon: ListChecks },
+      { label: "Work Order Templates", path: appPath("/work-order-templates"), icon: ClipboardList },
+      { label: "Warranty Alerts", path: appPath("/warranty-alerts"), icon: AlertTriangle },
     ],
   },
   {
     id: "finance",
     label: "Finance",
-    icon: NairaIcon,
+    icon: BarChart3,
     items: [
-      { label: "Cost Analytics", path: appPath("/cost-analytics"), icon: NairaIcon },
+      { label: "Cost Analytics", path: appPath("/cost-analytics"), icon: BarChart3 },
       {
         label: "Asset Valuation",
         path: appPath("/finance/asset-valuation"),
-        icon: Scale,
+        icon: BadgeDollarSign,
         managerOrAdminOnly: true,
       },
-      { label: "Financial Transactions", path: appPath("/financial"), icon: NairaIcon },
-      { label: "QuickBooks", path: appPath("/quickbooks"), icon: NairaIcon },
+      { label: "Financial Transactions", path: appPath("/financial"), icon: Receipt },
+      { label: "QuickBooks", path: appPath("/quickbooks"), icon: BookOpen },
     ],
   },
   {
@@ -190,11 +198,11 @@ export const SIDEBAR_GROUPS: AppNavGroup[] = [
       { label: "Reports", path: appPath("/reports"), icon: FileBarChart },
       { label: "WMS Report Suite", path: appPath("/reports/wms"), icon: FileBarChart },
       { label: "Monthly Warehouse Report", path: appPath("/reports/wms/monthly-warehouse-report"), icon: FileBarChart },
-      { label: "WMS Stock Movements", path: appPath("/reports/wms/stock-movements"), icon: FileBarChart },
-      { label: "WMS CTN Aging", path: appPath("/reports/wms/ctn-aging"), icon: FileBarChart },
+      { label: "WMS Stock Movements", path: appPath("/reports/wms/stock-movements"), icon: ArrowLeftRight },
+      { label: "WMS CTN Aging", path: appPath("/reports/wms/ctn-aging"), icon: ScanLine },
       { label: "WMS Donor Contribution", path: appPath("/reports/wms/donor-contribution"), icon: FileBarChart },
       { label: "WMS Loss & Damage", path: appPath("/reports/wms/loss-damage"), icon: FileBarChart },
-      { label: "WMS Kit Assembly", path: appPath("/reports/wms/kit-assembly"), icon: FileBarChart },
+      { label: "WMS Kit Assembly", path: appPath("/reports/wms/kit-assembly"), icon: Boxes },
       { label: "Report Scheduling", path: appPath("/report-scheduling"), icon: FileBarChart },
     ],
   },
@@ -212,8 +220,8 @@ export const SIDEBAR_GROUPS_ADMIN: AppNavGroup[] = [
     adminOnly: true,
     items: [
       { label: "Users", path: appPath("/settings/users"), icon: Users },
-      { label: "Pending Users", path: appPath("/settings/pending-users"), icon: Users },
-      { label: "Vendors", path: appPath("/settings/vendors"), icon: Users },
+      { label: "Pending Users", path: appPath("/settings/pending-users"), icon: UserPlus },
+      { label: "Vendors", path: appPath("/settings/vendors"), icon: Store },
       { label: "Activity Log", path: appPath("/administration/activity-log"), icon: History },
     ],
   },
@@ -221,7 +229,7 @@ export const SIDEBAR_GROUPS_ADMIN: AppNavGroup[] = [
 
 /** Standalone bottom items, exact order: Settings, then Activity Log (not in collapsible groups). */
 export const SIDEBAR_BOTTOM: AppNavItem[] = [
-  { label: "Settings", path: appPath("/dashboard-settings"), icon: Settings },
+  { label: "Settings", path: appPath("/dashboard-settings"), icon: SlidersHorizontal },
 ];
 
 const GROUP_PREFIXES: { groupId: string; pathPrefix: string }[] = [

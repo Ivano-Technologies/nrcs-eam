@@ -42,6 +42,7 @@ import {
 } from "./assetRegister";
 import { nanoid } from "nanoid";
 import { generateSupabaseCompliantTempPassword } from "./tempPassword";
+import { DASHBOARD_NAV } from "../shared/dashboardNav";
 import { FACILITY_TYPE_VALUES, type FacilityType } from "../shared/facilities";
 import type { InsertUser } from "../drizzle/schema";
 import { validateFacilityHierarchy } from "./facilityHierarchy";
@@ -2177,7 +2178,14 @@ export const appRouter = router({
     attentionItems: protectedProcedure
       .input(z.object({ role: z.enum(["Admin", "Manager", "Staff", "Field"]) }))
       .query(async ({ input, ctx }) => {
-        const allClear = { icon: "CheckCircle2", tone: "green", label: "No action items right now", meta: "All clear" };
+        const allClear = {
+          icon: "CheckCircle2",
+          tone: "green",
+          label: "No action items right now",
+          meta: "All clear",
+          href: null as string | null,
+        };
+        type AttentionItem = { icon: string; tone: string; label: string; meta: string; href: string | null };
         const scope = dashboardDataScope(ctx);
         if (scope.mode === "empty") return [allClear];
         const siteId = scope.mode === "site" ? scope.siteId : undefined;
@@ -2280,13 +2288,14 @@ export const appRouter = router({
             }),
           ]);
 
-          const items: Array<{ icon: string; tone: string; label: string; meta: string }> = [];
+          const items: AttentionItem[] = [];
           if ((pendingUserCount ?? 0) > 0) {
             items.push({
               icon: "Users",
               tone: "amber",
               label: `${pendingUserCount} user ${pendingUserCount === 1 ? "registration" : "registrations"} pending`,
               meta: "Access",
+              href: DASHBOARD_NAV.pendingUsers,
             });
           }
           if ((failedLoginsCount ?? 0) > 0) {
@@ -2295,6 +2304,7 @@ export const appRouter = router({
               tone: "red",
               label: `${failedLoginsCount} failed login attempt${failedLoginsCount === 1 ? "" : "s"} in last 24h`,
               meta: "Security",
+              href: DASHBOARD_NAV.auditTrail,
             });
           }
           if (reqSummary) {
@@ -2306,6 +2316,7 @@ export const appRouter = router({
                   ? `${reqSummary.total} requisition${reqSummary.total === 1 ? "" : "s"} awaiting approval`
                   : "No pending requisitions",
               meta: reqSummary.urgent > 0 ? `${reqSummary.urgent} urgent` : "Up to date",
+              href: reqSummary.total > 0 ? DASHBOARD_NAV.requisitionsSubmitted : DASHBOARD_NAV.requisitionsAll,
             });
           }
           if ((inactiveFacilities ?? 0) > 0) {
@@ -2314,6 +2325,7 @@ export const appRouter = router({
               tone: "amber",
               label: `${inactiveFacilities} facilit${inactiveFacilities === 1 ? "y" : "ies"} marked offline`,
               meta: "Facilities",
+              href: DASHBOARD_NAV.facilitiesInactive,
             });
           }
           if ((grnDrafts ?? 0) > 0) {
@@ -2322,6 +2334,7 @@ export const appRouter = router({
               tone: "blue",
               label: `${grnDrafts} GRN draft${grnDrafts === 1 ? "" : "s"} not finalised`,
               meta: "Inventory",
+              href: DASHBOARD_NAV.receiptsDraft,
             });
           }
           return (items.length > 0 ? items : [allClear]).slice(0, 4);
@@ -2354,7 +2367,7 @@ export const appRouter = router({
             }),
           ]);
 
-          const items: Array<{ icon: string; tone: string; label: string; meta: string }> = [];
+          const items: AttentionItem[] = [];
           if (reqSummary) {
             items.push({
               icon: "ClipboardList",
@@ -2364,6 +2377,7 @@ export const appRouter = router({
                   ? `${reqSummary.total} requisition${reqSummary.total === 1 ? "" : "s"} awaiting approval`
                   : "No pending requisitions",
               meta: reqSummary.urgent > 0 ? `${reqSummary.urgent} urgent` : "Up to date",
+              href: reqSummary.total > 0 ? DASHBOARD_NAV.requisitionsSubmitted : DASHBOARD_NAV.requisitionsAll,
             });
           }
           if ((lowStockCount ?? 0) > 0) {
@@ -2372,6 +2386,7 @@ export const appRouter = router({
               tone: "amber",
               label: `${lowStockCount} item${lowStockCount === 1 ? "" : "s"} below reorder level`,
               meta: "Low stock",
+              href: DASHBOARD_NAV.inventoryStockLow,
             });
           }
           if ((overdueMaintenanceCount ?? 0) > 0) {
@@ -2380,6 +2395,7 @@ export const appRouter = router({
               tone: "orange",
               label: `${overdueMaintenanceCount} maintenance task${overdueMaintenanceCount === 1 ? "" : "s"} overdue`,
               meta: "Maintenance",
+              href: DASHBOARD_NAV.maintenance,
             });
           }
           if ((waybillDrafts ?? 0) > 0) {
@@ -2388,6 +2404,7 @@ export const appRouter = router({
               tone: "blue",
               label: `${waybillDrafts} waybill${waybillDrafts === 1 ? "" : "s"} not yet dispatched`,
               meta: "Outgoing",
+              href: DASHBOARD_NAV.waybillsDraft,
             });
           }
           if ((grnDrafts ?? 0) > 0) {
@@ -2396,6 +2413,7 @@ export const appRouter = router({
               tone: "blue",
               label: `${grnDrafts} GRN draft${grnDrafts === 1 ? "" : "s"} not finalised`,
               meta: "Inventory",
+              href: DASHBOARD_NAV.receiptsDraft,
             });
           }
           return (items.length > 0 ? items : [allClear]).slice(0, 4);
@@ -2434,13 +2452,14 @@ export const appRouter = router({
             }),
           ]);
 
-          const items: Array<{ icon: string; tone: string; label: string; meta: string }> = [];
+          const items: AttentionItem[] = [];
           if ((grnDrafts ?? 0) > 0) {
             items.push({
               icon: "FileText",
               tone: "red",
               label: `${grnDrafts} GRN draft${grnDrafts === 1 ? "" : "s"} awaiting finalisation`,
               meta: "Receiving",
+              href: DASHBOARD_NAV.receiptsDraft,
             });
           }
           if ((waybillDrafts ?? 0) > 0) {
@@ -2449,6 +2468,7 @@ export const appRouter = router({
               tone: "amber",
               label: `${waybillDrafts} waybill${waybillDrafts === 1 ? "" : "s"} ready to dispatch`,
               meta: "Outgoing",
+              href: DASHBOARD_NAV.waybillsDraft,
             });
           }
           if ((stockCountsInProgress ?? 0) > 0) {
@@ -2457,6 +2477,7 @@ export const appRouter = router({
               tone: "blue",
               label: `${stockCountsInProgress} stock count${stockCountsInProgress === 1 ? "" : "s"} in progress`,
               meta: "Stock takes",
+              href: DASHBOARD_NAV.stockCountsInProgress,
             });
           }
           if ((pendingReqCount ?? 0) > 0) {
@@ -2465,6 +2486,7 @@ export const appRouter = router({
               tone: "blue",
               label: `${pendingReqCount} requisition${pendingReqCount === 1 ? "" : "s"} submitted, awaiting approval`,
               meta: "Requisitions",
+              href: DASHBOARD_NAV.requisitionsSubmitted,
             });
           }
           return (items.length > 0 ? items : [allClear]).slice(0, 4);
@@ -2490,13 +2512,14 @@ export const appRouter = router({
           lowStockFacilities(),
         ]);
 
-        const items: Array<{ icon: string; tone: string; label: string; meta: string }> = [];
+        const items: AttentionItem[] = [];
         if ((activeWaybills ?? 0) > 0) {
           items.push({
             icon: "Truck",
             tone: "red",
             label: `${activeWaybills} active distribution${activeWaybills === 1 ? "" : "s"} this week`,
             meta: "In progress",
+            href: DASHBOARD_NAV.waybillsDispatched,
           });
         }
         if ((pendingReqCount ?? 0) > 0) {
@@ -2505,6 +2528,7 @@ export const appRouter = router({
             tone: "amber",
             label: `${pendingReqCount} requisition${pendingReqCount === 1 ? "" : "s"} pending`,
             meta: "Submitted",
+            href: DASHBOARD_NAV.requisitionsSubmitted,
           });
         }
         if ((lowStockFacilityCount ?? 0) > 0) {
@@ -2513,9 +2537,16 @@ export const appRouter = router({
             tone: "amber",
             label: `${lowStockFacilityCount} facilit${lowStockFacilityCount === 1 ? "y" : "ies"} have low stock`,
             meta: "Low stock",
+            href: DASHBOARD_NAV.inventoryStockLow,
           });
         }
-        items.push({ icon: "CheckCircle2", tone: "green", label: "System operational", meta: "NRCS EAM" });
+        items.push({
+          icon: "CheckCircle2",
+          tone: "green",
+          label: "System operational",
+          meta: "NRCS EAM",
+          href: null,
+        });
         return items.slice(0, 4);
       }),
   }),

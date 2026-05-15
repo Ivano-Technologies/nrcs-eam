@@ -9,8 +9,10 @@ import { StockMovementChart } from "@/components/dashboard/StockMovementChart";
 import { useDashboardRolePreview } from "@/components/dashboard/rolePreviewContext";
 import type { DashboardPeriod, UserRole } from "@/components/dashboard/types";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { waybillsPeriodHref } from "@/lib/dashboardPeriodRange";
 import { formatNaira } from "@/lib/format";
 import { trpc } from "@/lib/trpc";
+import { DASHBOARD_NAV } from "@shared/dashboardNav";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertTriangle, Banknote, MapPin, ShieldCheck, Truck } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -112,6 +114,7 @@ export default function Home() {
       delta: metrics?.lowStockItems.delta,
       deltaDirection: normalizeDirection(metrics?.lowStockItems.direction),
       goodWhen: (metrics?.lowStockItems.goodWhen ?? "down") as "up" | "down",
+      href: DASHBOARD_NAV.inventoryStockLow,
     },
     {
       key: "facilities" as const,
@@ -123,6 +126,7 @@ export default function Home() {
       delta: undefined,
       deltaDirection: "flat" as const,
       goodWhen: (metrics?.activeFacilities.goodWhen ?? "up") as "up" | "down",
+      href: DASHBOARD_NAV.facilitiesActive,
     },
     {
       key: "stock" as const,
@@ -134,6 +138,7 @@ export default function Home() {
       delta: readinessDeltaFormatted,
       deltaDirection: normalizeDirection(metrics?.stockReadiness?.direction),
       goodWhen: (metrics?.stockReadiness?.goodWhen ?? "up") as "up" | "down",
+      href: DASHBOARD_NAV.inventoryStockOverview,
     },
     {
       key: "approvals" as const,
@@ -148,6 +153,7 @@ export default function Home() {
       delta: distributionDelta,
       deltaDirection: normalizeDirection(metrics?.distributionVelocity?.direction),
       goodWhen: (metrics?.distributionVelocity?.goodWhen ?? "up") as "up" | "down",
+      href: waybillsPeriodHref(period),
     },
     {
       key: "totalAssetValue" as const,
@@ -159,6 +165,7 @@ export default function Home() {
       delta: undefined,
       deltaDirection: "flat" as const,
       goodWhen: "up" as const,
+      href: DASHBOARD_NAV.assetValuation,
     },
   ];
 
@@ -193,6 +200,7 @@ export default function Home() {
               deltaDirection={kpi.deltaDirection}
               goodWhen={kpi.goodWhen}
               valueTestId={`dashboard-kpi-value-${kpi.key}`}
+              href={kpi.href}
             />
           ))}
         </div>

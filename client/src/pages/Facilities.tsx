@@ -111,7 +111,7 @@ export type FacilitiesPageProps = {
 };
 
 export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps) {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const { canEditFacilities } = usePermissions();
   const lockedFacilityType = segmentToListFilter(segment);
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
@@ -201,6 +201,14 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
     });
     setIsCreateOpen(true);
   }, [autoOpenCreate]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const st = new URLSearchParams(window.location.search).get("status");
+    if (st === "active" || st === "inactive" || st === "all") {
+      setStatusFilter(st);
+    }
+  }, [location]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
