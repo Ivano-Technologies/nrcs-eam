@@ -8,8 +8,11 @@ import AssetScanner from "@/pages/AssetScanner";
 import Assets from "@/pages/Assets";
 import AuditTrail from "@/pages/AuditTrail";
 import Compliance from "@/pages/Compliance";
-import CostAnalytics from "@/pages/CostAnalytics";
 import AssetValuation from "@/pages/AssetValuation";
+import CostManagement, { CostAnalyticsRedirect } from "@/pages/finance/CostManagement";
+import DepreciationReporting from "@/pages/finance/DepreciationReporting";
+import InsuranceRegister from "@/pages/compliance/InsuranceRegister";
+import AnnualFinanceReport from "@/pages/reports/AnnualFinanceReport";
 import DashboardSettings from "@/pages/DashboardSettings";
 import EmailNotifications from "@/pages/EmailNotifications";
 import FacilityDetail from "@/pages/FacilityDetail";
@@ -130,7 +133,9 @@ export default function ProtectedAppSection() {
           <Route path="/app/scanner" component={AssetScanner} />
           <Route path="/app/asset-map" component={AssetMap} />
           <Route path="/app/warranty-alerts" component={WarrantyAlerts} />
-          <Route path="/app/cost-analytics" component={CostAnalytics} />
+          <Route path="/app/cost-analytics" component={CostAnalyticsRedirect} />
+          <Route path="/app/finance/cost-management" component={CostManagement} />
+          <Route path="/app/finance/depreciation" component={DepreciationReporting} />
           <Route path="/app/finance/asset-valuation" component={AssetValuation} />
           <Route path="/app/audit-trail" component={AuditTrail} />
           <Route path="/app/activity-log" component={ActivityLog} />
@@ -183,6 +188,7 @@ export default function ProtectedAppSection() {
           <Route path="/app/vendors" component={Vendors} />
           <Route path="/app/financial" component={Financial} />
           <Route path="/app/compliance" component={Compliance} />
+          <Route path="/app/compliance/insurance" component={InsuranceRegister} />
           <Route path="/app/sites/:id">
             {(params) => <Redirect to={`/app/facilities/${params.id}`} />}
           </Route>
@@ -223,6 +229,7 @@ export default function ProtectedAppSection() {
           <Route path="/app/settings/notifications" component={NotificationPreferences} />
           <Route path="/app/notification-preferences" component={NotificationPreferences} />
           <Route path="/app/reports" component={Reports} />
+          <Route path="/app/reports/annual-finance" component={AnnualFinanceReport} />
           <Route path="/app/reports/wms" component={WmsReportSuite} />
           <Route path="/app/reports/wms/monthly-warehouse-report" component={MonthlyWarehouseReport} />
           <Route path="/app/reports/wms/stock-movements" component={WmsStockMovementsReport} />
