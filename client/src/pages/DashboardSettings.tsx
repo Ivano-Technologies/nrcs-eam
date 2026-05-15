@@ -17,14 +17,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { trpc } from "@/lib/trpc";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { appPath } from "@/lib/routes";
 import { Camera, Loader2, Monitor, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearch } from "wouter";
 import { toast } from "sonner";
 
 export default function DashboardSettings() {
   const { user } = useAuth();
+  const search = useSearch();
   const utils = trpc.useUtils();
+  const mustChangePassword =
+    user?.mustChangePasswordOnLogin ||
+    new URLSearchParams(search).get("changePassword") === "required";
   const isAdmin = user?.role === "admin";
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -40,6 +47,12 @@ export default function DashboardSettings() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
+  useEffect(() => {
+    if (mustChangePassword) {
+      setPwdOpen(true);
+    }
+  }, [mustChangePassword]);
 
   const [notif, setNotif] = useState({
     newUserRequests: true,
@@ -205,12 +218,16 @@ export default function DashboardSettings() {
   };
 
   const changePasswordMutation = trpc.auth.changePassword.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
+      await utils.auth.me.invalidate();
       toast.success("Password updated");
       setPwdOpen(false);
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
+      if (typeof window !== "undefined" && window.location.search.includes("changePassword=required")) {
+        window.history.replaceState(null, "", appPath("/dashboard-settings"));
+      }
     },
     onError: (e) => toast.error(e.message),
   });
@@ -259,6 +276,15 @@ export default function DashboardSettings() {
         <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
         <p className="text-muted-foreground mt-2 break-words">Account, appearance, and preferences</p>
       </div>
+
+      {mustChangePassword && (
+        <Alert>
+          <AlertDescription>
+            You must set a new personal password before continuing. Use your current (temporary) password below,
+            then choose a new one.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <Card id="profile-settings" className="scroll-mt-24 max-w-full overflow-hidden">
         <CardHeader>
@@ -548,10 +574,16 @@ export default function DashboardSettings() {
 
       <DashboardWidgetSettings />
 
-      <Dialog open={pwdOpen} onOpenChange={setPwdOpen}>
+      <Dialog
+        open={pwdOpen}
+        onOpenChange={(open) => {
+          if (!open && mustChangePassword) return;
+          setPwdOpen(open);
+        }}
+      >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Change password</DialogTitle>
+            <DialogTitle>{mustChangePassword ? "Set your password" : "Change password"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2">
             <div className="space-y-2">
@@ -587,9 +619,11 @@ export default function DashboardSettings() {
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setPwdOpen(false)}>
-              Cancel
-            </Button>
+            {!mustChangePassword && (
+              <Button type="button" variant="outline" onClick={() => setPwdOpen(false)}>
+                Cancel
+              </Button>
+            )}
             <Button
               type="button"
               onClick={submitPassword}

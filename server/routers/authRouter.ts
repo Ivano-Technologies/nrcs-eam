@@ -180,7 +180,10 @@ export const authRouter = router({
         supabaseUserId: data.user.id,
       });
       await db.touchUserLastSignedInById(appUser.id);
-      return { success: true as const };
+      return {
+        success: true as const,
+        mustChangePasswordOnLogin: appUser.mustChangePasswordOnLogin,
+      };
     }),
 
   updateProfile: protectedProcedure
@@ -322,6 +325,7 @@ export const authRouter = router({
           message: error.message,
         });
       }
+      await db.clearMustChangePasswordOnLogin(u.id);
       return { success: true as const };
     }),
 
@@ -357,6 +361,10 @@ export const authRouter = router({
           message: error.message,
         });
       }
+      await db.updateUser(input.userId, {
+        mustChangePasswordOnLogin: true,
+        updatedAt: new Date(),
+      });
       return { success: true as const };
     }),
 });

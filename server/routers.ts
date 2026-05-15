@@ -2646,6 +2646,7 @@ export const appRouter = router({
             role: input.role,
             siteId: input.facilityId ?? null,
             status: "active",
+            mustChangePasswordOnLogin: true,
           });
         } catch (e) {
           try {

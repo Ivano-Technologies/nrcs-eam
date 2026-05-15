@@ -253,6 +253,13 @@
       "when": 1777800000000,
       "tag": "0035_site_valuations",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1777900000000,
+      "tag": "0036_users_must_change_password",
+      "breakpoints": true
     }
   ]
 }

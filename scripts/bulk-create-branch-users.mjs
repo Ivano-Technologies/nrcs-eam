@@ -6,13 +6,17 @@ import { fileURLToPath } from 'url'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 config({ path: resolve(__dirname, '../.env.local') })
 
+const defaultPassword = process.env.BULK_USER_DEFAULT_PASSWORD
+if (!defaultPassword) {
+  console.error('BULK_USER_DEFAULT_PASSWORD environment variable is required')
+  process.exit(1)
+}
+
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY,
   { auth: { autoRefreshToken: false, persistSession: false } }
 )
-
-const PASSWORD = 'NRCSEAM@2026'
 
 const USERS = [
   'abia.umuahia@redcrossnigeria.org',
@@ -57,7 +61,7 @@ const USERS = [
 for (const email of USERS) {
   const { data: authData, error: authError } = await supabase.auth.admin.createUser({
     email,
-    password: PASSWORD,
+    password: defaultPassword,
     email_confirm: true,
   })
 
@@ -72,14 +76,20 @@ for (const email of USERS) {
     console.log(`OK   (auth)  ${email}`)
   }
 
-  const { error: dbError } = await supabase
-    .from('users')
-    .upsert({
+  const openId =
+    authData?.user?.id ??
+    (await supabase.auth.admin.getUserByEmail(email).then((r) => r.data.user?.id))
+
+  const { error: dbError } = await supabase.from('users').upsert(
+    {
       email,
       role: 'staff',
       status: 'active',
-      openId: authData?.user?.id ?? (await supabase.auth.admin.getUserByEmail(email).then(r => r.data.user?.id))
-    }, { onConflict: 'email' })
+      openId,
+      must_change_password_on_login: true,
+    },
+    { onConflict: 'email' }
+  )
 
   if (dbError) {
     console.error(`FAIL (db)    ${email}: ${dbError.message}`)

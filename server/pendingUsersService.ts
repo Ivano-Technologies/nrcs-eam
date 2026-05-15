@@ -109,6 +109,7 @@ async function insertAppUserAfterSupabaseInvite(params: {
       role: params.role,
       siteId: params.siteId ?? null,
       hasCompletedOnboarding: true,
+      mustChangePasswordOnLogin: true,
     })
     .returning({ id: users.id });
 
