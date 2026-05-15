@@ -1528,14 +1528,26 @@ export const appRouter = router({
       return await db.getAssetValuationReport();
     }),
     exportExecutivePdf: managerOrAdminProcedure.mutation(async () => {
-      const report = await db.getAssetValuationReport();
-      const { buildAssetValuationExecutivePdf } = await import("./assetValuationPdf");
-      const buffer = await buildAssetValuationExecutivePdf(report);
-      return {
-        filename: `nrcs-asset-valuation-executive-${new Date().toISOString().slice(0, 10)}.pdf`,
-        mimeType: "application/pdf",
-        base64: buffer.toString("base64"),
-      };
+      try {
+        const report = await db.getAssetValuationReport();
+        const { buildAssetValuationExecutivePdf } = await import("./assetValuationPdf");
+        const buffer = await buildAssetValuationExecutivePdf(report);
+        if (!buffer.length) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "PDF generation produced empty output" });
+        }
+        return {
+          filename: "nrcs-asset-valuation-2026.pdf",
+          mimeType: "application/pdf",
+          base64: buffer.toString("base64"),
+        };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        console.error("[assetValuation.exportExecutivePdf]", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error instanceof Error ? error.message : "PDF export failed",
+        });
+      }
     }),
     exportRegisterExcel: managerOrAdminProcedure.mutation(async () => {
       const report = await db.getAssetValuationReport();

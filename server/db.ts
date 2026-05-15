@@ -2364,6 +2364,10 @@ export async function getVendorById(id: number) {
 }
 
 const movableNonLandSql = sql`coalesce(upper(trim(${assets.itemCategoryCode})), '') not in ('LA', 'LB')`;
+/** Prefer NRCS register `actual_unit_value`, fall back to legacy `acquisitionCost`. */
+const movableUnitValueSql = sql`coalesce(${assets.actualUnitValue}::numeric, ${assets.acquisitionCost}::numeric, 0)`;
+const movableHasValueSql = sql`(${assets.actualUnitValue} is not null or ${assets.acquisitionCost} is not null)`;
+const movableDepreciatedSql = sql`coalesce(${assets.depreciatedValue}::numeric, ${assets.currentDepreciatedValue}::numeric, 0)`;
 
 export type DashboardAssetValueBreakdown = {
   propertyNgn: number;
@@ -2391,12 +2395,10 @@ export async function getDashboardTotalAssetValue(
   const assetSiteFilter = scope.mode === "site" ? eq(assets.siteId, scope.siteId) : undefined;
   const [movRow] = await database
     .select({
-      movableNgn: sql<number>`coalesce(sum(${assets.actualUnitValue}::numeric), 0)`.mapWith(Number),
+      movableNgn: sql<number>`coalesce(sum(${movableUnitValueSql}), 0)`.mapWith(Number),
     })
     .from(assets)
-    .where(
-      and(isNotNull(assets.actualUnitValue), movableNonLandSql, assetSiteFilter ?? sql`true`)
-    );
+    .where(and(movableNonLandSql, movableHasValueSql, assetSiteFilter ?? sql`true`));
 
   const propertyNgn = Number(propRow?.propertyNgn ?? 0);
   const movableNgn = Number(movRow?.movableNgn ?? 0);
@@ -2441,8 +2443,10 @@ export type AssetValuationReport = {
   totalFacilityCount: number;
   propertyRegister: AssetValuationPropertyRow[];
   pendingValuation: AssetValuationPendingRow[];
-  /** Branch facilities (state offices) with no property valuation — summary narrative. */
+  /** Active branch offices with no property valuation row. */
   pendingBranchValuation: AssetValuationPendingRow[];
+  /** Count of active `branch` facilities in `sites`. */
+  activeBranchCount: number;
   movableByCategory: AssetValuationMovableCategoryRow[];
 };
 
@@ -2470,6 +2474,7 @@ export async function getAssetValuationReport(): Promise<AssetValuationReport> {
     propertyRegister: [],
     pendingValuation: [],
     pendingBranchValuation: [],
+    activeBranchCount: 0,
     movableByCategory: [],
   };
 
@@ -2486,18 +2491,23 @@ export async function getAssetValuationReport(): Promise<AssetValuationReport> {
 
   const [movSum] = await database
     .select({
-      total: sql<number>`coalesce(sum(${assets.actualUnitValue}::numeric), 0)`.mapWith(Number),
+      total: sql<number>`coalesce(sum(${movableUnitValueSql}), 0)`.mapWith(Number),
     })
     .from(assets)
-    .where(and(isNotNull(assets.actualUnitValue), movableNonLandSql));
+    .where(and(movableNonLandSql, movableHasValueSql));
 
   const [facCount] = await database
     .select({ n: sql<number>`count(*)::int`.mapWith(Number) })
     .from(sites);
 
+  const [activeBranchRow] = await database
+    .select({ n: sql<number>`count(*)::int`.mapWith(Number) })
+    .from(sites)
+    .where(and(eq(sites.facilityType, "branch"), eq(sites.isActive, true)));
+
   const valuedSiteIds = await database.selectDistinct({ siteId: siteValuations.siteId }).from(siteValuations);
   const ids = valuedSiteIds.map((r) => r.siteId).filter((id): id is number => id != null);
-  const branchFilter = eq(sites.facilityType, "branch");
+  const pendingBranchBase = and(eq(sites.facilityType, "branch"), eq(sites.isActive, true));
 
   const pending =
     ids.length === 0
@@ -2534,7 +2544,7 @@ export async function getAssetValuationReport(): Promise<AssetValuationReport> {
             facilityType: sites.facilityType,
           })
           .from(sites)
-          .where(branchFilter)
+          .where(pendingBranchBase)
           .orderBy(asc(sites.state), asc(sites.name))
       : await database
           .select({
@@ -2545,7 +2555,7 @@ export async function getAssetValuationReport(): Promise<AssetValuationReport> {
             facilityType: sites.facilityType,
           })
           .from(sites)
-          .where(and(notInArray(sites.id, ids), branchFilter))
+          .where(and(notInArray(sites.id, ids), pendingBranchBase))
           .orderBy(asc(sites.state), asc(sites.name));
 
   const propRows = await database
@@ -2570,12 +2580,12 @@ export async function getAssetValuationReport(): Promise<AssetValuationReport> {
     .select({
       categoryName: sql<string>`coalesce(${assetCategories.name}, 'Uncategorized')`,
       count: sql<number>`count(*)::int`.mapWith(Number),
-      totalAcquisition: sql<number>`coalesce(sum(${assets.actualUnitValue}::numeric), 0)`.mapWith(Number),
-      totalDep: sql<number>`coalesce(sum(coalesce(${assets.depreciatedValue}::numeric, ${assets.currentDepreciatedValue}::numeric, 0)), 0)`.mapWith(Number),
+      totalAcquisition: sql<number>`coalesce(sum(${movableUnitValueSql}), 0)`.mapWith(Number),
+      totalDep: sql<number>`coalesce(sum(${movableDepreciatedSql}), 0)`.mapWith(Number),
     })
     .from(assets)
     .innerJoin(assetCategories, eq(assets.categoryId, assetCategories.id))
-    .where(and(isNotNull(assets.actualUnitValue), movableNonLandSql))
+    .where(and(movableNonLandSql, movableHasValueSql))
     .groupBy(assetCategories.id, assetCategories.name)
     .orderBy(asc(assetCategories.name));
 
@@ -2616,6 +2626,7 @@ export async function getAssetValuationReport(): Promise<AssetValuationReport> {
       state: r.state,
       facilityType: String(r.facilityType),
     })),
+    activeBranchCount: Number(activeBranchRow?.n ?? 0),
     movableByCategory: movableRows.map((r) => ({
       categoryName: r.categoryName,
       count: Number(r.count ?? 0),

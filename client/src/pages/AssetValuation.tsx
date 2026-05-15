@@ -9,26 +9,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { downloadBase64File } from "@/lib/download";
 import { formatNaira } from "@/lib/format";
 import { trpc } from "@/lib/trpc";
 import { AlertTriangle, ArrowDown, ArrowUp, Download, FileSpreadsheet } from "lucide-react";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 
 type SortKey = "state" | "code" | "name" | "land" | "market" | "certified" | "date";
 type SortDir = "asc" | "desc";
-
-function downloadBase64File(base64: string, filename: string, mimeType: string) {
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  const blob = new Blob([bytes], { type: mimeType });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
 
 function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
   if (!active) return <span className="inline-block w-4" />;
@@ -50,14 +39,26 @@ export default function AssetValuation() {
 
   const pdfMutation = trpc.assetValuation.exportExecutivePdf.useMutation({
     onSuccess: (data) => {
+      if (!data.base64?.length) {
+        toast.error("PDF export returned empty data");
+        return;
+      }
       downloadBase64File(data.base64, data.filename, data.mimeType);
+      toast.success("Executive summary PDF downloaded");
     },
+    onError: (e) => toast.error(e.message || "PDF export failed"),
   });
 
   const excelMutation = trpc.assetValuation.exportRegisterExcel.useMutation({
     onSuccess: (data) => {
+      if (!data.base64?.length) {
+        toast.error("Excel export returned empty data");
+        return;
+      }
       downloadBase64File(data.base64, data.filename, data.mimeType);
+      toast.success("Valuation register downloaded");
     },
+    onError: (e) => toast.error(e.message || "Excel export failed"),
   });
 
   const [sortKey, setSortKey] = useState<SortKey>("state");
@@ -193,7 +194,7 @@ export default function AssetValuation() {
       {/* Section 1 — Summary */}
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Summary</h2>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
           <Card>
             <CardHeader className="pb-2">
               <CardDescription>Total certified property value</CardDescription>
@@ -214,14 +215,18 @@ export default function AssetValuation() {
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardDescription>Properties valued</CardDescription>
-              <CardTitle className="text-xl tabular-nums">
-                {r.distinctSitesWithValuation}
-                <span className="text-base font-normal text-muted-foreground">
-                  {" "}
-                  of {r.totalFacilityCount} facilities
-                </span>
-              </CardTitle>
+              <CardDescription>Valued properties (register)</CardDescription>
+              <CardTitle className="text-xl tabular-nums">{r.valuationRowCount}</CardTitle>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {r.distinctSitesWithValuation} sites · {r.totalFacilityCount} facilities total
+              </p>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>Branch offices pending valuation</CardDescription>
+              <CardTitle className="text-xl tabular-nums">{pendingBranches.length}</CardTitle>
+              <p className="mt-1 text-sm text-muted-foreground">of {r.activeBranchCount} active branches</p>
             </CardHeader>
           </Card>
         </div>
