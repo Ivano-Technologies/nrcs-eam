@@ -13,7 +13,9 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { downloadBase64File } from "@/lib/download";
 import { formatNaira, formatNairaSummaryCard } from "@/lib/format";
+import { KPI_VALUE_CLASS } from "@/lib/kpiTypography";
 import { trpc } from "@/lib/trpc";
+import { cn } from "@/lib/utils";
 import { AlertTriangle, ArrowDown, ArrowUp, Download, FileSpreadsheet } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -38,33 +40,38 @@ function SummaryMetricCard({
   const amountFmt = amount != null ? formatNairaSummaryCard(amount) : null;
   const showTooltip = amountFmt != null && amountFmt.display !== amountFmt.full;
 
+  const valueClass = cn("mt-1 break-words", KPI_VALUE_CLASS);
+
   return (
     <Card className="min-w-0 overflow-hidden">
-      <CardHeader className="min-w-0 space-y-1.5 pb-2">
-        <CardDescription className="line-clamp-2 text-xs leading-tight">{label}</CardDescription>
-        {amountFmt ? (
-          showTooltip ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <p
-                  className="break-words text-lg font-bold tabular-nums leading-snug"
-                  title={amountFmt.full}
-                >
-                  {amountFmt.display}
-                </p>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-xs">{amountFmt.full}</TooltipContent>
-            </Tooltip>
+      <CardContent className="flex min-w-0 flex-col justify-between p-4">
+        <div>
+          <div className="flex h-8 items-start">
+            <p className="line-clamp-2 text-xs leading-tight text-muted-foreground">{label}</p>
+          </div>
+          {amountFmt ? (
+            showTooltip ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <p className={valueClass} title={amountFmt.full}>
+                    {amountFmt.display}
+                  </p>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">{amountFmt.full}</TooltipContent>
+              </Tooltip>
+            ) : (
+              <p className={valueClass} title={amountFmt.full}>
+                {amountFmt.display}
+              </p>
+            )
           ) : (
-            <p className="break-words text-lg font-bold tabular-nums leading-snug" title={amountFmt.full}>
-              {amountFmt.display}
-            </p>
-          )
-        ) : (
-          <p className="break-words text-lg font-bold tabular-nums leading-snug">{value}</p>
-        )}
-        {subtext ? <p className="text-xs leading-tight text-muted-foreground">{subtext}</p> : null}
-      </CardHeader>
+            <p className={valueClass}>{value}</p>
+          )}
+        </div>
+        {subtext ? (
+          <p className="mt-2 text-xs leading-tight text-muted-foreground">{subtext}</p>
+        ) : null}
+      </CardContent>
     </Card>
   );
 }
@@ -286,7 +293,7 @@ export default function AssetValuation() {
       {/* Section 1 — Summary */}
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Summary</h2>
-        <div className="grid min-w-0 grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
+        <div className="grid min-w-0 grid-cols-2 items-start gap-3 md:grid-cols-3 lg:grid-cols-5">
           <SummaryMetricCard
             label="Total certified property value"
             amount={r.totalCertifiedPropertyNgn}

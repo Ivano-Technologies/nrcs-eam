@@ -1,4 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
+import { KPI_VALUE_CLASS } from "@/lib/kpiTypography";
 import { cn } from "@/lib/utils";
 import { ChevronRight, TrendingDown, TrendingUp, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
@@ -84,7 +85,10 @@ function KpiCardInner({
         </header>
 
         <div 
-          className="mt-3 min-w-0 whitespace-nowrap text-[2rem] font-bold leading-snug tracking-tight tabular-nums text-[#1a2332] dark:text-[hsl(0_0%_95%)]"
+          className={cn(
+            "mt-3 min-w-0 whitespace-nowrap tracking-tight text-[#1a2332] dark:text-[hsl(0_0%_95%)]",
+            KPI_VALUE_CLASS
+          )}
           data-testid={valueTestId}
         >
           {value}

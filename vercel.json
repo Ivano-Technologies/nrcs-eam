@@ -1,10 +1,11 @@
 {
   "installCommand": "pnpm install --no-frozen-lockfile",
-  "buildCommand": "pnpm run build:frontend && pnpm exec esbuild server/_core/vercelTrpcHandler.ts --platform=node --bundle --format=cjs --outfile=api/trpc/_handler.cjs --external:canvas --external:*.node",
+  "buildCommand": "pnpm run build:frontend && pnpm exec esbuild server/_core/vercelTrpcHandler.ts --platform=node --bundle --format=cjs --outfile=api/trpc/_handler.cjs --external:canvas --external:*.node && node scripts/copy-pdfkit-afm.mjs",
   "outputDirectory": "dist/public",
   "functions": {
     "api/trpc/[trpc].js": {
-      "maxDuration": 60
+      "maxDuration": 60,
+      "includeFiles": "api/trpc/data/**"
     },
     "api/health.ts": {
       "memory": 512,

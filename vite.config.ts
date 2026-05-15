@@ -85,9 +85,9 @@ const plugins = [
           },
         },
         {
-          /** tRPC read queries for field/dashboard pages (GET only). `sites` = facilities register. */
+          /** tRPC read queries for field/dashboard/finance pages (GET only). `sites` = facilities register. */
           urlPattern:
-            /\/api\/trpc\/.*(assets|sites|inventoryV2|inventory|dashboard|auth)\./i,
+            /\/api\/trpc\/.*(assets|sites|inventoryV2|inventory|dashboard|auth|assetValuation|financial|quickbooks)\./i,
           handler: "StaleWhileRevalidate",
           method: "GET",
           options: {

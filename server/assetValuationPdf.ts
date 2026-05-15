@@ -34,7 +34,12 @@ const FOOTER =
 /** Executive PDF for board / donor reporting (serverless-safe pdfkit). */
 export async function buildAssetValuationExecutivePdf(report: AssetValuationReport): Promise<Buffer> {
   const PDFDocument = (await import("pdfkit")).default;
-  const doc = new PDFDocument({ size: "A4", margin: 44, bufferPages: true });
+  const doc = new PDFDocument({
+    size: "A4",
+    margin: 44,
+    bufferPages: true,
+    autoFirstPage: true,
+  });
   const chunks: Buffer[] = [];
 
   return new Promise((resolve, reject) => {

@@ -6,6 +6,8 @@
 dist/
 build/
 *.dist
+api/trpc/data/
+api/trpc/_handler.cjs
 
 # Environment variables
 .env
