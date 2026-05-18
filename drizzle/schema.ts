@@ -1538,9 +1538,97 @@ export const insuranceRecords = pgTable(
   ]
 );
 
+export const vehicleCompliance = pgTable(
+  "vehicle_compliance",
+  {
+    id: serial("id").primaryKey(),
+    assetId: integer("assetId")
+      .notNull()
+      .references(() => assets.id, { onDelete: "cascade" }),
+    plateNumber: varchar("plateNumber", { length: 32 }),
+    roadWorthinessExpiry: date("roadWorthinessExpiry", { mode: "date" }),
+    insuranceExpiry: date("insuranceExpiry", { mode: "date" }),
+    licenceExpiry: date("licenceExpiry", { mode: "date" }),
+    lastInspectionDate: date("lastInspectionDate", { mode: "date" }),
+    notes: text("notes"),
+    createdBy: integer("createdBy").references(() => users.id),
+    createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
+  },
+  (t) => [index("vehicle_compliance_assetId_idx").on(t.assetId)]
+);
+
+export const generatorCompliance = pgTable(
+  "generator_compliance",
+  {
+    id: serial("id").primaryKey(),
+    assetId: integer("assetId")
+      .notNull()
+      .references(() => assets.id, { onDelete: "cascade" }),
+    lastServiceDate: date("lastServiceDate", { mode: "date" }),
+    nextServiceDue: date("nextServiceDue", { mode: "date" }),
+    serviceProvider: varchar("serviceProvider", { length: 255 }),
+    runningHoursAtService: integer("runningHoursAtService"),
+    safetyCertExpiry: date("safetyCertExpiry", { mode: "date" }),
+    notes: text("notes"),
+    createdBy: integer("createdBy").references(() => users.id),
+    createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
+  },
+  (t) => [index("generator_compliance_assetId_idx").on(t.assetId)]
+);
+
+export const buildingSafety = pgTable(
+  "building_safety",
+  {
+    id: serial("id").primaryKey(),
+    siteId: integer("siteId")
+      .notNull()
+      .references(() => sites.id, { onDelete: "cascade" }),
+    certificateType: varchar("certificateType", { length: 64 }).notNull(),
+    issuingAuthority: varchar("issuingAuthority", { length: 255 }),
+    certificateNumber: varchar("certificateNumber", { length: 128 }),
+    issueDate: date("issueDate", { mode: "date" }),
+    expiryDate: date("expiryDate", { mode: "date" }),
+    notes: text("notes"),
+    createdBy: integer("createdBy").references(() => users.id),
+    createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
+  },
+  (t) => [index("building_safety_siteId_idx").on(t.siteId)]
+);
+
+export const donorReporting = pgTable(
+  "donor_reporting",
+  {
+    id: serial("id").primaryKey(),
+    donorName: varchar("donorName", { length: 255 }).notNull(),
+    programmeRef: varchar("programmeRef", { length: 255 }),
+    assetId: integer("assetId").references(() => assets.id, { onDelete: "set null" }),
+    siteId: integer("siteId").references(() => sites.id, { onDelete: "set null" }),
+    reportType: varchar("reportType", { length: 32 }).notNull(),
+    dueDate: date("dueDate", { mode: "date" }).notNull(),
+    submittedDate: date("submittedDate", { mode: "date" }),
+    status: varchar("status", { length: 32 }),
+    notes: text("notes"),
+    createdBy: integer("createdBy").references(() => users.id),
+    createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
+  },
+  (t) => [index("donor_reporting_dueDate_idx").on(t.dueDate)]
+);
+
 export type Budget = typeof budgets.$inferSelect;
 export type InsertBudget = typeof budgets.$inferInsert;
 export type MaintenanceCost = typeof maintenanceCosts.$inferSelect;
 export type InsertMaintenanceCost = typeof maintenanceCosts.$inferInsert;
 export type InsuranceRecord = typeof insuranceRecords.$inferSelect;
 export type InsertInsuranceRecord = typeof insuranceRecords.$inferInsert;
+export type VehicleCompliance = typeof vehicleCompliance.$inferSelect;
+export type InsertVehicleCompliance = typeof vehicleCompliance.$inferInsert;
+export type GeneratorCompliance = typeof generatorCompliance.$inferSelect;
+export type InsertGeneratorCompliance = typeof generatorCompliance.$inferInsert;
+export type BuildingSafety = typeof buildingSafety.$inferSelect;
+export type InsertBuildingSafety = typeof buildingSafety.$inferInsert;
+export type DonorReporting = typeof donorReporting.$inferSelect;
+export type InsertDonorReporting = typeof donorReporting.$inferInsert;

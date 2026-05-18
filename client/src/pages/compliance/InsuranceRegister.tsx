@@ -44,9 +44,10 @@ function statusBadge(status: "active" | "expiring" | "expired") {
   return <Badge className="bg-red-100 text-red-800">Expired</Badge>;
 }
 
-export default function InsuranceRegister() {
+export function InsuranceRegisterContent({ embedded = false }: { embedded?: boolean }) {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
+  const canManage = user?.role === "admin" || user?.role === "manager";
   const [location] = useLocation();
   const statusFilter = useMemo(() => {
     const q = location.includes("?") ? new URLSearchParams(location.split("?")[1]) : null;
@@ -106,9 +107,8 @@ export default function InsuranceRegister() {
     },
   });
 
-  return (
-    <ManagerFinanceGate>
-      <div className="container mx-auto space-y-6 p-6">
+  const content = (
+      <div className={embedded ? "space-y-6" : "container mx-auto space-y-6 p-6"}>
         {summary.expiring > 0 ? (
           <Card className="border-amber-300 bg-amber-50 dark:bg-amber-950/30">
             <CardContent className="flex items-center gap-3 py-4">
@@ -121,24 +121,39 @@ export default function InsuranceRegister() {
           </Card>
         ) : null}
 
+        {!embedded ? (
         <div className="flex flex-col gap-4 sm:flex-row sm:justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Insurance Register</h1>
             <p className="text-muted-foreground">Property, vehicle, equipment, and liability policies</p>
           </div>
           <div className="flex gap-2">
-            {isAdmin ? (
+            {canManage ? (
               <Button onClick={() => setOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Add policy
               </Button>
             ) : null}
+            {canManage ? (
+              <Button variant="outline" disabled={exportExcel.isPending} onClick={() => exportExcel.mutate({})}>
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                Export
+              </Button>
+            ) : null}
+          </div>
+        </div>
+        ) : canManage ? (
+          <div className="mb-4 flex justify-end gap-2">
+            <Button onClick={() => setOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add policy
+            </Button>
             <Button variant="outline" disabled={exportExcel.isPending} onClick={() => exportExcel.mutate({})}>
               <FileSpreadsheet className="mr-2 h-4 w-4" />
               Export
             </Button>
           </div>
-        </div>
+        ) : null}
 
         <div className="grid gap-4 md:grid-cols-4">
           <Card>
@@ -190,7 +205,7 @@ export default function InsuranceRegister() {
                   <TableHead>End</TableHead>
                   <TableHead>Days</TableHead>
                   <TableHead>Status</TableHead>
-                  {isAdmin ? <TableHead /> : null}
+                  {canManage ? <TableHead /> : null}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -206,7 +221,7 @@ export default function InsuranceRegister() {
                     <TableCell>{r.policyEnd}</TableCell>
                     <TableCell>{r.daysToRenewal}</TableCell>
                     <TableCell>{statusBadge(r.status)}</TableCell>
-                    {isAdmin ? (
+                    {canManage ? (
                       <TableCell>
                         <Button size="sm" variant="ghost" onClick={() => del.mutate({ id: r.id })}>
                           Delete
@@ -313,7 +328,13 @@ export default function InsuranceRegister() {
           </DialogContent>
         </Dialog>
       </div>
-    </ManagerFinanceGate>
   );
+
+  if (embedded) return content;
+  return <ManagerFinanceGate>{content}</ManagerFinanceGate>;
+}
+
+export default function InsuranceRegister() {
+  return <InsuranceRegisterContent />;
 }
 

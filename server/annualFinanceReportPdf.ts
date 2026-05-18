@@ -1,122 +1,84 @@
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { rgb } from "pdf-lib";
 import type { getAnnualFinanceReportData } from "./financeModulesDb";
+import { createNrcsPdfLayout, finalizePdfLayout, type PdfLayout } from "./lib/nrcsPdfLayout";
 
 type ReportData = Awaited<ReturnType<typeof getAnnualFinanceReportData>>;
 
-const FOOTER =
-  "Confidential — Nigerian Red Cross Society — Prepared by Ivano Technologies Ltd";
-const NRCS_RED = rgb(200 / 255, 16 / 255, 46 / 255);
+const BODY = rgb(0.12, 0.12, 0.12);
+const SECTION = rgb(0.22, 0.22, 0.22);
 
 function ngn(n: number): string {
   return `₦${Math.round(n).toLocaleString("en-NG")}`;
 }
 
+function section(layout: PdfLayout, title: string) {
+  layout.ensure(layout.lineH * 2);
+  layout.page.drawText(title, {
+    x: layout.margin,
+    y: layout.y,
+    size: 11,
+    font: layout.bold,
+    color: SECTION,
+  });
+  layout.y -= layout.lineH + 4;
+}
+
+function line(layout: PdfLayout, text: string, size = 9) {
+  layout.ensure(layout.lineH);
+  layout.page.drawText(layout.truncate(text, 100), {
+    x: layout.margin,
+    y: layout.y,
+    size,
+    font: layout.font,
+    color: BODY,
+    maxWidth: layout.contentW,
+  });
+  layout.y -= layout.lineH;
+}
+
 export async function buildAnnualFinanceReportPdf(data: ReportData): Promise<Buffer> {
-  const pdfDoc = await PDFDocument.create();
-  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-  const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-
-  let page = pdfDoc.addPage([595, 842]);
-  const margin = 48;
-  let y = 800;
-  const lineH = 14;
-  const pageH = 842;
-
-  const ensure = (needed: number) => {
-    if (y - needed < margin + 24) {
-      page = pdfDoc.addPage([595, 842]);
-      y = 800;
-    }
-  };
-
-  const drawFooter = (p: typeof page) => {
-    p.drawText(FOOTER, {
-      x: margin,
-      y: 28,
-      size: 7,
-      font,
-      color: rgb(0.4, 0.4, 0.4),
-    });
-  };
-
-  page.drawRectangle({
-    x: 0,
-    y: pageH - 72,
-    width: 595,
-    height: 72,
-    color: NRCS_RED,
+  const layout = await createNrcsPdfLayout({
+    title: `Annual Finance Report — ${data.year}`,
+    subtitle: "Nigerian Red Cross Society — Enterprise Asset Management",
   });
-  page.drawText(`Annual Finance Report — ${data.year}`, {
-    x: margin,
-    y: pageH - 48,
-    size: 18,
-    font: bold,
-    color: rgb(1, 1, 1),
-  });
-  page.drawText("Nigerian Red Cross Society — Enterprise Asset Management", {
-    x: margin,
-    y: pageH - 66,
-    size: 10,
-    font,
-    color: rgb(1, 1, 1),
-  });
-  y = pageH - 96;
 
-  const section = (title: string) => {
-    ensure(lineH * 3);
-    page.drawText(title, { x: margin, y, size: 12, font: bold, color: rgb(0.1, 0.1, 0.1) });
-    y -= lineH + 4;
-  };
+  layout.y -= 6;
 
-  const line = (text: string, size = 9) => {
-    ensure(lineH);
-    page.drawText(text, { x: margin, y, size, font, color: rgb(0.15, 0.15, 0.15) });
-    y -= lineH;
-  };
+  section(layout, "1. Asset Valuation Summary");
+  line(layout, `Total certified property value: ${ngn(data.valuation.totalCertifiedPropertyNgn)}`);
+  line(layout, `Total movable asset value: ${ngn(data.valuation.totalMovableAcquisitionNgn)}`);
+  line(layout, `Combined total asset value: ${ngn(data.valuation.combinedTotalNgn)}`);
+  layout.y -= 8;
 
-  section("1. Asset Valuation Summary");
-  line(`Total certified property value: ${ngn(data.valuation.totalCertifiedPropertyNgn)}`);
-  line(`Total movable asset value: ${ngn(data.valuation.totalMovableAcquisitionNgn)}`);
-  line(`Combined total asset value: ${ngn(data.valuation.combinedTotalNgn)}`);
-  y -= 8;
+  section(layout, "2. Depreciation Summary");
+  line(layout, `Gross asset value: ${ngn(data.depreciation.totalGrossAssetValue)}`);
+  line(layout, `Accumulated depreciation: ${ngn(data.depreciation.totalAccumulatedDepreciation)}`);
+  line(layout, `Net book value: ${ngn(data.depreciation.totalNetBookValue)}`);
+  line(layout, `Assets fully depreciated: ${data.depreciation.assetsFullyDepreciated}`);
+  layout.y -= 8;
 
-  section("2. Depreciation Summary");
-  line(`Gross asset value: ${ngn(data.depreciation.totalGrossAssetValue)}`);
-  line(`Accumulated depreciation: ${ngn(data.depreciation.totalAccumulatedDepreciation)}`);
-  line(`Net book value: ${ngn(data.depreciation.totalNetBookValue)}`);
-  line(`Assets fully depreciated: ${data.depreciation.assetsFullyDepreciated}`);
-  y -= 8;
-
-  section("3. Budget vs Actual");
-  for (const b of data.budgetVsActual.slice(0, 40)) {
+  section(layout, "3. Budget vs Actual");
+  for (const b of data.budgetVsActual) {
     line(
+      layout,
       `${b.siteName}: budget ${ngn(b.budget)}, spend ${ngn(b.spend)}, ${b.percentUsed}% used (${b.status})`
     );
   }
-  if (data.budgetVsActual.length > 40) {
-    line(`… and ${data.budgetVsActual.length - 40} more branches`);
-  }
-  y -= 8;
+  layout.y -= 8;
 
-  section("4. Maintenance Cost Summary");
-  line(`Total maintenance spend: ${ngn(data.maintenance.totalSpend)}`);
-  line("Top assets by maintenance cost:");
+  section(layout, "4. Maintenance Cost Summary");
+  line(layout, `Total maintenance spend: ${ngn(data.maintenance.totalSpend)}`);
+  line(layout, "Top assets by maintenance cost:");
   for (const t of data.maintenance.topAssets) {
-    line(`  • ${t.assetCode ?? "—"} ${t.assetName}: ${ngn(t.total)}`, 8);
+    line(layout, `  • ${t.assetCode ?? "—"} ${t.assetName}: ${ngn(t.total)}`, 8);
   }
-  y -= 8;
+  layout.y -= 8;
 
-  section("5. Insurance Summary");
-  line(`Total insured value: ${ngn(data.insurance.totalInsuredValue)}`);
-  line(`Total annual premiums: ${ngn(data.insurance.totalAnnualPremiums)}`);
-  line(`Policies expiring in ${data.year}: ${data.insurance.policiesExpiringInYear}`);
-  line(`Active policies: ${data.insurance.activeCount}`);
+  section(layout, "5. Insurance Summary");
+  line(layout, `Total insured value: ${ngn(data.insurance.totalInsuredValue)}`);
+  line(layout, `Total annual premiums: ${ngn(data.insurance.totalAnnualPremiums)}`);
+  line(layout, `Policies expiring in ${data.year}: ${data.insurance.policiesExpiringInYear}`);
+  line(layout, `Active policies: ${data.insurance.activeCount}`);
 
-  const pages = pdfDoc.getPages();
-  for (const p of pages) {
-    drawFooter(p);
-  }
-
-  const bytes = await pdfDoc.save();
-  return Buffer.from(bytes);
+  return finalizePdfLayout(layout);
 }

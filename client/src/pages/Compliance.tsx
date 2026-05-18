@@ -1,288 +1,799 @@
-import { trpc } from "@/lib/trpc";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { InsuranceRegisterContent } from "@/pages/compliance/InsuranceRegister";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FileCheck, Plus, Calendar } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { KPI_VALUE_CLASS } from "@/lib/kpiTypography";
+import { trpc } from "@/lib/trpc";
+import { cn } from "@/lib/utils";
+import type { inferRouterOutputs } from "@trpc/server";
+import type { AppRouter } from "../../../server/routers";
+
+type VehicleRow = inferRouterOutputs<AppRouter>["complianceTracking"]["vehicles"]["list"][number];
+type GeneratorRow = inferRouterOutputs<AppRouter>["complianceTracking"]["generators"]["list"][number];
+type BuildingRow = inferRouterOutputs<AppRouter>["complianceTracking"]["buildings"]["list"][number];
+type DonorRow = inferRouterOutputs<AppRouter>["complianceTracking"]["donor"]["list"][number];
+import { Plus, ShieldCheck } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { useLocation } from "wouter";
 import { toast } from "sonner";
-import { useState } from "react";
+
+type TabKey = "vehicles" | "generators" | "buildings" | "donor" | "insurance";
+
+function docBadge(status: string) {
+  if (status === "compliant") return <Badge className="bg-green-100 text-green-800">Compliant</Badge>;
+  if (status === "expiring") return <Badge className="bg-amber-100 text-amber-800">Expiring Soon</Badge>;
+  if (status === "non_compliant") return <Badge className="bg-red-100 text-red-800">Non-Compliant</Badge>;
+  return <Badge variant="secondary">{status}</Badge>;
+}
+
+function generatorBadge(status: string) {
+  if (status === "serviced") return <Badge className="bg-green-100 text-green-800">Serviced</Badge>;
+  if (status === "due_soon") return <Badge className="bg-amber-100 text-amber-800">Due Soon</Badge>;
+  return <Badge className="bg-red-100 text-red-800">Overdue</Badge>;
+}
+
+function donorBadge(status: string) {
+  if (status === "submitted") return <Badge className="bg-green-100 text-green-800">Submitted</Badge>;
+  if (status === "due_soon") return <Badge className="bg-amber-100 text-amber-800">Due Soon</Badge>;
+  if (status === "overdue") return <Badge className="bg-red-100 text-red-800">Overdue</Badge>;
+  return <Badge variant="secondary">Pending</Badge>;
+}
+
+function parseQuery(location: string) {
+  const q = location.includes("?") ? new URLSearchParams(location.split("?")[1]) : new URLSearchParams();
+  const tab = q.get("tab") as TabKey | null;
+  const status = q.get("status");
+  return { tab: tab ?? "vehicles", status };
+}
 
 export default function Compliance() {
-  const [open, setOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    title: "",
-    regulatoryBody: "",
-    requirementType: "",
-    description: "",
-    status: "pending" as "compliant" | "non_compliant" | "pending" | "expired",
-    dueDate: "",
-    completionDate: "",
-    nextReviewDate: "",
-    assetId: "",
-    assignedTo: "",
-    documentUrl: "",
+  const { user } = useAuth();
+  const canEdit = user?.role === "admin" || user?.role === "manager";
+  const [location, setLocation] = useLocation();
+  const { tab: initialTab, status: urlStatus } = useMemo(() => parseQuery(location), [location]);
+  const [tab, setTab] = useState<TabKey>(initialTab);
+
+  useEffect(() => {
+    setTab(initialTab);
+  }, [initialTab]);
+
+  const utils = trpc.useUtils();
+  const { data: summary } = trpc.complianceTracking.summary.useQuery();
+
+  const vehicleStatus =
+    urlStatus === "expiring"
+      ? "expiring"
+      : urlStatus === "non-compliant"
+        ? "non_compliant"
+        : undefined;
+  const generatorStatus =
+    urlStatus === "overdue" ? "overdue" : urlStatus === "due-soon" ? "due_soon" : undefined;
+  const donorStatus =
+    urlStatus === "due-soon" ? "due_soon" : urlStatus === "overdue" ? "overdue" : undefined;
+
+  const { data: vehicles } = trpc.complianceTracking.vehicles.list.useQuery(
+    vehicleStatus ? { status: vehicleStatus } : undefined,
+    { enabled: tab === "vehicles" }
+  );
+  const { data: generators } = trpc.complianceTracking.generators.list.useQuery(
+    generatorStatus ? { status: generatorStatus } : undefined,
+    { enabled: tab === "generators" }
+  );
+  const { data: buildings } = trpc.complianceTracking.buildings.list.useQuery(undefined, {
+    enabled: tab === "buildings",
+  });
+  const { data: donorRows } = trpc.complianceTracking.donor.list.useQuery(
+    donorStatus ? { status: donorStatus } : undefined,
+    { enabled: tab === "donor" }
+  );
+  const { data: sites } = trpc.sites.list.useQuery(undefined, { enabled: canEdit });
+
+  const [vehicleOpen, setVehicleOpen] = useState(false);
+  const [vehicleForm, setVehicleForm] = useState({
+    id: undefined as number | undefined,
+    assetCode: "",
+    assetId: 0,
+    plateNumber: "",
+    roadWorthinessExpiry: "",
+    insuranceExpiry: "",
+    licenceExpiry: "",
+    lastInspectionDate: "",
     notes: "",
   });
 
-  const utils = trpc.useUtils();
-  const { data: records, isLoading } = trpc.compliance.list.useQuery();
-  const { data: assets } = trpc.assets.list.useQuery();
-  const { data: users } = trpc.users.list.useQuery();
-
-  const createMutation = trpc.compliance.create.useMutation({
+  const vehicleUpsert = trpc.complianceTracking.vehicles.upsert.useMutation({
     onSuccess: () => {
-      toast.success("Compliance record created successfully");
-      utils.compliance.list.invalidate();
-      setOpen(false);
-      setFormData({
-        title: "",
-        regulatoryBody: "",
-        requirementType: "",
-        description: "",
-        status: "pending",
-        dueDate: "",
-        completionDate: "",
-        nextReviewDate: "",
-        assetId: "",
-        assignedTo: "",
-        documentUrl: "",
-        notes: "",
-      });
+      toast.success("Vehicle record saved");
+      void utils.complianceTracking.vehicles.list.invalidate();
+      void utils.complianceTracking.summary.invalidate();
+      setVehicleOpen(false);
     },
-    onError: (error) => {
-      toast.error(`Failed to create record: ${error.message}`);
+    onError: (e) => toast.error(e.message),
+  });
+  const vehicleDelete = trpc.complianceTracking.vehicles.delete.useMutation({
+    onSuccess: () => {
+      void utils.complianceTracking.vehicles.list.invalidate();
+      void utils.complianceTracking.summary.invalidate();
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.title) {
-      toast.error("Title is required");
-      return;
-    }
+  const [genOpen, setGenOpen] = useState(false);
+  const [genForm, setGenForm] = useState({
+    id: undefined as number | undefined,
+    assetCode: "",
+    assetId: 0,
+    lastServiceDate: "",
+    nextServiceDue: "",
+    serviceProvider: "",
+    runningHoursAtService: "",
+    safetyCertExpiry: "",
+    notes: "",
+  });
+  const genUpsert = trpc.complianceTracking.generators.upsert.useMutation({
+    onSuccess: () => {
+      toast.success("Generator record saved");
+      void utils.complianceTracking.generators.list.invalidate();
+      void utils.complianceTracking.summary.invalidate();
+      setGenOpen(false);
+    },
+    onError: (e) => toast.error(e.message),
+  });
+  const genDelete = trpc.complianceTracking.generators.delete.useMutation({
+    onSuccess: () => {
+      void utils.complianceTracking.generators.list.invalidate();
+      void utils.complianceTracking.summary.invalidate();
+    },
+  });
 
-    createMutation.mutate({
-      title: formData.title,
-      regulatoryBody: formData.regulatoryBody || undefined,
-      requirementType: formData.requirementType || undefined,
-      description: formData.description || undefined,
-      status: formData.status,
-      dueDate: formData.dueDate ? new Date(formData.dueDate) : undefined,
-      completionDate: formData.completionDate ? new Date(formData.completionDate) : undefined,
-      nextReviewDate: formData.nextReviewDate ? new Date(formData.nextReviewDate) : undefined,
-      assetId: formData.assetId ? parseInt(formData.assetId) : undefined,
-      assignedTo: formData.assignedTo ? parseInt(formData.assignedTo) : undefined,
-      documentUrl: formData.documentUrl || undefined,
-      notes: formData.notes || undefined,
-    });
-  };
+  const [buildingOpen, setBuildingOpen] = useState(false);
+  const [buildingForm, setBuildingForm] = useState({
+    id: undefined as number | undefined,
+    siteId: "",
+    certificateType: "Fire Safety",
+    issuingAuthority: "",
+    certificateNumber: "",
+    issueDate: "",
+    expiryDate: "",
+    notes: "",
+  });
+  const buildingUpsert = trpc.complianceTracking.buildings.upsert.useMutation({
+    onSuccess: () => {
+      toast.success("Building safety record saved");
+      void utils.complianceTracking.buildings.list.invalidate();
+      void utils.complianceTracking.summary.invalidate();
+      setBuildingOpen(false);
+    },
+    onError: (e) => toast.error(e.message),
+  });
+  const buildingDelete = trpc.complianceTracking.buildings.delete.useMutation({
+    onSuccess: () => {
+      void utils.complianceTracking.buildings.list.invalidate();
+      void utils.complianceTracking.summary.invalidate();
+    },
+  });
 
-  if (isLoading) {
-    return <div className="flex items-center justify-center h-96"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>;
+  const [donorOpen, setDonorOpen] = useState(false);
+  const [donorForm, setDonorForm] = useState({
+    id: undefined as number | undefined,
+    donorName: "",
+    programmeRef: "",
+    reportType: "Quarterly",
+    dueDate: "",
+    submittedDate: "",
+    notes: "",
+  });
+  const donorUpsert = trpc.complianceTracking.donor.upsert.useMutation({
+    onSuccess: () => {
+      toast.success("Donor reporting record saved");
+      void utils.complianceTracking.donor.list.invalidate();
+      void utils.complianceTracking.summary.invalidate();
+      setDonorOpen(false);
+    },
+    onError: (e) => toast.error(e.message),
+  });
+  const donorDelete = trpc.complianceTracking.donor.delete.useMutation({
+    onSuccess: () => {
+      void utils.complianceTracking.donor.list.invalidate();
+      void utils.complianceTracking.summary.invalidate();
+    },
+  });
+
+  async function resolveAssetCode(code: string): Promise<number | null> {
+    const trimmed = code.trim();
+    if (!trimmed) return null;
+    const asset = await utils.complianceTracking.lookupAsset.fetch({ assetCode: trimmed });
+    return asset?.id ?? null;
   }
 
-  const getStatusColor = (status: string) => {
-    const colors = { compliant: "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-100", non_compliant: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-100", pending: "bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-100", expired: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100" };
-    return colors[status as keyof typeof colors] || "bg-gray-100 text-gray-800";
+  const onTabChange = (value: string) => {
+    const t = value as TabKey;
+    setTab(t);
+    setLocation(`/app/compliance?tab=${t}`);
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="container mx-auto space-y-6 p-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Compliance Tracking</h1>
-          <p className="text-muted-foreground mt-2">Manage regulatory requirements</p>
+          <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight">
+            <ShieldCheck className="h-8 w-8 text-primary" />
+            Compliance Tracking
+          </h1>
+          <p className="text-muted-foreground">
+            Vehicle, generator, building safety, donor reporting, and insurance compliance
+          </p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button><Plus className="mr-2 h-4 w-4" />Add Record</Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Add Compliance Record</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2 col-span-2">
-                  <Label htmlFor="title">Title *</Label>
-                  <Input
-                    id="title"
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    placeholder="e.g., Annual Fire Safety Inspection"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="regulatoryBody">Regulatory Body</Label>
-                  <Input
-                    id="regulatoryBody"
-                    value={formData.regulatoryBody}
-                    onChange={(e) => setFormData({ ...formData, regulatoryBody: e.target.value })}
-                    placeholder="e.g., Fire Service"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="requirementType">Requirement Type</Label>
-                  <Input
-                    id="requirementType"
-                    value={formData.requirementType}
-                    onChange={(e) => setFormData({ ...formData, requirementType: e.target.value })}
-                    placeholder="e.g., Safety, Environmental"
-                  />
-                </div>
-
-                <div className="space-y-2 col-span-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Describe the compliance requirement..."
-                    rows={3}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="status">Status</Label>
-                  <Select value={formData.status} onValueChange={(value: any) => setFormData({ ...formData, status: value })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="compliant">Compliant</SelectItem>
-                      <SelectItem value="non_compliant">Non-Compliant</SelectItem>
-                      <SelectItem value="expired">Expired</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="assetId">Related Asset</Label>
-                  <Select value={formData.assetId} onValueChange={(value) => setFormData({ ...formData, assetId: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select asset (optional)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {assets?.map((asset) => (
-                        <SelectItem key={asset.id} value={asset.id.toString()}>
-                          {asset.name} ({asset.assetTag})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="dueDate">Due Date</Label>
-                  <Input
-                    id="dueDate"
-                    type="date"
-                    value={formData.dueDate}
-                    onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="completionDate">Completion Date</Label>
-                  <Input
-                    id="completionDate"
-                    type="date"
-                    value={formData.completionDate}
-                    onChange={(e) => setFormData({ ...formData, completionDate: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="nextReviewDate">Next Review Date</Label>
-                  <Input
-                    id="nextReviewDate"
-                    type="date"
-                    value={formData.nextReviewDate}
-                    onChange={(e) => setFormData({ ...formData, nextReviewDate: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="assignedTo">Assigned To</Label>
-                  <Select value={formData.assignedTo} onValueChange={(value) => setFormData({ ...formData, assignedTo: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select user (optional)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {users?.map((user) => (
-                        <SelectItem key={user.id} value={user.id.toString()}>
-                          {user.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2 col-span-2">
-                  <Label htmlFor="documentUrl">Document URL</Label>
-                  <Input
-                    id="documentUrl"
-                    value={formData.documentUrl}
-                    onChange={(e) => setFormData({ ...formData, documentUrl: e.target.value })}
-                    placeholder="Link to compliance document"
-                  />
-                </div>
-
-                <div className="space-y-2 col-span-2">
-                  <Label htmlFor="notes">Notes</Label>
-                  <Textarea
-                    id="notes"
-                    value={formData.notes}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    placeholder="Additional notes..."
-                    rows={3}
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? "Creating..." : "Add Record"}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {records?.map((record) => (
-          <Card key={record.id}>
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-2">
-                  <FileCheck className="h-5 w-5 text-primary" />
-                  <div><CardTitle className="text-lg">{record.title}</CardTitle>{record.regulatoryBody && <p className="text-xs text-muted-foreground">{record.regulatoryBody}</p>}</div>
-                </div>
-                <Badge className={getStatusColor(record.status)}>{record.status.replace("_", " ")}</Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2 text-sm">
-                {record.requirementType && <p className="text-muted-foreground"><span className="font-medium">Type:</span> {record.requirementType}</p>}
-                {record.dueDate && <div className="flex items-center gap-1 text-muted-foreground"><Calendar className="h-3 w-3" /><span>Due: {new Date(record.dueDate).toLocaleDateString()}</span></div>}
-              </div>
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Total compliance records</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className={KPI_VALUE_CLASS}>{summary?.totalRecords ?? 0}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Compliant</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className={KPI_VALUE_CLASS}>
+              {summary?.compliantCount ?? 0}{" "}
+              <span className="text-sm font-normal text-muted-foreground">({summary?.compliantPct ?? 0}%)</span>
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Expiring soon</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className={cn(KPI_VALUE_CLASS, (summary?.expiringSoonCount ?? 0) > 0 && "text-amber-600")}>
+              {summary?.expiringSoonCount ?? 0}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Non-compliant / overdue</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className={cn(KPI_VALUE_CLASS, (summary?.nonCompliantCount ?? 0) > 0 && "text-red-600")}>
+              {summary?.nonCompliantCount ?? 0}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Tabs value={tab} onValueChange={onTabChange}>
+        <TabsList className="flex h-auto flex-wrap gap-1">
+          <TabsTrigger value="vehicles">Vehicles</TabsTrigger>
+          <TabsTrigger value="generators">Generators</TabsTrigger>
+          <TabsTrigger value="buildings">Building safety</TabsTrigger>
+          <TabsTrigger value="donor">Donor reporting</TabsTrigger>
+          <TabsTrigger value="insurance">Insurance register</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="vehicles" className="space-y-4">
+          {canEdit ? (
+            <Button
+              onClick={() => {
+                setVehicleForm({
+                  id: undefined,
+                  assetCode: "",
+                  assetId: 0,
+                  plateNumber: "",
+                  roadWorthinessExpiry: "",
+                  insuranceExpiry: "",
+                  licenceExpiry: "",
+                  lastInspectionDate: "",
+                  notes: "",
+                });
+                setVehicleOpen(true);
+              }}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add vehicle record
+            </Button>
+          ) : null}
+          <Card>
+            <CardContent className="overflow-x-auto p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Asset code</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Branch</TableHead>
+                    <TableHead>Plate</TableHead>
+                    <TableHead>Road worthiness</TableHead>
+                    <TableHead>Insurance</TableHead>
+                    <TableHead>Licence</TableHead>
+                    <TableHead>Last inspection</TableHead>
+                    <TableHead>Status</TableHead>
+                    {canEdit ? <TableHead /> : null}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(vehicles ?? []).map((r: VehicleRow) => (
+                    <TableRow key={r.id}>
+                      <TableCell>{r.assetCode}</TableCell>
+                      <TableCell>{r.description}</TableCell>
+                      <TableCell>{r.branch}</TableCell>
+                      <TableCell>{r.plateNumber}</TableCell>
+                      <TableCell>{r.roadWorthinessExpiry ?? "—"}</TableCell>
+                      <TableCell>{r.insuranceExpiry ?? "—"}</TableCell>
+                      <TableCell>{r.licenceExpiry ?? "—"}</TableCell>
+                      <TableCell>{r.lastInspectionDate ?? "—"}</TableCell>
+                      <TableCell>{docBadge(r.status)}</TableCell>
+                      {canEdit ? (
+                        <TableCell className="space-x-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setVehicleForm({
+                                id: r.id,
+                                assetCode: r.assetCode ?? "",
+                                assetId: r.assetId,
+                                plateNumber: r.plateNumber ?? "",
+                                roadWorthinessExpiry: r.roadWorthinessExpiry ?? "",
+                                insuranceExpiry: r.insuranceExpiry ?? "",
+                                licenceExpiry: r.licenceExpiry ?? "",
+                                lastInspectionDate: r.lastInspectionDate ?? "",
+                                notes: r.notes ?? "",
+                              });
+                              setVehicleOpen(true);
+                            }}
+                          >
+                            Edit
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => vehicleDelete.mutate({ id: r.id })}>
+                            Delete
+                          </Button>
+                        </TableCell>
+                      ) : null}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
-        ))}
-      </div>
+        </TabsContent>
+
+        <TabsContent value="generators" className="space-y-4">
+          {canEdit ? (
+            <Button onClick={() => setGenOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add generator record
+            </Button>
+          ) : null}
+          <Card>
+            <CardContent className="overflow-x-auto p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Asset code</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Branch</TableHead>
+                    <TableHead>Last service</TableHead>
+                    <TableHead>Next due</TableHead>
+                    <TableHead>Provider</TableHead>
+                    <TableHead>Hours</TableHead>
+                    <TableHead>Safety cert</TableHead>
+                    <TableHead>Status</TableHead>
+                    {canEdit ? <TableHead /> : null}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(generators ?? []).map((r: GeneratorRow) => (
+                    <TableRow key={r.id}>
+                      <TableCell>{r.assetCode}</TableCell>
+                      <TableCell>{r.description}</TableCell>
+                      <TableCell>{r.branch}</TableCell>
+                      <TableCell>{r.lastServiceDate ?? "—"}</TableCell>
+                      <TableCell>{r.nextServiceDue ?? "—"}</TableCell>
+                      <TableCell>{r.serviceProvider ?? "—"}</TableCell>
+                      <TableCell>{r.runningHoursAtService ?? "—"}</TableCell>
+                      <TableCell>{r.safetyCertExpiry ?? "—"}</TableCell>
+                      <TableCell>{generatorBadge(r.status)}</TableCell>
+                      {canEdit ? (
+                        <TableCell>
+                          <Button size="sm" variant="ghost" onClick={() => genDelete.mutate({ id: r.id })}>
+                            Delete
+                          </Button>
+                        </TableCell>
+                      ) : null}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="buildings" className="space-y-4">
+          {canEdit ? (
+            <Button onClick={() => setBuildingOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add certificate
+            </Button>
+          ) : null}
+          <Card>
+            <CardContent className="overflow-x-auto p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Facility</TableHead>
+                    <TableHead>State</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Authority</TableHead>
+                    <TableHead>Certificate #</TableHead>
+                    <TableHead>Issue</TableHead>
+                    <TableHead>Expiry</TableHead>
+                    <TableHead>Status</TableHead>
+                    {canEdit ? <TableHead /> : null}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(buildings ?? []).map((r: BuildingRow) => (
+                    <TableRow key={r.id}>
+                      <TableCell>{r.facilityName}</TableCell>
+                      <TableCell>{r.state}</TableCell>
+                      <TableCell>{r.certificateType}</TableCell>
+                      <TableCell>{r.issuingAuthority}</TableCell>
+                      <TableCell>{r.certificateNumber}</TableCell>
+                      <TableCell>{r.issueDate ?? "—"}</TableCell>
+                      <TableCell>{r.expiryDate ?? "—"}</TableCell>
+                      <TableCell>{docBadge(r.status)}</TableCell>
+                      {canEdit ? (
+                        <TableCell>
+                          <Button size="sm" variant="ghost" onClick={() => buildingDelete.mutate({ id: r.id })}>
+                            Delete
+                          </Button>
+                        </TableCell>
+                      ) : null}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="donor" className="space-y-4">
+          {canEdit ? (
+            <Button onClick={() => setDonorOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add donor report
+            </Button>
+          ) : null}
+          <Card>
+            <CardContent className="overflow-x-auto p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Donor</TableHead>
+                    <TableHead>Programme</TableHead>
+                    <TableHead>Asset / facility</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Due</TableHead>
+                    <TableHead>Submitted</TableHead>
+                    <TableHead>Status</TableHead>
+                    {canEdit ? <TableHead /> : null}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(donorRows ?? []).map((r: DonorRow) => (
+                    <TableRow key={r.id}>
+                      <TableCell>{r.donorName}</TableCell>
+                      <TableCell>{r.programmeRef}</TableCell>
+                      <TableCell>{r.assetOrFacility}</TableCell>
+                      <TableCell>{r.reportType}</TableCell>
+                      <TableCell>{r.dueDate}</TableCell>
+                      <TableCell>{r.submittedDate ?? "—"}</TableCell>
+                      <TableCell>{donorBadge(r.status)}</TableCell>
+                      {canEdit ? (
+                        <TableCell>
+                          <Button size="sm" variant="ghost" onClick={() => donorDelete.mutate({ id: r.id })}>
+                            Delete
+                          </Button>
+                        </TableCell>
+                      ) : null}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="insurance">
+          <InsuranceRegisterContent embedded />
+        </TabsContent>
+      </Tabs>
+
+      <Dialog open={vehicleOpen} onOpenChange={setVehicleOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{vehicleForm.id ? "Edit" : "Add"} vehicle compliance</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-3">
+            <Label>Asset code</Label>
+            <Input
+              value={vehicleForm.assetCode}
+              onChange={(e) => setVehicleForm((f) => ({ ...f, assetCode: e.target.value }))}
+              onBlur={async () => {
+                const id = await resolveAssetCode(vehicleForm.assetCode);
+                if (id) setVehicleForm((f) => ({ ...f, assetId: id }));
+              }}
+            />
+            <Label>Plate number</Label>
+            <Input
+              value={vehicleForm.plateNumber}
+              onChange={(e) => setVehicleForm((f) => ({ ...f, plateNumber: e.target.value }))}
+            />
+            <Label>Road worthiness expiry</Label>
+            <Input
+              type="date"
+              value={vehicleForm.roadWorthinessExpiry}
+              onChange={(e) => setVehicleForm((f) => ({ ...f, roadWorthinessExpiry: e.target.value }))}
+            />
+            <Label>Insurance expiry</Label>
+            <Input
+              type="date"
+              value={vehicleForm.insuranceExpiry}
+              onChange={(e) => setVehicleForm((f) => ({ ...f, insuranceExpiry: e.target.value }))}
+            />
+            <Label>Licence expiry</Label>
+            <Input
+              type="date"
+              value={vehicleForm.licenceExpiry}
+              onChange={(e) => setVehicleForm((f) => ({ ...f, licenceExpiry: e.target.value }))}
+            />
+            <Label>Last inspection</Label>
+            <Input
+              type="date"
+              value={vehicleForm.lastInspectionDate}
+              onChange={(e) => setVehicleForm((f) => ({ ...f, lastInspectionDate: e.target.value }))}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={async () => {
+                let assetId = vehicleForm.assetId;
+                if (!assetId) {
+                  const resolved = await resolveAssetCode(vehicleForm.assetCode);
+                  if (!resolved) {
+                    toast.error("Asset code not found");
+                    return;
+                  }
+                  assetId = resolved;
+                }
+                vehicleUpsert.mutate({
+                  id: vehicleForm.id,
+                  assetId,
+                  plateNumber: vehicleForm.plateNumber || undefined,
+                  roadWorthinessExpiry: vehicleForm.roadWorthinessExpiry || undefined,
+                  insuranceExpiry: vehicleForm.insuranceExpiry || undefined,
+                  licenceExpiry: vehicleForm.licenceExpiry || undefined,
+                  lastInspectionDate: vehicleForm.lastInspectionDate || undefined,
+                  notes: vehicleForm.notes || undefined,
+                });
+              }}
+            >
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={genOpen} onOpenChange={setGenOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Generator compliance</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-3">
+            <Label>Asset code</Label>
+            <Input
+              value={genForm.assetCode}
+              onChange={(e) => setGenForm((f) => ({ ...f, assetCode: e.target.value }))}
+            />
+            <Label>Next service due</Label>
+            <Input
+              type="date"
+              value={genForm.nextServiceDue}
+              onChange={(e) => setGenForm((f) => ({ ...f, nextServiceDue: e.target.value }))}
+            />
+            <Label>Service provider</Label>
+            <Input
+              value={genForm.serviceProvider}
+              onChange={(e) => setGenForm((f) => ({ ...f, serviceProvider: e.target.value }))}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={async () => {
+                const assetId = await resolveAssetCode(genForm.assetCode);
+                if (!assetId) {
+                  toast.error("Asset code not found");
+                  return;
+                }
+                genUpsert.mutate({
+                  id: genForm.id,
+                  assetId,
+                  nextServiceDue: genForm.nextServiceDue || undefined,
+                  serviceProvider: genForm.serviceProvider || undefined,
+                });
+              }}
+            >
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={buildingOpen} onOpenChange={setBuildingOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Building safety certificate</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-3">
+            <Label>Facility</Label>
+            <Select value={buildingForm.siteId} onValueChange={(v) => setBuildingForm((f) => ({ ...f, siteId: v }))}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select facility" />
+              </SelectTrigger>
+              <SelectContent>
+                {(sites ?? []).map((s) => (
+                  <SelectItem key={s.id} value={String(s.id)}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Label>Certificate type</Label>
+            <Select
+              value={buildingForm.certificateType}
+              onValueChange={(v) => setBuildingForm((f) => ({ ...f, certificateType: v }))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {["Fire Safety", "Structural", "Occupancy", "Environmental"].map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {t}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Label>Expiry date</Label>
+            <Input
+              type="date"
+              value={buildingForm.expiryDate}
+              onChange={(e) => setBuildingForm((f) => ({ ...f, expiryDate: e.target.value }))}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={() => {
+                const siteId = parseInt(buildingForm.siteId, 10);
+                if (!siteId) {
+                  toast.error("Select a facility");
+                  return;
+                }
+                buildingUpsert.mutate({
+                  id: buildingForm.id,
+                  siteId,
+                  certificateType: buildingForm.certificateType,
+                  issuingAuthority: buildingForm.issuingAuthority || undefined,
+                  certificateNumber: buildingForm.certificateNumber || undefined,
+                  issueDate: buildingForm.issueDate || undefined,
+                  expiryDate: buildingForm.expiryDate || undefined,
+                });
+              }}
+            >
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={donorOpen} onOpenChange={setDonorOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Donor reporting</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-3">
+            <Label>Donor</Label>
+            <Input
+              value={donorForm.donorName}
+              onChange={(e) => setDonorForm((f) => ({ ...f, donorName: e.target.value }))}
+            />
+            <Label>Programme reference</Label>
+            <Input
+              value={donorForm.programmeRef}
+              onChange={(e) => setDonorForm((f) => ({ ...f, programmeRef: e.target.value }))}
+            />
+            <Label>Report type</Label>
+            <Select
+              value={donorForm.reportType}
+              onValueChange={(v) => setDonorForm((f) => ({ ...f, reportType: v }))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {["Quarterly", "Annual", "Ad Hoc"].map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {t}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Label>Due date</Label>
+            <Input
+              type="date"
+              value={donorForm.dueDate}
+              onChange={(e) => setDonorForm((f) => ({ ...f, dueDate: e.target.value }))}
+            />
+            <Label>Submitted date</Label>
+            <Input
+              type="date"
+              value={donorForm.submittedDate}
+              onChange={(e) => setDonorForm((f) => ({ ...f, submittedDate: e.target.value }))}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={() => {
+                if (!donorForm.donorName || !donorForm.dueDate) {
+                  toast.error("Donor and due date are required");
+                  return;
+                }
+                donorUpsert.mutate({
+                  id: donorForm.id,
+                  donorName: donorForm.donorName,
+                  programmeRef: donorForm.programmeRef || undefined,
+                  reportType: donorForm.reportType,
+                  dueDate: donorForm.dueDate,
+                  submittedDate: donorForm.submittedDate || undefined,
+                });
+              }}
+            >
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

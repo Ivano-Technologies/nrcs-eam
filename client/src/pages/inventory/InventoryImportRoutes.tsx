@@ -1,20 +1,12 @@
-import { InventoryShell } from "@/components/inventory/InventoryShell";
 import ImportDraftsPage from "@/pages/inventory/ImportDraftsPage";
 import ImportPage from "@/pages/inventory/ImportPage";
 
+/** Standalone import pipeline — not the inventory tracking hub (`/inventory/tracking`). */
 export function InventoryImportPageRoute() {
-  return (
-    <InventoryShell activeTab="tracking">
-      <ImportPage embedInShell />
-    </InventoryShell>
-  );
+  return <ImportPage />;
 }
 
 export function InventoryImportDraftsRoute() {
-  return (
-    <InventoryShell activeTab="tracking">
-      <ImportDraftsPage embedInShell />
-    </InventoryShell>
-  );
+  return <ImportDraftsPage />;
 }
 
