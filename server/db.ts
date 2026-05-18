@@ -1774,9 +1774,40 @@ export async function updateUser(id: number, data: Partial<InsertUser>) {
 export async function deleteUser(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   await db.delete(users).where(eq(users.id, id));
   return { success: true };
+}
+
+export type OrphanedAppUser = {
+  id: number;
+  email: string | null;
+  role: string;
+  createdAt: Date;
+};
+
+/** App users with no matching auth.users row (ghost accounts). */
+export async function findOrphanedAppUsers(): Promise<OrphanedAppUser[]> {
+  const database = await getDb();
+  if (!database) return [];
+
+  const rows = await database.execute(sql`
+    SELECT u.id, u.email, u.role, u."createdAt"
+    FROM public.users u
+    LEFT JOIN auth.users a ON LOWER(a.email) = LOWER(u.email)
+    WHERE u.email IS NOT NULL
+      AND a.id IS NULL
+    ORDER BY u."createdAt" DESC
+  `);
+
+  const list = Array.isArray(rows) ? rows : [];
+  return list.map((r: Record<string, unknown>) => ({
+    id: Number(r.id),
+    email: r.email != null ? String(r.email) : null,
+    role: String(r.role),
+    createdAt:
+      r.createdAt instanceof Date ? r.createdAt : new Date(String(r.createdAt ?? "")),
+  }));
 }
 
 

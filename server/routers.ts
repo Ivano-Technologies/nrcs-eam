@@ -2871,6 +2871,41 @@ export const appRouter = router({
         return { success: true as const };
       }),
 
+    delete: adminProcedure
+      .input(z.object({ id: z.number().int().positive() }))
+      .mutation(async ({ input, ctx }) => {
+        if (input.id === ctx.user.id) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "You cannot delete your own account",
+          });
+        }
+        const target = await db.getUserById(input.id);
+        if (!target) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
+        }
+
+        const supabase = getSupabaseServiceRole();
+        if (target.authUserId) {
+          const { error } = await supabase.auth.admin.deleteUser(target.authUserId);
+          if (error && !/not found|does not exist/i.test(error.message)) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: error.message,
+            });
+          }
+        }
+
+        const still = await db.getUserById(input.id);
+        if (still) {
+          await db.deleteUser(input.id);
+        }
+
+        return { success: true as const };
+      }),
+
+    findOrphaned: adminProcedure.query(async () => db.findOrphanedAppUsers()),
+
     resetPassword: adminProcedure
       .input(z.object({ email: z.string().email() }))
       .mutation(async ({ input }) => {

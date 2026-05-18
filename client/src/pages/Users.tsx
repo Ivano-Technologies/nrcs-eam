@@ -38,7 +38,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc";
-import { UserPlus } from "lucide-react";
+import { Ghost, Trash2, UserPlus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -133,6 +133,29 @@ export default function Users() {
     onError: (e) => toast.error(e.message || "Deactivate failed"),
   });
 
+  const deleteMutation = trpc.users.delete.useMutation({
+    onSuccess: () => {
+      toast.success("User deleted");
+      void utils.users.list.invalidate();
+      void utils.users.findOrphaned.invalidate();
+      setDeleteId(null);
+    },
+    onError: (e) => toast.error(e.message || "Delete failed"),
+  });
+
+  const [orphanOpen, setOrphanOpen] = useState(false);
+  const { data: orphaned, isLoading: orphansLoading, refetch: refetchOrphans } =
+    trpc.users.findOrphaned.useQuery(undefined, { enabled: orphanOpen && user?.role === "admin" });
+
+  const deleteOrphanMutation = trpc.users.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Orphaned account removed");
+      void utils.users.list.invalidate();
+      void refetchOrphans();
+    },
+    onError: (e) => toast.error(e.message || "Delete failed"),
+  });
+
   const resetPasswordMutation = trpc.users.resetPassword.useMutation({
     onSuccess: (data) => {
       toast.success(data.message);
@@ -160,11 +183,14 @@ export default function Users() {
   } | null>(null);
 
   const [deactivateId, setDeactivateId] = useState<number | null>(null);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
 
   const deactivateTarget = useMemo(
     () => rows?.find((r) => r.id === deactivateId),
     [rows, deactivateId]
   );
+
+  const deleteTarget = useMemo(() => rows?.find((r) => r.id === deleteId), [rows, deleteId]);
 
   if (user?.role !== "admin") {
     return (
@@ -189,10 +215,16 @@ export default function Users() {
           <h1 className="text-3xl font-bold">User Management</h1>
           <p className="mt-2 text-muted-foreground">Create accounts, assign facilities, and manage access</p>
         </div>
-        <Button onClick={() => setCreateOpen(true)} className="shrink-0 gap-2">
-          <UserPlus className="h-4 w-4" />
-          Add user
-        </Button>
+        <div className="flex shrink-0 flex-wrap gap-2">
+          <Button variant="outline" className="gap-2" onClick={() => setOrphanOpen(true)}>
+            <Ghost className="h-4 w-4" />
+            Find orphaned accounts
+          </Button>
+          <Button onClick={() => setCreateOpen(true)} className="gap-2">
+            <UserPlus className="h-4 w-4" />
+            Add user
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-col gap-3 rounded-lg border bg-card p-4 md:flex-row md:flex-wrap md:items-end">
@@ -331,6 +363,15 @@ export default function Users() {
                         onClick={() => setDeactivateId(u.id)}
                       >
                         Deactivate
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        disabled={u.id === user.id}
+                        onClick={() => setDeleteId(u.id)}
+                        aria-label="Delete user"
+                      >
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </TableCell>
@@ -574,6 +615,85 @@ export default function Users() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={deleteId != null} onOpenChange={(o) => !o && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete user permanently?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget
+                ? `This removes ${deleteTarget.name ?? deleteTarget.email} from the app and Supabase Auth. This cannot be undone.`
+                : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteMutation.isPending || deleteId == null}
+              onClick={() => deleteId != null && deleteMutation.mutate({ id: deleteId })}
+            >
+              {deleteMutation.isPending ? "Deleting…" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Dialog open={orphanOpen} onOpenChange={setOrphanOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Orphaned accounts</DialogTitle>
+            <DialogDescription>
+              Users in the app database with no matching Supabase Auth account. They appear in EAM but cannot log in.
+            </DialogDescription>
+          </DialogHeader>
+          {orphansLoading ? (
+            <p className="text-sm text-muted-foreground">Searching…</p>
+          ) : (orphaned?.length ?? 0) === 0 ? (
+            <p className="text-sm text-muted-foreground">No orphaned accounts found.</p>
+          ) : (
+            <div className="max-h-80 overflow-auto rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead className="text-right">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {orphaned?.map((o) => (
+                    <TableRow key={o.id}>
+                      <TableCell>{o.email ?? "—"}</TableCell>
+                      <TableCell>{roleLabel(o.role)}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {new Date(o.createdAt).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          disabled={deleteOrphanMutation.isPending}
+                          onClick={() => deleteOrphanMutation.mutate({ id: o.id })}
+                        >
+                          Delete
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => void refetchOrphans()}>
+              Refresh
+            </Button>
+            <Button onClick={() => setOrphanOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
