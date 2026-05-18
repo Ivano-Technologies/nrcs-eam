@@ -164,8 +164,15 @@ export function SidebarGroupedNav({
   const renderItemButton = (item: AppNavItem, subsectionIndex?: number) => {
     const base = item.path.replace(/\/$/, "") || "/";
     const loc = location.replace(/\/$/, "") || "/";
+    const importBase = appPath("/inventory/import").replace(/\/$/, "") || "/";
     let isActive = loc === base || (base !== "/app" && loc.startsWith(base + "/"));
-    if (!isActive && base === INVENTORY_TRACKING_SIDEBAR_PATH && locationMatchesInventoryTracking(loc)) {
+    if (
+      !isActive &&
+      base === INVENTORY_TRACKING_SIDEBAR_PATH &&
+      locationMatchesInventoryTracking(loc) &&
+      !loc.startsWith(`${importBase}/`) &&
+      loc !== importBase
+    ) {
       isActive = true;
     }
     const badge = item.navCountBadge ? navBadgeValue(sidebarCounts ?? undefined, item.navCountBadge) : undefined;

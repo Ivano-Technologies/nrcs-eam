@@ -22,6 +22,13 @@ import {
   depreciationReportRouter,
   insuranceRecordsRouter,
 } from "./financeRouters";
+import { complianceTrackingRouter } from "./complianceTrackingRouters";
+import { donorAssetsRouter } from "./donorAssetsRouters";
+import {
+  countDonorReportsDueSoon,
+  countGeneratorsOverdue,
+  countVehiclesExpiringSoon,
+} from "./complianceTrackingDb";
 import { countInsuranceExpiringSoon } from "./financeModulesDb";
 import { requireRole } from "./_core/trpc";
 import { getSupabaseServiceRole } from "./_core/supabase";
@@ -1535,6 +1542,8 @@ export const appRouter = router({
   depreciationReport: depreciationReportRouter,
   insuranceRecords: insuranceRecordsRouter,
   annualFinanceReport: annualFinanceReportRouter,
+  complianceTracking: complianceTrackingRouter,
+  donorAssets: donorAssetsRouter,
 
   assetValuation: router({
     report: managerOrAdminProcedure.query(async () => {
@@ -2267,8 +2276,17 @@ export const appRouter = router({
           });
 
         if (input.role === "Admin") {
-          const [pendingUserCount, failedLoginsCount, reqSummary, inactiveFacilities, grnDrafts, insuranceExpiring] =
-            await Promise.all([
+          const [
+            pendingUserCount,
+            failedLoginsCount,
+            reqSummary,
+            inactiveFacilities,
+            grnDrafts,
+            insuranceExpiring,
+            vehiclesExpiring,
+            generatorsOverdue,
+            donorReportsDueSoon,
+          ] = await Promise.all([
             safe("pendingUsers", async () => {
               const rows = await database
                 .select({ count: sql<number>`count(*)`.mapWith(Number) })
@@ -2300,6 +2318,9 @@ export const appRouter = router({
               return Number(rows[0]?.count ?? 0);
             }),
             safe("insuranceExpiring", () => countInsuranceExpiringSoon()),
+            safe("vehiclesExpiring", () => countVehiclesExpiringSoon()),
+            safe("generatorsOverdue", () => countGeneratorsOverdue()),
+            safe("donorReportsDueSoon", () => countDonorReportsDueSoon()),
           ]);
 
           const items: AttentionItem[] = [];
@@ -2360,12 +2381,48 @@ export const appRouter = router({
               href: DASHBOARD_NAV.insuranceExpiring,
             });
           }
+          if ((vehiclesExpiring ?? 0) > 0) {
+            items.push({
+              icon: "Car",
+              tone: "amber",
+              label: `${vehiclesExpiring} vehicle${vehiclesExpiring === 1 ? "" : "s"} with documents expiring soon`,
+              meta: "Compliance",
+              href: DASHBOARD_NAV.vehiclesExpiring,
+            });
+          }
+          if ((generatorsOverdue ?? 0) > 0) {
+            items.push({
+              icon: "Zap",
+              tone: "red",
+              label: `${generatorsOverdue} generator${generatorsOverdue === 1 ? "" : "s"} overdue for service`,
+              meta: "Compliance",
+              href: DASHBOARD_NAV.generatorsOverdue,
+            });
+          }
+          if ((donorReportsDueSoon ?? 0) > 0) {
+            items.push({
+              icon: "FileCheck",
+              tone: "amber",
+              label: `${donorReportsDueSoon} donor report${donorReportsDueSoon === 1 ? "" : "s"} due within 14 days`,
+              meta: "Compliance",
+              href: DASHBOARD_NAV.donorReportsDueSoon,
+            });
+          }
           return (items.length > 0 ? items : [allClear]).slice(0, 4);
         }
 
         if (input.role === "Manager") {
-          const [reqSummary, lowStockCount, overdueMaintenanceCount, waybillDrafts, grnDrafts, insuranceExpiring] =
-            await Promise.all([
+          const [
+            reqSummary,
+            lowStockCount,
+            overdueMaintenanceCount,
+            waybillDrafts,
+            grnDrafts,
+            insuranceExpiring,
+            vehiclesExpiring,
+            generatorsOverdue,
+            donorReportsDueSoon,
+          ] = await Promise.all([
             requisitionSummary(),
             lowStockItems(),
             safe("overdueMaintenance", async () => {
@@ -2390,6 +2447,9 @@ export const appRouter = router({
               return Number(rows[0]?.count ?? 0);
             }),
             safe("insuranceExpiring", () => countInsuranceExpiringSoon()),
+            safe("vehiclesExpiring", () => countVehiclesExpiringSoon()),
+            safe("generatorsOverdue", () => countGeneratorsOverdue()),
+            safe("donorReportsDueSoon", () => countDonorReportsDueSoon()),
           ]);
 
           const items: AttentionItem[] = [];
@@ -2412,6 +2472,33 @@ export const appRouter = router({
               label: `${insuranceExpiring} insurance polic${insuranceExpiring === 1 ? "y" : "ies"} expiring soon`,
               meta: "Compliance",
               href: DASHBOARD_NAV.insuranceExpiring,
+            });
+          }
+          if ((vehiclesExpiring ?? 0) > 0) {
+            items.push({
+              icon: "Car",
+              tone: "amber",
+              label: `${vehiclesExpiring} vehicle${vehiclesExpiring === 1 ? "" : "s"} with documents expiring soon`,
+              meta: "Compliance",
+              href: DASHBOARD_NAV.vehiclesExpiring,
+            });
+          }
+          if ((generatorsOverdue ?? 0) > 0) {
+            items.push({
+              icon: "Zap",
+              tone: "red",
+              label: `${generatorsOverdue} generator${generatorsOverdue === 1 ? "" : "s"} overdue for service`,
+              meta: "Compliance",
+              href: DASHBOARD_NAV.generatorsOverdue,
+            });
+          }
+          if ((donorReportsDueSoon ?? 0) > 0) {
+            items.push({
+              icon: "FileCheck",
+              tone: "amber",
+              label: `${donorReportsDueSoon} donor report${donorReportsDueSoon === 1 ? "" : "s"} due within 14 days`,
+              meta: "Compliance",
+              href: DASHBOARD_NAV.donorReportsDueSoon,
             });
           }
           if ((lowStockCount ?? 0) > 0) {

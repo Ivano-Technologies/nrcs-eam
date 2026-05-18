@@ -90,7 +90,7 @@ const plugins = [
         {
           /** tRPC read queries for field/dashboard/finance pages (GET only). `sites` = facilities register. */
           urlPattern:
-            /\/api\/trpc\/.*(assets|sites|inventoryV2|inventory|dashboard|auth|assetValuation|financial|quickbooks|costManagement|depreciationReport|insuranceRecords|annualFinanceReport)\./i,
+            /\/api\/trpc\/.*(assets|sites|inventoryV2|inventory|dashboard|auth|assetValuation|financial|quickbooks|costManagement|depreciationReport|insuranceRecords|annualFinanceReport|complianceTracking|donorAssets)\./i,
           handler: "StaleWhileRevalidate",
           method: "GET",
           options: {

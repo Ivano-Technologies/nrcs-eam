@@ -6,6 +6,7 @@ import AssetDetail from "@/pages/AssetDetail";
 import AssetMap from "@/pages/AssetMap";
 import AssetScanner from "@/pages/AssetScanner";
 import Assets from "@/pages/Assets";
+import DonorAssets from "@/pages/assets/DonorAssets";
 import AuditTrail from "@/pages/AuditTrail";
 import Compliance from "@/pages/Compliance";
 import AssetValuation from "@/pages/AssetValuation";
@@ -128,6 +129,7 @@ export default function ProtectedAppSection() {
         <Switch>
           <Route path="/app" component={Home} />
           <Route path="/app/welcome" component={Welcome} />
+          <Route path="/app/assets/donors" component={DonorAssets} />
           <Route path="/app/assets/:id" component={AssetDetail} />
           <Route path="/app/assets" component={Assets} />
           <Route path="/app/scanner" component={AssetScanner} />
@@ -148,11 +150,11 @@ export default function ProtectedAppSection() {
           <Route path="/app/maintenance" component={Maintenance} />
           <Route path="/app/inventory/stock-overview" component={InventoryStockOverviewPage} />
           <Route path="/app/inventory/ctn-registry" component={CtnRegistryPage} />
+          <Route path="/app/inventory/import/drafts" component={InventoryImportDraftsRoute} />
+          <Route path="/app/inventory/import" component={InventoryImportPageRoute} />
           <Route path="/app/inventory/tracking" component={InventoryTrackingPage} />
           <Route path="/app/inventory/requisitions" component={InventoryRequisitionsPage} />
           <Route path="/app/inventory/transfers" component={InventoryTransfersRoute} />
-          <Route path="/app/inventory/import" component={InventoryImportPageRoute} />
-          <Route path="/app/inventory/import/drafts" component={InventoryImportDraftsRoute} />
           <Route path="/app/inventory/receipts/:id/print/:copyType" component={ReceiptPrint} />
           <Route path="/app/inventory/receipts/new" component={ReceiptDetail} />
           <Route path="/app/inventory/receipts/:id" component={ReceiptDetail} />

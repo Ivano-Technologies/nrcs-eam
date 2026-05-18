@@ -5,6 +5,7 @@ import {
   Landmark,
   MapPin,
   Scan,
+  Gift,
   Wrench,
   Boxes,
   Package,
@@ -68,6 +69,7 @@ export const SIDEBAR_GROUPS: AppNavGroup[] = [
       { label: "Asset Register", path: appPath("/assets"), icon: Landmark },
       { label: "Asset Map", path: appPath("/asset-map"), icon: MapPin },
       { label: "Asset Scanner", path: appPath("/scanner"), icon: Scan },
+      { label: "Donor Assets", path: appPath("/assets/donors"), icon: Gift },
       {
         label: "Asset Valuation",
         path: appPath("/finance/asset-valuation"),
@@ -257,6 +259,7 @@ export const SIDEBAR_BOTTOM: AppNavItem[] = [
 ];
 
 const GROUP_PREFIXES: { groupId: string; pathPrefix: string }[] = [
+  { groupId: "assets", pathPrefix: appPath("/assets/donors") },
   { groupId: "assets", pathPrefix: appPath("/assets") },
   { groupId: "assets", pathPrefix: appPath("/asset-map") },
   { groupId: "assets", pathPrefix: appPath("/scanner") },
@@ -283,6 +286,7 @@ const GROUP_PREFIXES: { groupId: string; pathPrefix: string }[] = [
   { groupId: "inventory", pathPrefix: appPath("/inventory/expiry") },
   { groupId: "inventory", pathPrefix: appPath("/inventory/distributions") },
   { groupId: "inventory", pathPrefix: appPath("/inventory/kits") },
+  { groupId: "inventory", pathPrefix: appPath("/inventory/import") },
   { groupId: "inventory", pathPrefix: appPath("/inventory") },
   { groupId: "maintenance", pathPrefix: appPath("/maintenance") },
   { groupId: "maintenance", pathPrefix: appPath("/work-orders") },
