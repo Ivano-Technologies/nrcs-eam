@@ -14,9 +14,12 @@ function isSecureRequest(req: Request) {
   return protoList.some(proto => proto.trim().toLowerCase() === "https");
 }
 
-export function getSessionCookieOptions(
-  req: Request
-): Pick<CookieOptions, "domain" | "httpOnly" | "path" | "sameSite" | "secure"> {
+export type SessionCookieOptions = Pick<
+  CookieOptions,
+  "domain" | "httpOnly" | "path" | "sameSite" | "secure"
+>;
+
+export function getSessionCookieOptions(req: Request): SessionCookieOptions {
   const explicitDomain = process.env.SESSION_COOKIE_DOMAIN?.trim();
   const domain =
     explicitDomain && explicitDomain.length > 0 ? explicitDomain : undefined;
@@ -30,4 +33,9 @@ export function getSessionCookieOptions(
     sameSite: secure ? "none" : "lax",
     secure,
   };
+}
+
+/** Options for clearCookie — must match set-cookie attributes; never pass maxAge (Express v5 ignores it). */
+export function getClearCookieOptions(req: Request): SessionCookieOptions {
+  return getSessionCookieOptions(req);
 }

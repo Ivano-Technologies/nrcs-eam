@@ -32,12 +32,16 @@ export function useAuth(options?: UseAuthOptions) {
         error instanceof TRPCClientError &&
         error.data?.code === "UNAUTHORIZED"
       ) {
-        return;
+        // Session already gone — still clear client state and redirect.
+      } else {
+        console.error("[auth.logout] mutation failed", error);
       }
-      throw error;
     } finally {
       utils.auth.me.setData(undefined, null);
       await utils.auth.me.invalidate();
+      if (typeof window !== "undefined") {
+        window.location.href = "/login";
+      }
     }
   }, [logoutMutation, utils]);
 

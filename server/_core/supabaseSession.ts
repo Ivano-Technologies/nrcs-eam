@@ -9,7 +9,7 @@ import { parse as parseCookieHeader } from "cookie";
 import type { Request, Response } from "express";
 import type { User } from "../../drizzle/schema";
 import * as db from "../db";
-import { getSessionCookieOptions } from "./cookies";
+import { getClearCookieOptions, getSessionCookieOptions } from "./cookies";
 import { getSupabasePublishableServer } from "./supabase";
 
 function parseCookies(header: string | undefined): Map<string, string> {
@@ -60,8 +60,34 @@ export function setSessionCookies(
   });
 }
 
-export function clearSessionCookies(req: Request, res: Response): void {
-  const opts = { ...getSessionCookieOptions(req), maxAge: -1 as const };
+export async function clearSessionCookies(
+  req: Request,
+  res: Response
+): Promise<void> {
+  const accessToken = getAccessTokenFromRequest(req);
+  const refreshToken = getRefreshTokenFromRequest(req);
+
+  if (accessToken && refreshToken) {
+    try {
+      const supabase = getSupabasePublishableServer();
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      });
+      if (sessionError) {
+        console.warn("[auth.logout] setSession before signOut:", sessionError.message);
+      } else {
+        const { error: signOutError } = await supabase.auth.signOut();
+        if (signOutError) {
+          console.warn("[auth.logout] supabase signOut:", signOutError.message);
+        }
+      }
+    } catch (err) {
+      console.warn("[auth.logout] supabase signOut failed:", err);
+    }
+  }
+
+  const opts = getClearCookieOptions(req);
   res.clearCookie(SUPABASE_ACCESS_TOKEN_COOKIE, opts);
   res.clearCookie(SUPABASE_REFRESH_TOKEN_COOKIE, opts);
   res.clearCookie(COOKIE_NAME, opts);

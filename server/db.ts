@@ -93,6 +93,43 @@ export async function getDb() {
   return _db;
 }
 
+/**
+ * Warm the postgres pool (serverless cold start). Retries with backoff and pool reset.
+ */
+export async function warmDbConnection(
+  retries = 3,
+  baseDelayMs = 500
+): Promise<NonNullable<Awaited<ReturnType<typeof getDb>>>> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      const database = await getDb();
+      if (!database) {
+        throw new Error(
+          "Database not available (check DATABASE_URL and pool initialisation)"
+        );
+      }
+      await database.execute(sql`SELECT 1`);
+      return database;
+    } catch (error) {
+      lastError = error;
+      if (attempt < retries - 1) {
+        console.warn(
+          `[Database] warmDbConnection attempt ${attempt + 1}/${retries} failed, retrying`,
+          error instanceof Error ? error.message : error
+        );
+        await resetDbConnection();
+        await new Promise((resolve) =>
+          setTimeout(resolve, baseDelayMs * (attempt + 1))
+        );
+      }
+    }
+  }
+  throw lastError instanceof Error
+    ? lastError
+    : new Error(String(lastError ?? "warmDbConnection failed"));
+}
+
 /** Close and clear the singleton pool (e.g. retry migrations after transient TLS/network errors). */
 export async function resetDbConnection(): Promise<void> {
   if (_sql) {

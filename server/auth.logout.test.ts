@@ -66,12 +66,12 @@ describe("auth.logout", () => {
     );
     for (const c of clearedCookies) {
       expect(c.options).toMatchObject({
-        maxAge: -1,
         secure: true,
         sameSite: "none",
         httpOnly: true,
         path: "/",
       });
+      expect(c.options).not.toHaveProperty("maxAge");
     }
   });
 });

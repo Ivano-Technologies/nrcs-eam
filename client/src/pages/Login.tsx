@@ -15,6 +15,21 @@ import { GlassCard } from "@/components/auth/GlassCard";
 import { PasswordInputWithToggle } from "@/components/auth/PasswordInputWithToggle";
 import { trpc } from "@/lib/trpc";
 import { appPath } from "@/lib/routes";
+import { TRPCClientError } from "@trpc/client";
+
+function isRetryableLoginError(error: unknown): boolean {
+  if (!(error instanceof TRPCClientError)) return false;
+  const code = error.data?.code;
+  return (
+    code === "INTERNAL_SERVER_ERROR" ||
+    code === "TIMEOUT" ||
+    error.message.toLowerCase().includes("temporarily unavailable")
+  );
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -26,15 +41,22 @@ export default function Login() {
 
   const loginMutation = trpc.auth.loginWithPassword.useMutation({
     onSuccess: async (data) => {
-      await utils.auth.me.refetch();
+      let me = await utils.auth.me.fetch();
+      if (!me) {
+        await sleep(500);
+        me = await utils.auth.me.fetch();
+      }
+      if (!me) {
+        setErrorMessage(
+          "Signed in but session could not be loaded. Please try again."
+        );
+        return;
+      }
       if (data.mustChangePasswordOnLogin) {
         setLocation(`${appPath("/dashboard-settings")}?changePassword=required`);
         return;
       }
       setLocation(appPath("/"));
-    },
-    onError: (error: { message?: string }) => {
-      setErrorMessage(error.message || "Sign in failed");
     },
   });
 
@@ -49,7 +71,7 @@ export default function Login() {
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
     setResetMessage(null);
@@ -63,7 +85,36 @@ export default function Login() {
       return;
     }
 
-    loginMutation.mutate({ email: email.trim(), password });
+    const credentials = { email: email.trim(), password };
+
+    const runLogin = async (attempt: number) => {
+      try {
+        return await loginMutation.mutateAsync(credentials);
+      } catch (error) {
+        if (attempt === 0 && isRetryableLoginError(error)) {
+          console.warn("[login] first attempt failed, retrying once", {
+            code:
+              error instanceof TRPCClientError ? error.data?.code : undefined,
+            message: error instanceof Error ? error.message : String(error),
+          });
+          await sleep(1000);
+          return runLogin(1);
+        }
+        throw error;
+      }
+    };
+
+    try {
+      await runLogin(0);
+    } catch (error) {
+      const message =
+        error instanceof TRPCClientError
+          ? error.message
+          : error instanceof Error
+            ? error.message
+            : "Sign in failed";
+      setErrorMessage(message || "Sign in failed");
+    }
   };
 
   const handlePasswordReset = (e: React.MouseEvent<HTMLButtonElement>) => {
