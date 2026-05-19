@@ -163,7 +163,7 @@
     "jsdom": "^29.0.2",
     "png-to-ico": "^3.0.1",
     "pnpm": "^10.15.1",
-    "postcss": "^8.4.47",
+    "postcss": "^8.5.14",
     "prettier": "^3.6.2",
     "sharp": "^0.34.5",
     "tailwindcss": "^4.1.14",
