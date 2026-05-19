@@ -10,7 +10,7 @@ import type { Request, Response } from "express";
 import type { User } from "../../drizzle/schema";
 import * as db from "../db";
 import { getSessionCookieOptions } from "./cookies";
-import { getSupabaseAnonServer } from "./supabase";
+import { getSupabasePublishableServer } from "./supabase";
 
 function parseCookies(header: string | undefined): Map<string, string> {
   if (!header) {
@@ -75,7 +75,7 @@ export async function authenticateRequest(
   res: Response
 ): Promise<User> {
   let accessToken = getAccessTokenFromRequest(req);
-  const supabase = getSupabaseAnonServer();
+  const supabase = getSupabasePublishableServer();
 
   if (!accessToken) {
     const refresh = getRefreshTokenFromRequest(req);

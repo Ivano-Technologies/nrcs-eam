@@ -41,7 +41,7 @@ Single-organization web application for the **Nigerian Red Cross Society** to ma
 ```bash
 pnpm install
 cp .env.example .env
-# Edit .env — at minimum DATABASE_URL (Supabase pooler URL), SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY
+# Edit .env — at minimum DATABASE_URL (Supabase pooler URL), SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, SUPABASE_SECRET_KEY
 pnpm exec drizzle-kit migrate
 pnpm dev
 ```
@@ -61,7 +61,7 @@ Production SPA is built and deployed from this repo via **Vercel** (Git integrat
 |----------|--------|
 | `VITE_API_BASE_URL` | **HTTPS API origin** (no trailing slash) where Express runs, e.g. `https://api.example.com`. Without this, the SPA requests same-origin `/api/trpc`, which only works if the API is served from the same host. |
 | `VITE_SUPABASE_URL` | Same value as `SUPABASE_URL` (public). |
-| `VITE_SUPABASE_ANON_KEY` | Same value as `SUPABASE_ANON_KEY` (public anon key). |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Same value as `SUPABASE_PUBLISHABLE_KEY` (public publishable key). |
 
 **Server / API host** (wherever Node runs: VPS, Railway, Fly, Vercel serverless adapter, etc.) needs: `DATABASE_URL`, `SUPABASE_*`, `FRONTEND_ORIGIN`, `CORS_ORIGINS`, etc. See [`.env.example`](.env.example).
 
@@ -88,7 +88,7 @@ Open the app at the URL printed by the dev server (typically `http://localhost:3
 
 `tests/mvp-audit` now authenticates with Supabase session bootstrap instead of a seeded magic-token table.
 
-- Required in `.env.e2e`: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
+- Required in `.env.e2e`: `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`
 - Required in `.env.e2e`: `TEST_USER_PASSWORD`
 - `pnpm run seed-e2e:local` ensures the app `users` row plus Supabase Auth user exist and are linked.
 - Playwright setup (`tests/mvp-audit/auth.setup.ts`) signs in via Supabase, injects `sb-access-token` and `sb-refresh-token` cookies, and writes `playwright/.auth/mvp-audit-user.json`.

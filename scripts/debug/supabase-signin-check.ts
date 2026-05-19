@@ -5,26 +5,26 @@ async function main() {
   const email = process.env.DEBUG_SUPABASE_EMAIL?.trim();
   const password = process.env.DEBUG_SUPABASE_PASSWORD;
   const url = process.env.SUPABASE_URL?.trim() ?? "";
-  const anon = process.env.SUPABASE_ANON_KEY ?? "";
+  const publishable = process.env.SUPABASE_PUBLISHABLE_KEY ?? "";
 
   if (!email || !password) {
     throw new Error(
       "Set DEBUG_SUPABASE_EMAIL and DEBUG_SUPABASE_PASSWORD before running"
     );
   }
-  if (!url || !anon) {
-    throw new Error("SUPABASE_URL and SUPABASE_ANON_KEY are required");
+  if (!url || !publishable) {
+    throw new Error("SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY are required");
   }
 
   console.log(
     JSON.stringify({
       supabaseUrlPrefix: url.slice(0, 30),
       looksLikeDbUrl: /^postgres(ql)?:\/\//i.test(url),
-      anonKeyPrefix: anon.slice(0, 12),
+      publishableKeyPrefix: publishable.slice(0, 12),
     })
   );
 
-  const supabase = createClient(url, anon, {
+  const supabase = createClient(url, publishable, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
   const { data, error } = await supabase.auth.signInWithPassword({

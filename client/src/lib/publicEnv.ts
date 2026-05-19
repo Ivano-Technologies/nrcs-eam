@@ -4,10 +4,10 @@
  */
 export function getViteSupabasePublicConfig(): {
   url: string;
-  anonKey: string;
+  publishableKey: string;
 } {
   return {
     url: import.meta.env.VITE_SUPABASE_URL?.trim() ?? "",
-    anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? "",
+    publishableKey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim() ?? "",
   };
 }

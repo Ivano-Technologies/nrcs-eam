@@ -154,8 +154,8 @@ async function syncPublicReferenceIntoTest(
 
 export async function setupTestSchema(): Promise<void> {
   const databaseUrl = requireEnv("DATABASE_URL");
-  // Require service role key so this script only runs in privileged test contexts.
-  requireEnv("SUPABASE_SERVICE_ROLE_KEY");
+  // Require secret key so this script only runs in privileged test contexts.
+  requireEnv("SUPABASE_SECRET_KEY");
   const schema = process.env.SUPABASE_TEST_SCHEMA?.trim() || "test";
 
   const ssl = getPostgresJsSslOption();

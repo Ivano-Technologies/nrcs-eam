@@ -9,7 +9,7 @@ import { Router, type Request } from "express";
 import { count } from "drizzle-orm";
 import { users } from "../../drizzle/schema";
 import { getDb } from "../db";
-import { getSupabaseServiceRole } from "../_core/supabase";
+import { getSupabaseSecret } from "../_core/supabase";
 
 const router = Router();
 
@@ -70,7 +70,7 @@ router.post("/setup/create-admin", async (req, res) => {
         throw Object.assign(new Error("ALREADY_EXISTS"), { code: "ALREADY_EXISTS" });
       }
 
-      const supabase = getSupabaseServiceRole();
+      const supabase = getSupabaseSecret();
       const { data, error } = await supabase.auth.admin.createUser({
         email: ADMIN_EMAIL,
         email_confirm: true,

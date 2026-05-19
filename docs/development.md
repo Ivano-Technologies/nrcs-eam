@@ -7,8 +7,8 @@
 3. Set required env vars:
    - `DATABASE_URL`
    - `SUPABASE_URL`
-   - `SUPABASE_ANON_KEY`
-   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `SUPABASE_PUBLISHABLE_KEY`
+   - `SUPABASE_SECRET_KEY`
 4. Optional integrations:
    - `RESEND_API_KEY` (WMS notifications)
 5. Apply migrations: `pnpm exec drizzle-kit migrate`
@@ -48,8 +48,8 @@ Both skips print explicit warnings in the command output when enabled.
 Required in `.env.e2e`:
 
 - `SUPABASE_URL`
-- `SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY`
+- `SUPABASE_PUBLISHABLE_KEY`
+- `SUPABASE_SECRET_KEY`
 - `TEST_USER_PASSWORD`
 
 Optional for WMS notifications in local/prod `.env`:

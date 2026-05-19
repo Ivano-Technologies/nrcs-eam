@@ -8,7 +8,7 @@
  *   - Refuses NODE_ENV=production unless --force (same pattern as clean-test-data.ts).
  *
  * Supabase Auth: deletes all auth users except the admin email when
- * SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY are set.
+ * SUPABASE_URL + SUPABASE_SECRET_KEY are set.
  *
  * Usage:
  *   pnpm exec tsx scripts/db/full-reset.ts
@@ -64,7 +64,7 @@ NOT touched:
 
 Sequences reset for empty tables; users id follows max(admin id).
 
-Supabase: other Auth users deleted (same email exception) if service role is configured.
+Supabase: other Auth users deleted (same email exception) if the secret key is configured.
 
 Run with:  pnpm exec tsx scripts/db/full-reset.ts --force
            pnpm exec tsx scripts/db/full-reset.ts --force --yes
@@ -258,9 +258,9 @@ async function main(): Promise<void> {
   console.log("\n--- Supabase Auth (optional) ---\n");
 
   const supabaseUrl = process.env.SUPABASE_URL?.trim();
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
-  if (supabaseUrl && serviceKey) {
-    const supabase = createClient(supabaseUrl, serviceKey, {
+  const secretKey = process.env.SUPABASE_SECRET_KEY?.trim();
+  if (supabaseUrl && secretKey) {
+    const supabase = createClient(supabaseUrl, secretKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
     let page = 1;
@@ -286,7 +286,7 @@ async function main(): Promise<void> {
     }
     console.log(`  Supabase Auth users removed (except admin): ${deleted}`);
   } else {
-    console.log("  Skipped (set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to prune Auth users).");
+    console.log("  Skipped (set SUPABASE_URL and SUPABASE_SECRET_KEY to prune Auth users).");
   }
 
   console.log("\n--- Verification counts ---\n");

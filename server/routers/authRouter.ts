@@ -4,7 +4,10 @@ import { z } from "zod";
 import { publicProcedure, protectedProcedure, router } from "../_core/trpc";
 import { adminProcedure } from "./roleProcedures";
 import { clearSessionCookies, setSessionCookies } from "../_core/supabaseSession";
-import { getSupabaseAnonServer, getSupabaseServiceRole } from "../_core/supabase";
+import {
+  getSupabasePublishableServer,
+  getSupabaseSecret,
+} from "../_core/supabase";
 import { toPublicUser } from "../_core/sanitizeUser";
 import * as db from "../db";
 import type { InsertUser } from "../../drizzle/schema";
@@ -60,7 +63,7 @@ export const authRouter = router({
         process.env.FRONTEND_ORIGIN?.replace(/\/$/, "") ||
         process.env.VITE_APP_URL?.replace(/\/$/, "") ||
         "http://localhost:3000";
-      const supabase = getSupabaseAnonServer();
+      const supabase = getSupabasePublishableServer();
       const { error } = await supabase.auth.resetPasswordForEmail(input.email.trim(), {
         redirectTo: `${frontend}/reset-password`,
       });
@@ -83,7 +86,7 @@ export const authRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       const supabaseUrl = process.env.SUPABASE_URL?.trim() ?? "";
-      const supabaseAnon = process.env.SUPABASE_ANON_KEY ?? "";
+      const supabasePublishable = process.env.SUPABASE_PUBLISHABLE_KEY ?? "";
       const looksLikeDbUrl = /^postgres(ql)?:\/\//i.test(supabaseUrl);
       console.log(
         "[auth.loginWithPassword] env",
@@ -91,8 +94,8 @@ export const authRouter = router({
           hasSupabaseUrl: supabaseUrl.length > 0,
           supabaseUrlPrefix: supabaseUrl.slice(0, 30),
           looksLikeDbUrl,
-          hasAnonKey: supabaseAnon.length > 0,
-          anonKeyPrefix: supabaseAnon.slice(0, 12),
+          hasPublishableKey: supabasePublishable.length > 0,
+          publishableKeyPrefix: supabasePublishable.slice(0, 12),
         })
       );
       const appUser = await db.getLoginUserByEmailLowercase(input.email);
@@ -114,7 +117,7 @@ export const authRouter = router({
         });
       }
 
-      const supabase = getSupabaseAnonServer();
+      const supabase = getSupabasePublishableServer();
       const { data, error } = await supabase.auth.signInWithPassword({
         email: input.email.trim(),
         password: input.password,
@@ -224,7 +227,7 @@ export const authRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const supabase = getSupabaseServiceRole();
+      const supabase = getSupabaseSecret();
       const bytes = Buffer.from(input.dataBase64, "base64");
       if (!bytes.length) {
         throw new TRPCError({
@@ -304,7 +307,7 @@ export const authRouter = router({
           message: "Password change is not available for this account type",
         });
       }
-      const supabase = getSupabaseAnonServer();
+      const supabase = getSupabasePublishableServer();
       const { error: signErr } = await supabase.auth.signInWithPassword({
         email: u.email.trim(),
         password: input.currentPassword,
@@ -315,7 +318,7 @@ export const authRouter = router({
           message: "Current password is incorrect",
         });
       }
-      const admin = getSupabaseServiceRole();
+      const admin = getSupabaseSecret();
       const { error } = await admin.auth.admin.updateUserById(u.authUserId, {
         password: input.newPassword,
       });
@@ -350,7 +353,7 @@ export const authRouter = router({
           message: "User has no Supabase account; approve or invite them first",
         });
       }
-      const supabase = getSupabaseServiceRole();
+      const supabase = getSupabaseSecret();
       const { error } = await supabase.auth.admin.updateUserById(
         target.authUserId,
         { password: input.password }

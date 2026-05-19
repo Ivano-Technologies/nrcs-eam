@@ -19,17 +19,17 @@ export function validateProductionSecrets(): void {
 
   const db = process.env.DATABASE_URL?.trim();
   const supabaseUrl = process.env.SUPABASE_URL?.trim();
-  const supabaseAnon = process.env.SUPABASE_ANON_KEY?.trim();
-  const supabaseService = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  const supabasePublishable = process.env.SUPABASE_PUBLISHABLE_KEY?.trim();
+  const supabaseSecret = process.env.SUPABASE_SECRET_KEY?.trim();
 
   if (!db) {
     throw new Error(
       "[startup] Production requires DATABASE_URL (from .env or Secrets Manager JSON)"
     );
   }
-  if (!supabaseUrl || !supabaseAnon || !supabaseService) {
+  if (!supabaseUrl || !supabasePublishable || !supabaseSecret) {
     throw new Error(
-      "[startup] Production requires SUPABASE_URL, SUPABASE_ANON_KEY, and SUPABASE_SERVICE_ROLE_KEY"
+      "[startup] Production requires SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, and SUPABASE_SECRET_KEY"
     );
   }
 

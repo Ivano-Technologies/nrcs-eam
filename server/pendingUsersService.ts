@@ -3,7 +3,7 @@ import { randomBytes } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { pendingUsers, users } from "../drizzle/schema";
 import * as db from "./db";
-import { getSupabaseServiceRole } from "./_core/supabase";
+import { getSupabaseSecret } from "./_core/supabase";
 import { generateEmailTemplate, sendEmail } from "./emailService";
 
 function getFrontendOrigin(): string {
@@ -151,7 +151,7 @@ export async function approvePendingUser(
   }
 
   const email = pendingUser.email.trim().toLowerCase();
-  const supabase = getSupabaseServiceRole();
+  const supabase = getSupabaseSecret();
   const tempPassword = randomBytes(18).toString("base64url").slice(0, 24);
 
   const { data, error } = await supabase.auth.admin.createUser({

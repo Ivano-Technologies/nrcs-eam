@@ -1,14 +1,14 @@
 /**
  * One-off: remove app user + Supabase Auth user by email.
  * Usage: pnpm exec tsx scripts/delete-user-by-email.ts user@example.com
- * Requires DATABASE_URL, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY in env.
+ * Requires DATABASE_URL, SUPABASE_URL, SUPABASE_SECRET_KEY in env.
  */
 import "dotenv/config";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { users } from "../drizzle/schema";
-import { getSupabaseServiceRole } from "../server/_core/supabase";
+import { getSupabaseSecret } from "../server/_core/supabase";
 
 async function main() {
   const email = process.argv[2]?.trim().toLowerCase();
@@ -26,7 +26,7 @@ async function main() {
   const db = drizzle(client);
 
   const rows = await db.select().from(users).where(eq(users.email, email)).limit(1);
-  const supabase = getSupabaseServiceRole();
+  const supabase = getSupabaseSecret();
 
   if (rows.length > 0 && rows[0].authUserId) {
     const { error } = await supabase.auth.admin.deleteUser(rows[0].authUserId);

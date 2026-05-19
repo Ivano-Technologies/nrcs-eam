@@ -1,7 +1,7 @@
 /**
  * Set a user's password in Supabase Auth (not in Drizzle).
  * Usage: SET_PASSWORD_EMAIL=x@y.com SET_PASSWORD_PASSWORD='...' pnpm exec tsx scripts/setPassword.ts
- * Requires: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+ * Requires: SUPABASE_URL, SUPABASE_SECRET_KEY
  *
  * Defaults to ivanonigeria@gmail.com / @Localhost001 if env vars not set.
  * Also backfills auth_user_id on the app users row if missing.
@@ -20,13 +20,13 @@ async function main() {
   const password = process.env.SET_PASSWORD_PASSWORD ?? "@Localhost001";
 
   const supabaseUrl = process.env.SUPABASE_URL?.trim();
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
-  if (!supabaseUrl || !serviceRoleKey) {
-    console.error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required");
+  const secretKey = process.env.SUPABASE_SECRET_KEY?.trim();
+  if (!supabaseUrl || !secretKey) {
+    console.error("SUPABASE_URL and SUPABASE_SECRET_KEY are required");
     process.exit(1);
   }
 
-  const supabase = createClient(supabaseUrl, serviceRoleKey, {
+  const supabase = createClient(supabaseUrl, secretKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 

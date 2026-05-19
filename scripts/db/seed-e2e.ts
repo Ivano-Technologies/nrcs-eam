@@ -4,8 +4,8 @@
  *
  * Required Supabase env vars:
  * - SUPABASE_URL
- * - SUPABASE_ANON_KEY
- * - SUPABASE_SERVICE_ROLE_KEY
+ * - SUPABASE_PUBLISHABLE_KEY
+ * - SUPABASE_SECRET_KEY
  * - E2E_USER_EMAIL
  * - E2E_USER_PASSWORD
  *
@@ -248,22 +248,22 @@ export async function runSeedE2e() {
     });
 
   const supabaseUrl = requireEnv("SUPABASE_URL");
-  const supabaseAnonKey = requireEnv("SUPABASE_ANON_KEY");
-  const supabaseServiceRole = requireEnv("SUPABASE_SERVICE_ROLE_KEY");
+  const supabasePublishableKey = requireEnv("SUPABASE_PUBLISHABLE_KEY");
+  const supabaseSecretKey = requireEnv("SUPABASE_SECRET_KEY");
   const fromEnv =
     process.env.E2E_USER_PASSWORD?.trim() ??
     process.env.TEST_USER_PASSWORD?.trim();
   const password =
     fromEnv && isStrongPassword(fromEnv) ? fromEnv : "PlaywrightTest@2026";
 
-  const admin = createClient(supabaseUrl, supabaseServiceRole, {
+  const admin = createClient(supabaseUrl, supabaseSecretKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
-  const anon = createClient(supabaseUrl, supabaseAnonKey, {
+  const publishable = createClient(supabaseUrl, supabasePublishableKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
   await applySupabaseTestSchema(admin, "seed-e2e");
-  await applySupabaseTestSchema(anon, "seed-e2e");
+  await applySupabaseTestSchema(publishable, "seed-e2e");
 
   let created:
     | {
@@ -320,7 +320,7 @@ export async function runSeedE2e() {
   });
 
   await withSeedRetry(async () => {
-    const { error } = await anon.auth.signInWithPassword({
+    const { error } = await publishable.auth.signInWithPassword({
       email: E2E_EMAIL,
       password,
     });

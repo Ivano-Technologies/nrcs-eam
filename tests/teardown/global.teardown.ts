@@ -16,7 +16,7 @@ export default async function globalTeardown(): Promise<void> {
   const schema = getPlaywrightTestSchema();
   const databaseUrl = requireEnv("DATABASE_URL");
   const supabaseUrl = requireEnv("SUPABASE_URL");
-  const serviceRoleKey = requireEnv("SUPABASE_SERVICE_ROLE_KEY");
+  const secretKey = requireEnv("SUPABASE_SECRET_KEY");
   const ssl = getPostgresJsSslOption();
 
   const sql = postgres(databaseUrl, {
@@ -53,7 +53,7 @@ export default async function globalTeardown(): Promise<void> {
     console.log(`[teardown] truncated ${schema}.${table}`);
   }
 
-  const supabase = createClient(supabaseUrl, serviceRoleKey, {
+  const supabase = createClient(supabaseUrl, secretKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
   const { data, error } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });

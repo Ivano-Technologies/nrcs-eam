@@ -31,7 +31,7 @@ import {
 } from "./complianceTrackingDb";
 import { countInsuranceExpiringSoon } from "./financeModulesDb";
 import { requireRole } from "./_core/trpc";
-import { getSupabaseServiceRole } from "./_core/supabase";
+import { getSupabaseSecret } from "./_core/supabase";
 import {
   assetTransfers,
   assets,
@@ -2742,7 +2742,7 @@ export const appRouter = router({
         }
 
         const tempPassword = generateSupabaseCompliantTempPassword(12);
-        const supabase = getSupabaseServiceRole();
+        const supabase = getSupabaseSecret();
         const { data, error } = await supabase.auth.admin.createUser({
           email,
           password: tempPassword,
@@ -2844,7 +2844,7 @@ export const appRouter = router({
         await db.updateUser(id, patch);
 
         if (target.authUserId && (name !== undefined || role !== undefined)) {
-          const admin = getSupabaseServiceRole();
+          const admin = getSupabaseSecret();
           const nextName = name !== undefined ? name.trim() : (target.name ?? "");
           await admin.auth.admin.updateUserById(target.authUserId, {
             user_metadata: { full_name: nextName },
@@ -2885,7 +2885,7 @@ export const appRouter = router({
           throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
         }
 
-        const supabase = getSupabaseServiceRole();
+        const supabase = getSupabaseSecret();
         if (target.authUserId) {
           const { error } = await supabase.auth.admin.deleteUser(target.authUserId);
           if (error && !/not found|does not exist/i.test(error.message)) {
@@ -2910,7 +2910,7 @@ export const appRouter = router({
       .input(z.object({ email: z.string().email() }))
       .mutation(async ({ input }) => {
         const email = input.email.trim().toLowerCase();
-        const supabase = getSupabaseServiceRole();
+        const supabase = getSupabaseSecret();
         const redirectTo = `${getFrontendOriginForUserEmails()}/reset-password`;
         const { data, error } = await supabase.auth.admin.generateLink({
           type: "recovery",

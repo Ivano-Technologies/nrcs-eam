@@ -49,12 +49,12 @@ function getSupabaseUrl() {
   return requireEnv("SUPABASE_URL");
 }
 
-function getSupabaseAnonKey() {
-  return requireEnv("SUPABASE_ANON_KEY");
+function getSupabasePublishableKey() {
+  return requireEnv("SUPABASE_PUBLISHABLE_KEY");
 }
 
-function getSupabaseServiceRoleKey() {
-  return requireEnv("SUPABASE_SERVICE_ROLE_KEY");
+function getSupabaseSecretKey() {
+  return requireEnv("SUPABASE_SECRET_KEY");
 }
 
 function getE2EPassword() {
@@ -74,13 +74,13 @@ function getE2EEmail() {
 }
 
 function createAdminClient() {
-  return createClient(getSupabaseUrl(), getSupabaseServiceRoleKey(), {
+  return createClient(getSupabaseUrl(), getSupabaseSecretKey(), {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
 
-function createAnonClient() {
-  return createClient(getSupabaseUrl(), getSupabaseAnonKey(), {
+function createPublishableClient() {
+  return createClient(getSupabaseUrl(), getSupabasePublishableKey(), {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
@@ -173,10 +173,10 @@ export async function createTestUserInSupabase(): Promise<User> {
 export async function generateSessionForTestUser(): Promise<SessionPayload> {
   const password = getE2EPassword();
   const email = getE2EEmail();
-  const anon = createAnonClient();
-  await applySupabaseTestSchema(anon, "mvp-audit auth");
+  const publishable = createPublishableClient();
+  await applySupabaseTestSchema(publishable, "mvp-audit auth");
   const data = await withSeedRetry(async () => {
-    const { data, error } = await anon.auth.signInWithPassword({
+    const { data, error } = await publishable.auth.signInWithPassword({
       email,
       password,
     });

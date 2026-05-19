@@ -4,12 +4,12 @@ import { E2E_USER_EMAIL, E2E_USER_PASSWORD } from "./live-helpers";
 /** Ensures the Playwright E2E user exists in Supabase Auth with confirmed email and known password. */
 export async function ensureE2eAuthUser(): Promise<void> {
   const supabaseUrl = process.env.SUPABASE_URL?.trim();
-  const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
-  if (!supabaseUrl || !serviceRole) {
-    console.warn("[ensureE2eAuthUser] Skipping; SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY missing");
+  const secretKey = process.env.SUPABASE_SECRET_KEY?.trim();
+  if (!supabaseUrl || !secretKey) {
+    console.warn("[ensureE2eAuthUser] Skipping; SUPABASE_URL or SUPABASE_SECRET_KEY missing");
     return;
   }
-  const admin = createClient(supabaseUrl, serviceRole, {
+  const admin = createClient(supabaseUrl, secretKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
