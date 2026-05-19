@@ -11,6 +11,7 @@
 
 import fs from "fs";
 import path from "path";
+import type postgres from "postgres";
 
 export function isDatabaseSslEnabled(): boolean {
   const v = process.env.DATABASE_SSL;
@@ -41,10 +42,30 @@ export type Mysql2SslConfig = {
  * When `DATABASE_SSL` is unset, returns `{ rejectUnauthorized: false }` for remote URLs
  * so Supabase/Postgres TLS still works without a CA bundle.
  */
-export function getPostgresJsSslOption():
+export type PostgresJsSslOption =
   | undefined
   | false
-  | { rejectUnauthorized: boolean; ca?: string | Buffer } {
+  | "require"
+  | { rejectUnauthorized: boolean; ca?: string | Buffer };
+
+export function isSupabaseDatabaseUrl(url: string): boolean {
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    return host.includes("supabase.co") || host.includes("pooler.supabase.com");
+  } catch {
+    return false;
+  }
+}
+
+export function isServerlessRuntime(): boolean {
+  return (
+    process.env.VERCEL === "1" ||
+    Boolean(process.env.VERCEL_ENV) ||
+    Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME)
+  );
+}
+
+export function getPostgresJsSslOption(): PostgresJsSslOption {
   /** Same idea as libpq `sslmode=disable` — use for VPC-private Postgres when TLS is not spoken on the socket. */
   if (process.env.POSTGRES_SSLMODE === "disable") {
     return false;
@@ -63,10 +84,9 @@ export function getPostgresJsSslOption():
     return undefined;
   }
 
-  // Supabase pooled connections can present cert chains not available in local trust stores.
-  // Use TLS but skip strict cert verification unless an explicit CA bundle is configured.
+  // Supabase (especially Transaction pooler on :6543) requires TLS.
   if (host.includes("supabase.co") || host.includes("pooler.supabase.com")) {
-    return { rejectUnauthorized: false };
+    return "require";
   }
 
   const strict = getMysql2SslOptions();
@@ -121,4 +141,46 @@ export function getMysql2SslOptions(): Mysql2SslConfig | undefined {
   }
 
   return { rejectUnauthorized: false };
+}
+
+/** Shared postgres.js pool options (Supabase Transaction pooler + Vercel serverless). */
+export function getPostgresJsPoolOptions(
+  databaseUrl: string = process.env.DATABASE_URL ?? ""
+): NonNullable<Parameters<typeof postgres>[1]> {
+  const ssl = getPostgresJsSslOption();
+  const supabase = isSupabaseDatabaseUrl(databaseUrl);
+  const serverless = isServerlessRuntime();
+  const e2eSchema = process.env.SUPABASE_TEST_SCHEMA?.trim();
+
+  const options: NonNullable<Parameters<typeof postgres>[1]> = {
+    // Required for Supabase Transaction pooler (port 6543); prepared statements fail silently.
+    prepare: false,
+    max:
+      serverless || supabase
+        ? 1
+        : Number(process.env.DB_POOL_MAX ?? 10),
+    idle_timeout: 20,
+    connect_timeout: serverless ? 10 : 30,
+    // Rotate connections on warm serverless instances (e.g. after DATABASE_URL password change).
+    ...(serverless ? { max_lifetime: 60 * 5 } : {}),
+    ...(e2eSchema
+      ? {
+          connection: {
+            search_path: `${e2eSchema},public`,
+          },
+        }
+      : {}),
+  };
+
+  if (ssl === false) {
+    options.ssl = false;
+  } else if (ssl === "require") {
+    options.ssl = "require";
+  } else if (ssl !== undefined) {
+    options.ssl = ssl;
+  } else if (supabase) {
+    options.ssl = "require";
+  }
+
+  return options;
 }

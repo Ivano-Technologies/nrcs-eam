@@ -34,45 +34,60 @@ import {
   requisitions,
 } from "../drizzle/schema";
 import type { FacilityType } from "../shared/facilities";
-import { getPostgresJsSslOption } from "../shared/mysqlSsl";
+import {
+  getPostgresJsPoolOptions,
+  isSupabaseDatabaseUrl,
+} from "../shared/mysqlSsl";
 import { ENV } from './_core/env';
 import type { InventoryTransaction } from "../drizzle/schema";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 let _sql: ReturnType<typeof postgres> | null = null;
+let _dbUrlFingerprint: string | null = null;
+
+function databaseUrlFingerprint(): string {
+  return process.env.DATABASE_URL?.trim() ?? "";
+}
 
 export async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
+  const fingerprint = databaseUrlFingerprint();
+  if (_db && _dbUrlFingerprint && _dbUrlFingerprint !== fingerprint) {
+    console.warn(
+      "[Database] DATABASE_URL changed — resetting pooled connection"
+    );
+    await resetDbConnection();
+  }
+
+  if (!_db && fingerprint) {
     try {
-      const url = process.env.DATABASE_URL;
-      const ssl = getPostgresJsSslOption();
-      const e2eSchema = process.env.SUPABASE_TEST_SCHEMA?.trim();
-      const options: Parameters<typeof postgres>[1] = {
-        max: 10,
-        idle_timeout: 20,
-        connect_timeout: 30,
-        prepare: false,
-        // Playwright seeds and tears down the mirrored schema (default `test`). Without this, the API
-        // reads `public` while seed-e2e writes CTN ledger rows to `test`, so WMS balances stay at 0.
-        ...(e2eSchema
-          ? {
-              connection: {
-                search_path: `${e2eSchema},public`,
-              },
-            }
-          : {}),
-      };
-      if (ssl !== undefined && ssl !== false) {
-        options.ssl = ssl;
-      } else if (ssl === false) {
-        options.ssl = false;
+      const url = fingerprint;
+      const options = getPostgresJsPoolOptions(url);
+      let host = "";
+      let port = "";
+      try {
+        const parsed = new URL(url);
+        host = parsed.hostname;
+        port = parsed.port;
+      } catch {
+        // ignore parse errors; postgres will surface them
       }
+      console.log("[Database] Initialising postgres.js pool", {
+        host,
+        port,
+        supabase: isSupabaseDatabaseUrl(url),
+        prepare: options.prepare,
+        max: options.max,
+        ssl: options.ssl,
+        connect_timeout: options.connect_timeout,
+      });
       _sql = postgres(url, options);
       _db = drizzle(_sql);
+      _dbUrlFingerprint = fingerprint;
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
       _sql = null;
+      _dbUrlFingerprint = null;
     }
   }
   return _db;
@@ -89,6 +104,7 @@ export async function resetDbConnection(): Promise<void> {
   }
   _sql = null;
   _db = null;
+  _dbUrlFingerprint = null;
 }
 
 const OPEN_REGISTRATION_KEY = "openRegistration";
@@ -2152,10 +2168,22 @@ export async function getLoginUserByEmailLowercase(email: string): Promise<{
       .limit(1);
     return result.length > 0 ? result[0] : undefined;
   } catch (error) {
-    const e = error as { message?: string; code?: string };
+    const e = error as {
+      message?: string;
+      code?: string;
+      detail?: string;
+      hint?: string;
+      severity?: string;
+      cause?: unknown;
+    };
     console.error("[auth.login] getLoginUserByEmailLowercase query failed", {
       message: e?.message,
       code: e?.code,
+      detail: e?.detail,
+      hint: e?.hint,
+      severity: e?.severity,
+      cause: e?.cause,
+      raw: error,
     });
     throw error;
   }

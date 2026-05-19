@@ -9,6 +9,11 @@ import {
   getSupabasePublishableServer,
   getSupabaseSecret,
 } from "../_core/supabase";
+import {
+  getPostgresJsPoolOptions,
+  isServerlessRuntime,
+  isSupabaseDatabaseUrl,
+} from "../../shared/mysqlSsl";
 import { toPublicUser } from "../_core/sanitizeUser";
 import * as db from "../db";
 import type { InsertUser } from "../../drizzle/schema";
@@ -138,7 +143,28 @@ export const authRouter = router({
       hasSecretKey: Boolean(process.env.SUPABASE_SECRET_KEY?.trim()),
       hasDatabaseUrl: Boolean(process.env.DATABASE_URL?.trim()),
       nodeEnv: process.env.NODE_ENV ?? null,
+      vercel: process.env.VERCEL ?? null,
+      vercelEnv: process.env.VERCEL_ENV ?? null,
     };
+
+    const dbUrl = process.env.DATABASE_URL?.trim() ?? "";
+    if (dbUrl) {
+      try {
+        const pool = getPostgresJsPoolOptions(dbUrl);
+        results.dbPoolConfig = {
+          supabase: isSupabaseDatabaseUrl(dbUrl),
+          serverless: isServerlessRuntime(),
+          prepare: pool.prepare,
+          max: pool.max,
+          ssl: pool.ssl,
+          connect_timeout: pool.connect_timeout,
+          max_lifetime: pool.max_lifetime ?? null,
+        };
+      } catch (e) {
+        results.dbPoolConfig =
+          e instanceof Error ? `${e.name}: ${e.message}` : String(e);
+      }
+    }
 
     return results;
   }),
