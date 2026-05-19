@@ -153,3 +153,5 @@ mnt/
 
 .env.vercel.production
 vercel.production
+
+.agents/
