@@ -1,5 +1,7 @@
 # NRCS Enterprise Asset Management (EAM)
 
+![Monthly Security Audit](https://github.com/Ivano-Technologies/nrcs-eam/actions/workflows/monthly-security-audit.yml/badge.svg)
+
 Single-organization web application for the **Nigerian Red Cross Society** to manage assets, maintenance, work orders, inventory, compliance, and related reporting.
 
 ## Scope
