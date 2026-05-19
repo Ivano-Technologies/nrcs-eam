@@ -288,6 +288,13 @@
       "when": 1778300000000,
       "tag": "0040_compliance_tracking",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1779235200000,
+      "tag": "0041_revoke_security_definer_execute",
+      "breakpoints": true
     }
   ]
 }
