@@ -155,3 +155,4 @@ mnt/
 vercel.production
 
 .agents/
+skills-lock.json
