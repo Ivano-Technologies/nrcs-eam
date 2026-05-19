@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { TRPCError } from "@trpc/server";
+import { sql } from "drizzle-orm";
 import { z } from "zod";
 import { publicProcedure, protectedProcedure, router } from "../_core/trpc";
 import { adminProcedure } from "./roleProcedures";
@@ -77,6 +78,71 @@ export const authRouter = router({
       };
     }),
 
+  /** TEMPORARY — remove after login 500 debugging. Public so it can be hit without a session. */
+  testLogin: publicProcedure.query(async () => {
+    const results: Record<string, unknown> = {};
+    const testEmail = "ivanonigeria@gmail.com";
+
+    try {
+      const database = await db.getDb();
+      if (!database) {
+        results.dbConnection = "getDb() returned null (check DATABASE_URL)";
+      } else {
+        await database.execute(sql`SELECT 1 as ok`);
+        results.dbConnection = "ok";
+      }
+    } catch (e) {
+      results.dbConnection =
+        e instanceof Error ? `${e.name}: ${e.message}` : String(e);
+    }
+
+    try {
+      const user = await db.getUserByEmail(testEmail);
+      results.getUserByEmail = {
+        found: !!user,
+        status: user?.status ?? null,
+        authUserId: user?.authUserId ?? null,
+      };
+    } catch (e) {
+      results.getUserByEmail =
+        e instanceof Error ? `${e.name}: ${e.message}` : String(e);
+    }
+
+    try {
+      const loginUser = await db.getLoginUserByEmailLowercase(testEmail);
+      results.getLoginUserByEmailLowercase = {
+        found: !!loginUser,
+        status: loginUser?.status ?? null,
+        authUserId: loginUser?.authUserId ?? null,
+      };
+    } catch (e) {
+      results.getLoginUserByEmailLowercase =
+        e instanceof Error ? `${e.name}: ${e.message}` : String(e);
+    }
+
+    try {
+      const supabase = getSupabasePublishableServer();
+      const { data, error } = await supabase.auth.getSession();
+      results.supabaseGetSession = {
+        error: error?.message ?? null,
+        hasSession: !!data.session,
+      };
+    } catch (e) {
+      results.supabaseGetSession =
+        e instanceof Error ? `${e.name}: ${e.message}` : String(e);
+    }
+
+    results.env = {
+      hasSupabaseUrl: Boolean(process.env.SUPABASE_URL?.trim()),
+      hasPublishableKey: Boolean(process.env.SUPABASE_PUBLISHABLE_KEY?.trim()),
+      hasSecretKey: Boolean(process.env.SUPABASE_SECRET_KEY?.trim()),
+      hasDatabaseUrl: Boolean(process.env.DATABASE_URL?.trim()),
+      nodeEnv: process.env.NODE_ENV ?? null,
+    };
+
+    return results;
+  }),
+
   loginWithPassword: publicProcedure
     .input(
       z.object({
@@ -85,108 +151,143 @@ export const authRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const supabaseUrl = process.env.SUPABASE_URL?.trim() ?? "";
-      const supabasePublishable = process.env.SUPABASE_PUBLISHABLE_KEY ?? "";
-      const looksLikeDbUrl = /^postgres(ql)?:\/\//i.test(supabaseUrl);
-      console.log(
-        "[auth.loginWithPassword] env",
-        JSON.stringify({
-          hasSupabaseUrl: supabaseUrl.length > 0,
-          supabaseUrlPrefix: supabaseUrl.slice(0, 30),
-          looksLikeDbUrl,
-          hasPublishableKey: supabasePublishable.length > 0,
-          publishableKeyPrefix: supabasePublishable.slice(0, 12),
-        })
-      );
-      const appUser = await db.getLoginUserByEmailLowercase(input.email);
-      if (!appUser) {
-        console.warn(
-          "[auth.loginWithPassword] No app user for email",
-          input.email.trim().toLowerCase()
+      try {
+        const supabaseUrl = process.env.SUPABASE_URL?.trim() ?? "";
+        const supabasePublishable = process.env.SUPABASE_PUBLISHABLE_KEY ?? "";
+        const looksLikeDbUrl = /^postgres(ql)?:\/\//i.test(supabaseUrl);
+        console.log(
+          "[login] Step 0 — env",
+          JSON.stringify({
+            email: input.email.trim().toLowerCase(),
+            hasSupabaseUrl: supabaseUrl.length > 0,
+            supabaseUrlPrefix: supabaseUrl.slice(0, 30),
+            looksLikeDbUrl,
+            hasPublishableKey: supabasePublishable.length > 0,
+            publishableKeyPrefix: supabasePublishable.slice(0, 12),
+            hasDatabaseUrl: Boolean(process.env.DATABASE_URL?.trim()),
+          })
         );
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "Invalid email or password",
-        });
-      }
 
-      if (appUser.status === "inactive") {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "Your account has been deactivated. Contact your administrator.",
+        console.log(
+          "[login] Step 1 — looking up user in public.users:",
+          input.email
+        );
+        const appUser = await db.getLoginUserByEmailLowercase(input.email);
+        console.log("[login] Step 1 result:", {
+          found: !!appUser,
+          status: appUser?.status ?? null,
+          id: appUser?.id ?? null,
+          authUserId: appUser?.authUserId ?? null,
         });
-      }
 
-      const supabase = getSupabasePublishableServer();
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: input.email.trim(),
-        password: input.password,
-      });
-      if (error) {
-        console.error(
-          "[auth.loginWithPassword] Supabase signInWithPassword error",
-          {
+        if (!appUser) {
+          console.warn(
+            "[login] Step 1 — no app user for email",
+            input.email.trim().toLowerCase()
+          );
+          throw new TRPCError({
+            code: "UNAUTHORIZED",
+            message: "Invalid email or password",
+          });
+        }
+
+        if (appUser.status === "inactive") {
+          throw new TRPCError({
+            code: "UNAUTHORIZED",
+            message:
+              "Your account has been deactivated. Contact your administrator.",
+          });
+        }
+
+        console.log("[login] Step 2 — attempting Supabase auth for:", input.email);
+        const supabase = getSupabasePublishableServer();
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: input.email.trim(),
+          password: input.password,
+        });
+        console.log("[login] Step 2 result:", {
+          error: error?.message ?? null,
+          hasUser: !!data?.user,
+          hasSession: !!data?.session,
+          supabaseUserId: data?.user?.id ?? null,
+        });
+
+        if (error) {
+          console.error("[login] Step 2 — Supabase signInWithPassword error", {
             message: error.message,
             status: (error as { status?: number }).status,
             name: (error as { name?: string }).name,
-          }
-        );
-      }
+          });
+        }
 
-      if (error || !data.session) {
-        console.warn("[auth.loginWithPassword] Supabase session missing");
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "Invalid email or password",
-        });
-      }
+        if (error || !data.session) {
+          throw new TRPCError({
+            code: "UNAUTHORIZED",
+            message: "Invalid email or password",
+          });
+        }
 
-      const supabaseEmail = data.user.email?.trim().toLowerCase() ?? "";
-      const appEmail = appUser.email?.trim().toLowerCase() ?? "";
-      if (supabaseEmail && appEmail && supabaseEmail !== appEmail) {
-        console.warn("[auth.loginWithPassword] Email mismatch", {
-          supabaseEmail,
-          appEmail,
-        });
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Email does not match this account",
-        });
-      }
+        const supabaseEmail = data.user.email?.trim().toLowerCase() ?? "";
+        const appEmail = appUser.email?.trim().toLowerCase() ?? "";
+        if (supabaseEmail && appEmail && supabaseEmail !== appEmail) {
+          console.warn("[login] email mismatch", { supabaseEmail, appEmail });
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Email does not match this account",
+          });
+        }
 
-      if (data.user.id !== appUser.authUserId && appUser.authUserId) {
-        console.warn("[auth.loginWithPassword] authUserId mismatch", {
-          supabaseUserId: data.user.id,
-          appAuthUserId: appUser.authUserId,
+        if (data.user.id !== appUser.authUserId && appUser.authUserId) {
+          console.warn("[login] authUserId mismatch", {
+            supabaseUserId: data.user.id,
+            appAuthUserId: appUser.authUserId,
+            appUserId: appUser.id,
+          });
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Session does not match this account",
+          });
+        }
+
+        if (!appUser.authUserId) {
+          console.log("[login] Step 3 — linking app user to Supabase user", {
+            appUserId: appUser.id,
+            supabaseUserId: data.user.id,
+          });
+          await db.updateUser(appUser.id, {
+            authUserId: data.user.id,
+            loginMethod: "supabase",
+          });
+          console.log("[login] Step 3 — link complete");
+        }
+
+        console.log("[login] Step 4 — creating session cookies");
+        setSessionCookies(ctx.req, ctx.res, data.session);
+        console.log("[login] Step 4 — session cookies set");
+
+        console.log("[login] Step 5 — touch lastSignedIn", { appUserId: appUser.id });
+        await db.touchUserLastSignedInById(appUser.id);
+        console.log("[login] Step 5 — lastSignedIn updated");
+
+        console.log("[login] success", {
           appUserId: appUser.id,
-        });
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Session does not match this account",
-        });
-      }
-
-      if (!appUser.authUserId) {
-        console.log("[auth.loginWithPassword] Linking app user to supabase user", {
-          appUserId: appUser.id,
           supabaseUserId: data.user.id,
         });
-        await db.updateUser(appUser.id, {
-          authUserId: data.user.id,
-          loginMethod: "supabase",
+        return {
+          success: true as const,
+          mustChangePasswordOnLogin: appUser.mustChangePasswordOnLogin,
+        };
+      } catch (err) {
+        console.error("[login] FATAL ERROR:", err);
+        if (err instanceof TRPCError) {
+          throw err;
+        }
+        const message = err instanceof Error ? err.message : String(err);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message,
         });
       }
-
-      setSessionCookies(ctx.req, ctx.res, data.session);
-      console.log("[auth.loginWithPassword] Login success", {
-        appUserId: appUser.id,
-        supabaseUserId: data.user.id,
-      });
-      await db.touchUserLastSignedInById(appUser.id);
-      return {
-        success: true as const,
-        mustChangePasswordOnLogin: appUser.mustChangePasswordOnLogin,
-      };
     }),
 
   updateProfile: protectedProcedure
