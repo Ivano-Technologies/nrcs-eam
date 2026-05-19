@@ -24,24 +24,29 @@ export function useAuth(options?: UseAuthOptions) {
     },
   });
 
-  const logout = useCallback(async () => {
+  const logout = useCallback(() => {
+    utils.auth.me.setData(undefined, null);
     try {
-      await logoutMutation.mutateAsync();
-    } catch (error: unknown) {
-      if (
-        error instanceof TRPCClientError &&
-        error.data?.code === "UNAUTHORIZED"
-      ) {
-        // Session already gone — still clear client state and redirect.
-      } else {
-        console.error("[auth.logout] mutation failed", error);
-      }
-    } finally {
-      utils.auth.me.setData(undefined, null);
-      await utils.auth.me.invalidate();
-      if (typeof window !== "undefined") {
-        window.location.href = "/login";
-      }
+      localStorage.removeItem("manus-runtime-user-info");
+    } catch {
+      // ignore storage errors (private mode, etc.)
+    }
+
+    // Fire server logout in background — cookie clear must not block the redirect.
+    logoutMutation.mutate(undefined, {
+      onError: (error) => {
+        if (
+          error instanceof TRPCClientError &&
+          error.data?.code === "UNAUTHORIZED"
+        ) {
+          return;
+        }
+        console.error("[auth.logout] background mutation failed", error);
+      },
+    });
+
+    if (typeof window !== "undefined") {
+      window.location.href = "/login";
     }
   }, [logoutMutation, utils]);
 

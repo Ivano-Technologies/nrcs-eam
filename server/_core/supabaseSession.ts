@@ -64,29 +64,8 @@ export async function clearSessionCookies(
   req: Request,
   res: Response
 ): Promise<void> {
-  const accessToken = getAccessTokenFromRequest(req);
-  const refreshToken = getRefreshTokenFromRequest(req);
-
-  if (accessToken && refreshToken) {
-    try {
-      const supabase = getSupabasePublishableServer();
-      const { error: sessionError } = await supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken,
-      });
-      if (sessionError) {
-        console.warn("[auth.logout] setSession before signOut:", sessionError.message);
-      } else {
-        const { error: signOutError } = await supabase.auth.signOut();
-        if (signOutError) {
-          console.warn("[auth.logout] supabase signOut:", signOutError.message);
-        }
-      }
-    } catch (err) {
-      console.warn("[auth.logout] supabase signOut failed:", err);
-    }
-  }
-
+  // Session is httpOnly JWT cookies managed by this app — clearing cookies ends the session.
+  // Do not call supabase.auth.signOut() here; it can block ~50s on a network round-trip to Supabase Auth.
   const opts = getClearCookieOptions(req);
   res.clearCookie(SUPABASE_ACCESS_TOKEN_COOKIE, opts);
   res.clearCookie(SUPABASE_REFRESH_TOKEN_COOKIE, opts);

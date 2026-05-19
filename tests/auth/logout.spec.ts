@@ -8,9 +8,13 @@ test.describe("logout (live)", () => {
     });
 
     await page.getByTestId("user-menu-trigger").click();
-    await page.getByRole("menuitem", { name: /sign out/i }).click();
 
-    await page.waitForURL(/\/login/, { timeout: 30_000 });
+    const start = Date.now();
+    await page.getByRole("menuitem", { name: /sign out/i }).click();
+    await page.waitForURL(/\/login/, { timeout: 5_000 });
+    const elapsed = Date.now() - start;
+    console.log(`Logout completed in ${elapsed}ms`);
+    expect(elapsed).toBeLessThan(3_000);
     await expect(page.getByTestId("login-email-input")).toBeVisible({
       timeout: 15_000,
     });
