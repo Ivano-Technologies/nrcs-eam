@@ -24,7 +24,7 @@ export function useAuth(options?: UseAuthOptions) {
     },
   });
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
     utils.auth.me.setData(undefined, null);
     try {
       localStorage.removeItem("manus-runtime-user-info");
@@ -32,18 +32,18 @@ export function useAuth(options?: UseAuthOptions) {
       // ignore storage errors (private mode, etc.)
     }
 
-    // Fire server logout in background — cookie clear must not block the redirect.
-    logoutMutation.mutate(undefined, {
-      onError: (error) => {
-        if (
-          error instanceof TRPCClientError &&
-          error.data?.code === "UNAUTHORIZED"
-        ) {
-          return;
-        }
-        console.error("[auth.logout] background mutation failed", error);
-      },
-    });
+    try {
+      await logoutMutation.mutateAsync(undefined);
+    } catch (error) {
+      if (
+        error instanceof TRPCClientError &&
+        error.data?.code === "UNAUTHORIZED"
+      ) {
+        // Session already cleared on server or client.
+      } else {
+        console.error("[auth.logout] mutation failed", error);
+      }
+    }
 
     if (typeof window !== "undefined") {
       window.location.href = "/login";

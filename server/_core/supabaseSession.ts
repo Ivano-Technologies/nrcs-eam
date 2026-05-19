@@ -70,6 +70,9 @@ export async function clearSessionCookies(
   res.clearCookie(SUPABASE_ACCESS_TOKEN_COOKIE, opts);
   res.clearCookie(SUPABASE_REFRESH_TOKEN_COOKIE, opts);
   res.clearCookie(COOKIE_NAME, opts);
+
+  // Let Express finish attaching Set-Cookie clear headers before the tRPC handler returns.
+  await new Promise<void>(resolve => setImmediate(resolve));
 }
 
 /**
