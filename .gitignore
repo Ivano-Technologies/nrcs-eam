@@ -150,3 +150,6 @@ screenshots/
 docs/manual/outputs/
 # Windows path artifact from generator
 mnt/
+
+.env.vercel.production
+vercel.production
