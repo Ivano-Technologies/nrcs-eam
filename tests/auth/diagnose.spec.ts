@@ -1,5 +1,25 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type APIRequestContext } from "@playwright/test";
 import { E2E_USER_EMAIL, E2E_USER_PASSWORD } from "./live-helpers";
+
+async function postWithRetry(
+  request: APIRequestContext,
+  url: string,
+  options: Parameters<APIRequestContext["post"]>[1],
+  retries = 3
+) {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      return await request.post(url, options);
+    } catch (error) {
+      lastError = error;
+      if (attempt < retries - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
+      }
+    }
+  }
+  throw lastError;
+}
 
 test("API health check", async ({ request }) => {
   const response = await request.get("https://nrcseam.techivano.com/health");
@@ -10,7 +30,8 @@ test("API health check", async ({ request }) => {
 });
 
 test("tRPC endpoint returns JSON", async ({ request }) => {
-  const response = await request.post(
+  const response = await postWithRetry(
+    request,
     "https://nrcseam.techivano.com/api/trpc/auth.loginWithPassword",
     {
       headers: { "Content-Type": "application/json" },

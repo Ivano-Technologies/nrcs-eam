@@ -1,6 +1,8 @@
 import { test, expect } from "@playwright/test";
 import { E2E_USER_EMAIL, E2E_USER_PASSWORD } from "./live-helpers";
 
+test.use({ storageState: { cookies: [], origins: [] } });
+
 /**
  * Live production smoke: password login → /app dashboard.
  * Requires Supabase Auth: app `users` row with matching `auth_user_id` and password set in Supabase (or via admin).

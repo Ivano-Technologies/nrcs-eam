@@ -13,6 +13,13 @@ function requireEnv(name: string): string {
 }
 
 export default async function globalTeardown(): Promise<void> {
+  if (process.env.PLAYWRIGHT_LIVE_AUTH === "1") {
+    console.log(
+      "[teardown] Skipping local DB/Auth cleanup (live-auth production smoke)"
+    );
+    return;
+  }
+
   const schema = getPlaywrightTestSchema();
   const databaseUrl = requireEnv("DATABASE_URL");
   const supabaseUrl = requireEnv("SUPABASE_URL");

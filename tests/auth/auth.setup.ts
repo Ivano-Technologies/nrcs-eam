@@ -14,17 +14,9 @@ setup("bootstrap live-auth storage state", async ({ page, context }) => {
     await page.goto("/login", { waitUntil: "domcontentloaded", timeout: 180_000 });
     console.log("[auth.setup] opened /login");
 
-    const emailInput = page
-      .getByTestId("login-email-input")
-      .or(page.getByLabel(/email/i))
-      .or(page.locator("input[type='email']"));
-    const passwordInput = page
-      .getByTestId("login-password-input")
-      .or(page.getByLabel(/password/i))
-      .or(page.locator("input[type='password']"));
-    const submitButton = page
-      .getByTestId("login-password-submit")
-      .or(page.getByRole("button", { name: /sign in|login|log in|continue/i }));
+    const emailInput = page.getByTestId("login-email-input");
+    const passwordInput = page.getByTestId("login-password-input");
+    const submitButton = page.getByTestId("login-password-submit");
 
     await expect(emailInput).toBeVisible({ timeout: 30_000 });
     console.log("[auth.setup] email input visible");

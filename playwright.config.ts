@@ -60,6 +60,7 @@ export default defineConfig({
       testMatch: ["**/auth/**/*.spec.ts", "**/features/**/*.spec.ts"],
       testIgnore: "**/auth/**/*.setup.ts",
       dependencies: ["live-auth-setup"],
+      retries: process.env.CI ? 1 : 0,
       use: {
         baseURL: LIVE_AUTH_BASE,
         trace: "retain-on-failure",
