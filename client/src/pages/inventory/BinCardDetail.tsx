@@ -5,6 +5,7 @@ import { trpc } from "@/lib/trpc";
 import { useState } from "react";
 import { useLocation, useRoute } from "wouter";
 import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 export default function BinCardDetail() {
   const [, params] = useRoute("/app/inventory/tracking/bin-cards/:id");
@@ -49,11 +50,32 @@ export default function BinCardDetail() {
       </div>
       <div className="flex items-center gap-2">
         {card.status === "open" ? (
-          <Button onClick={() => close.mutate({ id, closedById: 1, notes: reason || undefined })}>Close Bin Card</Button>
+          <Button
+            disabled={close.isPending}
+            onClick={() => close.mutate({ id, closedById: 1, notes: reason || undefined })}
+          >
+            {close.isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Closing…
+              </>
+            ) : (
+              "Close Bin Card"
+            )}
+          </Button>
         ) : (
           <>
             <Input placeholder="Reopen reason" value={reason} onChange={(e) => setReason(e.target.value)} />
-            <Button onClick={() => reopen.mutate({ id, reopenedById: 1, reason })}>Reopen</Button>
+            <Button disabled={reopen.isPending} onClick={() => reopen.mutate({ id, reopenedById: 1, reason })}>
+              {reopen.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Reopening…
+                </>
+              ) : (
+                "Reopen"
+              )}
+            </Button>
           </>
         )}
       </div>

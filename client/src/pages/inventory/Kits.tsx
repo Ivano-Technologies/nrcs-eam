@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 type ComponentLine = { catalogueId: string; quantity: string };
 
@@ -95,9 +96,17 @@ export default function Kits({ embedInShell = false }: { embedInShell?: boolean 
                 {isStaffOrAbove ? (
                   <Button
                     data-testid="kit-assemble-btn"
+                    disabled={assembleMutation.isPending}
                     onClick={() => assembleMutation.mutate({ kitId: Number(selectedKitId), warehouseId: Number(warehouseId), quantity: Number(quantity) })}
                   >
-                    Assemble
+                    {assembleMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Assembling…
+                      </>
+                    ) : (
+                      "Assemble"
+                    )}
                   </Button>
                 ) : null}
               </CardContent>
@@ -117,9 +126,17 @@ export default function Kits({ embedInShell = false }: { embedInShell?: boolean 
                 {isStaffOrAbove ? (
                   <Button
                     data-testid="kit-disassemble-btn"
+                    disabled={disassembleMutation.isPending}
                     onClick={() => disassembleMutation.mutate({ kitId: Number(selectedKitId), warehouseId: Number(warehouseId), quantity: Number(quantity) })}
                   >
-                    Disassemble
+                    {disassembleMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Disassembling…
+                      </>
+                    ) : (
+                      "Disassemble"
+                    )}
                   </Button>
                 ) : null}
               </CardContent>
@@ -162,6 +179,7 @@ export default function Kits({ embedInShell = false }: { embedInShell?: boolean 
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
               <Button
+                disabled={createMutation.isPending}
                 onClick={() =>
                   createMutation.mutate({
                     kitCode,
@@ -173,7 +191,14 @@ export default function Kits({ embedInShell = false }: { embedInShell?: boolean 
                   })
                 }
               >
-                Save
+                {createMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving…
+                  </>
+                ) : (
+                  "Save"
+                )}
               </Button>
             </div>
           </div>
