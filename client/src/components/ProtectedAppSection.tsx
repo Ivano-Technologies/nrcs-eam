@@ -14,21 +14,24 @@ const Assets = lazy(() => import("@/pages/Assets"));
 const DonorAssets = lazy(() => import("@/pages/assets/DonorAssets"));
 const AuditTrail = lazy(() => import("@/pages/AuditTrail"));
 const Compliance = lazy(() => import("@/pages/Compliance"));
-const ComponentShowcase = lazy(() =>
-  import("@/pages/ComponentShowcase").catch((err: unknown) => {
-    console.error("[dev/showcase] failed to load ComponentShowcase", err);
-    return {
-      default: function ComponentShowcaseLoadError() {
-        return (
-          <div className="container mx-auto space-y-2 p-6 text-destructive">
-            <h1 className="text-lg font-semibold">Showcase failed to load</h1>
-            <pre className="whitespace-pre-wrap text-sm">{String(err)}</pre>
-          </div>
-        );
-      },
-    };
-  })
-);
+/** Dev-only — lazy import gated so production builds exclude showcase (and streamdown/mermaid). */
+const DevShowcaseRoute = import.meta.env.DEV
+  ? lazy(() =>
+      import("@/pages/ComponentShowcase").catch((err: unknown) => {
+        console.error("[dev/showcase] failed to load ComponentShowcase", err);
+        return {
+          default: function ComponentShowcaseLoadError() {
+            return (
+              <div className="container mx-auto space-y-2 p-6 text-destructive">
+                <h1 className="text-lg font-semibold">Showcase failed to load</h1>
+                <pre className="whitespace-pre-wrap text-sm">{String(err)}</pre>
+              </div>
+            );
+          },
+        };
+      })
+    )
+  : null;
 const AssetValuation = lazy(() => import("@/pages/AssetValuation"));
 const CostManagement = lazy(() => import("@/pages/finance/CostManagement"));
 const CostAnalyticsRedirect = lazy(() =>
@@ -225,10 +228,10 @@ function ProtectedAppSectionRoutes() {
       <>
         <DashboardLayout>
           <Switch>
-            {import.meta.env.DEV ? (
+            {import.meta.env.DEV && DevShowcaseRoute ? (
               <Route path="/app/showcase">
                 <Suspense fallback={<PageLoader className="p-4 sm:p-6" />}>
-                  <ComponentShowcase />
+                  <DevShowcaseRoute />
                 </Suspense>
               </Route>
             ) : null}
