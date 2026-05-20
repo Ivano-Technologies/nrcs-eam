@@ -25,15 +25,15 @@ const bundles = [
   },
   {
     entryPoints: [path.join(repoRoot, "api/cron/daily.ts")],
-    outfile: path.join(repoRoot, "api/cron/daily.js"),
+    outfile: path.join(repoRoot, "api/cron/_daily.cjs"),
   },
   {
     entryPoints: [path.join(repoRoot, "api/cron/weekly.ts")],
-    outfile: path.join(repoRoot, "api/cron/weekly.js"),
+    outfile: path.join(repoRoot, "api/cron/_weekly.cjs"),
   },
   {
     entryPoints: [path.join(repoRoot, "api/cron/monthly.ts")],
-    outfile: path.join(repoRoot, "api/cron/monthly.js"),
+    outfile: path.join(repoRoot, "api/cron/_monthly.cjs"),
   },
 ];
 

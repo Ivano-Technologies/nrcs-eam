@@ -11,16 +11,13 @@
       "maxDuration": 10
     },
     "api/cron/daily.js": {
-      "memory": 512,
-      "maxDuration": 30
+      "maxDuration": 60
     },
     "api/cron/weekly.js": {
-      "memory": 512,
-      "maxDuration": 30
+      "maxDuration": 60
     },
     "api/cron/monthly.js": {
-      "memory": 512,
-      "maxDuration": 30
+      "maxDuration": 60
     }
   },
   "crons": [
