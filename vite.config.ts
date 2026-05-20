@@ -13,7 +13,11 @@ const plugins = [
   react(),
   tailwindcss(),
   ...(process.env.DISABLE_VITE_JSX_LOC === "1" ? [] : [jsxLocPlugin()]),
-  vitePluginManusRuntime(),
+  {
+    ...vitePluginManusRuntime(),
+    /** Dev / AI tooling only — do not inject ~360KB inline runtime into production HTML */
+    apply: "serve",
+  },
   VitePWA({
     registerType: "autoUpdate",
     injectRegister: "auto",
@@ -134,8 +138,16 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       output: {
-        manualChunks: {
-          xlsx: ["xlsx"],
+        manualChunks(id: string) {
+          if (id.includes("node_modules")) {
+            if (id.includes("xlsx")) return "xlsx";
+            if (id.includes("@radix-ui")) return "radix";
+            if (id.includes("recharts")) return "recharts";
+            if (id.includes("framer-motion")) return "framerMotion";
+            if (id.includes("@supabase/supabase-js")) return "supabase";
+            if (id.includes("posthog-js")) return "posthog";
+            if (id.includes("date-fns")) return "dateFns";
+          }
         },
       },
     },
