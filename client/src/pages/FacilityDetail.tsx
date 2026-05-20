@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
+import PageLoader from "@/components/ui/PageLoader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -61,7 +62,7 @@ export default function FacilityDetail() {
   );
 
   if (!enabled) return <div className="text-sm text-muted-foreground">Invalid facility id.</div>;
-  if (!facility) return <div className="text-sm text-muted-foreground">Loading facility...</div>;
+  if (!facility) return <PageLoader />;
 
   return (
     <div className="space-y-4">

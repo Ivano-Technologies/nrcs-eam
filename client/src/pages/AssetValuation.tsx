@@ -15,6 +15,7 @@ import { downloadBase64File } from "@/lib/download";
 import { formatNaira, formatNairaSummaryCard } from "@/lib/format";
 import { KPI_VALUE_CLASS } from "@/lib/kpiTypography";
 import { trpc } from "@/lib/trpc";
+import PageLoader from "@/components/ui/PageLoader";
 import { cn } from "@/lib/utils";
 import { AlertTriangle, ArrowDown, ArrowUp, Download, FileSpreadsheet } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -225,20 +226,7 @@ export default function AssetValuation() {
     );
   }
 
-  if (reportQuery.isLoading) {
-    return (
-      <div className="container mx-auto p-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 w-1/3 rounded bg-muted" />
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="h-24 rounded bg-muted" />
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
+  if (reportQuery.isLoading) return <PageLoader />;
 
   if (reportQuery.isError || !reportQuery.data) {
     return (

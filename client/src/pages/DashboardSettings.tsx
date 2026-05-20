@@ -474,7 +474,10 @@ export default function DashboardSettings() {
           </CardHeader>
           <CardContent className="space-y-4">
             {emailLoading ? (
-              <p className="text-sm text-muted-foreground">Loading…</p>
+              <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Loading…</span>
+              </div>
             ) : (
               <>
                 <div className="flex items-center justify-between gap-4">

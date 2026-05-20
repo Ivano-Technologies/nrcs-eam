@@ -1,4 +1,5 @@
 import { trpc } from "@/lib/trpc";
+import PageLoader from "@/components/ui/PageLoader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -75,9 +76,7 @@ export default function Maintenance() {
     });
   };
 
-  if (isLoading) {
-    return <div className="flex items-center justify-center h-96"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>;
-  }
+  if (isLoading) return <PageLoader />;
 
   return (
     <div className="space-y-6">

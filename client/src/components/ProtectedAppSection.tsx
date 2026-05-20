@@ -1,6 +1,7 @@
 import DashboardLayout from "@/components/DashboardLayout";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import PageLoader from "@/components/ui/PageLoader";
 import { appPath } from "@/lib/routes";
 import { lazy, Suspense } from "react";
 import { Redirect, Route, Switch, useRoute } from "wouter";
@@ -13,6 +14,21 @@ const Assets = lazy(() => import("@/pages/Assets"));
 const DonorAssets = lazy(() => import("@/pages/assets/DonorAssets"));
 const AuditTrail = lazy(() => import("@/pages/AuditTrail"));
 const Compliance = lazy(() => import("@/pages/Compliance"));
+const ComponentShowcase = lazy(() =>
+  import("@/pages/ComponentShowcase").catch((err: unknown) => {
+    console.error("[dev/showcase] failed to load ComponentShowcase", err);
+    return {
+      default: function ComponentShowcaseLoadError() {
+        return (
+          <div className="container mx-auto space-y-2 p-6 text-destructive">
+            <h1 className="text-lg font-semibold">Showcase failed to load</h1>
+            <pre className="whitespace-pre-wrap text-sm">{String(err)}</pre>
+          </div>
+        );
+      },
+    };
+  })
+);
 const AssetValuation = lazy(() => import("@/pages/AssetValuation"));
 const CostManagement = lazy(() => import("@/pages/finance/CostManagement"));
 const CostAnalyticsRedirect = lazy(() =>
@@ -209,6 +225,13 @@ function ProtectedAppSectionRoutes() {
       <>
         <DashboardLayout>
           <Switch>
+            {import.meta.env.DEV ? (
+              <Route path="/app/showcase">
+                <Suspense fallback={<PageLoader className="p-4 sm:p-6" />}>
+                  <ComponentShowcase />
+                </Suspense>
+              </Route>
+            ) : null}
             <Route path="/app" component={Home} />
             <Route path="/app/welcome" component={Welcome} />
             <Route path="/app/assets/donors" component={DonorAssets} />

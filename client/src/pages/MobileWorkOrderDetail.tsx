@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, CheckCircle2, Camera, MessageSquare } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Camera, MessageSquare, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function MobileWorkOrderDetail() {
@@ -49,7 +49,10 @@ export default function MobileWorkOrderDetail() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 p-4">
-        <div className="text-center py-8">Loading...</div>
+        <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>Loading…</span>
+        </div>
       </div>
     );
   }

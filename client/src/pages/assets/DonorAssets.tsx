@@ -23,6 +23,7 @@ import { downloadBase64File } from "@/lib/download";
 import { formatNaira } from "@/lib/format";
 import { KPI_VALUE_CLASS } from "@/lib/kpiTypography";
 import { trpc } from "@/lib/trpc";
+import TableLoader from "@/components/ui/TableLoader";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "../../../../server/routers";
 
@@ -219,8 +220,8 @@ export default function DonorAssets() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground">
-                    Loading…
+                  <TableCell colSpan={6}>
+                    <TableLoader />
                   </TableCell>
                 </TableRow>
               ) : (report?.donors ?? []).length === 0 ? (

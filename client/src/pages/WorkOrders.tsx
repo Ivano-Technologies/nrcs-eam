@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
+import TableLoader from "@/components/ui/TableLoader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -275,9 +276,7 @@ export default function WorkOrders() {
       </Card>
 
       {isLoading ? (
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        </div>
+        <TableLoader className="py-8" />
       ) : workOrders && workOrders.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3" data-testid="work-order-list">
           {workOrders.map((wo) => (
