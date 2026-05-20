@@ -17,6 +17,18 @@ import { initPostHog } from "./lib/posthog";
 initPostHog();
 initAnalytics();
 
+window.addEventListener("unhandledrejection", (event) => {
+  try {
+    if ((window as any).posthog) {
+      (window as any).posthog.captureException(event.reason, {
+        source: "unhandledrejection",
+      });
+    }
+  } catch (_) {
+    // silent
+  }
+});
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
