@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import PageHeader from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -9,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { trpc } from "@/lib/trpc";
 import { downloadBase64File } from "@/lib/download";
 import { usePermissions } from "@/_core/hooks/usePermissions";
-import { Download, Loader2 } from "lucide-react";
+import { Download, FileBarChart, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   Bar,
@@ -179,12 +180,11 @@ export default function Reports() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Reports & Analytics</h1>
-        <p className="text-muted-foreground">
-          Inventory intelligence, VED/ABC/FNS analysis, and forecasting.
-        </p>
-      </div>
+      <PageHeader
+        icon={FileBarChart}
+        title="Reports"
+        subtitle="Inventory intelligence, VED/ABC/FNS analysis, and forecasting."
+      />
 
       {isManagerOrAdmin ? (
         <Card>

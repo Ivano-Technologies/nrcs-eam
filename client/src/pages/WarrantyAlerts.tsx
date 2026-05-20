@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import PageLoader from "@/components/ui/PageLoader";
+import PageHeader from "@/components/ui/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, Calendar, Loader2, Mail } from "lucide-react";
+import { Calendar, Loader2, Mail, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 
 export default function WarrantyAlerts() {
@@ -39,14 +40,13 @@ export default function WarrantyAlerts() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Warranty Alerts</h1>
-          <p className="text-muted-foreground mt-2">
-            Monitor asset warranties and receive expiration alerts
-          </p>
-        </div>
+        <PageHeader
+          icon={ShieldAlert}
+          title="Warranty Alerts"
+          subtitle="Monitor asset warranties and receive expiration alerts"
+          className="mb-0"
+        />
         <div className="flex items-center gap-2">
-          <AlertTriangle className="h-5 w-5 text-destructive" />
           <span className="text-sm text-muted-foreground">
             {expiringWarranties?.filter(a => getDaysUntilExpiry(a.warrantyExpiry!) <= 90).length || 0} expiring soon
           </span>

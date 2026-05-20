@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
+import PageHeader from "@/components/ui/PageHeader";
 import PageLoader from "@/components/ui/PageLoader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { DollarSign, Loader2, Plus, TrendingUp, TrendingDown, ArrowUpCircle, ArrowDownCircle, Edit2, Save, X } from "lucide-react";
+import { DollarSign, Loader2, Plus, TrendingUp, TrendingDown, ArrowUpCircle, ArrowDownCircle, Edit2, Save, X, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { formatNaira } from "@/lib/format";
@@ -140,8 +141,11 @@ export default function Financial() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Financial Tracking</h1>
-        <p className="mt-2 text-muted-foreground">Monitor revenue, costs, and expenses</p>
+        <PageHeader
+          icon={Wallet}
+          title="Financial Transactions"
+          subtitle="Monitor revenue, costs, and expenses"
+        />
       </div>
 
       <ModuleFiltersCard

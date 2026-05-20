@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
+import PageHeader from "@/components/ui/PageHeader";
 import PageLoader from "@/components/ui/PageLoader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -164,10 +165,12 @@ export default function ReportScheduling() {
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Report Scheduling</h1>
-          <p className="text-muted-foreground">Automate report generation and email delivery</p>
-        </div>
+        <PageHeader
+          icon={Calendar}
+          title="Report Scheduling"
+          subtitle="Automate report generation and email delivery"
+          className="mb-0"
+        />
         <Button onClick={() => setIsCreateDialogOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
           New Schedule

@@ -1,4 +1,5 @@
 import { trpc } from "@/lib/trpc";
+import PageHeader from "@/components/ui/PageHeader";
 import PageLoader from "@/components/ui/PageLoader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MapView } from "@/components/Map";
@@ -6,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, Navigation } from "lucide-react";
+import { Map, MapPin, Navigation } from "lucide-react";
 import { DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM_COUNTRY } from "@/lib/mapDefaults";
 import { appPath } from "@/lib/routes";
 
@@ -213,12 +214,12 @@ export default function AssetMap() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Asset Map</h1>
-          <p className="text-muted-foreground mt-2">
-            Track asset locations across NRCS facilities
-          </p>
-        </div>
+        <PageHeader
+          icon={Map}
+          title="Asset Map"
+          subtitle="Track asset locations across NRCS facilities"
+          className="mb-0"
+        />
         <div className="flex items-center gap-2">
           <MapPin className="h-5 w-5 text-muted-foreground" />
           <span className="text-sm text-muted-foreground">

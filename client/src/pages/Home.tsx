@@ -9,13 +9,14 @@ import { StockMovementChart } from "@/components/dashboard/StockMovementChart";
 import { useDashboardRolePreview } from "@/components/dashboard/rolePreviewContext";
 import type { DashboardPeriod, UserRole } from "@/components/dashboard/types";
 import { useAuth } from "@/_core/hooks/useAuth";
+import PageHeader from "@/components/ui/PageHeader";
 import PageLoader from "@/components/ui/PageLoader";
 import { waybillsPeriodHref } from "@/lib/dashboardPeriodRange";
 import { formatNaira } from "@/lib/format";
 import { trpc } from "@/lib/trpc";
 import { DASHBOARD_NAV } from "@shared/dashboardNav";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertTriangle, Banknote, MapPin, ShieldCheck, Truck } from "lucide-react";
+import { AlertTriangle, Banknote, LayoutDashboard, MapPin, ShieldCheck, Truck } from "lucide-react";
 import { useMemo, useState } from "react";
 
 const DEFAULT_WIDGETS = {
@@ -75,10 +76,12 @@ export default function Home() {
     return (
       <div className="space-y-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-            <p className="mt-2 text-[#334155] dark:text-[hsl(0_0%_95%)]">Field view — your branch only</p>
-          </div>
+          <PageHeader
+            icon={LayoutDashboard}
+            title="Dashboard"
+            subtitle="Field view — your branch only"
+            className="mb-0"
+          />
         </div>
         <FieldDashboard />
       </div>
@@ -172,10 +175,12 @@ export default function Home() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="mt-2 text-[#334155] dark:text-[hsl(0_0%_95%)]">Overview of your asset management system</p>
-        </div>
+        <PageHeader
+          icon={LayoutDashboard}
+          title="Dashboard"
+          subtitle="Overview of your asset management system"
+          className="mb-0"
+        />
         <div className="max-w-full overflow-x-auto">
           <PeriodSelector value={period} onChange={setPeriod} />
         </div>

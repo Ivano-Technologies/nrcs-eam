@@ -29,6 +29,7 @@ import type { AppRouter } from "../../../../server/routers";
 
 type DonorBreakdownRow = inferRouterOutputs<AppRouter>["donorAssets"]["report"]["donors"][number];
 type DonorAssetRow = DonorBreakdownRow["assets"][number];
+import PageHeader from "@/components/ui/PageHeader";
 import { ChevronDown, ChevronRight, FileSpreadsheet, Gift, Loader2 } from "lucide-react";
 import { Fragment, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -84,15 +85,12 @@ export default function DonorAssets() {
   return (
     <div className="container mx-auto space-y-6 p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight">
-            <Gift className="h-8 w-8 text-primary" />
-            Donor Assets
-          </h1>
-          <p className="text-muted-foreground">
-            Donor-funded assets from the register — acquisition and book values by donor
-          </p>
-        </div>
+        <PageHeader
+          icon={Gift}
+          title="Donor Assets Report"
+          subtitle="Donor-funded assets from the register — acquisition and book values by donor"
+          className="mb-0"
+        />
         {canExport ? (
           <Button
             variant="outline"

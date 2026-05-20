@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc";
 import { downloadBase64File } from "@/lib/download";
-import { Loader2 } from "lucide-react";
+import PageHeader from "@/components/ui/PageHeader";
+import { CalendarDays, Loader2 } from "lucide-react";
 
 export default function MonthlyWarehouseReport() {
   const [, setLocation] = useLocation();
@@ -34,10 +35,11 @@ export default function MonthlyWarehouseReport() {
 
   return (
     <div className="space-y-4">
-      <div className="space-y-1">
-        <h1 className="text-3xl font-bold">Warehouse - Monthly Report</h1>
-        <p className="text-sm text-muted-foreground">NIGERIAN RED CROSS SOCIETY</p>
-      </div>
+      <PageHeader
+        icon={CalendarDays}
+        title="Monthly Warehouse Report"
+        subtitle="NIGERIAN RED CROSS SOCIETY"
+      />
 
       <div className="rounded-md border p-4">
         <div className="grid gap-3 md:grid-cols-4">

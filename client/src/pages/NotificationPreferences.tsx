@@ -1,4 +1,5 @@
 import { trpc } from "@/lib/trpc";
+import PageHeader from "@/components/ui/PageHeader";
 import PageLoader from "@/components/ui/PageLoader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -81,12 +82,11 @@ export default function NotificationPreferences() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Notification Preferences</h1>
-        <p className="text-muted-foreground mt-2">
-          Customize which notifications you want to receive
-        </p>
-      </div>
+      <PageHeader
+        icon={Bell}
+        title="Notification Preferences"
+        subtitle="Customize which notifications you want to receive"
+      />
 
       <Card className="border-t-4 border-t-primary">
         <CardHeader>

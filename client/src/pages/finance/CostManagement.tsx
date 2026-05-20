@@ -1,4 +1,5 @@
 import { ManagerFinanceGate } from "@/components/finance/ManagerFinanceGate";
+import PageHeader from "@/components/ui/PageHeader";
 import { CostAnalyticsOverview } from "@/components/finance/CostAnalyticsOverview";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,7 +34,7 @@ import { formatNaira } from "@/lib/format";
 import { KPI_VALUE_CLASS } from "@/lib/kpiTypography";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
-import { FileSpreadsheet, Loader2, Plus } from "lucide-react";
+import { BarChart3, FileSpreadsheet, Loader2, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Redirect } from "wouter";
@@ -123,12 +124,11 @@ export default function CostManagement() {
   return (
     <ManagerFinanceGate>
       <div className="container mx-auto space-y-6 p-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Cost Management</h1>
-          <p className="text-muted-foreground">
-            Expenditure overview, maintenance costs, and branch budgets ({year}).
-          </p>
-        </div>
+        <PageHeader
+          icon={BarChart3}
+          title="Cost Management"
+          subtitle={`Expenditure overview, maintenance costs, and branch budgets (${year}).`}
+        />
 
         <Tabs defaultValue="overview">
           <TabsList>

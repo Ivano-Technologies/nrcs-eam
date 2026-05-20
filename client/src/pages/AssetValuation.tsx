@@ -15,9 +15,10 @@ import { downloadBase64File } from "@/lib/download";
 import { formatNaira, formatNairaSummaryCard } from "@/lib/format";
 import { KPI_VALUE_CLASS } from "@/lib/kpiTypography";
 import { trpc } from "@/lib/trpc";
+import PageHeader from "@/components/ui/PageHeader";
 import PageLoader from "@/components/ui/PageLoader";
 import { cn } from "@/lib/utils";
-import { AlertTriangle, ArrowDown, ArrowUp, Download, FileSpreadsheet, Loader2 } from "lucide-react";
+import { AlertTriangle, ArrowDown, ArrowUp, Download, FileSpreadsheet, Loader2, TrendingUp } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -247,12 +248,12 @@ export default function AssetValuation() {
   return (
     <div className="container mx-auto space-y-8 p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Asset Valuation</h1>
-          <p className="text-muted-foreground">
-            Property register, movable asset totals, and executive exports (Finance).
-          </p>
-        </div>
+        <PageHeader
+          icon={TrendingUp}
+          title="Asset Valuation"
+          subtitle="Property register, movable asset totals, and executive exports (Finance)."
+          className="mb-0"
+        />
         <div className="flex flex-wrap gap-2">
           <Button
             type="button"

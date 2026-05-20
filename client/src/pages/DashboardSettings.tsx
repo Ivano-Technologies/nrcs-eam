@@ -2,6 +2,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { DashboardWidgetSettings } from "@/components/DashboardWidgetSettings";
 import { OpenRegistrationSettings } from "@/components/OpenRegistrationSettings";
 import { InstallPWAButton } from "@/components/InstallPWAButton";
+import PageHeader from "@/components/ui/PageHeader";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,7 +20,7 @@ import { Switch } from "@/components/ui/switch";
 import { trpc } from "@/lib/trpc";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { appPath } from "@/lib/routes";
-import { Camera, Loader2, Monitor, Moon, Sun } from "lucide-react";
+import { Camera, Loader2, Monitor, Moon, Settings, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearch } from "wouter";
@@ -272,10 +273,11 @@ export default function DashboardSettings() {
 
   return (
     <div className="space-y-6 max-w-full min-w-0">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-        <p className="text-muted-foreground mt-2 break-words">Account, appearance, and preferences</p>
-      </div>
+      <PageHeader
+        icon={Settings}
+        title="Settings"
+        subtitle="Account, appearance, and preferences"
+      />
 
       {mustChangePassword && (
         <Alert>

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
+import PageHeader from "@/components/ui/PageHeader";
 import PageLoader from "@/components/ui/PageLoader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Edit, Trash2, FileText, Loader2 } from "lucide-react";
+import { Plus, Edit, Trash2, FileText, Loader2, Files } from "lucide-react";
 import { toast } from "sonner";
 
 export default function WorkOrderTemplates() {
@@ -162,10 +163,12 @@ export default function WorkOrderTemplates() {
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Work Order Templates</h1>
-          <p className="text-muted-foreground">Create reusable templates for common maintenance tasks</p>
-        </div>
+        <PageHeader
+          icon={Files}
+          title="Work Order Templates"
+          subtitle="Create reusable templates for common maintenance tasks"
+          className="mb-0"
+        />
         <Button onClick={() => setIsCreateDialogOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
           New Template
