@@ -10,7 +10,7 @@ import { useDashboardRolePreview } from "@/components/dashboard/rolePreviewConte
 import type { DashboardPeriod, UserRole } from "@/components/dashboard/types";
 import { useAuth } from "@/_core/hooks/useAuth";
 import PageHeader from "@/components/ui/PageHeader";
-import PageLoader from "@/components/ui/PageLoader";
+import { Skeleton } from "@/components/ui/skeleton";
 import { waybillsPeriodHref } from "@/lib/dashboardPeriodRange";
 import { formatNaira } from "@/lib/format";
 import { trpc } from "@/lib/trpc";
@@ -67,10 +67,6 @@ export default function Home() {
 
   const normalizeDirection = (direction?: string): "up" | "down" | "flat" =>
     direction === "up" || direction === "down" ? direction : "flat";
-
-  const isLoading = metricsLoading || totalAssetValueLoading;
-
-  if (isLoading) return <PageLoader />;
 
   if (effectiveRole === "Field") {
     return (
@@ -153,22 +149,28 @@ export default function Home() {
       goodWhen: (metrics?.distributionVelocity?.goodWhen ?? "up") as "up" | "down",
       href: waybillsPeriodHref(period),
     },
-    {
-      key: "totalAssetValue" as const,
-      label: "Total Asset Value",
-      value: formatNaira(totalAssetValue?.totalNgn ?? 0, { compact: true }),
-      sub: `Property: ${formatNaira(totalAssetValue?.propertyNgn ?? 0, { compact: true })} · Movable: ${formatNaira(totalAssetValue?.movableNgn ?? 0, { compact: true })}`,
-      icon: Banknote,
-      tone: "blue" as const,
-      delta: undefined,
-      deltaDirection: "flat" as const,
-      goodWhen: "up" as const,
-      href: DASHBOARD_NAV.assetValuation,
-    },
   ];
 
-  const staffKpis = allKpis.filter((k) => ["lowStock", "totalAssetValue", "approvals"].includes(k.key));
-  const kpis = effectiveRole === "Staff" ? staffKpis : allKpis;
+  const metricKpis =
+    effectiveRole === "Staff"
+      ? allKpis.filter((k) => ["lowStock", "approvals"].includes(k.key))
+      : allKpis;
+
+  const totalAssetKpi = {
+    key: "totalAssetValue" as const,
+    label: "Total Asset Value",
+    value: formatNaira(totalAssetValue?.totalNgn ?? 0, { compact: true }),
+    sub: `Property: ${formatNaira(totalAssetValue?.propertyNgn ?? 0, { compact: true })} · Movable: ${formatNaira(totalAssetValue?.movableNgn ?? 0, { compact: true })}`,
+    icon: Banknote,
+    tone: "blue" as const,
+    delta: undefined,
+    deltaDirection: "flat" as const,
+    goodWhen: "up" as const,
+    href: DASHBOARD_NAV.assetValuation,
+  };
+
+  const kpiGridClass =
+    "grid max-[359px]:grid-cols-1 grid-cols-2 gap-3 md:grid-cols-2 md:gap-4 xl:grid-cols-5";
 
   const showWidgets = (key: keyof typeof DEFAULT_WIDGETS) => fixedLayout || widgetVisibility[key];
 
@@ -187,22 +189,49 @@ export default function Home() {
       </div>
 
       {showWidgets("kpiCards") ? (
-        <div className="grid max-[359px]:grid-cols-1 grid-cols-2 gap-3 md:grid-cols-2 md:gap-4 xl:grid-cols-5">
-          {kpis.map((kpi) => (
+        <div className="space-y-4">
+          {metricsLoading ? (
+            <div className={kpiGridClass}>
+              {metricKpis.map((kpi) => (
+                <Skeleton key={kpi.key} className="h-24 rounded-xl" />
+              ))}
+            </div>
+          ) : (
+            <div className={kpiGridClass}>
+              {metricKpis.map((kpi) => (
+                <KpiCard
+                  key={kpi.key}
+                  label={kpi.label}
+                  value={kpi.value}
+                  sub={kpi.sub}
+                  icon={kpi.icon}
+                  tone={kpi.tone}
+                  delta={kpi.delta}
+                  deltaDirection={kpi.deltaDirection}
+                  goodWhen={kpi.goodWhen}
+                  valueTestId={`dashboard-kpi-value-${kpi.key}`}
+                  href={kpi.href}
+                />
+              ))}
+            </div>
+          )}
+          {totalAssetValueLoading ? (
+            <Skeleton className="h-24 w-full rounded-xl mb-4" />
+          ) : (
             <KpiCard
-              key={kpi.key}
-              label={kpi.label}
-              value={kpi.value}
-              sub={kpi.sub}
-              icon={kpi.icon}
-              tone={kpi.tone}
-              delta={kpi.delta}
-              deltaDirection={kpi.deltaDirection}
-              goodWhen={kpi.goodWhen}
-              valueTestId={`dashboard-kpi-value-${kpi.key}`}
-              href={kpi.href}
+              key={totalAssetKpi.key}
+              label={totalAssetKpi.label}
+              value={totalAssetKpi.value}
+              sub={totalAssetKpi.sub}
+              icon={totalAssetKpi.icon}
+              tone={totalAssetKpi.tone}
+              delta={totalAssetKpi.delta}
+              deltaDirection={totalAssetKpi.deltaDirection}
+              goodWhen={totalAssetKpi.goodWhen}
+              valueTestId={`dashboard-kpi-value-${totalAssetKpi.key}`}
+              href={totalAssetKpi.href}
             />
-          ))}
+          )}
         </div>
       ) : null}
 

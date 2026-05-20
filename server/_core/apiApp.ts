@@ -1,9 +1,7 @@
 // @ts-nocheck
-import { sql } from "drizzle-orm";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import cors from "cors";
 import express, { type Express, type Request, type Response } from "express";
-import { getDb } from "../db";
 import { appRouter } from "../routers";
 import setupRouter from "../routes/setup";
 import documentsRouter from "../routes/documents";
@@ -27,21 +25,9 @@ export function createApiApp(): Express {
   app.options("*", cors(createDynamicCorsMiddlewareOptions()));
   app.use(cors(createDynamicCorsMiddlewareOptions()));
 
-  async function healthHandler(req: Request, res: Response) {
-    if (req.query?.deep === "1") {
-      try {
-        const db = await getDb();
-        if (!db) {
-          throw new Error("Database not initialized");
-        }
-        await db.execute(sql`SELECT 1`);
-        return res.status(200).json({ ok: true, db: true });
-      } catch (err) {
-        console.error("[health] DB check failed:", err);
-        return res.status(503).json({ ok: false, db: false });
-      }
-    }
-    return res.status(200).json({ ok: true });
+  function healthHandler(_req: Request, res: Response) {
+    res.setHeader("Cache-Control", "no-store");
+    return res.status(200).json({ ok: true, ts: Date.now() });
   }
 
   // Expose both to support standalone (`/health`) and /api function mounting (`/api/health`).
