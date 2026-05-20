@@ -11,7 +11,7 @@ import {
 import { formatNaira } from "@/lib/format";
 import { KPI_VALUE_CLASS } from "@/lib/kpiTypography";
 import { trpc } from "@/lib/trpc";
-import { Download, FileSpreadsheet } from "lucide-react";
+import { Download, FileSpreadsheet, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -96,7 +96,14 @@ export default function AnnualFinanceReport() {
               </Select>
             </div>
             <Button onClick={load} disabled={isFetching}>
-              Generate report
+              {isFetching ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generating…
+                </>
+              ) : (
+                "Generate report"
+              )}
             </Button>
             {report ? (
               <>
@@ -110,8 +117,17 @@ export default function AnnualFinanceReport() {
                     })
                   }
                 >
-                  <Download className="mr-2 h-4 w-4" />
-                  Export PDF
+                  {exportPdf.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Exporting…
+                    </>
+                  ) : (
+                    <>
+                      <Download className="mr-2 h-4 w-4" />
+                      Export PDF
+                    </>
+                  )}
                 </Button>
                 <Button
                   variant="outline"
@@ -123,8 +139,17 @@ export default function AnnualFinanceReport() {
                     })
                   }
                 >
-                  <FileSpreadsheet className="mr-2 h-4 w-4" />
-                  Export Excel
+                  {exportExcel.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Exporting…
+                    </>
+                  ) : (
+                    <>
+                      <FileSpreadsheet className="mr-2 h-4 w-4" />
+                      Export Excel
+                    </>
+                  )}
                 </Button>
               </>
             ) : null}

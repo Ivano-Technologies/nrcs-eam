@@ -13,6 +13,7 @@ import {
 import { AuthPageLayout } from "@/components/auth/AuthPageLayout";
 import { GlassCard } from "@/components/auth/GlassCard";
 import { PasswordInputWithToggle } from "@/components/auth/PasswordInputWithToggle";
+import { Loader2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { appPath } from "@/lib/routes";
 import { TRPCClientError } from "@trpc/client";
@@ -185,16 +186,30 @@ export default function Login() {
             className={authPrimaryButtonClass}
             disabled={loginMutation.isPending || passwordResetMutation.isPending}
           >
-            {loginMutation.isPending ? "Signing in..." : "Sign in"}
+            {loginMutation.isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Signing in...
+              </>
+            ) : (
+              "Sign in"
+            )}
           </Button>
           <button
             type="button"
             data-testid="login-forgot-password"
-            className="w-full text-sm text-[#1E3A8A] underline-offset-2 hover:underline disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex w-full items-center justify-center gap-2 text-sm text-[#1E3A8A] underline-offset-2 hover:underline disabled:cursor-not-allowed disabled:opacity-60"
             disabled={loginMutation.isPending || passwordResetMutation.isPending}
             onClick={handlePasswordReset}
           >
-            {passwordResetMutation.isPending ? "Sending reset link..." : "Forgot password?"}
+            {passwordResetMutation.isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Sending reset link...
+              </>
+            ) : (
+              "Forgot password?"
+            )}
           </button>
 
           <p className="pt-2 text-center text-sm text-gray-600">

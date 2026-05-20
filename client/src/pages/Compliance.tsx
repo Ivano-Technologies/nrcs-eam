@@ -38,7 +38,7 @@ type VehicleRow = inferRouterOutputs<AppRouter>["complianceTracking"]["vehicles"
 type GeneratorRow = inferRouterOutputs<AppRouter>["complianceTracking"]["generators"]["list"][number];
 type BuildingRow = inferRouterOutputs<AppRouter>["complianceTracking"]["buildings"]["list"][number];
 type DonorRow = inferRouterOutputs<AppRouter>["complianceTracking"]["donor"]["list"][number];
-import { Plus, ShieldCheck } from "lucide-react";
+import { Loader2, Plus, ShieldCheck } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
@@ -375,8 +375,20 @@ export default function Compliance() {
                           >
                             Edit
                           </Button>
-                          <Button size="sm" variant="ghost" onClick={() => vehicleDelete.mutate({ id: r.id })}>
-                            Delete
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={vehicleDelete.isPending}
+                            onClick={() => vehicleDelete.mutate({ id: r.id })}
+                          >
+                            {vehicleDelete.isPending && vehicleDelete.variables?.id === r.id ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Deleting…
+                              </>
+                            ) : (
+                              "Delete"
+                            )}
                           </Button>
                         </TableCell>
                       ) : null}
@@ -426,8 +438,20 @@ export default function Compliance() {
                       <TableCell>{generatorBadge(r.status)}</TableCell>
                       {canEdit ? (
                         <TableCell>
-                          <Button size="sm" variant="ghost" onClick={() => genDelete.mutate({ id: r.id })}>
-                            Delete
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={genDelete.isPending}
+                            onClick={() => genDelete.mutate({ id: r.id })}
+                          >
+                            {genDelete.isPending && genDelete.variables?.id === r.id ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Deleting…
+                              </>
+                            ) : (
+                              "Delete"
+                            )}
                           </Button>
                         </TableCell>
                       ) : null}
@@ -475,8 +499,20 @@ export default function Compliance() {
                       <TableCell>{docBadge(r.status)}</TableCell>
                       {canEdit ? (
                         <TableCell>
-                          <Button size="sm" variant="ghost" onClick={() => buildingDelete.mutate({ id: r.id })}>
-                            Delete
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={buildingDelete.isPending}
+                            onClick={() => buildingDelete.mutate({ id: r.id })}
+                          >
+                            {buildingDelete.isPending && buildingDelete.variables?.id === r.id ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Deleting…
+                              </>
+                            ) : (
+                              "Delete"
+                            )}
                           </Button>
                         </TableCell>
                       ) : null}
@@ -522,8 +558,20 @@ export default function Compliance() {
                       <TableCell>{donorBadge(r.status)}</TableCell>
                       {canEdit ? (
                         <TableCell>
-                          <Button size="sm" variant="ghost" onClick={() => donorDelete.mutate({ id: r.id })}>
-                            Delete
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={donorDelete.isPending}
+                            onClick={() => donorDelete.mutate({ id: r.id })}
+                          >
+                            {donorDelete.isPending && donorDelete.variables?.id === r.id ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Deleting…
+                              </>
+                            ) : (
+                              "Delete"
+                            )}
                           </Button>
                         </TableCell>
                       ) : null}
@@ -587,6 +635,7 @@ export default function Compliance() {
           </div>
           <DialogFooter>
             <Button
+              disabled={vehicleUpsert.isPending}
               onClick={async () => {
                 let assetId = vehicleForm.assetId;
                 if (!assetId) {
@@ -609,7 +658,14 @@ export default function Compliance() {
                 });
               }}
             >
-              Save
+              {vehicleUpsert.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving…
+                </>
+              ) : (
+                "Save"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -640,6 +696,7 @@ export default function Compliance() {
           </div>
           <DialogFooter>
             <Button
+              disabled={genUpsert.isPending}
               onClick={async () => {
                 const assetId = await resolveAssetCode(genForm.assetCode);
                 if (!assetId) {
@@ -654,7 +711,14 @@ export default function Compliance() {
                 });
               }}
             >
-              Save
+              {genUpsert.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving…
+                </>
+              ) : (
+                "Save"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -704,6 +768,7 @@ export default function Compliance() {
           </div>
           <DialogFooter>
             <Button
+              disabled={buildingUpsert.isPending}
               onClick={() => {
                 const siteId = parseInt(buildingForm.siteId, 10);
                 if (!siteId) {
@@ -721,7 +786,14 @@ export default function Compliance() {
                 });
               }}
             >
-              Save
+              {buildingUpsert.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving…
+                </>
+              ) : (
+                "Save"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -774,6 +846,7 @@ export default function Compliance() {
           </div>
           <DialogFooter>
             <Button
+              disabled={donorUpsert.isPending}
               onClick={() => {
                 if (!donorForm.donorName || !donorForm.dueDate) {
                   toast.error("Donor and due date are required");
@@ -789,7 +862,14 @@ export default function Compliance() {
                 });
               }}
             >
-              Save
+              {donorUpsert.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving…
+                </>
+              ) : (
+                "Save"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

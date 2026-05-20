@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { trpc } from "@/lib/trpc";
 import { downloadBase64File } from "@/lib/download";
 import { usePermissions } from "@/_core/hooks/usePermissions";
-import { Download } from "lucide-react";
+import { Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   Bar,
@@ -238,8 +238,17 @@ export default function Reports() {
                 }
               }}
             >
-              <Download className="mr-2 h-4 w-4" />
-              Download branch report
+              {branchSummaryPdf.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generating…
+                </>
+              ) : (
+                <>
+                  <Download className="mr-2 h-4 w-4" />
+                  Download branch report
+                </>
+              )}
             </Button>
           </CardContent>
         </Card>

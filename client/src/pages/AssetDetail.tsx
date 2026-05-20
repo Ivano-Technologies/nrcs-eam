@@ -18,6 +18,7 @@ import {
   Image as ImageIcon,
   X,
   ChevronDown,
+  Loader2,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -596,8 +597,17 @@ export default function AssetDetail() {
                   onClick={() => generateQRCodeMutation.mutate({ id: asset.id })}
                   disabled={generateQRCodeMutation.isPending}
                 >
-                  <QrCode className="mr-2 h-4 w-4" />
-                  Generate QR Code
+                  {generateQRCodeMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Generating…
+                    </>
+                  ) : (
+                    <>
+                      <QrCode className="mr-2 h-4 w-4" />
+                      Generate QR Code
+                    </>
+                  )}
                 </Button>
               )}
             </div>
@@ -685,8 +695,17 @@ export default function AssetDetail() {
                   onClick={() => document.getElementById('photo-upload')?.click()}
                   disabled={uploadingPhoto}
                 >
-                  <Upload className="mr-2 h-4 w-4" />
-                  {uploadingPhoto ? 'Uploading...' : 'Upload Photo'}
+                  {uploadingPhoto ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Upload Photo
+                    </>
+                  )}
                 </Button>
               </div>
             )}
@@ -871,7 +890,14 @@ export default function AssetDetail() {
               Cancel
             </Button>
             <Button onClick={handleUploadWithCaption} disabled={uploadingPhoto}>
-              {uploadingPhoto ? 'Uploading...' : `Upload ${pendingFiles.length} Photo(s)`}
+              {uploadingPhoto ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                `Upload ${pendingFiles.length} Photo(s)`
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1377,7 +1403,14 @@ export default function AssetDetail() {
               Cancel
             </Button>
             <Button data-testid="asset-detail-save-btn" onClick={handleUpdate} disabled={updateAssetMutation.isPending}>
-              {updateAssetMutation.isPending ? "Updating..." : "Update Asset"}
+              {updateAssetMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                "Update Asset"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

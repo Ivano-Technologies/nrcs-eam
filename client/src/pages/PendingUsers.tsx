@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { trpc } from "@/lib/trpc";
 import TableLoader from "@/components/ui/TableLoader";
-import { CheckCircle, XCircle, Clock } from "lucide-react";
+import { CheckCircle, XCircle, Clock, Loader2 } from "lucide-react";
 
 export default function PendingUsers() {
   const [selectedUser, setSelectedUser] = useState<number | null>(null);
@@ -113,16 +113,34 @@ export default function PendingUsers() {
                       disabled={approveMutation.isPending}
                       className="bg-green-600 hover:bg-green-700"
                     >
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Approve
+                      {approveMutation.isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Approving…
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Approve
+                        </>
+                      )}
                     </Button>
                     <Button
                       onClick={() => handleReject(user.id)}
                       disabled={rejectMutation.isPending}
                       variant="destructive"
                     >
-                      <XCircle className="h-4 w-4 mr-2" />
-                      Reject
+                      {rejectMutation.isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Rejecting…
+                        </>
+                      ) : (
+                        <>
+                          <XCircle className="h-4 w-4 mr-2" />
+                          Reject
+                        </>
+                      )}
                     </Button>
                   </div>
                 </div>

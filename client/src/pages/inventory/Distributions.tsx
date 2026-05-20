@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ViewToggle, type ViewMode } from "@/components/ViewToggle";
 import { toast } from "sonner";
 import { downloadBase64File } from "@/lib/download";
+import { Loader2 } from "lucide-react";
 
 export default function Distributions({ embedInShell = false }: { embedInShell?: boolean } = {}) {
   const [viewMode, setViewMode] = useState<ViewMode>(() => (localStorage.getItem("viewMode_inventory_distributions") as ViewMode) || "table");
@@ -115,7 +116,14 @@ export default function Distributions({ embedInShell = false }: { embedInShell?:
                         }
                       }}
                     >
-                      {downloadPdfMutation.isPending ? "Generating..." : "Download PDF"}
+                      {downloadPdfMutation.isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        "Download PDF"
+                      )}
                     </Button>
                   </td>
                 </tr>

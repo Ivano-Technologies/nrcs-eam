@@ -31,7 +31,7 @@ import { formatNaira } from "@/lib/format";
 import { KPI_VALUE_CLASS } from "@/lib/kpiTypography";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
-import { AlertTriangle, FileSpreadsheet, Plus } from "lucide-react";
+import { AlertTriangle, FileSpreadsheet, Loader2, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
@@ -136,8 +136,17 @@ export function InsuranceRegisterContent({ embedded = false }: { embedded?: bool
             ) : null}
             {canManage ? (
               <Button variant="outline" disabled={exportExcel.isPending} onClick={() => exportExcel.mutate({})}>
-                <FileSpreadsheet className="mr-2 h-4 w-4" />
-                Export
+                {exportExcel.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Exporting…
+                  </>
+                ) : (
+                  <>
+                    <FileSpreadsheet className="mr-2 h-4 w-4" />
+                    Export
+                  </>
+                )}
               </Button>
             ) : null}
           </div>
@@ -149,8 +158,17 @@ export function InsuranceRegisterContent({ embedded = false }: { embedded?: bool
               Add policy
             </Button>
             <Button variant="outline" disabled={exportExcel.isPending} onClick={() => exportExcel.mutate({})}>
-              <FileSpreadsheet className="mr-2 h-4 w-4" />
-              Export
+              {exportExcel.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Exporting…
+                </>
+              ) : (
+                <>
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  Export
+                </>
+              )}
             </Button>
           </div>
         ) : null}
@@ -302,6 +320,7 @@ export function InsuranceRegisterContent({ embedded = false }: { embedded?: bool
             </div>
             <DialogFooter>
               <Button
+                disabled={create.isPending}
                 onClick={() => {
                   const siteId = parseInt(form.siteId, 10);
                   if (!siteId || !form.insurer || !form.policyNumber) {
@@ -322,7 +341,14 @@ export function InsuranceRegisterContent({ embedded = false }: { embedded?: bool
                   });
                 }}
               >
-                Save
+                {create.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving…
+                  </>
+                ) : (
+                  "Save"
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>

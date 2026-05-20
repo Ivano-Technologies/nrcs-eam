@@ -17,7 +17,7 @@ import { KPI_VALUE_CLASS } from "@/lib/kpiTypography";
 import { trpc } from "@/lib/trpc";
 import PageLoader from "@/components/ui/PageLoader";
 import { cn } from "@/lib/utils";
-import { AlertTriangle, ArrowDown, ArrowUp, Download, FileSpreadsheet } from "lucide-react";
+import { AlertTriangle, ArrowDown, ArrowUp, Download, FileSpreadsheet, Loader2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -261,8 +261,17 @@ export default function AssetValuation() {
             disabled={excelMutation.isPending}
             onClick={() => excelMutation.mutate()}
           >
-            <FileSpreadsheet className="mr-2 h-4 w-4" />
-            Export to Excel
+            {excelMutation.isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Exporting…
+              </>
+            ) : (
+              <>
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                Export to Excel
+              </>
+            )}
           </Button>
           <Button
             type="button"
@@ -270,8 +279,17 @@ export default function AssetValuation() {
             disabled={pdfMutation.isPending}
             onClick={() => pdfMutation.mutate()}
           >
-            <Download className="mr-2 h-4 w-4" />
-            Export to PDF
+            {pdfMutation.isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Exporting…
+              </>
+            ) : (
+              <>
+                <Download className="mr-2 h-4 w-4" />
+                Export to PDF
+              </>
+            )}
           </Button>
         </div>
       </div>

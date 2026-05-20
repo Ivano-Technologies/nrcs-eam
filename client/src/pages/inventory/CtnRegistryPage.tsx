@@ -31,6 +31,7 @@ import TableLoader from "@/components/ui/TableLoader";
 import { ITEM_CATEGORY_VALUES } from "@shared/itemCategory";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { Loader2 } from "lucide-react";
 
 const CATEGORY_LABEL: Record<string, string> = {
   food_nutrition: "Food & nutrition",
@@ -369,7 +370,14 @@ export default function CtnRegistryPage() {
                 }}
                 disabled={createMutation.isPending}
               >
-                {createMutation.isPending ? "Saving…" : "Create CTN"}
+                {createMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving…
+                  </>
+                ) : (
+                  "Create CTN"
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>

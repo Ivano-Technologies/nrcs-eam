@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc";
 import { downloadBase64File } from "@/lib/download";
+import { Loader2 } from "lucide-react";
 
 export default function MonthlyWarehouseReport() {
   const [, setLocation] = useLocation();
@@ -80,7 +81,14 @@ export default function MonthlyWarehouseReport() {
             downloadBase64File(file.data, file.filename, file.mimeType);
           }}
         >
-          Export PDF
+          {pdfMutation.isPending ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Exporting…
+            </>
+          ) : (
+            "Export PDF"
+          )}
         </Button>
         <Button
           variant="outline"
@@ -90,7 +98,14 @@ export default function MonthlyWarehouseReport() {
             downloadBase64File(file.data, file.filename, file.mimeType);
           }}
         >
-          Export Excel
+          {excelMutation.isPending ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Exporting…
+            </>
+          ) : (
+            "Export Excel"
+          )}
         </Button>
         <Button
           variant="outline"
@@ -104,7 +119,14 @@ export default function MonthlyWarehouseReport() {
             });
           }}
         >
-          Resend
+          {emailMutation.isPending ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Sending…
+            </>
+          ) : (
+            "Resend"
+          )}
         </Button>
         <Button
           variant="outline"

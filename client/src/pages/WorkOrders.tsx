@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Wrench, Calendar } from "lucide-react";
+import { Loader2, Plus, Search, Wrench, Calendar } from "lucide-react";
 import { Link } from "wouter";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -244,7 +244,14 @@ export default function WorkOrders() {
                 onClick={handleCreateWorkOrder}
                 disabled={createWorkOrderMutation.isPending}
               >
-                {createWorkOrderMutation.isPending ? "Creating..." : "Create Work Order"}
+                {createWorkOrderMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  "Create Work Order"
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>

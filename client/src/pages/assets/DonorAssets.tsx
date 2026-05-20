@@ -29,7 +29,7 @@ import type { AppRouter } from "../../../../server/routers";
 
 type DonorBreakdownRow = inferRouterOutputs<AppRouter>["donorAssets"]["report"]["donors"][number];
 type DonorAssetRow = DonorBreakdownRow["assets"][number];
-import { ChevronDown, ChevronRight, FileSpreadsheet, Gift } from "lucide-react";
+import { ChevronDown, ChevronRight, FileSpreadsheet, Gift, Loader2 } from "lucide-react";
 import { Fragment, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -99,8 +99,17 @@ export default function DonorAssets() {
             disabled={exportExcel.isPending}
             onClick={() => exportExcel.mutate(filters)}
           >
-            <FileSpreadsheet className="mr-2 h-4 w-4" />
-            Export to Excel
+            {exportExcel.isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Exporting…
+              </>
+            ) : (
+              <>
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                Export to Excel
+              </>
+            )}
           </Button>
         ) : null}
       </div>

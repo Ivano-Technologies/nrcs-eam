@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Camera, Search, Package, MapPin, CheckCircle, XCircle } from "lucide-react";
+import { Camera, Search, Package, MapPin, CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { appPath } from "@/lib/routes";
 
 export default function AssetScanner() {
@@ -340,7 +340,14 @@ ${updateForm.notes}`
                     disabled={updateAssetMutation.isPending}
                     className="flex-1"
                   >
-                    {updateAssetMutation.isPending ? "Updating..." : "Update Asset"}
+                    {updateAssetMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Updating...
+                      </>
+                    ) : (
+                      "Update Asset"
+                    )}
                   </Button>
                   <Button
                     variant="outline"

@@ -10,7 +10,7 @@ import { Link } from "wouter";
 import { FACILITY_TYPE_LABELS } from "@shared/facilities";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { toast } from "sonner";
-import { MapPin } from "lucide-react";
+import { Loader2, MapPin } from "lucide-react";
 
 export default function FacilityDetail() {
   const { isManagerOrAdmin } = usePermissions();
@@ -80,8 +80,17 @@ export default function FacilityDetail() {
               disabled={syncCoordsMutation.isPending}
               onClick={() => syncCoordsMutation.mutate({ siteId: facility.id })}
             >
-              <MapPin className="mr-2 h-4 w-4" />
-              Sync asset coordinates from facility
+              {syncCoordsMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Syncing…
+                </>
+              ) : (
+                <>
+                  <MapPin className="mr-2 h-4 w-4" />
+                  Sync asset coordinates from facility
+                </>
+              )}
             </Button>
           ) : null}
         </CardHeader>
