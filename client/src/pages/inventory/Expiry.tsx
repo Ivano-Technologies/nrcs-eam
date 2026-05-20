@@ -6,6 +6,7 @@ import { InventorySecondaryNav } from "@/components/inventory/InventorySecondary
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 function daysRemaining(date: string | Date | null | undefined) {
   if (!date) return null;
@@ -80,7 +81,20 @@ export default function Expiry({ embedInShell = false }: { embedInShell?: boolea
                       <td className="px-2 py-2">{row.quantity}</td>
                       <td className="px-2 py-2">
                         {isManagerOrAdmin ? (
-                          <Button size="sm" onClick={() => markExpired.mutate({ batchId: row.batchId })}>Mark expired</Button>
+                          <Button
+                            size="sm"
+                            disabled={markExpired.isPending && markExpired.variables?.batchId === row.batchId}
+                            onClick={() => markExpired.mutate({ batchId: row.batchId })}
+                          >
+                            {markExpired.isPending && markExpired.variables?.batchId === row.batchId ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Processing…
+                              </>
+                            ) : (
+                              "Mark expired"
+                            )}
+                          </Button>
                         ) : null}
                       </td>
                     </tr>
@@ -95,9 +109,16 @@ export default function Expiry({ embedInShell = false }: { embedInShell?: boolea
             {isManagerOrAdmin ? (
               <Button
                 onClick={() => disposeExpired.mutate({ batchIds: selectedExpired })}
-                disabled={!selectedExpired.length}
+                disabled={!selectedExpired.length || disposeExpired.isPending}
               >
-                Create disposal waybill
+                {disposeExpired.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating…
+                  </>
+                ) : (
+                  "Create disposal waybill"
+                )}
               </Button>
             ) : null}
             <div className="rounded-md border overflow-x-auto">
