@@ -1748,7 +1748,6 @@ export const appRouter = router({
           };
         }
         const siteId = scope.mode === "site" ? scope.siteId : undefined;
-        const stats = await db.getDashboardStats(siteId != null ? { siteId } : undefined);
         const database = await db.getDb();
 
         let stockReadiness: {
@@ -1780,16 +1779,17 @@ export const appRouter = router({
           goodWhen: "up" as const,
         };
         let activeFacilitiesKpi = { value: 0, total: 0, offline: 0, goodWhen: "up" as const };
+        let stats: Awaited<ReturnType<typeof db.getDashboardStats>> = null;
 
         if (database) {
           const window = getPeriodWindow(input.period);
           const activeSiteWhere =
             siteId != null ? and(eq(sites.isActive, true), eq(sites.id, siteId)) : eq(sites.isActive, true);
-          const totalSiteWhere = siteId != null ? eq(sites.id, siteId) : undefined;
           const inactiveSiteWhere =
             siteId != null ? and(eq(sites.isActive, false), eq(sites.id, siteId)) : eq(sites.isActive, false);
           const cardSiteFilter = siteId != null ? eq(stockCards.locationId, siteId) : undefined;
           const [
+            statsResult,
             activeFacilities,
             totalFacilities,
             inactiveFacilities,
@@ -1800,6 +1800,7 @@ export const appRouter = router({
             historicalDist,
           ] =
             await Promise.all([
+              db.getDashboardStats(siteId != null ? { siteId } : undefined),
               database.select({ id: sites.id }).from(sites).where(activeSiteWhere),
               siteId != null
                 ? database
@@ -1888,6 +1889,7 @@ export const appRouter = router({
                   )
                 ),
             ]);
+          stats = statsResult;
 
           const adequate = currentAdequateRows.length;
           const previousAdequate = previousAdequateRows.length;
@@ -1918,6 +1920,8 @@ export const appRouter = router({
             offline: Number(inactiveFacilities[0]?.total ?? 0),
             goodWhen: "up" as const,
           };
+        } else {
+          stats = await db.getDashboardStats(siteId != null ? { siteId } : undefined);
         }
         return {
           lowStockItems: {

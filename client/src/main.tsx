@@ -17,6 +17,17 @@ import { initPostHog } from "./lib/posthog";
 initPostHog();
 initAnalytics();
 
+// Keep Vercel serverless function warm
+if (typeof window !== "undefined") {
+  const ping = () =>
+    fetch(`${getTrpcUrl()}/system.ping`, {
+      method: "GET",
+      credentials: "include",
+    }).catch(() => {});
+  ping();
+  setInterval(ping, 4 * 60 * 1000);
+}
+
 window.addEventListener("unhandledrejection", (event) => {
   try {
     if ((window as any).posthog) {
