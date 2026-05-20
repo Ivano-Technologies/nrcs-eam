@@ -1,40 +1,22 @@
 version: 2
 updates:
-  # npm/pnpm dependencies
-  - package-ecosystem: "npm"
+  - package-ecosystem: npm
     directory: "/"
     schedule:
-      interval: "monthly"
-      day: "monday"
-      time: "09:00"
-      timezone: "Africa/Lagos"
-    open-pull-requests-limit: 10
-    labels:
-      - "dependencies"
-      - "security"
-    ignore:
-      # xlsx has no public patch — ignore until replacement is scoped
-      - dependency-name: "xlsx"
-        update-types: ["version-update:semver-patch"]
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
     groups:
-      aws-sdk:
-        patterns:
-          - "@aws-sdk/*"
-      dev-toolchain:
-        patterns:
-          - "vite*"
-          - "vitest*"
-          - "esbuild*"
-          - "drizzle-kit"
+      production-dependencies:
+        dependency-type: production
         update-types:
-          - "minor"
-          - "patch"
-
-  # GitHub Actions dependencies
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
-      interval: "monthly"
-    labels:
-      - "dependencies"
-      - "github-actions"
+          - minor
+          - patch
+      development-dependencies:
+        dependency-type: development
+        update-types:
+          - minor
+          - patch
+    ignore:
+      - dependency-name: "xlsx"
+        reason: "No patch available in CE line — tracked separately"
