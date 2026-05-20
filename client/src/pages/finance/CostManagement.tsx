@@ -33,7 +33,7 @@ import { formatNaira } from "@/lib/format";
 import { KPI_VALUE_CLASS } from "@/lib/kpiTypography";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
-import { FileSpreadsheet, Plus } from "lucide-react";
+import { FileSpreadsheet, Loader2, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Redirect } from "wouter";
@@ -255,8 +255,17 @@ export default function CostManagement() {
             <div className="flex gap-2">
               <Button onClick={() => setBudgetDialog(true)}>Set branch budget</Button>
               <Button variant="outline" disabled={exportBudget.isPending} onClick={() => exportBudget.mutate({ year })}>
-                <FileSpreadsheet className="mr-2 h-4 w-4" />
-                Export Excel
+                {exportBudget.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Exporting…
+                  </>
+                ) : (
+                  <>
+                    <FileSpreadsheet className="mr-2 h-4 w-4" />
+                    Export Excel
+                  </>
+                )}
               </Button>
             </div>
             <Card>
@@ -318,6 +327,7 @@ export default function CostManagement() {
             </div>
             <DialogFooter>
               <Button
+                disabled={upsertBudget.isPending}
                 onClick={() => {
                   const siteId = parseInt(budgetSiteId, 10);
                   const amount = parseFloat(budgetAmount);
@@ -335,7 +345,14 @@ export default function CostManagement() {
                   });
                 }}
               >
-                Save
+                {upsertBudget.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving…
+                  </>
+                ) : (
+                  "Save"
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -405,6 +422,7 @@ export default function CostManagement() {
             </div>
             <DialogFooter>
               <Button
+                disabled={createCost.isPending}
                 onClick={() => {
                   const assetId = parseInt(costForm.assetId, 10);
                   const costNgn = parseFloat(costForm.costNgn);
@@ -422,7 +440,14 @@ export default function CostManagement() {
                   });
                 }}
               >
-                Save
+                {createCost.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving…
+                  </>
+                ) : (
+                  "Save"
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>

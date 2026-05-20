@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 export default function ImportDraftsPage({ embedInShell = false }: { embedInShell?: boolean } = {}) {
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -64,8 +65,35 @@ export default function ImportDraftsPage({ embedInShell = false }: { embedInShel
                     <td className="px-2 py-2">{draft.status}</td>
                     <td className="px-2 py-2 space-x-2">
                       <Button size="sm" variant="outline" onClick={() => setSelectedId(draft.id)}>Edit</Button>
-                      <Button size="sm" onClick={() => finalize.mutate({ id: draft.id })}>Finalize</Button>
-                      <Button size="sm" variant="destructive" onClick={() => discard.mutate({ id: draft.id })}>Discard</Button>
+                      <Button
+                        size="sm"
+                        disabled={finalize.isPending && finalize.variables?.id === draft.id}
+                        onClick={() => finalize.mutate({ id: draft.id })}
+                      >
+                        {finalize.isPending && finalize.variables?.id === draft.id ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Finalizing…
+                          </>
+                        ) : (
+                          "Finalize"
+                        )}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        disabled={discard.isPending && discard.variables?.id === draft.id}
+                        onClick={() => discard.mutate({ id: draft.id })}
+                      >
+                        {discard.isPending && discard.variables?.id === draft.id ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Discarding…
+                          </>
+                        ) : (
+                          "Discard"
+                        )}
+                      </Button>
                     </td>
                   </tr>
                 ))}

@@ -22,7 +22,7 @@ import { formatNaira } from "@/lib/format";
 import { KPI_VALUE_CLASS } from "@/lib/kpiTypography";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { FileSpreadsheet, RefreshCw } from "lucide-react";
+import { FileSpreadsheet, Loader2, RefreshCw } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -80,13 +80,31 @@ export default function DepreciationReporting() {
           <div className="flex flex-wrap gap-2">
             {isAdmin ? (
               <Button variant="outline" disabled={recalc.isPending} onClick={() => recalc.mutate()}>
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Recalculate
+                {recalc.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Recalculating…
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Recalculate
+                  </>
+                )}
               </Button>
             ) : null}
             <Button variant="default" disabled={exportExcel.isPending} onClick={() => exportExcel.mutate({})}>
-              <FileSpreadsheet className="mr-2 h-4 w-4" />
-              Export Excel
+              {exportExcel.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Exporting…
+                </>
+              ) : (
+                <>
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  Export Excel
+                </>
+              )}
             </Button>
           </div>
         </div>

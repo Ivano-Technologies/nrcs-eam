@@ -13,6 +13,7 @@ import {
 } from "@/components/auth/AuthPageShell";
 import { AuthPageLayout } from "@/components/auth/AuthPageLayout";
 import { GlassCard } from "@/components/auth/GlassCard";
+import { Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 
 type RecoveryState = "checking" | "ready" | "invalid" | "success";
@@ -184,7 +185,14 @@ export default function ResetPassword() {
               className={authPrimaryButtonClass}
               disabled={isSubmitting || Boolean(validationMessage)}
             >
-              {isSubmitting ? "Updating..." : "Set new password"}
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                "Set new password"
+              )}
             </Button>
           </form>
         )}

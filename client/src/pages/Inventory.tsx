@@ -29,6 +29,7 @@ import { toast } from "sonner";
 import {
   ArrowDownToLine,
   ArrowUpFromLine,
+  Loader2,
   Package,
   ShieldAlert,
   TriangleAlert,
@@ -731,8 +732,17 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                     onClick={() => importMutation.mutate({})}
                     disabled={importMutation.isPending}
                   >
-                    <ArrowDownToLine className="mr-2 h-4 w-4" />
-                    Import
+                    {importMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Importing…
+                      </>
+                    ) : (
+                      <>
+                        <ArrowDownToLine className="mr-2 h-4 w-4" />
+                        Import
+                      </>
+                    )}
                   </Button>
                   <Button className="h-9" variant="outline" disabled>
                     <ArrowUpFromLine className="mr-2 h-4 w-4" />
@@ -911,7 +921,14 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                       toast.success(`Dry run completed. ${res.summary.ok} valid row(s).`);
                     }}
                   >
-                    Dry-run
+                    {openingDryRun.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Importing…
+                      </>
+                    ) : (
+                      "Dry-run"
+                    )}
                   </Button>
                   <Button
                     disabled={!openingRows.length || !isAdmin || openingConfirm.isPending}
@@ -920,7 +937,14 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                       toast.success(`Imported ${res.imported}, skipped ${res.skipped}, errors ${res.errors.length}.`);
                     }}
                   >
-                    Confirm & Import
+                    {openingConfirm.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Importing…
+                      </>
+                    ) : (
+                      "Confirm & Import"
+                    )}
                   </Button>
                 </div>
                 {!!openingPreview.length && (
@@ -974,7 +998,14 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                       toast.success(`Dry run completed. ${res.summary.ok} valid row(s).`);
                     }}
                   >
-                    Dry-run
+                    {movementDryRun.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Importing…
+                      </>
+                    ) : (
+                      "Dry-run"
+                    )}
                   </Button>
                   <Button
                     disabled={!movementRows.length || !isAdmin || movementConfirm.isPending}
@@ -983,7 +1014,14 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                       toast.success(`Imported ${res.imported}, skipped ${res.skipped}, errors ${res.errors.length}.`);
                     }}
                   >
-                    Confirm & Import
+                    {movementConfirm.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Importing…
+                      </>
+                    ) : (
+                      "Confirm & Import"
+                    )}
                   </Button>
                 </div>
                 {!!movementPreview.length && (
@@ -1152,7 +1190,14 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                     catalogueUpdate.mutate({ id, itemCategory: editItemTaxonomy });
                   }}
                 >
-                  Save category
+                  {catalogueUpdate.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving…
+                    </>
+                  ) : (
+                    "Save category"
+                  )}
                 </Button>
               </CardContent>
             </Card>
@@ -1308,7 +1353,14 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                 });
               }}
             >
-              Create item
+              {catalogueCreate.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating…
+                </>
+              ) : (
+                "Create item"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

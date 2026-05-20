@@ -4,7 +4,7 @@ import PageLoader from "@/components/ui/PageLoader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, Calendar, Mail } from "lucide-react";
+import { AlertTriangle, Calendar, Loader2, Mail } from "lucide-react";
 import { toast } from "sonner";
 
 export default function WarrantyAlerts() {
@@ -96,8 +96,17 @@ export default function WarrantyAlerts() {
                   onClick={() => sendAlertMutation.mutate({ assetId: asset.id })}
                   disabled={sendAlertMutation.isPending}
                 >
-                  <Mail className="mr-2 h-4 w-4" />
-                  Send Alert Email
+                  {sendAlertMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Sending…
+                    </>
+                  ) : (
+                    <>
+                      <Mail className="mr-2 h-4 w-4" />
+                      Send Alert Email
+                    </>
+                  )}
                 </Button>
               </CardContent>
             </Card>

@@ -13,6 +13,7 @@ import { CtnInlineCreator } from "@/components/wms/CtnInlineCreator";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
 import { formatNaira } from "@/lib/format";
 import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 type WaybillSource = {
   ctnId: string;
@@ -217,6 +218,9 @@ export default function WaybillDetail() {
     await updateMutation.mutateAsync({ id: waybillId, payload: payload() });
     toast.success("Waybill draft updated.");
   };
+
+  const draftPending = createMutation.isPending || updateMutation.isPending;
+  const dispatchPending = draftPending || dispatchMutation.isPending;
 
   const dispatch = async () => {
     const lineIssues = lines.some((line) => !lineTotalOk(line) || line.ctnSources.some((src) => !src.ctnId || Number(src.quantity) <= 0));
@@ -525,8 +529,26 @@ export default function WaybillDetail() {
 
           <div className="flex flex-wrap justify-end gap-2">
             <Button variant="outline" onClick={() => setLocation("/app/inventory/issues")}>Cancel</Button>
-            <Button variant="outline" onClick={() => void saveDraft()}>Save as Draft</Button>
-            <Button onClick={() => void dispatch()}>Dispatch</Button>
+            <Button variant="outline" disabled={draftPending} onClick={() => void saveDraft()}>
+              {draftPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving…
+                </>
+              ) : (
+                "Save as Draft"
+              )}
+            </Button>
+            <Button disabled={dispatchPending} onClick={() => void dispatch()}>
+              {dispatchPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Dispatching…
+                </>
+              ) : (
+                "Dispatch"
+              )}
+            </Button>
             {waybillId && details.data?.status === "dispatched" ? (
               <>
                 <Button variant="outline" onClick={() => setLocation(`/app/inventory/issues/${waybillId}/print/white`)}>White copy</Button>

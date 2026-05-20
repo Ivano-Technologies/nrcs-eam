@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Building2, Plus, Mail, Phone } from "lucide-react";
+import { Building2, Loader2, Plus, Mail, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
 
@@ -214,7 +214,14 @@ export default function Vendors() {
                   Cancel
                 </Button>
                 <Button type="submit" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? "Creating..." : "Add Vendor"}
+                  {createMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    "Add Vendor"
+                  )}
                 </Button>
               </div>
             </form>

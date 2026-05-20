@@ -44,7 +44,7 @@ import {
 import { cn } from "@/lib/utils";
 import { MapView } from "@/components/Map";
 import { DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM_COUNTRY } from "@/lib/mapDefaults";
-import { Download, Edit2, MapPin, Plus, Save, Trash2, Upload, X } from "lucide-react";
+import { Download, Edit2, Loader2, MapPin, Plus, Save, Trash2, Upload, X } from "lucide-react";
 import { ViewToggle } from "@/components/ViewToggle";
 import { CardQrCode } from "@/components/CardQrCode";
 import { ModuleFiltersCard, ModuleFilterSearch } from "@/components/ModuleFiltersCard";
@@ -493,6 +493,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
               <Button
+                disabled={createMutation.isPending}
                 onClick={() => {
                   if (!createForm.name.trim()) return toast.error("Facility name is required");
                   const hierarchyError = validateHierarchyBeforeSubmit(createForm);
@@ -502,7 +503,14 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
                   createMutation.mutate(toPayload(createForm));
                 }}
               >
-                {createMutation.isPending ? "Saving..." : "Create Facility"}
+                {createMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Create Facility"
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -616,6 +624,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
                               <Button
                                 variant="ghost"
                                 size="icon"
+                                disabled={updateMutation.isPending}
                                 onClick={() => {
                                   const hierarchyError = validateHierarchyBeforeSubmit(editForm);
                                   if (hierarchyError) return toast.error(hierarchyError);
@@ -624,7 +633,11 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
                                   updateMutation.mutate({ id: f.id, ...toPayload(editForm) });
                                 }}
                               >
-                                <Save className="h-4 w-4" />
+                                {updateMutation.isPending ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Save className="h-4 w-4" />
+                                )}
                               </Button>
                               <Button variant="ghost" size="icon" onClick={() => setEditingId(null)}>
                                 <X className="h-4 w-4" />
@@ -660,12 +673,17 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
                               <Button
                                 variant="ghost"
                                 size="icon"
+                                disabled={deleteMutation.isPending}
                                 onClick={() => {
                                   if (!window.confirm(`Delete facility "${f.name}"?`)) return;
                                   deleteMutation.mutate({ ids: [f.id] });
                                 }}
                               >
-                                <Trash2 className="h-4 w-4" />
+                                {deleteMutation.isPending ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-4 w-4" />
+                                )}
                               </Button>
                             </>
                           )}

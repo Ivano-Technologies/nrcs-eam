@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc";
+import { Loader2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useLocation, useRoute } from "wouter";
 import { toast } from "sonner";
@@ -74,7 +75,16 @@ export default function StockCardDetail() {
         <Input placeholder="Counted qty" value={countedQty} onChange={(e) => setCountedQty(e.target.value)} />
         <Input placeholder="Supervisor ID (for retroactive)" value={supervisorId} onChange={(e) => setSupervisorId(e.target.value)} />
         <Input placeholder="Notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
-        <Button onClick={submitStockCheck} disabled={addStockCheck.isPending}>Add Stock Check</Button>
+        <Button onClick={submitStockCheck} disabled={addStockCheck.isPending}>
+          {addStockCheck.isPending ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving…
+            </>
+          ) : (
+            "Add Stock Check"
+          )}
+        </Button>
       </div>
 
       <div className="frozen-table-wrap rounded-md border">

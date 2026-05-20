@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Edit, Trash2, FileText } from "lucide-react";
+import { Plus, Edit, Trash2, FileText, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function WorkOrderTemplates() {
@@ -340,7 +340,16 @@ export default function WorkOrderTemplates() {
               onClick={editingTemplate ? handleUpdate : handleCreate}
               disabled={!formData.name || createMutation.isPending || updateMutation.isPending}
             >
-              {editingTemplate ? "Update" : "Create"} Template
+              {createMutation.isPending || updateMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving…
+                </>
+              ) : (
+                <>
+                  {editingTemplate ? "Update" : "Create"} Template
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

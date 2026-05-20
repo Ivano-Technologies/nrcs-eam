@@ -13,6 +13,7 @@ import { ModuleFiltersCard, ModuleFilterSearch } from "@/components/ModuleFilter
 import { useLocation } from "wouter";
 import { downloadBase64File } from "@/lib/download";
 import { appPath } from "@/lib/routes";
+import { Loader2 } from "lucide-react";
 
 type Line = { catalogueId: string; ctnId: string; quantity: string; batchNumber: string; expiryDate: string; notes: string };
 
@@ -186,7 +187,14 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
                       })();
                     }}
                   >
-                    {downloadPdfMutation.isPending ? "Generating..." : "Download PDF"}
+                    {downloadPdfMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      "Download PDF"
+                    )}
                   </Button>
                   {isManagerOrAdmin && row.status === "pending_approval" ? (
                     <Button

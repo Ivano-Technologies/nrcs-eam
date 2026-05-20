@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Edit, Trash2, Calendar, Mail, Clock } from "lucide-react";
+import { Plus, Edit, Trash2, Calendar, Mail, Clock, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function ReportScheduling() {
@@ -374,7 +374,16 @@ export default function ReportScheduling() {
               onClick={editingSchedule ? handleUpdate : handleCreate}
               disabled={!formData.name || !formData.recipients || createMutation.isPending || updateMutation.isPending}
             >
-              {editingSchedule ? "Update" : "Create"} Schedule
+              {createMutation.isPending || updateMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving…
+                </>
+              ) : (
+                <>
+                  {editingSchedule ? "Update" : "Create"} Schedule
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

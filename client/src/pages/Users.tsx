@@ -39,7 +39,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc";
-import { Ghost, Trash2, UserPlus } from "lucide-react";
+import { Ghost, Loader2, Trash2, UserPlus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -474,7 +474,14 @@ export default function Users() {
                 })
               }
             >
-              {createMutation.isPending ? "Creating…" : "Create user"}
+              {createMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating…
+                </>
+              ) : (
+                "Create user"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -581,7 +588,14 @@ export default function Users() {
                     })
                   }
                 >
-                  {updateMutation.isPending ? "Saving…" : "Save"}
+                  {updateMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving…
+                    </>
+                  ) : (
+                    "Save"
+                  )}
                 </Button>
               </DialogFooter>
             </>
@@ -605,7 +619,14 @@ export default function Users() {
               disabled={deactivateMutation.isPending || deactivateId == null}
               onClick={() => deactivateId != null && deactivateMutation.mutate({ id: deactivateId })}
             >
-              {deactivateMutation.isPending ? "Working…" : "Deactivate"}
+              {deactivateMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Working…
+                </>
+              ) : (
+                "Deactivate"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -628,7 +649,14 @@ export default function Users() {
               disabled={deleteMutation.isPending || deleteId == null}
               onClick={() => deleteId != null && deleteMutation.mutate({ id: deleteId })}
             >
-              {deleteMutation.isPending ? "Deleting…" : "Delete"}
+              {deleteMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting…
+                </>
+              ) : (
+                "Delete"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -672,7 +700,14 @@ export default function Users() {
                           disabled={deleteOrphanMutation.isPending}
                           onClick={() => deleteOrphanMutation.mutate({ id: o.id })}
                         >
-                          Delete
+                          {deleteOrphanMutation.isPending ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Deleting…
+                            </>
+                          ) : (
+                            "Delete"
+                          )}
                         </Button>
                       </TableCell>
                     </TableRow>

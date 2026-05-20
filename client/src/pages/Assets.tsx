@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Download, Upload, Edit2, Trash2, MapPin } from "lucide-react";
+import { Loader2, Plus, Download, Upload, Edit2, Trash2, MapPin } from "lucide-react";
 import { useLocation } from "wouter";
 import {
   AlertDialog,
@@ -1340,7 +1340,14 @@ export default function Assets() {
                     onClick={handleCreateAsset}
                     disabled={createAssetMutation.isPending}
                   >
-                    {createAssetMutation.isPending ? "Creating..." : "Create Asset"}
+                    {createAssetMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      "Create Asset"
+                    )}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -1450,7 +1457,14 @@ export default function Assets() {
                 onClick={() => recalculateDepreciationMutation.mutate()}
                 data-testid="asset-recalculate-depreciation-btn"
               >
-                Recalculate All Depreciation
+                {recalculateDepreciationMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Recalculating…
+                  </>
+                ) : (
+                  "Recalculate All Depreciation"
+                )}
               </Button>
             ) : null}
             {isAdmin ? (
@@ -1461,8 +1475,17 @@ export default function Assets() {
                 onClick={() => backfillCoordinatesMutation.mutate()}
                 data-testid="asset-sync-coordinates-from-facilities-btn"
               >
-                <MapPin className="mr-2 h-4 w-4" />
-                Sync coordinates from facilities
+                {backfillCoordinatesMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Syncing…
+                  </>
+                ) : (
+                  <>
+                    <MapPin className="mr-2 h-4 w-4" />
+                    Sync coordinates from facilities
+                  </>
+                )}
               </Button>
             ) : null}
           </>
@@ -2242,7 +2265,14 @@ export default function Assets() {
               onClick={handleSaveEdit}
               disabled={updateAssetMutation.isPending}
             >
-              {updateAssetMutation.isPending ? "Saving..." : "Save Changes"}
+              {updateAssetMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Changes"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

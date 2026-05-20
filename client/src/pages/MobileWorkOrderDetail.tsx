@@ -135,7 +135,14 @@ export default function MobileWorkOrderDetail() {
                 onClick={() => handleStatusUpdate("in_progress")}
                 disabled={updateMutation.isPending}
               >
-                Start Work
+                {updateMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving…
+                  </>
+                ) : (
+                  "Start Work"
+                )}
               </Button>
             )}
 
@@ -154,8 +161,17 @@ export default function MobileWorkOrderDetail() {
                   onClick={() => handleStatusUpdate("completed")}
                   disabled={updateMutation.isPending}
                 >
-                  <CheckCircle2 className="mr-2 h-4 w-4" />
-                  Mark Complete
+                  {updateMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving…
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="mr-2 h-4 w-4" />
+                      Mark Complete
+                    </>
+                  )}
                 </Button>
               </div>
             )}
@@ -208,8 +224,17 @@ export default function MobileWorkOrderDetail() {
               onClick={handleAddNotes}
               disabled={!notes.trim() || updateMutation.isPending}
             >
-              <MessageSquare className="mr-2 h-4 w-4" />
-              Save Notes
+              {updateMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving…
+                </>
+              ) : (
+                <>
+                  <MessageSquare className="mr-2 h-4 w-4" />
+                  Save Notes
+                </>
+              )}
             </Button>
           </CardContent>
         </Card>

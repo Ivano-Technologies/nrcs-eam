@@ -530,7 +530,14 @@ export default function DashboardSettings() {
                     })
                   }
                 >
-                  {setEmailMutation.isPending ? "Saving…" : "Save"}
+                  {setEmailMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving…
+                    </>
+                  ) : (
+                    "Save"
+                  )}
                 </Button>
               </>
             )}
@@ -553,7 +560,14 @@ export default function DashboardSettings() {
               disabled={sendAssetCheckRemindersMutation.isPending}
               onClick={() => sendAssetCheckRemindersMutation.mutate()}
             >
-              {sendAssetCheckRemindersMutation.isPending ? "Sending…" : "Send reminder emails now"}
+              {sendAssetCheckRemindersMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Sending…
+                </>
+              ) : (
+                "Send reminder emails now"
+              )}
             </Button>
           </CardContent>
         </Card>
@@ -567,7 +581,14 @@ export default function DashboardSettings() {
           </CardHeader>
           <CardContent>
             <Button type="button" variant="outline" onClick={handleExportZip} disabled={exportZipLoading}>
-              Export all data (ZIP)
+              {exportZipLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Exporting…
+                </>
+              ) : (
+                "Export all data (ZIP)"
+              )}
             </Button>
           </CardContent>
         </Card>
@@ -637,7 +658,14 @@ export default function DashboardSettings() {
                 newPassword.length < 8
               }
             >
-              {changePasswordMutation.isPending ? "Updating…" : "Update password"}
+              {changePasswordMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Updating…
+                </>
+              ) : (
+                "Update password"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
