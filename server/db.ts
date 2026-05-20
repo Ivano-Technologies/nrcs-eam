@@ -880,7 +880,7 @@ export async function searchAssets(searchTerm: string) {
 
 // Capped at 5,000 to prevent Vercel function memory/timeout issues.
 // For larger exports, apply filters (site, category, status) first.
-const ASSET_REGISTER_MAX_LIMIT = 5_000;
+export const ASSET_REGISTER_MAX_LIMIT = 5_000;
 
 export type AssetRegisterListParams = {
   siteId?: number;
@@ -1730,12 +1730,12 @@ export async function getUnreadNotificationCount(userId: number) {
   return Number(result[0]?.count ?? 0);
 }
 
-export async function markNotificationAsRead(id: number) {
+export async function markNotificationAsRead(id: number, userId: number) {
   const db = await getDb();
   if (!db) return null;
   return await db.update(notifications)
     .set({ isRead: true, readAt: new Date() })
-    .where(eq(notifications.id, id));
+    .where(and(eq(notifications.id, id), eq(notifications.userId, userId)));
 }
 
 export async function markAllNotificationsAsRead(userId: number) {
@@ -1749,10 +1749,12 @@ export async function markAllNotificationsAsRead(userId: number) {
     ));
 }
 
-export async function deleteNotification(id: number) {
+export async function deleteNotification(id: number, userId: number) {
   const db = await getDb();
   if (!db) return null;
-  return await db.delete(notifications).where(eq(notifications.id, id));
+  return await db.delete(notifications).where(
+    and(eq(notifications.id, id), eq(notifications.userId, userId))
+  );
 }
 
 // ============= NOTIFICATION PREFERENCES =============

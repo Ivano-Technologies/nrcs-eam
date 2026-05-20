@@ -450,7 +450,7 @@ export const appRouter = router({
             search: z.string().optional(),
             sortBy: z.string().optional(),
             sortDir: z.enum(["asc", "desc"]).optional(),
-            limit: z.number().min(1).max(50_000).optional(),
+            limit: z.number().min(1).max(db.ASSET_REGISTER_MAX_LIMIT).optional(),
             offset: z.number().min(0).optional(),
           })
           .optional()
@@ -2978,8 +2978,8 @@ export const appRouter = router({
     
     markAsRead: protectedProcedure
       .input(z.object({ id: z.number() }))
-      .mutation(async ({ input }) => {
-        return await db.markNotificationAsRead(input.id);
+      .mutation(async ({ input, ctx }) => {
+        return await db.markNotificationAsRead(input.id, ctx.user.id);
       }),
     
     markAllAsRead: protectedProcedure
@@ -2989,8 +2989,8 @@ export const appRouter = router({
     
     delete: protectedProcedure
       .input(z.object({ id: z.number() }))
-      .mutation(async ({ input }) => {
-        return await db.deleteNotification(input.id);
+      .mutation(async ({ input, ctx }) => {
+        return await db.deleteNotification(input.id, ctx.user.id);
       }),
     
     getPreferences: protectedProcedure
@@ -3374,7 +3374,7 @@ export const appRouter = router({
       return await db.getScheduledReports();
     }),
 
-    create: protectedProcedure
+    create: managerOrAdminProcedure
       .input(z.object({
         name: z.string(),
         reportType: z.enum(['assetInventory', 'maintenanceSchedule', 'workOrders', 'financial', 'compliance']),
@@ -3394,7 +3394,7 @@ export const appRouter = router({
         return { id: reportId };
       }),
 
-    update: protectedProcedure
+    update: managerOrAdminProcedure
       .input(z.object({
         id: z.number(),
         name: z.string().optional(),
@@ -3414,7 +3414,7 @@ export const appRouter = router({
         return { success: true };
       }),
 
-    delete: protectedProcedure
+    delete: managerOrAdminProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
         await db.deleteScheduledReport(input.id);
