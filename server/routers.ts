@@ -275,6 +275,10 @@ export const appRouter = router({
         );
       }),
 
+    mapData: protectedProcedure.query(async () => {
+      return await db.getSitesMapData();
+    }),
+
     getById: protectedProcedure
       .input(z.object({ id: z.number() }))
       .query(async ({ input }) => {

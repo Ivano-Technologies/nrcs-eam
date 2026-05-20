@@ -430,6 +430,58 @@ export async function getSitesList(opts?: { facilityType?: FacilityType }): Prom
   }));
 }
 
+export type SiteMapDataRow = {
+  id: number;
+  name: string;
+  facilityType: FacilityType;
+  latitude: string | null;
+  longitude: string | null;
+  parentFacilityId: number | null;
+  assetCount: number;
+  inventoryCount: number;
+};
+
+/** Active facilities with map coordinates and asset/inventory counts (for Asset Map). */
+export async function getSitesMapData(): Promise<SiteMapDataRow[]> {
+  const database = await getDb();
+  if (!database) return [];
+
+  const rows = await database
+    .select({
+      id: sites.id,
+      name: sites.name,
+      facilityType: sites.facilityType,
+      latitude: sites.latitude,
+      longitude: sites.longitude,
+      parentFacilityId: sites.parentFacilityId,
+      assetCount: sql<number>`cast(count(distinct ${assets.id}) as int)`,
+      inventoryCount: sql<number>`cast(count(distinct ${inventoryItems.id}) as int)`,
+    })
+    .from(sites)
+    .leftJoin(assets, eq(assets.siteId, sites.id))
+    .leftJoin(inventoryItems, eq(inventoryItems.siteId, sites.id))
+    .where(eq(sites.isActive, true))
+    .groupBy(
+      sites.id,
+      sites.name,
+      sites.facilityType,
+      sites.latitude,
+      sites.longitude,
+      sites.parentFacilityId
+    );
+
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    facilityType: row.facilityType,
+    latitude: row.latitude != null ? String(row.latitude) : null,
+    longitude: row.longitude != null ? String(row.longitude) : null,
+    parentFacilityId: row.parentFacilityId,
+    assetCount: row.assetCount ?? 0,
+    inventoryCount: row.inventoryCount ?? 0,
+  }));
+}
+
 export type SidebarNavCounts = {
   facilities: {
     all: number;
