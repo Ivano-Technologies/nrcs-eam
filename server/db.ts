@@ -266,7 +266,7 @@ export async function getUserByOpenId(openId: string) {
 export async function getAllUsers() {
   const db = await getDb();
   if (!db) return [];
-  return await db.select().from(users).orderBy(desc(users.createdAt));
+  return await db.select().from(users).orderBy(desc(users.createdAt)).limit(1000);
 }
 
 export type AdminUserListRow = {
@@ -680,7 +680,7 @@ export async function getAllAssets(filters?: {
     query = query.where(and(...conditions)) as any;
   }
   
-  return await query.orderBy(desc(assets.createdAt));
+  return await query.orderBy(desc(assets.createdAt)).limit(2000);
 }
 
 export async function getAssetById(id: number) {
@@ -878,7 +878,9 @@ export async function searchAssets(searchTerm: string) {
     .orderBy(desc(assets.createdAt));
 }
 
-const ASSET_REGISTER_MAX_LIMIT = 50_000;
+// Capped at 5,000 to prevent Vercel function memory/timeout issues.
+// For larger exports, apply filters (site, category, status) first.
+const ASSET_REGISTER_MAX_LIMIT = 5_000;
 
 export type AssetRegisterListParams = {
   siteId?: number;
@@ -1044,7 +1046,7 @@ export async function getAllWorkOrders(filters?: { siteId?: number; status?: str
     query = query.where(and(...conditions)) as any;
   }
   
-  return await query.orderBy(desc(workOrders.createdAt));
+  return await query.orderBy(desc(workOrders.createdAt)).limit(2000);
 }
 
 export async function getWorkOrderById(id: number) {
@@ -1085,7 +1087,7 @@ export async function getAllMaintenanceSchedules(filters?: { assetId?: number; i
     query = query.where(and(...conditions)) as any;
   }
   
-  return await query.orderBy(asc(maintenanceSchedules.nextDue));
+  return await query.orderBy(asc(maintenanceSchedules.nextDue)).limit(2000);
 }
 
 export async function getUpcomingMaintenance(days: number = 30) {
@@ -1393,7 +1395,7 @@ export async function getAllComplianceRecords(filters?: { assetId?: number; stat
     query = query.where(and(...conditions)) as any;
   }
   
-  return await query.orderBy(desc(complianceRecords.createdAt));
+  return await query.orderBy(desc(complianceRecords.createdAt)).limit(2000);
 }
 
 export async function updateComplianceRecord(id: number, data: Partial<typeof complianceRecords.$inferInsert>) {
@@ -1432,7 +1434,7 @@ export async function getAuditLogs(filters?: { userId?: number; entityType?: str
     return await result.limit(filters.limit);
   }
   
-  return await result;
+  return await result.limit(500);
 }
 
 /** Asset register edit history (`action = asset_edit`) with editor display name. */
