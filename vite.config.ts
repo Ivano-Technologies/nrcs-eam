@@ -75,6 +75,12 @@ const plugins = [
     },
     workbox: {
       globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+      globIgnores: [
+        "**/ComponentShowcase*",
+        "**/mermaid*",
+        "**/xlsx*",
+        "**/node_modules/**",
+      ],
       maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
       /** SPA client routes (/app/*) fall back to cached shell when offline. */
       navigateFallback: "/index.html",

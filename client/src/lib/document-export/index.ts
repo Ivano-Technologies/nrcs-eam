@@ -1,3 +1,5 @@
+import { getApiBaseUrl } from "@/lib/apiBase";
+
 export type ExportDocumentType = "grn" | "waybill" | "stock-card" | "bin-card" | "monthly-report";
 export type ExportFormat = "pdf" | "xlsx";
 
@@ -13,7 +15,10 @@ export function downloadBlob(blob: Blob, filename: string) {
 async function fetchDocumentExport(documentType: ExportDocumentType, id: number, format: ExportFormat, copyType?: string) {
   const query = new URLSearchParams({ format });
   if (copyType) query.set("copy", copyType);
-  const response = await fetch(`/api/documents/${documentType}/${id}/export?${query.toString()}`);
+  const base = getApiBaseUrl();
+  const path = `/api/documents/${documentType}/${id}/export?${query.toString()}`;
+  const url = base ? `${base}${path}` : path;
+  const response = await fetch(url, { credentials: "include" });
   if (!response.ok) {
     throw new Error(`Export failed (${response.status})`);
   }
