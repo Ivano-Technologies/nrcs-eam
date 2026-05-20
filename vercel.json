@@ -9,15 +9,6 @@
     "api/health.ts": {
       "memory": 512,
       "maxDuration": 10
-    },
-    "api/cron/daily.js": {
-      "maxDuration": 60
-    },
-    "api/cron/weekly.js": {
-      "maxDuration": 60
-    },
-    "api/cron/monthly.js": {
-      "maxDuration": 60
     }
   },
   "rewrites": [
