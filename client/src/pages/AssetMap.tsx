@@ -23,10 +23,10 @@ import { Map as MapIcon } from "lucide-react";
 
 const FACILITY_COLOURS: Record<FacilityType, string> = {
   national_headquarters: "#DC2626",
-  division: "#EA580C",
-  branch: "#2563EB",
-  clinic: "#16A34A",
-  warehouse: "#7C3AED",
+  division: "#EAB308",
+  branch: "#EA580C",
+  clinic: "#2563EB",
+  warehouse: "#16A34A",
 };
 
 const FACILITY_LABELS: Record<FacilityType, string> = {
