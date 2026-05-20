@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
+import PageLoader from "@/components/ui/PageLoader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -156,6 +157,8 @@ export default function WorkOrderTemplates() {
     }
   };
 
+  if (isLoading) return <PageLoader />;
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
@@ -169,9 +172,7 @@ export default function WorkOrderTemplates() {
         </Button>
       </div>
 
-      {isLoading ? (
-        <div className="text-center py-8">Loading templates...</div>
-      ) : templates.length === 0 ? (
+      {templates.length === 0 ? (
         <Card>
           <CardContent className="py-8 text-center">
             <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-4" />

@@ -16,7 +16,7 @@ const plugins = [
   {
     ...vitePluginManusRuntime(),
     /** Dev / AI tooling only — do not inject ~360KB inline runtime into production HTML */
-    apply: "serve",
+    apply: "serve" as const,
   },
   VitePWA({
     registerType: "autoUpdate",

@@ -1,4 +1,5 @@
 import { trpc } from "@/lib/trpc";
+import PageLoader from "@/components/ui/PageLoader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MapView } from "@/components/Map";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -205,13 +206,7 @@ export default function AssetMap() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
+  if (isLoading) return <PageLoader />;
 
   const assetsWithCoordinates = assets?.filter(a => a.latitude && a.longitude) || [];
 

@@ -3,7 +3,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { trpc } from "@/lib/trpc";
 import { formatNaira } from "@/lib/format";
 import { KPI_VALUE_CLASS } from "@/lib/kpiTypography";
-import { DollarSign, TrendingUp, Wrench, Building2, Users } from "lucide-react";
+import { DollarSign, TrendingUp, Wrench, Building2, Users, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { ModuleFiltersCard } from "@/components/ModuleFiltersCard";
 
@@ -12,7 +12,12 @@ export function CostAnalyticsOverview() {
   const { data: analytics, isLoading } = trpc.financial.getCostAnalytics.useQuery({ days });
 
   if (isLoading) {
-    return <p className="text-sm text-muted-foreground">Loading expenditure data…</p>;
+    return (
+      <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        <span>Loading…</span>
+      </div>
+    );
   }
 
   return (

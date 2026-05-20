@@ -9,6 +9,7 @@ import { StockMovementChart } from "@/components/dashboard/StockMovementChart";
 import { useDashboardRolePreview } from "@/components/dashboard/rolePreviewContext";
 import type { DashboardPeriod, UserRole } from "@/components/dashboard/types";
 import { useAuth } from "@/_core/hooks/useAuth";
+import PageLoader from "@/components/ui/PageLoader";
 import { waybillsPeriodHref } from "@/lib/dashboardPeriodRange";
 import { formatNaira } from "@/lib/format";
 import { trpc } from "@/lib/trpc";
@@ -68,13 +69,7 @@ export default function Home() {
 
   const isLoading = metricsLoading || totalAssetValueLoading;
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
+  if (isLoading) return <PageLoader />;
 
   if (effectiveRole === "Field") {
     return (

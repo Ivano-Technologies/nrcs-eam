@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { trpc } from "@/lib/trpc";
-import { CheckCircle, XCircle, Clock, Loader2 } from "lucide-react";
+import TableLoader from "@/components/ui/TableLoader";
+import { CheckCircle, XCircle, Clock } from "lucide-react";
 
 export default function PendingUsers() {
   const [selectedUser, setSelectedUser] = useState<number | null>(null);
@@ -49,13 +50,7 @@ export default function PendingUsers() {
     rejectMutation.mutate({ id: userId, reason: reason || undefined });
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-      </div>
-    );
-  }
+  if (isLoading) return <TableLoader />;
 
   const pending = pendingUsers?.filter((u) => u.status === "pending") || [];
   const processed = pendingUsers?.filter((u) => u.status !== "pending") || [];

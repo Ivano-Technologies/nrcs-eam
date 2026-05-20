@@ -2,7 +2,7 @@ import { KPI_VALUE_CLASS } from "@/lib/kpiTypography";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingDown, DollarSign, Calendar, Percent } from "lucide-react";
+import { TrendingDown, DollarSign, Calendar, Percent, Loader2 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface AssetDepreciationProps {
@@ -22,7 +22,10 @@ export default function AssetDepreciation({ assetId }: AssetDepreciationProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">Loading depreciation data...</p>
+          <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Loading…</span>
+          </div>
         </CardContent>
       </Card>
     );

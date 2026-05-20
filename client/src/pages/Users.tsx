@@ -1,4 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import TableLoader from "@/components/ui/TableLoader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -200,13 +201,7 @@ export default function Users() {
     );
   }
 
-  if (isLoading) {
-    return (
-      <div className="flex h-96 items-center justify-center">
-        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-primary" />
-      </div>
-    );
-  }
+  if (isLoading) return <TableLoader />;
 
   return (
     <div className="space-y-6">

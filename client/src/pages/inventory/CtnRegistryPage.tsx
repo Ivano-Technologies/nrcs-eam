@@ -27,6 +27,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc";
+import TableLoader from "@/components/ui/TableLoader";
 import { ITEM_CATEGORY_VALUES } from "@shared/itemCategory";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -190,8 +191,8 @@ export default function CtnRegistryPage() {
             <TableBody>
               {listQuery.isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-muted-foreground">
-                    Loading…
+                  <TableCell colSpan={8}>
+                    <TableLoader />
                   </TableCell>
                 </TableRow>
               ) : rows.length === 0 ? (

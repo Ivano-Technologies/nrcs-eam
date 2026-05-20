@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
+import PageLoader from "@/components/ui/PageLoader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -158,6 +159,8 @@ export default function ReportScheduling() {
     return labels[type] || type;
   };
 
+  if (isLoading) return <PageLoader />;
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
@@ -171,9 +174,7 @@ export default function ReportScheduling() {
         </Button>
       </div>
 
-      {isLoading ? (
-        <div className="text-center py-8">Loading schedules...</div>
-      ) : schedules.length === 0 ? (
+      {schedules.length === 0 ? (
         <Card>
           <CardContent className="py-8 text-center space-y-4">
             <Calendar className="mx-auto h-12 w-12 text-muted-foreground" />

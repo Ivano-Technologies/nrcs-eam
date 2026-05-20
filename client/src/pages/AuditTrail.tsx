@@ -2,6 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
+import PageLoader from "@/components/ui/PageLoader";
 import { FileText, Search, Calendar } from "lucide-react";
 import { useState } from "react";
 import { format } from "date-fns";
@@ -25,16 +26,7 @@ export default function AuditTrail() {
     );
   });
 
-  if (isLoading) {
-    return (
-      <div className="container mx-auto p-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-muted rounded w-1/3"></div>
-          <div className="h-64 bg-muted rounded"></div>
-        </div>
-      </div>
-    );
-  }
+  if (isLoading) return <PageLoader />;
 
   return (
     <div className="container mx-auto p-6 space-y-6">

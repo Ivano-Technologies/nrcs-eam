@@ -3,7 +3,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { CheckCircle2, Clock, AlertCircle, XCircle, ChevronRight, Camera } from "lucide-react";
+import { CheckCircle2, Clock, AlertCircle, XCircle, ChevronRight, Camera, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 import { appPath } from "@/lib/routes";
@@ -78,7 +78,10 @@ export default function MobileWorkOrders() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 p-4">
-        <div className="text-center py-8">Loading work orders...</div>
+        <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>Loading…</span>
+        </div>
       </div>
     );
   }

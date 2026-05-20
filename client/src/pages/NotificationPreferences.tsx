@@ -1,4 +1,5 @@
 import { trpc } from "@/lib/trpc";
+import PageLoader from "@/components/ui/PageLoader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -24,13 +25,7 @@ export default function NotificationPreferences() {
     updatePreferencesMutation.mutate({ [key]: value });
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
+  if (isLoading) return <PageLoader />;
 
   const notificationTypes = [
     {

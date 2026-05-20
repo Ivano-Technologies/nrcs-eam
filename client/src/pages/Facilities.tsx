@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import type { FacilitiesSegment } from "@/lib/facilityRoutes";
 import { parseFacilityTypeFromSearch, segmentToListFilter } from "@/lib/facilityRoutes";
 import { trpc } from "@/lib/trpc";
+import PageLoader from "@/components/ui/PageLoader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -369,7 +370,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
     URL.revokeObjectURL(url);
   };
 
-  if (isLoading) return <div className="h-96 animate-pulse rounded-md bg-muted" />;
+  if (isLoading) return <PageLoader />;
 
   return (
     <div className="space-y-4">
