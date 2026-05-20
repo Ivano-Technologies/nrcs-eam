@@ -1,4 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import PageHeader from "@/components/ui/PageHeader";
 import TableLoader from "@/components/ui/TableLoader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -39,7 +40,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc";
-import { Ghost, Loader2, Trash2, UserPlus } from "lucide-react";
+import { Ghost, Loader2, Trash2, UserPlus, Users as UsersIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -206,10 +207,12 @@ export default function Users() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">User Management</h1>
-          <p className="mt-2 text-muted-foreground">Create accounts, assign facilities, and manage access</p>
-        </div>
+        <PageHeader
+          icon={UsersIcon}
+          title="Users"
+          subtitle="Create accounts, assign facilities, and manage access"
+          className="mb-0"
+        />
         <div className="flex shrink-0 flex-wrap gap-2">
           <Button variant="outline" className="gap-2" onClick={() => setOrphanOpen(true)}>
             <Ghost className="h-4 w-4" />

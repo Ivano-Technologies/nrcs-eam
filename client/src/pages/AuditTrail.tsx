@@ -1,3 +1,4 @@
+import PageHeader from "@/components/ui/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -30,13 +31,11 @@ export default function AuditTrail() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-          <FileText className="h-8 w-8" />
-          Audit Trail
-        </h1>
-        <p className="text-muted-foreground">Complete history of all system changes</p>
-      </div>
+      <PageHeader
+        icon={FileText}
+        title="Audit Trail"
+        subtitle="Complete history of all system changes"
+      />
 
       {/* Filters */}
       <Card>

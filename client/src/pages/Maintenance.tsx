@@ -1,4 +1,5 @@
 import { trpc } from "@/lib/trpc";
+import PageHeader from "@/components/ui/PageHeader";
 import PageLoader from "@/components/ui/PageLoader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Loader2, Plus } from "lucide-react";
+import { Calendar, Loader2, Plus, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
 
@@ -82,8 +83,12 @@ export default function Maintenance() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Preventive Maintenance</h1>
-          <p className="text-muted-foreground mt-2">Manage maintenance schedules</p>
+          <PageHeader
+            icon={Wrench}
+            title="Maintenance"
+            subtitle="Manage maintenance schedules"
+            className="mb-0"
+          />
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>

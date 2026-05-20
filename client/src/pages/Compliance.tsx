@@ -1,5 +1,6 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { InsuranceRegisterContent } from "@/pages/compliance/InsuranceRegister";
+import PageHeader from "@/components/ui/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -240,15 +241,12 @@ export default function Compliance() {
   return (
     <div className="container mx-auto space-y-6 p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight">
-            <ShieldCheck className="h-8 w-8 text-primary" />
-            Compliance Tracking
-          </h1>
-          <p className="text-muted-foreground">
-            Vehicle, generator, building safety, donor reporting, and insurance compliance
-          </p>
-        </div>
+        <PageHeader
+          icon={ShieldCheck}
+          title="Compliance Tracking"
+          subtitle="Vehicle, generator, building safety, donor reporting, and insurance compliance"
+          className="mb-0"
+        />
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">

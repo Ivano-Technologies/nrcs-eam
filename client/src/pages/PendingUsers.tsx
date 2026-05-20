@@ -1,11 +1,12 @@
 import { useState } from "react";
+import PageHeader from "@/components/ui/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { trpc } from "@/lib/trpc";
 import TableLoader from "@/components/ui/TableLoader";
-import { CheckCircle, XCircle, Clock, Loader2 } from "lucide-react";
+import { CheckCircle, XCircle, Clock, Loader2, UserCheck } from "lucide-react";
 
 export default function PendingUsers() {
   const [selectedUser, setSelectedUser] = useState<number | null>(null);
@@ -57,11 +58,12 @@ export default function PendingUsers() {
 
   return (
     <div className="container mx-auto py-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold" data-testid="pending-users-heading">
-          User Access Requests
-        </h1>
-        <p className="text-gray-600 mt-2">Review and approve user signup requests</p>
+      <div data-testid="pending-users-heading">
+        <PageHeader
+          icon={UserCheck}
+          title="Pending Users"
+          subtitle="Review and approve user signup requests"
+        />
       </div>
 
       {pending.length === 0 && (

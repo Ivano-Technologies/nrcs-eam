@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
+import PageHeader from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -52,10 +53,12 @@ export default function EmailNotifications() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Email Notifications</h1>
-          <p className="text-muted-foreground">Send custom email notifications to users</p>
-        </div>
+        <PageHeader
+          icon={Mail}
+          title="Email Notifications"
+          subtitle="Send custom email notifications to users"
+          className="mb-0"
+        />
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>

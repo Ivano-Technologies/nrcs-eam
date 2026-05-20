@@ -1,4 +1,5 @@
 import { trpc } from "@/lib/trpc";
+import PageHeader from "@/components/ui/PageHeader";
 import PageLoader from "@/components/ui/PageLoader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Building2, Loader2, Plus, Mail, Phone } from "lucide-react";
+import { Building2, Loader2, Plus, Mail, Phone, Store } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
 
@@ -83,8 +84,12 @@ export default function Vendors() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Vendor Management</h1>
-          <p className="text-muted-foreground mt-2">Manage suppliers and contractors</p>
+          <PageHeader
+            icon={Store}
+            title="Vendors"
+            subtitle="Manage suppliers and contractors"
+            className="mb-0"
+          />
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>

@@ -4,7 +4,8 @@ import { segmentToNewTypeQuery } from "@/lib/facilityRoutes";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { Plus } from "lucide-react";
+import PageHeader from "@/components/ui/PageHeader";
+import { Building2, Plus } from "lucide-react";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 
 const TABS: { segment: FacilitiesSegment; label: string; path: string }[] = [
@@ -38,10 +39,12 @@ export function FacilitiesShell({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-3xl font-bold">Facilities Management</h1>
-          <p className="mt-1 text-muted-foreground">Manage NRCS facilities</p>
-        </div>
+        <PageHeader
+          icon={Building2}
+          title="Facilities Management"
+          subtitle="Manage NRCS facilities"
+          className="mb-0"
+        />
         {canEditFacilities ? (
           <Button className="h-9 shrink-0" asChild>
             <Link href={newHref} className="inline-flex items-center">

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { Html5Qrcode } from "html5-qrcode";
 import { trpc } from "@/lib/trpc";
+import PageHeader from "@/components/ui/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Camera, Search, Package, MapPin, CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { Camera, Search, Package, MapPin, CheckCircle, XCircle, Loader2, QrCode } from "lucide-react";
 import { appPath } from "@/lib/routes";
 
 export default function AssetScanner() {
@@ -143,12 +144,11 @@ ${updateForm.notes}`
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="max-w-2xl mx-auto space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold">Asset Scanner</h1>
-          <p className="text-muted-foreground mt-1">
-            Quick scan and update assets in the field
-          </p>
-        </div>
+        <PageHeader
+          icon={QrCode}
+          title="Asset Scanner"
+          subtitle="Quick scan and update assets in the field"
+        />
 
         {/* Scanner Card */}
         <Card>

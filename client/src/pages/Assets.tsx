@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
+import PageHeader from "@/components/ui/PageHeader";
 import TableLoader from "@/components/ui/TableLoader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Plus, Download, Upload, Edit2, Trash2, MapPin } from "lucide-react";
+import { Loader2, Plus, Download, Upload, Edit2, Trash2, MapPin, Package } from "lucide-react";
 import { useLocation } from "wouter";
 import {
   AlertDialog,
@@ -906,13 +907,13 @@ export default function Assets() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight" data-testid="asset-register-heading">
-            Asset Register
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            NRCS asset register — spreadsheet view with filters and Excel import/export
-          </p>
+        <div data-testid="asset-register-heading">
+          <PageHeader
+            icon={Package}
+            title="Asset Register"
+            subtitle="NRCS asset register — spreadsheet view with filters and Excel import/export"
+            className="mb-0"
+          />
         </div>
         <div className="flex flex-wrap items-center gap-2">
             {canEditAssets ? (

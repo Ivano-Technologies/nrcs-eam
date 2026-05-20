@@ -1,4 +1,5 @@
 import { ManagerFinanceGate } from "@/components/finance/ManagerFinanceGate";
+import PageHeader from "@/components/ui/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,7 +32,7 @@ import { formatNaira } from "@/lib/format";
 import { KPI_VALUE_CLASS } from "@/lib/kpiTypography";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
-import { AlertTriangle, FileSpreadsheet, Loader2, Plus } from "lucide-react";
+import { AlertTriangle, FileSpreadsheet, Loader2, Plus, Shield } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
@@ -123,10 +124,12 @@ export function InsuranceRegisterContent({ embedded = false }: { embedded?: bool
 
         {!embedded ? (
         <div className="flex flex-col gap-4 sm:flex-row sm:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Insurance Register</h1>
-            <p className="text-muted-foreground">Property, vehicle, equipment, and liability policies</p>
-          </div>
+          <PageHeader
+            icon={Shield}
+            title="Insurance Register"
+            subtitle="Property, vehicle, equipment, and liability policies"
+            className="mb-0"
+          />
           <div className="flex gap-2">
             {canManage ? (
               <Button onClick={() => setOpen(true)}>
