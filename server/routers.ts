@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { and, asc, desc, eq, gte, ilike, lte, or, sql } from "drizzle-orm";
+import { cache, TTL, withCache } from "./_core/cache";
 import { toPublicUser } from "./_core/sanitizeUser";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
@@ -85,6 +86,13 @@ function dashboardDataScope(ctx: { user: { role: string; siteId: number | null }
   if ((r === "staff" || r === "field") && ctx.user.siteId != null) return { mode: "site", siteId: ctx.user.siteId };
   if (r === "staff" || r === "field") return { mode: "empty" };
   return { mode: "all" };
+}
+
+function dashboardScopeCacheKey(ctx: { user: { role: string; siteId: number | null } }): string {
+  const scope = dashboardDataScope(ctx);
+  if (scope.mode === "site") return `site:${scope.siteId}`;
+  if (scope.mode === "empty") return "empty";
+  return "all";
 }
 
 function parseMoneyString(v: string | undefined | null): number | null {
@@ -269,15 +277,15 @@ export const appRouter = router({
   sites: router({
     list: protectedProcedure
       .input(z.object({ facilityType: facilityTypeZod.optional() }).optional())
-      .query(async ({ input }) => {
-        return await db.getSitesList(
-          input?.facilityType != null ? { facilityType: input.facilityType } : undefined
-        );
-      }),
+      .query(({ input }) =>
+        withCache(`sites:list:${JSON.stringify(input ?? {})}`, TTL.SITES, () =>
+          db.getSitesList(input?.facilityType != null ? { facilityType: input.facilityType } : undefined)
+        )
+      ),
 
-    mapData: protectedProcedure.query(async () => {
-      return await db.getSitesMapData();
-    }),
+    mapData: protectedProcedure.query(() =>
+      withCache("sites:mapData", TTL.SITES, () => db.getSitesMapData())
+    ),
 
     getById: protectedProcedure
       .input(z.object({ id: z.number() }))
@@ -308,12 +316,15 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         const { facilityType, parentFacilityId, code, ...rest } = input;
         const parentResolved = await resolveFacilityParentForSave({ facilityType, parentFacilityId });
-        return await db.createSite({
+        const site = await db.createSite({
           ...(code ? { code } : {}),
           ...rest,
           facilityType,
           parentFacilityId: parentResolved,
         });
+        cache.invalidate("sites:");
+        cache.invalidate("dashboard:");
+        return site;
       }),
 
     update: managerOrAdminProcedure
@@ -358,11 +369,14 @@ export const appRouter = router({
           siteId: id,
         });
 
-        return await db.updateSite(id, {
+        const updated = await db.updateSite(id, {
           ...data,
           ...(facilityType !== undefined ? { facilityType } : {}),
           parentFacilityId: nextParent,
         });
+        cache.invalidate("sites:");
+        cache.invalidate("dashboard:");
+        return updated;
       }),
 
     bulkDelete: managerOrAdminProcedure
@@ -383,6 +397,8 @@ export const appRouter = router({
             console.error(`Failed to delete facility ${id}:`, error);
           }
         }
+        cache.invalidate("sites:");
+        cache.invalidate("dashboard:");
         return { deleted, total: input.ids.length };
       }),
   }),
@@ -393,17 +409,19 @@ export const appRouter = router({
 
   // ============= ASSET CATEGORIES =============
   assetCategories: router({
-    list: protectedProcedure.query(async () => {
-      return await db.getAllAssetCategories();
-    }),
-    
+    list: protectedProcedure.query(() =>
+      withCache("categories:list", TTL.CATEGORIES, () => db.getAllAssetCategories())
+    ),
+
     create: managerOrAdminProcedure
       .input(z.object({
         name: z.string().min(1),
         description: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
-        return await db.createAssetCategory(input.name, input.description);
+        const category = await db.createAssetCategory(input.name, input.description);
+        cache.invalidate("categories:");
+        return category;
       }),
   }),
 
@@ -543,7 +561,7 @@ export const appRouter = router({
             if (!longitude) longitude = String(site.longitude);
           }
         }
-        return await db.createAsset({
+        const created = await db.createAsset({
           assetTag,
           name: input.name,
           description: input.description,
@@ -600,8 +618,11 @@ export const appRouter = router({
           latitude: latitude || undefined,
           longitude: longitude || undefined,
         });
+        cache.invalidate("dashboard:");
+        cache.invalidate("sites:");
+        return created;
       }),
-    
+
     generateQRCode: protectedProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
@@ -824,6 +845,8 @@ export const appRouter = router({
           if (!updated) {
             throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
           }
+          cache.invalidate("dashboard:");
+          cache.invalidate("sites:");
           return updated;
         } catch (e: unknown) {
           if (e instanceof Error && e.message === "Asset not found") {
@@ -921,6 +944,8 @@ export const appRouter = router({
             console.error(`Failed to delete asset ${id}:`, error);
           }
         }
+        cache.invalidate("dashboard:");
+        cache.invalidate("sites:");
         return { deleted, total: input.ids.length };
       }),
 
@@ -1193,9 +1218,11 @@ export const appRouter = router({
         location: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
-        return await db.createInventoryItem(input);
+        const item = await db.createInventoryItem(input);
+        cache.invalidate("dashboard:");
+        return item;
       }),
-    
+
     update: staffOrAboveProcedure
       .input(z.object({
         id: z.number(),
@@ -1224,6 +1251,7 @@ export const appRouter = router({
             updated
           );
         }
+        cache.invalidate("dashboard:");
         return updated;
       }),
 
@@ -1310,9 +1338,10 @@ export const appRouter = router({
           });
         }
 
+        cache.invalidate("dashboard:");
         return { discrepancies, adjustedLines: discrepancies.length };
       }),
-    
+
     addTransaction: protectedProcedure
       .input(z.object({
         itemId: z.number(),
@@ -1360,7 +1389,8 @@ export const appRouter = router({
             );
           }
         }
-        
+
+        cache.invalidate("dashboard:");
         return transaction;
       }),
 
@@ -1371,6 +1401,7 @@ export const appRouter = router({
         if (!ok) {
           throw new TRPCError({ code: "NOT_FOUND", message: "Transaction not found" });
         }
+        cache.invalidate("dashboard:");
         return { success: true as const };
       }),
 
@@ -1392,6 +1423,7 @@ export const appRouter = router({
             console.error(`Failed to delete inventory item ${id}:`, error);
           }
         }
+        cache.invalidate("dashboard:");
         return { deleted, total: input.ids.length };
       }),
 
@@ -1412,6 +1444,7 @@ export const appRouter = router({
           entityType: "inventory",
           entityId: input.id,
         });
+        cache.invalidate("dashboard:");
         return { success: true as const };
       }),
   }),
@@ -1685,7 +1718,8 @@ export const appRouter = router({
           period: z.enum(["Today", "Week", "Month", "Quarter", "Year"]),
         })
       )
-      .query(async ({ input, ctx }) => {
+      .query(({ input, ctx }) =>
+        withCache(`dashboard:metrics:${ctx.user.id}:${input.period}`, TTL.DASHBOARD, async () => {
         const scope = dashboardDataScope(ctx);
         if (scope.mode === "empty") {
           return {
@@ -1897,7 +1931,7 @@ export const appRouter = router({
           stockReadiness,
           distributionVelocity,
         };
-      }),
+      })),
     stockMovement: protectedProcedure
       .input(z.object({ weeks: z.number().min(4).max(26).default(12) }).optional())
       .query(async ({ input, ctx }) => {
@@ -1933,14 +1967,15 @@ export const appRouter = router({
       }),
     recentActivity: protectedProcedure
       .input(z.object({ limit: z.number().min(1).max(20).default(5) }).optional())
-      .query(async ({ input, ctx }) => {
+      .query(({ input, ctx }) => {
+        const scopeKey = dashboardScopeCacheKey(ctx);
+        const limit = input?.limit ?? 5;
+        return withCache(`dashboard:recentActivity:${scopeKey}:${limit}`, TTL.RECENT_ACTIVITY, async () => {
         const scope = dashboardDataScope(ctx);
         if (scope.mode === "empty") return [];
         const siteId = scope.mode === "site" ? scope.siteId : undefined;
         const database = await db.getDb();
         if (!database) return [];
-
-        const limit = input?.limit ?? 5;
         const siteMove = siteId != null ? eq(stockCards.locationId, siteId) : sql`true`;
         const recentMovementRows = await database
           .select({
@@ -2018,8 +2053,11 @@ export const appRouter = router({
             timestamp: new Date(row.timestamp).toISOString(),
             facilityName: row.facilityName ?? "Unknown facility",
           }));
+      });
       }),
-    facilityStatus: protectedProcedure.query(async ({ ctx }) => {
+    facilityStatus: protectedProcedure.query(({ ctx }) => {
+      const scopeKey = dashboardScopeCacheKey(ctx);
+      return withCache(`dashboard:facilityStatus:${scopeKey}`, TTL.FACILITY_STATUS, async () => {
       const scope = dashboardDataScope(ctx);
       if (scope.mode === "empty") return [];
       const siteId = scope.mode === "site" ? scope.siteId : undefined;
@@ -2095,6 +2133,7 @@ export const appRouter = router({
           if (b.stockScore === null) return -1;
           return a.stockScore - b.stockScore;
         });
+      });
     }),
     pendingRequisitions: protectedProcedure
       .input(z.object({ limit: z.number().min(1).max(12).default(4) }).optional())
@@ -2126,16 +2165,17 @@ export const appRouter = router({
       }),
 
     /** Sum of register `actual_unit_value` for assets the user can see (org-wide for admin/manager; home site for staff/field). */
-    totalAssetValue: protectedProcedure.query(async ({ ctx }) => {
-      const scope = dashboardDataScope(ctx);
-      if (scope.mode === "empty") return { totalNgn: 0, propertyNgn: 0, movableNgn: 0 };
-      const database = await db.getDb();
-      if (!database) return { totalNgn: 0, propertyNgn: 0, movableNgn: 0 };
-      const breakdown =
-        scope.mode === "all"
+    totalAssetValue: protectedProcedure.query(({ ctx }) => {
+      const scopeKey = dashboardScopeCacheKey(ctx);
+      return withCache(`dashboard:totalAssetValue:${scopeKey}`, TTL.DASHBOARD, async () => {
+        const scope = dashboardDataScope(ctx);
+        if (scope.mode === "empty") return { totalNgn: 0, propertyNgn: 0, movableNgn: 0 };
+        const database = await db.getDb();
+        if (!database) return { totalNgn: 0, propertyNgn: 0, movableNgn: 0 };
+        return scope.mode === "all"
           ? await db.getDashboardTotalAssetValue({ mode: "all" })
           : await db.getDashboardTotalAssetValue({ mode: "site", siteId: scope.siteId });
-      return breakdown;
+      });
     }),
 
     /** Per-branch stock readiness for Manager/Admin dashboards. */
@@ -2202,7 +2242,8 @@ export const appRouter = router({
 
     attentionItems: protectedProcedure
       .input(z.object({ role: z.enum(["Admin", "Manager", "Staff", "Field"]) }))
-      .query(async ({ input, ctx }) => {
+      .query(({ input, ctx }) =>
+        withCache(`dashboard:attentionItems:${ctx.user.id}:${input.role}`, TTL.ATTENTION, async () => {
         const allClear = {
           icon: "CheckCircle2",
           tone: "green",
@@ -2673,7 +2714,7 @@ export const appRouter = router({
           href: null,
         });
         return items.slice(0, 4);
-      }),
+      })),
   }),
 
   search: router({

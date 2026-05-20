@@ -26,7 +26,14 @@ import {
   waybills,
 } from "../../drizzle/schema";
 import { getDb, getAllUsers, createNotification, getUserById } from "../db";
-import { protectedProcedure, requireRole, router } from "../_core/trpc";
+import {
+  invalidateDashboardOnMutationMiddleware,
+  protectedProcedure as baseProtectedProcedure,
+  requireRole,
+  router,
+} from "../_core/trpc";
+
+const protectedProcedure = baseProtectedProcedure.use(invalidateDashboardOnMutationMiddleware);
 import { checkStockThreshold } from "../_core/inventoryAlerts";
 import {
   IFRC_CATALOGUE_SEED,

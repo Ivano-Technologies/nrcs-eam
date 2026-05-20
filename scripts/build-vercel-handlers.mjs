@@ -13,7 +13,19 @@ const shared = {
   platform: "node",
   bundle: true,
   format: "cjs",
-  external: ["canvas"],
+  target: "node20",
+  minify: true,
+  treeShaking: true,
+  external: [
+    "canvas",
+    "exceljs",
+    "pdfkit",
+    "pdf-lib",
+    "bcrypt",
+    "posthog-node",
+    "node-quickbooks",
+    "sharp",
+  ],
   logLevel: "info",
 };
 
