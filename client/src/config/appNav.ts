@@ -69,7 +69,6 @@ export const SIDEBAR_GROUPS: AppNavGroup[] = [
       { label: "Asset Register", path: appPath("/assets"), icon: Landmark },
       { label: "Asset Map", path: appPath("/asset-map"), icon: MapPin },
       { label: "Asset Scanner", path: appPath("/scanner"), icon: Scan },
-      { label: "Donor Assets", path: appPath("/assets/donors"), icon: Gift },
       {
         label: "Asset Valuation",
         path: appPath("/finance/asset-valuation"),
@@ -225,6 +224,11 @@ export const SIDEBAR_GROUPS: AppNavGroup[] = [
       { label: "WMS Kit Assembly", path: appPath("/reports/wms/kit-assembly"), icon: Boxes },
       { label: "Report Scheduling", path: appPath("/report-scheduling"), icon: FileBarChart },
       {
+        label: "Donor Assets Report",
+        path: appPath("/assets/donors"),
+        icon: Gift,
+      },
+      {
         label: "Annual Finance Report",
         path: appPath("/reports/annual-finance"),
         icon: FileBarChart,
@@ -259,7 +263,6 @@ export const SIDEBAR_BOTTOM: AppNavItem[] = [
 ];
 
 const GROUP_PREFIXES: { groupId: string; pathPrefix: string }[] = [
-  { groupId: "assets", pathPrefix: appPath("/assets/donors") },
   { groupId: "assets", pathPrefix: appPath("/assets") },
   { groupId: "assets", pathPrefix: appPath("/asset-map") },
   { groupId: "assets", pathPrefix: appPath("/scanner") },
@@ -302,6 +305,7 @@ const GROUP_PREFIXES: { groupId: string; pathPrefix: string }[] = [
   { groupId: "compliance", pathPrefix: appPath("/compliance/insurance") },
   { groupId: "compliance", pathPrefix: appPath("/compliance") },
   { groupId: "compliance", pathPrefix: appPath("/audit-trail") },
+  { groupId: "reports", pathPrefix: appPath("/assets/donors") },
   { groupId: "reports", pathPrefix: appPath("/reports/annual-finance") },
   { groupId: "reports", pathPrefix: appPath("/reports") },
   { groupId: "reports", pathPrefix: appPath("/report-scheduling") },

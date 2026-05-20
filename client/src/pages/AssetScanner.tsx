@@ -161,14 +161,17 @@ ${updateForm.notes}`
               Enter asset tag or barcode to find asset
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="flex flex-col gap-4">
             {/* Scan Mode Toggle */}
-            <div className="flex gap-2 items-stretch w-full" data-testid="asset-scanner-mode-toggle">
+            <div
+              className="flex w-full items-stretch gap-2"
+              data-testid="asset-scanner-mode-toggle"
+            >
               <Button
                 data-testid="asset-scanner-mode-manual"
                 variant={scanMode === "manual" ? "default" : "outline"}
                 onClick={() => setScanMode("manual")}
-                className="flex-1 min-h-11 inline-flex items-center justify-center gap-2"
+                className="inline-flex h-11 flex-1 items-center justify-center gap-2"
               >
                 <Search className="h-4 w-4 shrink-0" />
                 Manual Entry
@@ -177,7 +180,7 @@ ${updateForm.notes}`
                 data-testid="asset-scanner-mode-camera"
                 variant={scanMode === "camera" ? "default" : "outline"}
                 onClick={() => setScanMode("camera")}
-                className="flex-1 min-h-11 inline-flex items-center justify-center gap-2"
+                className="inline-flex h-11 flex-1 items-center justify-center gap-2"
               >
                 <Camera className="h-4 w-4 shrink-0" />
                 Camera Scan
@@ -186,12 +189,12 @@ ${updateForm.notes}`
 
             {/* Camera Scan */}
             {scanMode === "camera" && (
-              <div className="space-y-3">
-                <div id="qr-reader" className="w-full rounded-lg overflow-hidden border bg-black"></div>
-                <p className="text-sm text-center text-muted-foreground">
+              <div className="flex flex-col gap-4">
+                <div id="qr-reader" className="w-full overflow-hidden rounded-lg border bg-black"></div>
+                <p className="text-center text-sm text-muted-foreground">
                   {isScanning ? "Point camera at QR code or barcode..." : "Starting camera..."}
                 </p>
-                <Button onClick={() => setScanMode("manual")} variant="outline" className="w-full">
+                <Button onClick={() => setScanMode("manual")} variant="outline" className="h-11 w-full">
                   Switch to Manual Entry
                 </Button>
               </div>
@@ -199,8 +202,8 @@ ${updateForm.notes}`
 
             {/* Manual Entry */}
             {scanMode === "manual" && (
-              <div className="space-y-3">
-                <div>
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-4">
                   <Label htmlFor="assetTag">
                     Asset Tag{" "}
                     /{" "}
@@ -216,11 +219,11 @@ ${updateForm.notes}`
                         handleScan();
                       }
                     }}
-                    className="text-lg h-12"
+                    className="h-12 text-lg"
                     autoFocus
                   />
                 </div>
-                <Button onClick={handleScan} className="w-full h-12 text-lg">
+                <Button onClick={handleScan} className="h-11 w-full text-lg">
                   <Search className="h-5 w-5 mr-2" />
                   Find Asset
                 </Button>
