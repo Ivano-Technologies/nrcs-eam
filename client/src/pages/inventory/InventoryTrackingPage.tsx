@@ -74,8 +74,7 @@ export default function InventoryTrackingPage() {
     <InventoryShell activeTab="tracking">
       <div className="space-y-4">
         <p className="text-sm text-muted-foreground max-w-2xl">
-          Operational tools for stock visibility, movement history, and warehouse accuracy. Choose a workflow
-          below; the Inventory tracking tab stays available on each screen.
+          Track inventory transactions, stock history, and material movement across locations.
         </p>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {LINKS.map((item) => (

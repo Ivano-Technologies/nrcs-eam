@@ -911,7 +911,7 @@ export default function Assets() {
           <PageHeader
             icon={Package}
             title="Asset Register"
-            subtitle="NRCS asset register — spreadsheet view with filters and Excel import/export"
+            subtitle="Centralized digital asset register for managing, tracking, and maintaining all NRCS assets across locations and departments."
             className="mb-0"
           />
         </div>

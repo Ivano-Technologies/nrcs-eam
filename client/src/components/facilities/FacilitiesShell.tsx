@@ -42,7 +42,7 @@ export function FacilitiesShell({
         <PageHeader
           icon={Building2}
           title="Facilities Management"
-          subtitle="Manage NRCS facilities"
+          subtitle="Centralized management of NRCS facilities, infrastructure, occupancy, and operational maintenance activities."
           className="mb-0"
         />
         {canEditFacilities ? (

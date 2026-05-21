@@ -147,7 +147,7 @@ ${updateForm.notes}`
         <PageHeader
           icon={QrCode}
           title="Asset Scanner"
-          subtitle="Quick scan and update assets in the field"
+          subtitle="Mobile-enabled asset scanning for rapid identification, verification, and field updates."
         />
 
         {/* Scanner Card */}

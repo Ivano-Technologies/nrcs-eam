@@ -217,7 +217,7 @@ export default function AssetMap() {
         <PageHeader
           icon={Map}
           title="Asset Map"
-          subtitle="Track asset locations across NRCS facilities"
+          subtitle="Interactive asset location mapping across NRCS facilities, branches, and operational sites nationwide."
           className="mb-0"
         />
         <div className="flex items-center gap-2">

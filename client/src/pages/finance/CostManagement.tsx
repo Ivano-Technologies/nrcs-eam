@@ -127,7 +127,7 @@ export default function CostManagement() {
         <PageHeader
           icon={BarChart3}
           title="Cost Management"
-          subtitle={`Expenditure overview, maintenance costs, and branch budgets (${year}).`}
+          subtitle="Monitor operational expenditures, maintenance costs, and branch budget performance across NRCS operations."
         />
 
         <Tabs defaultValue="overview">

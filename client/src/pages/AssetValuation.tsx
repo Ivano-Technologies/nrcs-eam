@@ -251,7 +251,7 @@ export default function AssetValuation() {
         <PageHeader
           icon={TrendingUp}
           title="Asset Valuation"
-          subtitle="Property register, movable asset totals, and executive exports (Finance)."
+          subtitle="Comprehensive asset valuation and reporting for properties, movable assets, and executive financial reviews."
           className="mb-0"
         />
         <div className="flex flex-wrap gap-2">

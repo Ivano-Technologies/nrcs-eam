@@ -355,7 +355,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
           <div>
             <h1 className="text-3xl font-bold">Inventory</h1>
             <p className="mt-1 text-muted-foreground">
-              Humanitarian stock management for relief materials across warehouses.
+              Humanitarian inventory management system for tracking relief materials across NRCS warehouses nationwide.
             </p>
           </div>
           <InventorySecondaryNav />

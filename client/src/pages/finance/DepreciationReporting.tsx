@@ -77,7 +77,7 @@ export default function DepreciationReporting() {
           <PageHeader
             icon={TrendingDown}
             title="Depreciation Reporting"
-            subtitle="Asset depreciation schedule and net book values"
+            subtitle="Automated depreciation schedules and net book value reporting for organizational assets."
             className="mb-0"
           />
           <div className="flex flex-wrap gap-2">

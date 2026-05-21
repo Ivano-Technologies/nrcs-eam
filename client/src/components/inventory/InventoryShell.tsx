@@ -42,7 +42,7 @@ export function InventoryShell({ activeTab, children }: InventoryShellProps) {
         <PageHeader
           icon={Boxes}
           title="Inventory"
-          subtitle="Humanitarian stock management for relief materials across warehouses."
+          subtitle="Humanitarian inventory management system for tracking relief materials across NRCS warehouses nationwide."
           className="mb-0"
         />
       </div>

@@ -103,7 +103,7 @@ export default function CtnRegistryPage() {
         <PageHeader
           icon={Tag}
           title="CTN Registry"
-          subtitle="One CTN per consignment. Item codes describe the product; the CTN identifies the shipment."
+          subtitle="Centralized registry for recording, monitoring, and validating consignment tracking numbers."
         />
 
         <ModuleFiltersCard
