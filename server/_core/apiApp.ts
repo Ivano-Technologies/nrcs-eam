@@ -1,7 +1,9 @@
 // @ts-nocheck
+import { sql } from "drizzle-orm";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import cors from "cors";
 import express, { type Express } from "express";
+import { getDb } from "../db";
 import { appRouter } from "../routers";
 import setupRouter from "../routes/setup";
 import documentsRouter from "../routes/documents";
@@ -32,6 +34,18 @@ export function createApiApp(): Express {
   app.get("/api/health", (_req, res) => {
     res.status(200).json({ ok: true });
   });
+
+  const keepAlive = async (_req: express.Request, res: express.Response) => {
+    try {
+      const db = await getDb();
+      if (db) await db.execute(sql`SELECT 1`);
+      res.json({ ok: true, ts: Date.now() });
+    } catch {
+      res.json({ ok: false, ts: Date.now() });
+    }
+  };
+  app.get("/keep-alive", keepAlive);
+  app.get("/api/keep-alive", keepAlive);
 
   app.use("/api", express.json({ limit: "50mb" }));
   app.use("/api", express.urlencoded({ limit: "50mb", extended: true }));

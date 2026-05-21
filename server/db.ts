@@ -385,12 +385,9 @@ export async function getAllSites() {
 
 export type SiteListRow = Site & {
   parentFacilityName: string | null;
-  assetCount: number;
-  inventoryCount: number;
-  staffCount: number;
 };
 
-/** Facilities list with hierarchy label and aggregate counts (for UI / `sites.list`). */
+/** Facilities list with hierarchy label (for UI / `sites.list`). */
 export async function getSitesList(opts?: { facilityType?: FacilityType }): Promise<SiteListRow[]> {
   const database = await getDb();
   if (!database) return [];
@@ -399,35 +396,12 @@ export async function getSitesList(opts?: { facilityType?: FacilityType }): Prom
     opts?.facilityType != null
       ? allSitesRaw.filter((s) => s.facilityType === opts.facilityType)
       : allSitesRaw;
-  const [assetGroups, invGroups, staffGroups] = await Promise.all([
-    database
-      .select({ siteId: assets.siteId, c: sql<number>`cast(count(*) as int)` })
-      .from(assets)
-      .groupBy(assets.siteId),
-    database
-      .select({ siteId: inventoryItems.siteId, c: sql<number>`cast(count(*) as int)` })
-      .from(inventoryItems)
-      .groupBy(inventoryItems.siteId),
-    database
-      .select({ siteId: users.siteId, c: sql<number>`cast(count(*) as int)` })
-      .from(users)
-      .where(isNotNull(users.siteId))
-      .groupBy(users.siteId),
-  ]);
-  const assetMap = new Map(assetGroups.map((r) => [r.siteId, r.c]));
-  const invMap = new Map(invGroups.map((r) => [r.siteId, r.c]));
-  const staffMap = new Map(
-    staffGroups.filter((r): r is { siteId: number; c: number } => r.siteId != null).map((r) => [r.siteId, r.c])
-  );
   const idToName = new Map(allSitesRaw.map((s) => [s.id, s.name]));
 
   return allSites.map((s) => ({
     ...s,
     parentFacilityName:
       s.parentFacilityId != null ? idToName.get(s.parentFacilityId) ?? null : null,
-    assetCount: assetMap.get(s.id) ?? 0,
-    inventoryCount: invMap.get(s.id) ?? 0,
-    staffCount: staffMap.get(s.id) ?? 0,
   }));
 }
 

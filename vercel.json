@@ -4,7 +4,13 @@
   "outputDirectory": "dist/public",
   "functions": {
     "api/trpc/[trpc].js": {
-      "maxDuration": 60
+      "maxDuration": 60,
+      "regions": ["dub1"]
+    },
+    "api/keep-alive.ts": {
+      "memory": 512,
+      "maxDuration": 10,
+      "regions": ["dub1"]
     },
     "api/health.ts": {
       "memory": 512,
@@ -24,6 +30,10 @@
     }
   },
   "crons": [
+    {
+      "path": "/api/keep-alive",
+      "schedule": "0 9 */5 * *"
+    },
     {
       "path": "/api/cron/daily",
       "schedule": "0 2 * * *"
