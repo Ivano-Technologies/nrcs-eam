@@ -1751,6 +1751,117 @@ export const appRouter = router({
           const inactiveSiteWhere =
             siteId != null ? and(eq(sites.isActive, false), eq(sites.id, siteId)) : eq(sites.isActive, false);
           const cardSiteFilter = siteId != null ? eq(stockCards.locationId, siteId) : undefined;
+          const METRICS_TIMEOUT = 9_000;
+          type MetricsBatch = [
+            { id: number }[],
+            { total: number }[],
+            { total: number }[],
+            { locationId: number }[],
+            { locationId: number }[],
+            { total: number }[],
+            { total: number }[],
+            { total: number }[],
+          ];
+          let metricsBatch: MetricsBatch;
+          try {
+            metricsBatch = await Promise.race([
+              Promise.all([
+                database.select({ id: sites.id }).from(sites).where(activeSiteWhere),
+                siteId != null
+                  ? database
+                      .select({ total: sql<number>`count(*)`.mapWith(Number) })
+                      .from(sites)
+                      .where(eq(sites.id, siteId))
+                  : database.select({ total: sql<number>`count(*)`.mapWith(Number) }).from(sites),
+                database
+                  .select({ total: sql<number>`count(*)`.mapWith(Number) })
+                  .from(sites)
+                  .where(inactiveSiteWhere),
+                database
+                  .selectDistinct({ locationId: stockCards.locationId })
+                  .from(stockMovements)
+                  .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
+                  .innerJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
+                  .leftJoin(
+                    stockSettings,
+                    and(
+                      eq(stockSettings.catalogueId, commodityTrackingNumbers.itemId),
+                      eq(stockSettings.warehouseId, stockCards.locationId)
+                    )
+                  )
+                  .innerJoin(sites, eq(stockCards.locationId, sites.id))
+                  .where(
+                    and(
+                      eq(sites.isActive, true),
+                      cardSiteFilter ?? sql`true`,
+                      sql`(${stockMovements.quantityIn} - ${stockMovements.quantityOut}) > coalesce(${stockSettings.minLevel}, 0)`
+                    )
+                  ),
+                database
+                  .selectDistinct({ locationId: stockCards.locationId })
+                  .from(stockMovements)
+                  .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
+                  .innerJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
+                  .leftJoin(
+                    stockSettings,
+                    and(eq(stockSettings.warehouseId, stockCards.locationId), eq(stockSettings.catalogueId, commodityTrackingNumbers.itemId))
+                  )
+                  .where(
+                    and(
+                      lte(stockMovements.date, window.previousEndIso),
+                      cardSiteFilter ?? sql`true`,
+                      sql`(${stockMovements.quantityIn} - ${stockMovements.quantityOut}) > coalesce(${stockSettings.minLevel}, 0)`
+                    )
+                  ),
+                database
+                  .select({ total: sql<number>`coalesce(sum(${stockMovements.quantityOut}),0)`.mapWith(Number) })
+                  .from(stockMovements)
+                  .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
+                  .innerJoin(waybills, eq(stockMovements.documentRef, waybills.wbNumber))
+                  .where(
+                    and(
+                      eq(stockMovements.sourceType, "waybill"),
+                      eq(waybills.destinationType, "distribution_point"),
+                      gte(stockMovements.date, window.currentStartIso),
+                      lte(stockMovements.date, window.currentEndIso),
+                      cardSiteFilter ?? sql`true`
+                    )
+                  ),
+                database
+                  .select({ total: sql<number>`coalesce(sum(${stockMovements.quantityOut}),0)`.mapWith(Number) })
+                  .from(stockMovements)
+                  .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
+                  .innerJoin(waybills, eq(stockMovements.documentRef, waybills.wbNumber))
+                  .where(
+                    and(
+                      eq(stockMovements.sourceType, "waybill"),
+                      eq(waybills.destinationType, "distribution_point"),
+                      gte(stockMovements.date, window.previousStartIso),
+                      lte(stockMovements.date, window.previousEndIso),
+                      cardSiteFilter ?? sql`true`
+                    )
+                  ),
+                database
+                  .select({ total: sql<number>`coalesce(sum(${stockMovements.quantityOut}),0)`.mapWith(Number) })
+                  .from(stockMovements)
+                  .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
+                  .innerJoin(waybills, eq(stockMovements.documentRef, waybills.wbNumber))
+                  .where(
+                    and(
+                      eq(stockMovements.sourceType, "waybill"),
+                      eq(waybills.destinationType, "distribution_point"),
+                      cardSiteFilter ?? sql`true`
+                    )
+                  ),
+              ]),
+              new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error("metrics_timeout")), METRICS_TIMEOUT)
+              ),
+            ]);
+          } catch {
+            metricsBatch = [[], [{ total: 0 }], [{ total: 0 }], [], [], [{ total: 0 }], [{ total: 0 }], [{ total: 0 }]];
+          }
+
           const [
             activeFacilities,
             totalFacilities,
@@ -1760,96 +1871,7 @@ export const appRouter = router({
             currentDist,
             previousDist,
             historicalDist,
-          ] =
-            await Promise.all([
-              database.select({ id: sites.id }).from(sites).where(activeSiteWhere),
-              siteId != null
-                ? database
-                    .select({ total: sql<number>`count(*)`.mapWith(Number) })
-                    .from(sites)
-                    .where(eq(sites.id, siteId))
-                : database.select({ total: sql<number>`count(*)`.mapWith(Number) }).from(sites),
-              database
-                .select({ total: sql<number>`count(*)`.mapWith(Number) })
-                .from(sites)
-                .where(inactiveSiteWhere),
-              database
-                .selectDistinct({ locationId: stockCards.locationId })
-                .from(stockMovements)
-                .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
-                .innerJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
-                .leftJoin(
-                  stockSettings,
-                  and(
-                    eq(stockSettings.catalogueId, commodityTrackingNumbers.itemId),
-                    eq(stockSettings.warehouseId, stockCards.locationId)
-                  )
-                )
-                .innerJoin(sites, eq(stockCards.locationId, sites.id))
-                .where(
-                  and(
-                    eq(sites.isActive, true),
-                    cardSiteFilter ?? sql`true`,
-                    sql`(${stockMovements.quantityIn} - ${stockMovements.quantityOut}) > coalesce(${stockSettings.minLevel}, 0)`
-                  )
-                ),
-              database
-                .selectDistinct({ locationId: stockCards.locationId })
-                .from(stockMovements)
-                .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
-                .innerJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
-                .leftJoin(
-                  stockSettings,
-                  and(eq(stockSettings.warehouseId, stockCards.locationId), eq(stockSettings.catalogueId, commodityTrackingNumbers.itemId))
-                )
-                .where(
-                  and(
-                    lte(stockMovements.date, window.previousEndIso),
-                    cardSiteFilter ?? sql`true`,
-                    sql`(${stockMovements.quantityIn} - ${stockMovements.quantityOut}) > coalesce(${stockSettings.minLevel}, 0)`
-                  )
-                ),
-              database
-                .select({ total: sql<number>`coalesce(sum(${stockMovements.quantityOut}),0)`.mapWith(Number) })
-                .from(stockMovements)
-                .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
-                .innerJoin(waybills, eq(stockMovements.documentRef, waybills.wbNumber))
-                .where(
-                  and(
-                    eq(stockMovements.sourceType, "waybill"),
-                    eq(waybills.destinationType, "distribution_point"),
-                    gte(stockMovements.date, window.currentStartIso),
-                    lte(stockMovements.date, window.currentEndIso),
-                    cardSiteFilter ?? sql`true`
-                  )
-                ),
-              database
-                .select({ total: sql<number>`coalesce(sum(${stockMovements.quantityOut}),0)`.mapWith(Number) })
-                .from(stockMovements)
-                .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
-                .innerJoin(waybills, eq(stockMovements.documentRef, waybills.wbNumber))
-                .where(
-                  and(
-                    eq(stockMovements.sourceType, "waybill"),
-                    eq(waybills.destinationType, "distribution_point"),
-                    gte(stockMovements.date, window.previousStartIso),
-                    lte(stockMovements.date, window.previousEndIso),
-                    cardSiteFilter ?? sql`true`
-                  )
-                ),
-              database
-                .select({ total: sql<number>`coalesce(sum(${stockMovements.quantityOut}),0)`.mapWith(Number) })
-                .from(stockMovements)
-                .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
-                .innerJoin(waybills, eq(stockMovements.documentRef, waybills.wbNumber))
-                .where(
-                  and(
-                    eq(stockMovements.sourceType, "waybill"),
-                    eq(waybills.destinationType, "distribution_point"),
-                    cardSiteFilter ?? sql`true`
-                  )
-                ),
-            ]);
+          ] = metricsBatch;
 
           const adequate = currentAdequateRows.length;
           const previousAdequate = previousAdequateRows.length;

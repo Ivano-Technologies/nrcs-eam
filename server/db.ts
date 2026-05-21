@@ -2387,22 +2387,52 @@ export async function getCostAnalytics(days: number) {
     .filter(t => t.transactionType === 'repair')
     .reduce((sum, t) => sum + parseFloat(t.amount), 0);
   
-  // Group by category
-  const assetIds = Array.from(new Set(transactions.map(t => t.assetId).filter(Boolean)));
-  const assetsList = await Promise.all(
-    assetIds.map(id => getAssetById(id!))
+  const uniqueAssetIds = Array.from(
+    new Set(transactions.map((t) => t.assetId).filter((id): id is number => id != null))
   );
-  
+  const assetRows =
+    uniqueAssetIds.length > 0
+      ? await db.select().from(assets).where(inArray(assets.id, uniqueAssetIds))
+      : [];
+  const assetMap = new Map(assetRows.map((a) => [a.id, a]));
+
+  const uniqueCategoryIds = Array.from(
+    new Set(assetRows.map((a) => a.categoryId).filter((id): id is number => id != null))
+  );
+  const categoryRows =
+    uniqueCategoryIds.length > 0
+      ? await db.select().from(assetCategories).where(inArray(assetCategories.id, uniqueCategoryIds))
+      : [];
+  const categoryMap = new Map(categoryRows.map((c) => [c.id, c]));
+
+  const uniqueSiteIds = Array.from(
+    new Set(assetRows.map((a) => a.siteId).filter((id): id is number => id != null))
+  );
+  const siteRows =
+    uniqueSiteIds.length > 0
+      ? await db.select().from(sites).where(inArray(sites.id, uniqueSiteIds))
+      : [];
+  const siteMap = new Map(siteRows.map((s) => [s.id, s]));
+
+  const uniqueVendorIds = Array.from(
+    new Set(transactions.map((t) => t.vendorId).filter((id): id is number => id != null))
+  );
+  const vendorRows =
+    uniqueVendorIds.length > 0
+      ? await db.select().from(vendors).where(inArray(vendors.id, uniqueVendorIds))
+      : [];
+  const vendorMap = new Map(vendorRows.map((v) => [v.id, v]));
+
   const byCategory: Record<number, { categoryId: number; categoryName: string; total: number }> = {};
   for (const transaction of transactions) {
     if (transaction.assetId) {
-      const asset = assetsList.find(a => a?.id === transaction.assetId);
-      if (asset && asset.categoryId) {
+      const asset = assetMap.get(transaction.assetId);
+      if (asset?.categoryId) {
         if (!byCategory[asset.categoryId]) {
-          const category = await getAssetCategoryById(asset.categoryId);
+          const category = categoryMap.get(asset.categoryId);
           byCategory[asset.categoryId] = {
             categoryId: asset.categoryId,
-            categoryName: category?.name || 'Unknown',
+            categoryName: category?.name ?? "Unknown",
             total: 0,
           };
         }
@@ -2410,18 +2440,17 @@ export async function getCostAnalytics(days: number) {
       }
     }
   }
-  
-  // Group by site
+
   const bySite: Record<number, { siteId: number; siteName: string; total: number }> = {};
   for (const transaction of transactions) {
     if (transaction.assetId) {
-      const asset = assetsList.find(a => a?.id === transaction.assetId);
-      if (asset && asset.siteId) {
+      const asset = assetMap.get(transaction.assetId);
+      if (asset?.siteId) {
         if (!bySite[asset.siteId]) {
-          const site = await getSiteById(asset.siteId);
+          const site = siteMap.get(asset.siteId);
           bySite[asset.siteId] = {
             siteId: asset.siteId,
-            siteName: site?.name || 'Unknown',
+            siteName: site?.name ?? "Unknown",
             total: 0,
           };
         }
@@ -2429,16 +2458,15 @@ export async function getCostAnalytics(days: number) {
       }
     }
   }
-  
-  // Group by vendor
+
   const byVendor: Record<number, { vendorId: number; vendorName: string; total: number; transactionCount: number }> = {};
   for (const transaction of transactions) {
     if (transaction.vendorId) {
       if (!byVendor[transaction.vendorId]) {
-        const vendor = await getVendorById(transaction.vendorId);
+        const vendor = vendorMap.get(transaction.vendorId);
         byVendor[transaction.vendorId] = {
           vendorId: transaction.vendorId,
-          vendorName: vendor?.name || 'Unknown',
+          vendorName: vendor?.name ?? "Unknown",
           total: 0,
           transactionCount: 0,
         };

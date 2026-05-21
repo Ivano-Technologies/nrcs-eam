@@ -173,17 +173,49 @@ export async function getBudgetVsActualByBranch(year: number): Promise<BudgetVsA
     branchBudget.set(b.siteId, (branchBudget.get(b.siteId) ?? 0) + b.amount);
   }
 
-  const out: BudgetVsActualBranch[] = [];
-  for (const site of branchSites) {
+  const { start, end } = yearDateRange(year);
+  const yearStart = new Date(year, 0, 1);
+  const yearEnd = new Date(year, 11, 31, 23, 59, 59);
+
+  const [maintenanceBySite, financialBySite] = await Promise.all([
+    database
+      .select({
+        siteId: assets.siteId,
+        total: sql<number>`coalesce(sum(${maintenanceCosts.costNgn}::numeric), 0)`.mapWith(Number),
+      })
+      .from(maintenanceCosts)
+      .innerJoin(assets, eq(maintenanceCosts.assetId, assets.id))
+      .where(and(gte(maintenanceCosts.date, start), lte(maintenanceCosts.date, end)))
+      .groupBy(assets.siteId),
+    database
+      .select({
+        siteId: assets.siteId,
+        total: sql<number>`coalesce(sum(${financialTransactions.amount}::numeric), 0)`.mapWith(Number),
+      })
+      .from(financialTransactions)
+      .innerJoin(assets, eq(financialTransactions.assetId, assets.id))
+      .where(
+        and(
+          gte(financialTransactions.transactionDate, yearStart),
+          lte(financialTransactions.transactionDate, yearEnd)
+        )
+      )
+      .groupBy(assets.siteId),
+  ]);
+
+  const maintenanceSpend = new Map(maintenanceBySite.map((r) => [r.siteId, Number(r.total ?? 0)]));
+  const financialSpend = new Map(financialBySite.map((r) => [r.siteId, Number(r.total ?? 0)]));
+
+  return branchSites.map((site) => {
     const budget = branchBudget.get(site.id) ?? 0;
-    const spend = await ytdSpendForSite(site.id, year);
+    const spend =
+      (maintenanceSpend.get(site.id) ?? 0) + (financialSpend.get(site.id) ?? 0);
     const percentUsed = budget > 0 ? Math.round((spend / budget) * 1000) / 10 : spend > 0 ? 100 : 0;
     let status: BudgetVsActualBranch["status"] = "green";
     if (percentUsed >= 100) status = "red";
     else if (percentUsed >= 75) status = "amber";
-    out.push({ siteId: site.id, siteName: site.name, budget, spend, percentUsed, status });
-  }
-  return out;
+    return { siteId: site.id, siteName: site.name, budget, spend, percentUsed, status };
+  });
 }
 
 export type MaintenanceCostListRow = {
