@@ -133,10 +133,17 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [markers, setMarkers] = useState<google.maps.Marker[]>([]);
 
-  const listInput =
-    lockedFacilityType != null ? { facilityType: lockedFacilityType } : undefined;
-  const { data: facilities, isLoading, refetch } = trpc.sites.list.useQuery(listInput);
-  const { data: allFacilities = [] } = trpc.sites.list.useQuery(undefined, { staleTime: 120_000 });
+  const { data: allSites, isLoading, refetch } = trpc.sites.list.useQuery(undefined, {
+    staleTime: 120_000,
+  });
+
+  const effectiveTypeFilter = lockedFacilityType ?? (typeFilter === "all" ? "all" : typeFilter);
+
+  const facilities = useMemo(() => {
+    const rows = allSites ?? [];
+    if (effectiveTypeFilter === "all") return rows;
+    return rows.filter((s) => s.facilityType === effectiveTypeFilter);
+  }, [allSites, effectiveTypeFilter]);
   const createMutation = trpc.sites.create.useMutation({
     onSuccess: async () => {
       toast.success("Facility created successfully");
@@ -186,9 +193,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
     return Array.from(values).sort((a, b) => a.localeCompare(b));
   }, [facilities]);
 
-  const parentOptions = allFacilities;
-
-  const effectiveTypeFilter = lockedFacilityType ?? (typeFilter === "all" ? "all" : typeFilter);
+  const parentOptions = allSites ?? [];
 
   useEffect(() => {
     if (!autoOpenCreate) return;
@@ -341,7 +346,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
     if (!form.parentFacilityId) {
       return `A parent facility is required for ${FACILITY_TYPE_LABELS[form.facilityType]}`;
     }
-    const parent = allFacilities.find((x) => x.id === Number(form.parentFacilityId));
+    const parent = (allSites ?? []).find((x) => x.id === Number(form.parentFacilityId));
     if (!parent) {
       return "Invalid parent: selected parent facility does not exist";
     }

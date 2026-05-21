@@ -308,7 +308,8 @@ export async function listAdminUsersWithFacilities(filters?: {
     .from(users)
     .leftJoin(sites, eq(users.siteId, sites.id))
     .where(conditions.length ? and(...conditions) : undefined)
-    .orderBy(desc(users.createdAt));
+    .orderBy(desc(users.createdAt))
+    .limit(500);
 }
 
 export async function updateUserRole(
@@ -627,8 +628,8 @@ export async function getAllAssets(filters?: {
   if (conditions.length > 0) {
     query = query.where(and(...conditions)) as any;
   }
-  
-  return await query.orderBy(desc(assets.createdAt));
+
+  return await query.orderBy(desc(assets.createdAt)).limit(1000);
 }
 
 export async function getAssetById(id: number) {
@@ -1312,8 +1313,9 @@ export async function getFinancialTransactions(filters?: { assetId?: number; wor
   if (conditions.length > 0) {
     query = query.where(and(...conditions)) as any;
   }
-  
-  return await query.orderBy(desc(financialTransactions.transactionDate));
+
+  // Capped at 500 — server-side filters should be applied for large date ranges
+  return await query.orderBy(desc(financialTransactions.transactionDate)).limit(500);
 }
 
 // ============= COMPLIANCE =============
@@ -2370,11 +2372,11 @@ export async function getCostAnalytics(days: number) {
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - days);
   
-  // Get all transactions in date range
   const transactions = await db
     .select()
     .from(financialTransactions)
-    .where(gte(financialTransactions.transactionDate, startDate));
+    .where(gte(financialTransactions.transactionDate, startDate))
+    .limit(1000);
   
   // Calculate totals
   const totalCost = transactions.reduce((sum, t) => sum + parseFloat(t.amount), 0);
