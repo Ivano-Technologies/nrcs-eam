@@ -237,8 +237,7 @@ export async function listMaintenanceCosts(filters: {
     .innerJoin(sites, eq(assets.siteId, sites.id))
     .leftJoin(users, eq(maintenanceCosts.loggedBy, users.id))
     .where(conditions.length ? and(...conditions) : undefined)
-    .orderBy(desc(maintenanceCosts.date))
-    .limit(5000);
+    .orderBy(desc(maintenanceCosts.date));
 
   return rows.map((r) => ({
     id: r.id,

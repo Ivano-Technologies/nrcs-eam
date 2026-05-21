@@ -8,9 +8,6 @@ build/
 *.dist
 api/trpc/data/
 api/trpc/_handler.cjs
-api/cron/_daily.cjs
-api/cron/_weekly.cjs
-api/cron/_monthly.cjs
 
 # Environment variables
 .env

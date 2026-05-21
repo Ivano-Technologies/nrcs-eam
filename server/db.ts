@@ -266,7 +266,7 @@ export async function getUserByOpenId(openId: string) {
 export async function getAllUsers() {
   const db = await getDb();
   if (!db) return [];
-  return await db.select().from(users).orderBy(desc(users.createdAt)).limit(1000);
+  return await db.select().from(users).orderBy(desc(users.createdAt));
 }
 
 export type AdminUserListRow = {
@@ -427,58 +427,6 @@ export async function getSitesList(opts?: { facilityType?: FacilityType }): Prom
     assetCount: assetMap.get(s.id) ?? 0,
     inventoryCount: invMap.get(s.id) ?? 0,
     staffCount: staffMap.get(s.id) ?? 0,
-  }));
-}
-
-export type SiteMapDataRow = {
-  id: number;
-  name: string;
-  facilityType: FacilityType;
-  latitude: string | null;
-  longitude: string | null;
-  parentFacilityId: number | null;
-  assetCount: number;
-  inventoryCount: number;
-};
-
-/** Active facilities with map coordinates and asset/inventory counts (for Asset Map). */
-export async function getSitesMapData(): Promise<SiteMapDataRow[]> {
-  const database = await getDb();
-  if (!database) return [];
-
-  const rows = await database
-    .select({
-      id: sites.id,
-      name: sites.name,
-      facilityType: sites.facilityType,
-      latitude: sites.latitude,
-      longitude: sites.longitude,
-      parentFacilityId: sites.parentFacilityId,
-      assetCount: sql<number>`cast(count(distinct ${assets.id}) as int)`,
-      inventoryCount: sql<number>`cast(count(distinct ${inventoryItems.id}) as int)`,
-    })
-    .from(sites)
-    .leftJoin(assets, eq(assets.siteId, sites.id))
-    .leftJoin(inventoryItems, eq(inventoryItems.siteId, sites.id))
-    .where(eq(sites.isActive, true))
-    .groupBy(
-      sites.id,
-      sites.name,
-      sites.facilityType,
-      sites.latitude,
-      sites.longitude,
-      sites.parentFacilityId
-    );
-
-  return rows.map((row) => ({
-    id: row.id,
-    name: row.name,
-    facilityType: row.facilityType,
-    latitude: row.latitude != null ? String(row.latitude) : null,
-    longitude: row.longitude != null ? String(row.longitude) : null,
-    parentFacilityId: row.parentFacilityId,
-    assetCount: row.assetCount ?? 0,
-    inventoryCount: row.inventoryCount ?? 0,
   }));
 }
 
@@ -680,7 +628,7 @@ export async function getAllAssets(filters?: {
     query = query.where(and(...conditions)) as any;
   }
   
-  return await query.orderBy(desc(assets.createdAt)).limit(2000);
+  return await query.orderBy(desc(assets.createdAt));
 }
 
 export async function getAssetById(id: number) {
@@ -878,9 +826,7 @@ export async function searchAssets(searchTerm: string) {
     .orderBy(desc(assets.createdAt));
 }
 
-// Capped at 5,000 to prevent Vercel function memory/timeout issues.
-// For larger exports, apply filters (site, category, status) first.
-export const ASSET_REGISTER_MAX_LIMIT = 5_000;
+const ASSET_REGISTER_MAX_LIMIT = 50_000;
 
 export type AssetRegisterListParams = {
   siteId?: number;
@@ -1046,7 +992,7 @@ export async function getAllWorkOrders(filters?: { siteId?: number; status?: str
     query = query.where(and(...conditions)) as any;
   }
   
-  return await query.orderBy(desc(workOrders.createdAt)).limit(2000);
+  return await query.orderBy(desc(workOrders.createdAt));
 }
 
 export async function getWorkOrderById(id: number) {
@@ -1087,7 +1033,7 @@ export async function getAllMaintenanceSchedules(filters?: { assetId?: number; i
     query = query.where(and(...conditions)) as any;
   }
   
-  return await query.orderBy(asc(maintenanceSchedules.nextDue)).limit(2000);
+  return await query.orderBy(asc(maintenanceSchedules.nextDue));
 }
 
 export async function getUpcomingMaintenance(days: number = 30) {
@@ -1395,7 +1341,7 @@ export async function getAllComplianceRecords(filters?: { assetId?: number; stat
     query = query.where(and(...conditions)) as any;
   }
   
-  return await query.orderBy(desc(complianceRecords.createdAt)).limit(2000);
+  return await query.orderBy(desc(complianceRecords.createdAt));
 }
 
 export async function updateComplianceRecord(id: number, data: Partial<typeof complianceRecords.$inferInsert>) {
@@ -1434,7 +1380,7 @@ export async function getAuditLogs(filters?: { userId?: number; entityType?: str
     return await result.limit(filters.limit);
   }
   
-  return await result.limit(500);
+  return await result;
 }
 
 /** Asset register edit history (`action = asset_edit`) with editor display name. */
@@ -1503,36 +1449,27 @@ export async function getDashboardStats(opts?: { siteId?: number }) {
         )
       : sql`${inventoryItems.currentStock} < ${inventoryItems.minStockLevel}`;
 
-  const [
-    [totalAssets],
-    [operationalAssets],
-    [maintenanceAssets],
-    [pendingWorkOrders],
-    [inProgressWorkOrders],
-    [lowStockCount],
-  ] = await Promise.all([
-    assetScope
-      ? db.select({ count: sql<number>`count(*)` }).from(assets).where(assetScope)
-      : db.select({ count: sql<number>`count(*)` }).from(assets),
-    assetScope
-      ? db
-          .select({ count: sql<number>`count(*)` })
-          .from(assets)
-          .where(and(eq(assets.status, "operational"), assetScope))
-      : db.select({ count: sql<number>`count(*)` }).from(assets).where(eq(assets.status, "operational")),
-    assetScope
-      ? db
-          .select({ count: sql<number>`count(*)` })
-          .from(assets)
-          .where(and(eq(assets.status, "maintenance"), assetScope))
-      : db.select({ count: sql<number>`count(*)` }).from(assets).where(eq(assets.status, "maintenance")),
-    db.select({ count: sql<number>`count(*)` }).from(workOrders).where(eq(workOrders.status, "pending")),
-    db
-      .select({ count: sql<number>`count(*)` })
-      .from(workOrders)
-      .where(eq(workOrders.status, "in_progress")),
-    db.select({ count: sql<number>`count(*)` }).from(inventoryItems).where(lowStockWhere),
-  ]);
+  const [totalAssets] = assetScope
+    ? await db.select({ count: sql<number>`count(*)` }).from(assets).where(assetScope)
+    : await db.select({ count: sql<number>`count(*)` }).from(assets);
+  const [operationalAssets] = assetScope
+    ? await db
+        .select({ count: sql<number>`count(*)` })
+        .from(assets)
+        .where(and(eq(assets.status, "operational"), assetScope))
+    : await db.select({ count: sql<number>`count(*)` }).from(assets).where(eq(assets.status, "operational"));
+  const [maintenanceAssets] = assetScope
+    ? await db
+        .select({ count: sql<number>`count(*)` })
+        .from(assets)
+        .where(and(eq(assets.status, "maintenance"), assetScope))
+    : await db.select({ count: sql<number>`count(*)` }).from(assets).where(eq(assets.status, "maintenance"));
+  const [pendingWorkOrders] = await db.select({ count: sql<number>`count(*)` }).from(workOrders).where(eq(workOrders.status, "pending"));
+  const [inProgressWorkOrders] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(workOrders)
+    .where(eq(workOrders.status, "in_progress"));
+  const [lowStockCount] = await db.select({ count: sql<number>`count(*)` }).from(inventoryItems).where(lowStockWhere);
 
   return {
     totalAssets: Number(totalAssets?.count ?? 0),
@@ -1739,12 +1676,12 @@ export async function getUnreadNotificationCount(userId: number) {
   return Number(result[0]?.count ?? 0);
 }
 
-export async function markNotificationAsRead(id: number, userId: number) {
+export async function markNotificationAsRead(id: number) {
   const db = await getDb();
   if (!db) return null;
   return await db.update(notifications)
     .set({ isRead: true, readAt: new Date() })
-    .where(and(eq(notifications.id, id), eq(notifications.userId, userId)));
+    .where(eq(notifications.id, id));
 }
 
 export async function markAllNotificationsAsRead(userId: number) {
@@ -1758,12 +1695,10 @@ export async function markAllNotificationsAsRead(userId: number) {
     ));
 }
 
-export async function deleteNotification(id: number, userId: number) {
+export async function deleteNotification(id: number) {
   const db = await getDb();
   if (!db) return null;
-  return await db.delete(notifications).where(
-    and(eq(notifications.id, id), eq(notifications.userId, userId))
-  );
+  return await db.delete(notifications).where(eq(notifications.id, id));
 }
 
 // ============= NOTIFICATION PREFERENCES =============

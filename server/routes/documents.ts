@@ -1,8 +1,6 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
-import { Router, type Request, type Response } from "express";
+import { Router } from "express";
 import * as XLSX from "xlsx";
-import type { User } from "../../drizzle/schema";
-import { authenticateRequest } from "../_core/supabaseSession";
 import { documentPrintLog, goodsReceivedNotes, inventoryDocuments, waybills, waybillLines, waybillLineCtnSources } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { generateGrnPdf } from "../_core/pdfTemplates/grnPdf";
@@ -13,26 +11,6 @@ import { getBinCardDetail } from "../wms/binCard";
 import { buildMonthlyWarehouseReport } from "../wms/monthlyWarehouseReport";
 
 const router = Router();
-
-/** Roles allowed to export operational documents (blocks unauthenticated and `user` role). */
-const DOCUMENT_EXPORT_ROLES = new Set(["staff", "field", "manager", "admin"]);
-
-async function requireDocumentExportUser(
-  req: Request,
-  res: Response
-): Promise<User | null> {
-  try {
-    const user = await authenticateRequest(req, res);
-    if (!DOCUMENT_EXPORT_ROLES.has(user.role)) {
-      res.status(403).json({ error: "Forbidden" });
-      return null;
-    }
-    return user;
-  } catch {
-    res.status(401).json({ error: "Unauthorized" });
-    return null;
-  }
-}
 
 type ExportType = "grn" | "waybill" | "stock-card" | "bin-card" | "monthly-report";
 type ExportFormat = "pdf" | "xlsx";
@@ -49,9 +27,6 @@ function toSheetBuffer(rows: Record<string, unknown>[], sheetName: string): Buff
 }
 
 router.get("/documents/:type/:id/export", async (req, res) => {
-  const user = await requireDocumentExportUser(req, res);
-  if (!user) return;
-
   const type = String(req.params.type) as ExportType;
   const id = Number(req.params.id);
   const format = String(req.query.format ?? "pdf") as ExportFormat;
@@ -113,7 +88,7 @@ router.get("/documents/:type/:id/export", async (req, res) => {
           documentType: "grn",
           documentId: id,
           copyType,
-          printedBy: user.id,
+          printedBy: null,
           isReprint: Boolean(priorInventory[copyType] ?? prior[copyType]),
         });
       }
@@ -160,7 +135,7 @@ router.get("/documents/:type/:id/export", async (req, res) => {
           documentType: "waybill",
           documentId: id,
           copyType,
-          printedBy: user.id,
+          printedBy: null,
           isReprint: Boolean(prior[copyType]),
         });
       }

@@ -1,9 +1,7 @@
-import PageHeader from "@/components/ui/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
-import PageLoader from "@/components/ui/PageLoader";
 import { FileText, Search, Calendar } from "lucide-react";
 import { useState } from "react";
 import { format } from "date-fns";
@@ -27,15 +25,26 @@ export default function AuditTrail() {
     );
   });
 
-  if (isLoading) return <PageLoader />;
+  if (isLoading) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-muted rounded w-1/3"></div>
+          <div className="h-64 bg-muted rounded"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <PageHeader
-        icon={FileText}
-        title="Audit Trail"
-        subtitle="Complete history of all system changes"
-      />
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+          <FileText className="h-8 w-8" />
+          Audit Trail
+        </h1>
+        <p className="text-muted-foreground">Complete history of all system changes</p>
+      </div>
 
       {/* Filters */}
       <Card>

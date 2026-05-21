@@ -9,7 +9,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
 
 export default function Transfers({ embedInShell = false }: { embedInShell?: boolean } = {}) {
   const { isAdmin, isManagerOrAdmin, isStaffOrAbove } = usePermissions();
@@ -89,52 +88,13 @@ export default function Transfers({ embedInShell = false }: { embedInShell?: boo
                 <td className="px-2 py-2">{row.toWarehouseId ?? "—"}</td>
                 <td className="px-2 py-2 space-x-2">
                   {isAdmin && row.status === "pending_approval" ? (
-                    <Button
-                      size="sm"
-                      disabled={approveMutation.isPending && approveMutation.variables?.documentId === row.id}
-                      onClick={() => approveMutation.mutate({ documentId: row.id })}
-                    >
-                      {approveMutation.isPending && approveMutation.variables?.documentId === row.id ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Approving…
-                        </>
-                      ) : (
-                        "Approve"
-                      )}
-                    </Button>
+                    <Button size="sm" onClick={() => approveMutation.mutate({ documentId: row.id })}>Approve</Button>
                   ) : null}
                   {isStaffOrAbove && (row.status === "approved" || row.status === "pending_approval") ? (
-                    <Button
-                      size="sm"
-                      disabled={dispatchMutation.isPending && dispatchMutation.variables?.documentId === row.id}
-                      onClick={() => dispatchMutation.mutate({ documentId: row.id })}
-                    >
-                      {dispatchMutation.isPending && dispatchMutation.variables?.documentId === row.id ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Dispatching…
-                        </>
-                      ) : (
-                        "Dispatch"
-                      )}
-                    </Button>
+                    <Button size="sm" onClick={() => dispatchMutation.mutate({ documentId: row.id })}>Dispatch</Button>
                   ) : null}
                   {isStaffOrAbove && row.status === "dispatched" ? (
-                    <Button
-                      size="sm"
-                      disabled={receiveMutation.isPending && receiveMutation.variables?.documentId === row.id}
-                      onClick={() => receiveMutation.mutate({ documentId: row.id })}
-                    >
-                      {receiveMutation.isPending && receiveMutation.variables?.documentId === row.id ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Receiving…
-                        </>
-                      ) : (
-                        "Receive"
-                      )}
-                    </Button>
+                    <Button size="sm" onClick={() => receiveMutation.mutate({ documentId: row.id })}>Receive</Button>
                   ) : null}
                 </td>
               </tr>
@@ -166,7 +126,6 @@ export default function Transfers({ embedInShell = false }: { embedInShell?: boo
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
               <Button
-                disabled={createMutation.isPending}
                 onClick={() =>
                   createMutation.mutate({
                     fromWarehouseId: Number(fromWarehouseId),
@@ -175,14 +134,7 @@ export default function Transfers({ embedInShell = false }: { embedInShell?: boo
                   })
                 }
               >
-                {createMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Submitting…
-                  </>
-                ) : (
-                  "Submit"
-                )}
+                Submit
               </Button>
             </div>
           </div>

@@ -1,6 +1,4 @@
 import { trpc } from "@/lib/trpc";
-import PageHeader from "@/components/ui/PageHeader";
-import PageLoader from "@/components/ui/PageLoader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Loader2, Plus, Wrench } from "lucide-react";
+import { Calendar, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
 
@@ -77,18 +75,16 @@ export default function Maintenance() {
     });
   };
 
-  if (isLoading) return <PageLoader />;
+  if (isLoading) {
+    return <div className="flex items-center justify-center h-96"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>;
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <PageHeader
-            icon={Wrench}
-            title="Maintenance"
-            subtitle="Manage maintenance schedules"
-            className="mb-0"
-          />
+          <h1 className="text-3xl font-bold">Preventive Maintenance</h1>
+          <p className="text-muted-foreground mt-2">Manage maintenance schedules</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
@@ -224,14 +220,7 @@ export default function Maintenance() {
                   Cancel
                 </Button>
                 <Button type="submit" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creating...
-                    </>
-                  ) : (
-                    "Create Schedule"
-                  )}
+                  {createMutation.isPending ? "Creating..." : "Create Schedule"}
                 </Button>
               </div>
             </form>

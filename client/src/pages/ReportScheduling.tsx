@@ -1,7 +1,5 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
-import PageHeader from "@/components/ui/PageHeader";
-import PageLoader from "@/components/ui/PageLoader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Edit, Trash2, Calendar, Mail, Clock, Loader2 } from "lucide-react";
+import { Plus, Edit, Trash2, Calendar, Mail, Clock } from "lucide-react";
 import { toast } from "sonner";
 
 export default function ReportScheduling() {
@@ -160,24 +158,22 @@ export default function ReportScheduling() {
     return labels[type] || type;
   };
 
-  if (isLoading) return <PageLoader />;
-
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
-        <PageHeader
-          icon={Calendar}
-          title="Report Scheduling"
-          subtitle="Automate report generation and email delivery"
-          className="mb-0"
-        />
+        <div>
+          <h1 className="text-3xl font-bold">Report Scheduling</h1>
+          <p className="text-muted-foreground">Automate report generation and email delivery</p>
+        </div>
         <Button onClick={() => setIsCreateDialogOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
           New Schedule
         </Button>
       </div>
 
-      {schedules.length === 0 ? (
+      {isLoading ? (
+        <div className="text-center py-8">Loading schedules...</div>
+      ) : schedules.length === 0 ? (
         <Card>
           <CardContent className="py-8 text-center space-y-4">
             <Calendar className="mx-auto h-12 w-12 text-muted-foreground" />
@@ -377,16 +373,7 @@ export default function ReportScheduling() {
               onClick={editingSchedule ? handleUpdate : handleCreate}
               disabled={!formData.name || !formData.recipients || createMutation.isPending || updateMutation.isPending}
             >
-              {createMutation.isPending || updateMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving…
-                </>
-              ) : (
-                <>
-                  {editingSchedule ? "Update" : "Create"} Schedule
-                </>
-              )}
+              {editingSchedule ? "Update" : "Create"} Schedule
             </Button>
           </DialogFooter>
         </DialogContent>

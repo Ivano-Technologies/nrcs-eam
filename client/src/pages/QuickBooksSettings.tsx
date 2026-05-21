@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
-import PageHeader from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { BookOpen, Loader2, CheckCircle, XCircle, RefreshCw } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, RefreshCw } from "lucide-react";
 
 export default function QuickBooksSettings() {
   const [clientId, setClientId] = useState("");
@@ -84,11 +83,12 @@ export default function QuickBooksSettings() {
 
   return (
     <div className="container mx-auto p-6 max-w-4xl">
-      <PageHeader
-        icon={BookOpen}
-        title="QuickBooks Integration"
-        subtitle="Connect your NRCS EAM system to QuickBooks for automatic financial transaction sync"
-      />
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-navy-900">QuickBooks Integration</h1>
+        <p className="text-gray-600 mt-2">
+          Connect your NRCS EAM system to QuickBooks for automatic financial transaction sync
+        </p>
+      </div>
 
       {/* Connection Status Card */}
       <Card className="mb-6">

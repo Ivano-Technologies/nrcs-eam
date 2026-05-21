@@ -1,7 +1,7 @@
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Wrench, AlertCircle, CheckCircle, Loader2 } from "lucide-react";
+import { Calendar, Wrench, AlertCircle, CheckCircle } from "lucide-react";
 
 interface AssetMaintenanceTimelineProps {
   assetId: number;
@@ -15,12 +15,7 @@ export function AssetMaintenanceTimeline({ assetId }: AssetMaintenanceTimelinePr
   const schedules = allSchedules?.filter(s => s.assetId === assetId) || [];
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        <span>Loading…</span>
-      </div>
-    );
+    return <div className="animate-pulse h-64 bg-muted rounded-lg"></div>;
   }
 
   const timelineEvents = [

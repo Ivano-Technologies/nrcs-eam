@@ -14,7 +14,6 @@ import { ViewToggle, type ViewMode } from "@/components/ViewToggle";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { toast } from "sonner";
 import { downloadBase64File } from "@/lib/download";
-import { Loader2 } from "lucide-react";
 
 type ReqLine = { catalogueId: string; quantity: string; urgency: string; notes: string };
 
@@ -193,79 +192,14 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
                       }}
                       disabled={downloadPdfMutation.isPending}
                     >
-                      {downloadPdfMutation.isPending ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Generating...
-                        </>
-                      ) : (
-                        "Download PDF"
-                      )}
+                      {downloadPdfMutation.isPending ? "Generating..." : "Download PDF"}
                     </Button>
-                    {row.status === "draft" ? (
-                      <Button
-                        size="sm"
-                        disabled={submitMutation.isPending && submitMutation.variables?.requisitionId === row.id}
-                        onClick={() => submitMutation.mutate({ requisitionId: row.id })}
-                      >
-                        {submitMutation.isPending && submitMutation.variables?.requisitionId === row.id ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Submitting…
-                          </>
-                        ) : (
-                          "Submit"
-                        )}
-                      </Button>
-                    ) : null}
-                    {row.status === "submitted" ? (
-                      <Button
-                        size="sm"
-                        data-testid="req-approve-branch-btn"
-                        disabled={approveBranchMutation.isPending && approveBranchMutation.variables?.requisitionId === row.id}
-                        onClick={() => approveBranchMutation.mutate({ requisitionId: row.id })}
-                      >
-                        {approveBranchMutation.isPending && approveBranchMutation.variables?.requisitionId === row.id ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Approving…
-                          </>
-                        ) : (
-                          "Approve Branch"
-                        )}
-                      </Button>
-                    ) : null}
-                    {row.status === "branch_approved" && isAdmin ? (
-                      <Button
-                        size="sm"
-                        data-testid="req-approve-hq-btn"
-                        disabled={approveHqMutation.isPending && approveHqMutation.variables?.requisitionId === row.id}
-                        onClick={() => approveHqMutation.mutate({ requisitionId: row.id })}
-                      >
-                        {approveHqMutation.isPending && approveHqMutation.variables?.requisitionId === row.id ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Approving…
-                          </>
-                        ) : (
-                          "Approve HQ"
-                        )}
-                      </Button>
-                    ) : null}
+                    {row.status === "draft" ? <Button size="sm" onClick={() => submitMutation.mutate({ requisitionId: row.id })}>Submit</Button> : null}
+                    {row.status === "submitted" ? <Button size="sm" data-testid="req-approve-branch-btn" onClick={() => approveBranchMutation.mutate({ requisitionId: row.id })}>Approve Branch</Button> : null}
+                    {row.status === "branch_approved" && isAdmin ? <Button size="sm" data-testid="req-approve-hq-btn" onClick={() => approveHqMutation.mutate({ requisitionId: row.id })}>Approve HQ</Button> : null}
                     {row.status === "hq_approved" ? (
-                      <Button
-                        size="sm"
-                        disabled={fulfillMutation.isPending && fulfillMutation.variables?.requisitionId === row.id}
-                        onClick={() => fulfillMutation.mutate({ requisitionId: row.id, fromWarehouseId: warehouses[0]?.id ?? 0 })}
-                      >
-                        {fulfillMutation.isPending && fulfillMutation.variables?.requisitionId === row.id ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Fulfilling…
-                          </>
-                        ) : (
-                          "Fulfill"
-                        )}
+                      <Button size="sm" onClick={() => fulfillMutation.mutate({ requisitionId: row.id, fromWarehouseId: warehouses[0]?.id ?? 0 })}>
+                        Fulfill
                       </Button>
                     ) : null}
                     {["submitted", "branch_approved", "hq_approved"].includes(String(row.status)) ? (
@@ -273,20 +207,12 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
                         size="sm"
                         variant="outline"
                         data-testid="req-reject-btn"
-                        disabled={rejectMutation.isPending && rejectMutation.variables?.requisitionId === row.id}
                         onClick={() => {
                           const reason = window.prompt("Enter rejection reason");
                           if (reason) rejectMutation.mutate({ requisitionId: row.id, reason });
                         }}
                       >
-                        {rejectMutation.isPending && rejectMutation.variables?.requisitionId === row.id ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Rejecting…
-                          </>
-                        ) : (
-                          "Reject"
-                        )}
+                        Reject
                       </Button>
                     ) : null}
                   </td>
@@ -346,7 +272,6 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
               <Button
-                disabled={createMutation.isPending}
                 onClick={() =>
                   createMutation.mutate({
                     title,
@@ -364,14 +289,7 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
                   })
                 }
               >
-                {createMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving…
-                  </>
-                ) : (
-                  "Save as Draft"
-                )}
+                Save as Draft
               </Button>
             </div>
           </div>

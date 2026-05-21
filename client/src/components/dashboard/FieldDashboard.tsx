@@ -6,7 +6,7 @@ import { trpc } from "@/lib/trpc";
 import { appPath } from "@/lib/routes";
 import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, PackagePlus } from "lucide-react";
+import { PackagePlus } from "lucide-react";
 
 const STATUS_LABEL: Record<string, string> = {
   draft: "Draft",
@@ -70,10 +70,7 @@ export function FieldDashboard() {
         </CardHeader>
         <CardContent>
           {reqsLoading ? (
-            <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Loading…</span>
-            </div>
+            <p className="text-sm text-muted-foreground">Loading…</p>
           ) : !myReqs?.length ? (
             <p className="text-sm text-muted-foreground">No requisitions yet.</p>
           ) : (

@@ -1,6 +1,6 @@
 {
-  "installCommand": "pnpm install --frozen-lockfile",
-  "buildCommand": "pnpm run build:frontend && pnpm run build:vercel-handlers",
+  "installCommand": "pnpm install --no-frozen-lockfile",
+  "buildCommand": "pnpm run build:frontend && pnpm exec esbuild server/_core/vercelTrpcHandler.ts --platform=node --bundle --format=cjs --outfile=api/trpc/_handler.cjs --external:canvas --external:*.node",
   "outputDirectory": "dist/public",
   "functions": {
     "api/trpc/[trpc].js": {
@@ -9,8 +9,34 @@
     "api/health.ts": {
       "memory": 512,
       "maxDuration": 10
+    },
+    "api/cron/daily.ts": {
+      "memory": 512,
+      "maxDuration": 30
+    },
+    "api/cron/weekly.ts": {
+      "memory": 512,
+      "maxDuration": 30
+    },
+    "api/cron/monthly.ts": {
+      "memory": 512,
+      "maxDuration": 30
     }
   },
+  "crons": [
+    {
+      "path": "/api/cron/daily",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/weekly",
+      "schedule": "0 6 * * 1"
+    },
+    {
+      "path": "/api/cron/monthly",
+      "schedule": "0 6 1 * *"
+    }
+  ],
   "rewrites": [
     {
       "source": "/health",

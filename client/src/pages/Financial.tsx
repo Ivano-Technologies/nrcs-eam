@@ -1,14 +1,12 @@
 import { useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
-import PageHeader from "@/components/ui/PageHeader";
-import PageLoader from "@/components/ui/PageLoader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { DollarSign, Loader2, Plus, TrendingUp, TrendingDown, ArrowUpCircle, ArrowDownCircle, Edit2, Save, X, Wallet } from "lucide-react";
+import { DollarSign, Plus, TrendingUp, TrendingDown, ArrowUpCircle, ArrowDownCircle, Edit2, Save, X } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { formatNaira } from "@/lib/format";
@@ -136,16 +134,19 @@ export default function Financial() {
 
   const canManageFinancial = user?.role === "admin" || user?.role === "manager";
 
-  if (isLoading) return <PageLoader />;
+  if (isLoading) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div>
-        <PageHeader
-          icon={Wallet}
-          title="Financial Transactions"
-          subtitle="Monitor revenue, costs, and expenses"
-        />
+        <h1 className="text-3xl font-bold">Financial Tracking</h1>
+        <p className="mt-2 text-muted-foreground">Monitor revenue, costs, and expenses</p>
       </div>
 
       <ModuleFiltersCard
@@ -251,14 +252,7 @@ export default function Financial() {
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>Cancel</Button>
                 <Button onClick={handleCreateTransaction} disabled={createTransactionMutation.isPending}>
-                  {createTransactionMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creating...
-                    </>
-                  ) : (
-                    "Create Transaction"
-                  )}
+                  {createTransactionMutation.isPending ? "Creating..." : "Create Transaction"}
                 </Button>
               </DialogFooter>
             </DialogContent>

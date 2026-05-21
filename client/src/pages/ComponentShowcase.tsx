@@ -136,8 +136,6 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import PageLoader from "@/components/ui/PageLoader";
-import TableLoader from "@/components/ui/TableLoader";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
@@ -171,13 +169,9 @@ import {
   Sun,
   X,
 } from "lucide-react";
-import { lazy, Suspense, useState, type KeyboardEvent } from "react";
+import { useState } from "react";
 import { toast as sonnerToast } from "sonner";
-import type { Message } from "@/components/AIChatBox";
-
-const AIChatBox = lazy(() =>
-  import("@/components/AIChatBox").then((m) => ({ default: m.AIChatBox }))
-);
+import { AIChatBox, type Message } from "@/components/AIChatBox";
 
 export default function ComponentsShowcase() {
   const { resolvedTheme, setTheme } = useTheme();
@@ -210,7 +204,7 @@ export default function ComponentsShowcase() {
     setDialogOpen(false);
   };
 
-  const handleDialogKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+  const handleDialogKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && !e.nativeEvent.isComposing) {
       e.preventDefault();
       handleDialogSubmit();
@@ -739,22 +733,6 @@ export default function ComponentsShowcase() {
                     <Skeleton className="h-4 w-3/4" />
                     <Skeleton className="h-4 w-1/2" />
                   </div>
-                </div>
-                <Separator />
-                <div className="space-y-4">
-                  <Label>Loading — PageLoader</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Full-page skeleton for route-level data fetch (preview).
-                  </p>
-                  <PageLoader />
-                </div>
-                <Separator />
-                <div className="space-y-4">
-                  <Label>Loading — TableLoader</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Table/list skeleton for in-page data fetch (preview).
-                  </p>
-                  <TableLoader />
                 </div>
                 <Separator />
                 <div className="space-y-2">
@@ -1430,22 +1408,20 @@ export default function ComponentsShowcase() {
                       This is a demo with simulated responses. In a real app, you'd connect it to a tRPC mutation.
                     </p>
                   </div>
-                  <Suspense fallback={<PageLoader className="max-w-2xl" />}>
-                    <AIChatBox
-                      messages={chatMessages}
-                      onSendMessage={handleChatSend}
-                      isLoading={isChatLoading}
-                      placeholder="Try sending a message..."
-                      height="500px"
-                      emptyStateMessage="How can I help you today?"
-                      suggestedPrompts={[
-                        "What is React?",
-                        "Explain TypeScript",
-                        "How to use tRPC?",
-                        "Best practices for web development",
-                      ]}
-                    />
-                  </Suspense>
+                  <AIChatBox
+                    messages={chatMessages}
+                    onSendMessage={handleChatSend}
+                    isLoading={isChatLoading}
+                    placeholder="Try sending a message..."
+                    height="500px"
+                    emptyStateMessage="How can I help you today?"
+                    suggestedPrompts={[
+                      "What is React?",
+                      "Explain TypeScript",
+                      "How to use tRPC?",
+                      "Best practices for web development",
+                    ]}
+                  />
                 </div>
               </CardContent>
             </Card>

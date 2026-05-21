@@ -2,7 +2,6 @@ import { UNAUTHED_ERR_MSG } from '@shared/const';
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import type { TrpcContext } from "./context";
-import { cache } from "./cache";
 
 const t = initTRPC.context<TrpcContext>().create({
   transformer: superjson,
@@ -27,15 +26,6 @@ const requireUser = t.middleware(async opts => {
 });
 
 export const protectedProcedure = t.procedure.use(requireUser);
-
-/** Clears dashboard cache after inventoryV2 (and similar) mutations. */
-export const invalidateDashboardOnMutationMiddleware = t.middleware(async ({ next, type }) => {
-  const result = await next();
-  if (type === "mutation") {
-    cache.invalidate("dashboard:");
-  }
-  return result;
-});
 
 /**
  * Ensures the request is authenticated and the user's role is one of `roles`.

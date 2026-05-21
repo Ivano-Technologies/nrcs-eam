@@ -138,27 +138,6 @@ async function main() {
   getPostHogClient();
   await startServer();
 
-  process.on("unhandledRejection", (reason) => {
-    console.error("[server] Unhandled rejection:", reason);
-    try {
-      const client = getPostHogClient();
-      if (!client) return;
-      const captureException = (client as { captureException?: (err: unknown) => void })
-        .captureException;
-      if (typeof captureException === "function") {
-        captureException.call(client, reason);
-      } else {
-        client.capture({
-          distinctId: "server",
-          event: "server_error",
-          properties: { error: String(reason) },
-        });
-      }
-    } catch (_) {
-      // silent if posthog not available
-    }
-  });
-
   process.on("SIGTERM", async () => {
     await shutdownPostHog();
     process.exit(0);

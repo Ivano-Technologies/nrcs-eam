@@ -1,5 +1,4 @@
 import { ManagerFinanceGate } from "@/components/finance/ManagerFinanceGate";
-import PageHeader from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -12,7 +11,7 @@ import {
 import { formatNaira } from "@/lib/format";
 import { KPI_VALUE_CLASS } from "@/lib/kpiTypography";
 import { trpc } from "@/lib/trpc";
-import { BookOpen, Download, FileSpreadsheet, Loader2 } from "lucide-react";
+import { Download, FileSpreadsheet } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -55,11 +54,10 @@ export default function AnnualFinanceReport() {
   return (
     <ManagerFinanceGate>
       <div className="container mx-auto space-y-6 p-6">
-        <PageHeader
-          icon={BookOpen}
-          title="Annual Finance Report"
-          subtitle="Consolidated finance summary for board reporting"
-        />
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Annual Finance Report</h1>
+          <p className="text-muted-foreground">Consolidated finance summary for board reporting</p>
+        </div>
 
         <Card>
           <CardHeader>
@@ -98,14 +96,7 @@ export default function AnnualFinanceReport() {
               </Select>
             </div>
             <Button onClick={load} disabled={isFetching}>
-              {isFetching ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Generating…
-                </>
-              ) : (
-                "Generate report"
-              )}
+              Generate report
             </Button>
             {report ? (
               <>
@@ -119,17 +110,8 @@ export default function AnnualFinanceReport() {
                     })
                   }
                 >
-                  {exportPdf.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Exporting…
-                    </>
-                  ) : (
-                    <>
-                      <Download className="mr-2 h-4 w-4" />
-                      Export PDF
-                    </>
-                  )}
+                  <Download className="mr-2 h-4 w-4" />
+                  Export PDF
                 </Button>
                 <Button
                   variant="outline"
@@ -141,17 +123,8 @@ export default function AnnualFinanceReport() {
                     })
                   }
                 >
-                  {exportExcel.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Exporting…
-                    </>
-                  ) : (
-                    <>
-                      <FileSpreadsheet className="mr-2 h-4 w-4" />
-                      Export Excel
-                    </>
-                  )}
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  Export Excel
                 </Button>
               </>
             ) : null}

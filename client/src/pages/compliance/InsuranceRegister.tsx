@@ -1,5 +1,4 @@
 import { ManagerFinanceGate } from "@/components/finance/ManagerFinanceGate";
-import PageHeader from "@/components/ui/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,7 +31,7 @@ import { formatNaira } from "@/lib/format";
 import { KPI_VALUE_CLASS } from "@/lib/kpiTypography";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
-import { AlertTriangle, FileSpreadsheet, Loader2, Plus, Shield } from "lucide-react";
+import { AlertTriangle, FileSpreadsheet, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
@@ -124,12 +123,10 @@ export function InsuranceRegisterContent({ embedded = false }: { embedded?: bool
 
         {!embedded ? (
         <div className="flex flex-col gap-4 sm:flex-row sm:justify-between">
-          <PageHeader
-            icon={Shield}
-            title="Insurance Register"
-            subtitle="Property, vehicle, equipment, and liability policies"
-            className="mb-0"
-          />
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Insurance Register</h1>
+            <p className="text-muted-foreground">Property, vehicle, equipment, and liability policies</p>
+          </div>
           <div className="flex gap-2">
             {canManage ? (
               <Button onClick={() => setOpen(true)}>
@@ -139,17 +136,8 @@ export function InsuranceRegisterContent({ embedded = false }: { embedded?: bool
             ) : null}
             {canManage ? (
               <Button variant="outline" disabled={exportExcel.isPending} onClick={() => exportExcel.mutate({})}>
-                {exportExcel.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Exporting…
-                  </>
-                ) : (
-                  <>
-                    <FileSpreadsheet className="mr-2 h-4 w-4" />
-                    Export
-                  </>
-                )}
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                Export
               </Button>
             ) : null}
           </div>
@@ -161,17 +149,8 @@ export function InsuranceRegisterContent({ embedded = false }: { embedded?: bool
               Add policy
             </Button>
             <Button variant="outline" disabled={exportExcel.isPending} onClick={() => exportExcel.mutate({})}>
-              {exportExcel.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Exporting…
-                </>
-              ) : (
-                <>
-                  <FileSpreadsheet className="mr-2 h-4 w-4" />
-                  Export
-                </>
-              )}
+              <FileSpreadsheet className="mr-2 h-4 w-4" />
+              Export
             </Button>
           </div>
         ) : null}
@@ -323,7 +302,6 @@ export function InsuranceRegisterContent({ embedded = false }: { embedded?: bool
             </div>
             <DialogFooter>
               <Button
-                disabled={create.isPending}
                 onClick={() => {
                   const siteId = parseInt(form.siteId, 10);
                   if (!siteId || !form.insurer || !form.policyNumber) {
@@ -344,14 +322,7 @@ export function InsuranceRegisterContent({ embedded = false }: { embedded?: bool
                   });
                 }}
               >
-                {create.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving…
-                  </>
-                ) : (
-                  "Save"
-                )}
+                Save
               </Button>
             </DialogFooter>
           </DialogContent>

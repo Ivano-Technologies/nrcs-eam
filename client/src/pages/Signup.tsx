@@ -13,7 +13,6 @@ import {
 } from "@/components/auth/AuthPageShell";
 import { AuthPageLayout } from "@/components/auth/AuthPageLayout";
 import { GlassCard } from "@/components/auth/GlassCard";
-import { Loader2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 
 const SIGNUP_SUCCESS_MESSAGE =
@@ -153,14 +152,7 @@ export default function Signup() {
             className={authPrimaryButtonClass}
             disabled={signupMutation.isPending}
           >
-            {signupMutation.isPending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Submitting...
-              </>
-            ) : (
-              "Request Access"
-            )}
+            {signupMutation.isPending ? "Submitting..." : "Request Access"}
           </Button>
 
           <p className="pt-2 text-center text-sm text-gray-600">

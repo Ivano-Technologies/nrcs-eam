@@ -3,7 +3,6 @@ import { useLocation } from "wouter";
 import type { FacilitiesSegment } from "@/lib/facilityRoutes";
 import { parseFacilityTypeFromSearch, segmentToListFilter } from "@/lib/facilityRoutes";
 import { trpc } from "@/lib/trpc";
-import PageLoader from "@/components/ui/PageLoader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,7 +43,7 @@ import {
 import { cn } from "@/lib/utils";
 import { MapView } from "@/components/Map";
 import { DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM_COUNTRY } from "@/lib/mapDefaults";
-import { Download, Edit2, Loader2, MapPin, Plus, Save, Trash2, Upload, X } from "lucide-react";
+import { Download, Edit2, MapPin, Plus, Save, Trash2, Upload, X } from "lucide-react";
 import { ViewToggle } from "@/components/ViewToggle";
 import { CardQrCode } from "@/components/CardQrCode";
 import { ModuleFiltersCard, ModuleFilterSearch } from "@/components/ModuleFiltersCard";
@@ -370,7 +369,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
     URL.revokeObjectURL(url);
   };
 
-  if (isLoading) return <PageLoader />;
+  if (isLoading) return <div className="h-96 animate-pulse rounded-md bg-muted" />;
 
   return (
     <div className="space-y-4">
@@ -493,7 +492,6 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
               <Button
-                disabled={createMutation.isPending}
                 onClick={() => {
                   if (!createForm.name.trim()) return toast.error("Facility name is required");
                   const hierarchyError = validateHierarchyBeforeSubmit(createForm);
@@ -503,14 +501,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
                   createMutation.mutate(toPayload(createForm));
                 }}
               >
-                {createMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  "Create Facility"
-                )}
+                {createMutation.isPending ? "Saving..." : "Create Facility"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -624,7 +615,6 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                disabled={updateMutation.isPending}
                                 onClick={() => {
                                   const hierarchyError = validateHierarchyBeforeSubmit(editForm);
                                   if (hierarchyError) return toast.error(hierarchyError);
@@ -633,11 +623,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
                                   updateMutation.mutate({ id: f.id, ...toPayload(editForm) });
                                 }}
                               >
-                                {updateMutation.isPending ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <Save className="h-4 w-4" />
-                                )}
+                                <Save className="h-4 w-4" />
                               </Button>
                               <Button variant="ghost" size="icon" onClick={() => setEditingId(null)}>
                                 <X className="h-4 w-4" />
@@ -673,17 +659,12 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                disabled={deleteMutation.isPending}
                                 onClick={() => {
                                   if (!window.confirm(`Delete facility "${f.name}"?`)) return;
                                   deleteMutation.mutate({ ids: [f.id] });
                                 }}
                               >
-                                {deleteMutation.isPending ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <Trash2 className="h-4 w-4" />
-                                )}
+                                <Trash2 className="h-4 w-4" />
                               </Button>
                             </>
                           )}

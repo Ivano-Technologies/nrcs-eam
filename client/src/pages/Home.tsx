@@ -9,14 +9,12 @@ import { StockMovementChart } from "@/components/dashboard/StockMovementChart";
 import { useDashboardRolePreview } from "@/components/dashboard/rolePreviewContext";
 import type { DashboardPeriod, UserRole } from "@/components/dashboard/types";
 import { useAuth } from "@/_core/hooks/useAuth";
-import PageHeader from "@/components/ui/PageHeader";
-import { Skeleton } from "@/components/ui/skeleton";
 import { waybillsPeriodHref } from "@/lib/dashboardPeriodRange";
 import { formatNaira } from "@/lib/format";
 import { trpc } from "@/lib/trpc";
 import { DASHBOARD_NAV } from "@shared/dashboardNav";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertTriangle, Banknote, LayoutDashboard, MapPin, ShieldCheck, Truck } from "lucide-react";
+import { AlertTriangle, Banknote, MapPin, ShieldCheck, Truck } from "lucide-react";
 import { useMemo, useState } from "react";
 
 const DEFAULT_WIDGETS = {
@@ -68,16 +66,24 @@ export default function Home() {
   const normalizeDirection = (direction?: string): "up" | "down" | "flat" =>
     direction === "up" || direction === "down" ? direction : "flat";
 
+  const isLoading = metricsLoading || totalAssetValueLoading;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   if (effectiveRole === "Field") {
     return (
       <div className="space-y-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <PageHeader
-            icon={LayoutDashboard}
-            title="Dashboard"
-            subtitle="Field view — your branch only"
-            className="mb-0"
-          />
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+            <p className="mt-2 text-[#334155] dark:text-[hsl(0_0%_95%)]">Field view — your branch only</p>
+          </div>
         </div>
         <FieldDashboard />
       </div>
@@ -149,89 +155,54 @@ export default function Home() {
       goodWhen: (metrics?.distributionVelocity?.goodWhen ?? "up") as "up" | "down",
       href: waybillsPeriodHref(period),
     },
+    {
+      key: "totalAssetValue" as const,
+      label: "Total Asset Value",
+      value: formatNaira(totalAssetValue?.totalNgn ?? 0, { compact: true }),
+      sub: `Property: ${formatNaira(totalAssetValue?.propertyNgn ?? 0, { compact: true })} · Movable: ${formatNaira(totalAssetValue?.movableNgn ?? 0, { compact: true })}`,
+      icon: Banknote,
+      tone: "blue" as const,
+      delta: undefined,
+      deltaDirection: "flat" as const,
+      goodWhen: "up" as const,
+      href: DASHBOARD_NAV.assetValuation,
+    },
   ];
 
-  const metricKpis =
-    effectiveRole === "Staff"
-      ? allKpis.filter((k) => ["lowStock", "approvals"].includes(k.key))
-      : allKpis;
-
-  const totalAssetKpi = {
-    key: "totalAssetValue" as const,
-    label: "Total Asset Value",
-    value: formatNaira(totalAssetValue?.totalNgn ?? 0, { compact: true }),
-    sub: `Property: ${formatNaira(totalAssetValue?.propertyNgn ?? 0, { compact: true })} · Movable: ${formatNaira(totalAssetValue?.movableNgn ?? 0, { compact: true })}`,
-    icon: Banknote,
-    tone: "blue" as const,
-    delta: undefined,
-    deltaDirection: "flat" as const,
-    goodWhen: "up" as const,
-    href: DASHBOARD_NAV.assetValuation,
-  };
-
-  const kpiGridClass =
-    "grid max-[359px]:grid-cols-1 grid-cols-2 gap-3 md:grid-cols-2 md:gap-4 xl:grid-cols-5";
+  const staffKpis = allKpis.filter((k) => ["lowStock", "totalAssetValue", "approvals"].includes(k.key));
+  const kpis = effectiveRole === "Staff" ? staffKpis : allKpis;
 
   const showWidgets = (key: keyof typeof DEFAULT_WIDGETS) => fixedLayout || widgetVisibility[key];
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <PageHeader
-          icon={LayoutDashboard}
-          title="Dashboard"
-          subtitle="Overview of your asset management system"
-          className="mb-0"
-        />
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <p className="mt-2 text-[#334155] dark:text-[hsl(0_0%_95%)]">Overview of your asset management system</p>
+        </div>
         <div className="max-w-full overflow-x-auto">
           <PeriodSelector value={period} onChange={setPeriod} />
         </div>
       </div>
 
       {showWidgets("kpiCards") ? (
-        <div className="space-y-4">
-          {metricsLoading ? (
-            <div className={kpiGridClass}>
-              {metricKpis.map((kpi) => (
-                <Skeleton key={kpi.key} className="h-24 rounded-xl" />
-              ))}
-            </div>
-          ) : (
-            <div className={kpiGridClass}>
-              {metricKpis.map((kpi) => (
-                <KpiCard
-                  key={kpi.key}
-                  label={kpi.label}
-                  value={kpi.value}
-                  sub={kpi.sub}
-                  icon={kpi.icon}
-                  tone={kpi.tone}
-                  delta={kpi.delta}
-                  deltaDirection={kpi.deltaDirection}
-                  goodWhen={kpi.goodWhen}
-                  valueTestId={`dashboard-kpi-value-${kpi.key}`}
-                  href={kpi.href}
-                />
-              ))}
-            </div>
-          )}
-          {totalAssetValueLoading ? (
-            <Skeleton className="h-24 w-full rounded-xl mb-4" />
-          ) : (
+        <div className="grid max-[359px]:grid-cols-1 grid-cols-2 gap-3 md:grid-cols-2 md:gap-4 xl:grid-cols-5">
+          {kpis.map((kpi) => (
             <KpiCard
-              key={totalAssetKpi.key}
-              label={totalAssetKpi.label}
-              value={totalAssetKpi.value}
-              sub={totalAssetKpi.sub}
-              icon={totalAssetKpi.icon}
-              tone={totalAssetKpi.tone}
-              delta={totalAssetKpi.delta}
-              deltaDirection={totalAssetKpi.deltaDirection}
-              goodWhen={totalAssetKpi.goodWhen}
-              valueTestId={`dashboard-kpi-value-${totalAssetKpi.key}`}
-              href={totalAssetKpi.href}
+              key={kpi.key}
+              label={kpi.label}
+              value={kpi.value}
+              sub={kpi.sub}
+              icon={kpi.icon}
+              tone={kpi.tone}
+              delta={kpi.delta}
+              deltaDirection={kpi.deltaDirection}
+              goodWhen={kpi.goodWhen}
+              valueTestId={`dashboard-kpi-value-${kpi.key}`}
+              href={kpi.href}
             />
-          )}
+          ))}
         </div>
       ) : null}
 

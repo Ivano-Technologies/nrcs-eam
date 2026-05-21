@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import PageHeader from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,7 +6,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc";
-import { Warehouse } from "lucide-react";
 import * as XLSX from "xlsx";
 
 function exportCsv(filename: string, columns: string[], rows: Array<Record<string, unknown>>) {
@@ -55,11 +53,10 @@ export default function WmsReportSuite(props: any) {
 
   return (
     <div className="space-y-4">
-      <PageHeader
-        icon={Warehouse}
-        title="WMS Report Suite"
-        subtitle="Stock movements, CTN aging, donor contribution, loss/damage, and kit assembly audit."
-      />
+      <div>
+        <h1 className="text-3xl font-bold">WMS Report Suite</h1>
+        <p className="text-sm text-muted-foreground">Stock movements, CTN aging, donor contribution, loss/damage, and kit assembly audit.</p>
+      </div>
 
       <div className="rounded-md border p-4">
         <div className="grid gap-3 md:grid-cols-6">

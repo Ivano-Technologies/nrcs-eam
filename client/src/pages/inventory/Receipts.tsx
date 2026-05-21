@@ -13,7 +13,6 @@ import { ModuleFiltersCard, ModuleFilterSearch } from "@/components/ModuleFilter
 import { useLocation } from "wouter";
 import { downloadBase64File } from "@/lib/download";
 import { appPath } from "@/lib/routes";
-import { Loader2 } from "lucide-react";
 
 type Line = { catalogueId: string; ctnId: string; quantity: string; batchNumber: string; expiryDate: string; notes: string };
 
@@ -187,33 +186,18 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
                       })();
                     }}
                   >
-                    {downloadPdfMutation.isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Generating...
-                      </>
-                    ) : (
-                      "Download PDF"
-                    )}
+                    {downloadPdfMutation.isPending ? "Generating..." : "Download PDF"}
                   </Button>
                   {isManagerOrAdmin && row.status === "pending_approval" ? (
                     <Button
                       size="sm"
                       data-testid="approve-grn-btn"
-                      disabled={approveMutation.isPending && approveMutation.variables?.documentId === row.id}
                       onClick={(e) => {
                         e.stopPropagation();
                         approveMutation.mutate({ documentId: row.id });
                       }}
                     >
-                      {approveMutation.isPending && approveMutation.variables?.documentId === row.id ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Approving…
-                        </>
-                      ) : (
-                        "Approve"
-                      )}
+                      Approve
                     </Button>
                   ) : null}
                 </td>
@@ -295,7 +279,6 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
               <Button
-                disabled={createMutation.isPending}
                 onClick={() =>
                   createMutation.mutate({
                     warehouseId: Number(warehouseId),
@@ -315,14 +298,7 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
                   })
                 }
               >
-                {createMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Submitting…
-                  </>
-                ) : (
-                  "Submit for Approval"
-                )}
+                Submit for Approval
               </Button>
             </div>
           </div>

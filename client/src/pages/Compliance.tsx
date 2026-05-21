@@ -1,6 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { InsuranceRegisterContent } from "@/pages/compliance/InsuranceRegister";
-import PageHeader from "@/components/ui/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,7 +38,7 @@ type VehicleRow = inferRouterOutputs<AppRouter>["complianceTracking"]["vehicles"
 type GeneratorRow = inferRouterOutputs<AppRouter>["complianceTracking"]["generators"]["list"][number];
 type BuildingRow = inferRouterOutputs<AppRouter>["complianceTracking"]["buildings"]["list"][number];
 type DonorRow = inferRouterOutputs<AppRouter>["complianceTracking"]["donor"]["list"][number];
-import { Loader2, Plus, ShieldCheck } from "lucide-react";
+import { Plus, ShieldCheck } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
@@ -241,12 +240,15 @@ export default function Compliance() {
   return (
     <div className="container mx-auto space-y-6 p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <PageHeader
-          icon={ShieldCheck}
-          title="Compliance Tracking"
-          subtitle="Vehicle, generator, building safety, donor reporting, and insurance compliance"
-          className="mb-0"
-        />
+        <div>
+          <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight">
+            <ShieldCheck className="h-8 w-8 text-primary" />
+            Compliance Tracking
+          </h1>
+          <p className="text-muted-foreground">
+            Vehicle, generator, building safety, donor reporting, and insurance compliance
+          </p>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
@@ -373,20 +375,8 @@ export default function Compliance() {
                           >
                             Edit
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            disabled={vehicleDelete.isPending}
-                            onClick={() => vehicleDelete.mutate({ id: r.id })}
-                          >
-                            {vehicleDelete.isPending && vehicleDelete.variables?.id === r.id ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Deleting…
-                              </>
-                            ) : (
-                              "Delete"
-                            )}
+                          <Button size="sm" variant="ghost" onClick={() => vehicleDelete.mutate({ id: r.id })}>
+                            Delete
                           </Button>
                         </TableCell>
                       ) : null}
@@ -436,20 +426,8 @@ export default function Compliance() {
                       <TableCell>{generatorBadge(r.status)}</TableCell>
                       {canEdit ? (
                         <TableCell>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            disabled={genDelete.isPending}
-                            onClick={() => genDelete.mutate({ id: r.id })}
-                          >
-                            {genDelete.isPending && genDelete.variables?.id === r.id ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Deleting…
-                              </>
-                            ) : (
-                              "Delete"
-                            )}
+                          <Button size="sm" variant="ghost" onClick={() => genDelete.mutate({ id: r.id })}>
+                            Delete
                           </Button>
                         </TableCell>
                       ) : null}
@@ -497,20 +475,8 @@ export default function Compliance() {
                       <TableCell>{docBadge(r.status)}</TableCell>
                       {canEdit ? (
                         <TableCell>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            disabled={buildingDelete.isPending}
-                            onClick={() => buildingDelete.mutate({ id: r.id })}
-                          >
-                            {buildingDelete.isPending && buildingDelete.variables?.id === r.id ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Deleting…
-                              </>
-                            ) : (
-                              "Delete"
-                            )}
+                          <Button size="sm" variant="ghost" onClick={() => buildingDelete.mutate({ id: r.id })}>
+                            Delete
                           </Button>
                         </TableCell>
                       ) : null}
@@ -556,20 +522,8 @@ export default function Compliance() {
                       <TableCell>{donorBadge(r.status)}</TableCell>
                       {canEdit ? (
                         <TableCell>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            disabled={donorDelete.isPending}
-                            onClick={() => donorDelete.mutate({ id: r.id })}
-                          >
-                            {donorDelete.isPending && donorDelete.variables?.id === r.id ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Deleting…
-                              </>
-                            ) : (
-                              "Delete"
-                            )}
+                          <Button size="sm" variant="ghost" onClick={() => donorDelete.mutate({ id: r.id })}>
+                            Delete
                           </Button>
                         </TableCell>
                       ) : null}
@@ -633,7 +587,6 @@ export default function Compliance() {
           </div>
           <DialogFooter>
             <Button
-              disabled={vehicleUpsert.isPending}
               onClick={async () => {
                 let assetId = vehicleForm.assetId;
                 if (!assetId) {
@@ -656,14 +609,7 @@ export default function Compliance() {
                 });
               }}
             >
-              {vehicleUpsert.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving…
-                </>
-              ) : (
-                "Save"
-              )}
+              Save
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -694,7 +640,6 @@ export default function Compliance() {
           </div>
           <DialogFooter>
             <Button
-              disabled={genUpsert.isPending}
               onClick={async () => {
                 const assetId = await resolveAssetCode(genForm.assetCode);
                 if (!assetId) {
@@ -709,14 +654,7 @@ export default function Compliance() {
                 });
               }}
             >
-              {genUpsert.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving…
-                </>
-              ) : (
-                "Save"
-              )}
+              Save
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -766,7 +704,6 @@ export default function Compliance() {
           </div>
           <DialogFooter>
             <Button
-              disabled={buildingUpsert.isPending}
               onClick={() => {
                 const siteId = parseInt(buildingForm.siteId, 10);
                 if (!siteId) {
@@ -784,14 +721,7 @@ export default function Compliance() {
                 });
               }}
             >
-              {buildingUpsert.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving…
-                </>
-              ) : (
-                "Save"
-              )}
+              Save
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -844,7 +774,6 @@ export default function Compliance() {
           </div>
           <DialogFooter>
             <Button
-              disabled={donorUpsert.isPending}
               onClick={() => {
                 if (!donorForm.donorName || !donorForm.dueDate) {
                   toast.error("Donor and due date are required");
@@ -860,14 +789,7 @@ export default function Compliance() {
                 });
               }}
             >
-              {donorUpsert.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving…
-                </>
-              ) : (
-                "Save"
-              )}
+              Save
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
-import PageHeader from "@/components/ui/PageHeader";
-import TableLoader from "@/components/ui/TableLoader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Plus, Download, Upload, Edit2, Trash2, MapPin, Package } from "lucide-react";
+import { Plus, Download, Upload, Edit2, Trash2, MapPin } from "lucide-react";
 import { useLocation } from "wouter";
 import {
   AlertDialog,
@@ -907,13 +905,13 @@ export default function Assets() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div data-testid="asset-register-heading">
-          <PageHeader
-            icon={Package}
-            title="Asset Register"
-            subtitle="NRCS asset register — spreadsheet view with filters and Excel import/export"
-            className="mb-0"
-          />
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight" data-testid="asset-register-heading">
+            Asset Register
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            NRCS asset register — spreadsheet view with filters and Excel import/export
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
             {canEditAssets ? (
@@ -1341,14 +1339,7 @@ export default function Assets() {
                     onClick={handleCreateAsset}
                     disabled={createAssetMutation.isPending}
                   >
-                    {createAssetMutation.isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Creating...
-                      </>
-                    ) : (
-                      "Create Asset"
-                    )}
+                    {createAssetMutation.isPending ? "Creating..." : "Create Asset"}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -1458,14 +1449,7 @@ export default function Assets() {
                 onClick={() => recalculateDepreciationMutation.mutate()}
                 data-testid="asset-recalculate-depreciation-btn"
               >
-                {recalculateDepreciationMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Recalculating…
-                  </>
-                ) : (
-                  "Recalculate All Depreciation"
-                )}
+                Recalculate All Depreciation
               </Button>
             ) : null}
             {isAdmin ? (
@@ -1476,17 +1460,8 @@ export default function Assets() {
                 onClick={() => backfillCoordinatesMutation.mutate()}
                 data-testid="asset-sync-coordinates-from-facilities-btn"
               >
-                {backfillCoordinatesMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Syncing…
-                  </>
-                ) : (
-                  <>
-                    <MapPin className="mr-2 h-4 w-4" />
-                    Sync coordinates from facilities
-                  </>
-                )}
+                <MapPin className="mr-2 h-4 w-4" />
+                Sync coordinates from facilities
               </Button>
             ) : null}
           </>
@@ -1530,7 +1505,9 @@ export default function Assets() {
       ) : (
       <div data-testid="asset-list-table" className="rounded-md border bg-card overflow-x-auto overflow-y-visible px-2 md:px-3">
         {isLoading ? (
-          <TableLoader className="py-8" />
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+          </div>
         ) : (
           <div
             className="frozen-table-wrap frozen-table-double-header frozen-table-wrap-page-scroll"
@@ -2266,14 +2243,7 @@ export default function Assets() {
               onClick={handleSaveEdit}
               disabled={updateAssetMutation.isPending}
             >
-              {updateAssetMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                "Save Changes"
-              )}
+              {updateAssetMutation.isPending ? "Saving..." : "Save Changes"}
             </Button>
           </DialogFooter>
         </DialogContent>

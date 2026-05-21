@@ -1,7 +1,5 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
-import TableLoader from "@/components/ui/TableLoader";
-import PageHeader from "@/components/ui/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -43,11 +41,15 @@ export default function ActivityLog() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        icon={Activity}
-        title="Activity Log"
-        subtitle="Track all user actions and system changes"
-      />
+      <div>
+        <h1 className="text-3xl font-bold flex items-center gap-2">
+          <Activity className="h-8 w-8" />
+          Activity Log
+        </h1>
+        <p className="text-muted-foreground mt-2">
+          Track all user actions and system changes
+        </p>
+      </div>
 
       {/* Filters */}
       <Card>
@@ -129,7 +131,9 @@ export default function ActivityLog() {
 
       {/* Activity Table */}
       {isLoading ? (
-        <TableLoader className="py-8" />
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
       ) : rows.length > 0 ? (
         <Card>
           <CardContent className="pt-6">

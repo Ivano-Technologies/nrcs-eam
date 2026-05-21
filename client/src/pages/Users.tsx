@@ -1,6 +1,4 @@
 import { useAuth } from "@/_core/hooks/useAuth";
-import PageHeader from "@/components/ui/PageHeader";
-import TableLoader from "@/components/ui/TableLoader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -40,7 +38,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc";
-import { Ghost, Loader2, Trash2, UserPlus, Users as UsersIcon } from "lucide-react";
+import { Ghost, Trash2, UserPlus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -202,17 +200,21 @@ export default function Users() {
     );
   }
 
-  if (isLoading) return <TableLoader />;
+  if (isLoading) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <PageHeader
-          icon={UsersIcon}
-          title="Users"
-          subtitle="Create accounts, assign facilities, and manage access"
-          className="mb-0"
-        />
+        <div>
+          <h1 className="text-3xl font-bold">User Management</h1>
+          <p className="mt-2 text-muted-foreground">Create accounts, assign facilities, and manage access</p>
+        </div>
         <div className="flex shrink-0 flex-wrap gap-2">
           <Button variant="outline" className="gap-2" onClick={() => setOrphanOpen(true)}>
             <Ghost className="h-4 w-4" />
@@ -477,14 +479,7 @@ export default function Users() {
                 })
               }
             >
-              {createMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating…
-                </>
-              ) : (
-                "Create user"
-              )}
+              {createMutation.isPending ? "Creating…" : "Create user"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -591,14 +586,7 @@ export default function Users() {
                     })
                   }
                 >
-                  {updateMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving…
-                    </>
-                  ) : (
-                    "Save"
-                  )}
+                  {updateMutation.isPending ? "Saving…" : "Save"}
                 </Button>
               </DialogFooter>
             </>
@@ -622,14 +610,7 @@ export default function Users() {
               disabled={deactivateMutation.isPending || deactivateId == null}
               onClick={() => deactivateId != null && deactivateMutation.mutate({ id: deactivateId })}
             >
-              {deactivateMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Working…
-                </>
-              ) : (
-                "Deactivate"
-              )}
+              {deactivateMutation.isPending ? "Working…" : "Deactivate"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -652,14 +633,7 @@ export default function Users() {
               disabled={deleteMutation.isPending || deleteId == null}
               onClick={() => deleteId != null && deleteMutation.mutate({ id: deleteId })}
             >
-              {deleteMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Deleting…
-                </>
-              ) : (
-                "Delete"
-              )}
+              {deleteMutation.isPending ? "Deleting…" : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -703,14 +677,7 @@ export default function Users() {
                           disabled={deleteOrphanMutation.isPending}
                           onClick={() => deleteOrphanMutation.mutate({ id: o.id })}
                         >
-                          {deleteOrphanMutation.isPending ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Deleting…
-                            </>
-                          ) : (
-                            "Delete"
-                          )}
+                          Delete
                         </Button>
                       </TableCell>
                     </TableRow>

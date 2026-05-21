@@ -16,7 +16,7 @@ const plugins = [
   {
     ...vitePluginManusRuntime(),
     /** Dev / AI tooling only — do not inject ~360KB inline runtime into production HTML */
-    apply: "serve" as const,
+    apply: "serve",
   },
   VitePWA({
     registerType: "autoUpdate",
@@ -75,12 +75,6 @@ const plugins = [
     },
     workbox: {
       globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
-      globIgnores: [
-        "**/ComponentShowcase*",
-        "**/mermaid*",
-        "**/xlsx*",
-        "**/node_modules/**",
-      ],
       maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
       /** SPA client routes (/app/*) fall back to cached shell when offline. */
       navigateFallback: "/index.html",
@@ -98,8 +92,29 @@ const plugins = [
           },
         },
         {
-          urlPattern: /\/api\//,
-          handler: "NetworkOnly",
+          /** tRPC read queries for field/dashboard/finance pages (GET only). `sites` = facilities register. */
+          urlPattern:
+            /\/api\/trpc\/.*(assets|sites|inventoryV2|inventory|dashboard|auth|assetValuation|financial|quickbooks|costManagement|depreciationReport|insuranceRecords|annualFinanceReport|complianceTracking|donorAssets)\./i,
+          handler: "StaleWhileRevalidate",
+          method: "GET",
+          options: {
+            cacheName: "nrcs-eam-api-cache",
+            expiration: { maxEntries: 100, maxAgeSeconds: 86400 },
+            cacheableResponse: { statuses: [0, 200] },
+          },
+        },
+        {
+          urlPattern: /^https:\/\/nrcseam\.techivano\.com\/api\/.*/i,
+          handler: "NetworkFirst",
+          options: {
+            cacheName: "api-cache-legacy",
+            networkTimeoutSeconds: 10,
+            expiration: {
+              maxEntries: 50,
+              maxAgeSeconds: 60 * 60 * 24,
+            },
+            cacheableResponse: { statuses: [0, 200] },
+          },
         },
       ],
     },

@@ -15,7 +15,6 @@ import { SignatureBlock, type SignatureValue } from "@/components/wms/SignatureB
 import { CtnInlineCreator } from "@/components/wms/CtnInlineCreator";
 import { applyGrnSuggestion, looksLikeGrnNumber } from "@/lib/grnNumberSuggest";
 import { enqueueGrnOperation } from "@/lib/offlineSyncQueue";
-import { Loader2 } from "lucide-react";
 
 const emptyLine = (): GrnLineItem => ({
   consignmentNumber: "",
@@ -242,9 +241,6 @@ export default function ReceiptDetail() {
     setDirty(false);
   };
 
-  const draftPending = createDraft.isPending || updateDraft.isPending;
-  const finalizePending = draftPending || approveMutation.isPending;
-
   const finalize = async () => {
     if (!isFinalizable) {
       toast.error("Please complete all required fields before finalize.");
@@ -381,26 +377,8 @@ export default function ReceiptDetail() {
 
             <div className="flex flex-wrap justify-end gap-2">
               <Button variant="outline" onClick={() => setLocation("/app/inventory/receipts")}>Cancel</Button>
-              <Button variant="outline" disabled={draftPending} onClick={() => void saveDraft()}>
-                {draftPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving…
-                  </>
-                ) : (
-                  "Save as Draft"
-                )}
-              </Button>
-              <Button onClick={() => void finalize()} disabled={!isFinalizable || finalizePending}>
-                {finalizePending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Finalizing…
-                  </>
-                ) : (
-                  "Finalize"
-                )}
-              </Button>
+              <Button variant="outline" onClick={() => void saveDraft()}>Save as Draft</Button>
+              <Button onClick={() => void finalize()} disabled={!isFinalizable}>Finalize</Button>
               {savedId && isFinalized ? (
                 <>
                   <Button variant="outline" onClick={() => setLocation(`/app/inventory/receipts/${savedId}/print/white`)}>

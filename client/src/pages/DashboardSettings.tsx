@@ -2,7 +2,6 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { DashboardWidgetSettings } from "@/components/DashboardWidgetSettings";
 import { OpenRegistrationSettings } from "@/components/OpenRegistrationSettings";
 import { InstallPWAButton } from "@/components/InstallPWAButton";
-import PageHeader from "@/components/ui/PageHeader";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,7 +19,7 @@ import { Switch } from "@/components/ui/switch";
 import { trpc } from "@/lib/trpc";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { appPath } from "@/lib/routes";
-import { Camera, Loader2, Monitor, Moon, Settings, Sun } from "lucide-react";
+import { Camera, Loader2, Monitor, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearch } from "wouter";
@@ -273,11 +272,10 @@ export default function DashboardSettings() {
 
   return (
     <div className="space-y-6 max-w-full min-w-0">
-      <PageHeader
-        icon={Settings}
-        title="Settings"
-        subtitle="Account, appearance, and preferences"
-      />
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+        <p className="text-muted-foreground mt-2 break-words">Account, appearance, and preferences</p>
+      </div>
 
       {mustChangePassword && (
         <Alert>
@@ -476,10 +474,7 @@ export default function DashboardSettings() {
           </CardHeader>
           <CardContent className="space-y-4">
             {emailLoading ? (
-              <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Loading…</span>
-              </div>
+              <p className="text-sm text-muted-foreground">Loading…</p>
             ) : (
               <>
                 <div className="flex items-center justify-between gap-4">
@@ -532,14 +527,7 @@ export default function DashboardSettings() {
                     })
                   }
                 >
-                  {setEmailMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving…
-                    </>
-                  ) : (
-                    "Save"
-                  )}
+                  {setEmailMutation.isPending ? "Saving…" : "Save"}
                 </Button>
               </>
             )}
@@ -562,14 +550,7 @@ export default function DashboardSettings() {
               disabled={sendAssetCheckRemindersMutation.isPending}
               onClick={() => sendAssetCheckRemindersMutation.mutate()}
             >
-              {sendAssetCheckRemindersMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Sending…
-                </>
-              ) : (
-                "Send reminder emails now"
-              )}
+              {sendAssetCheckRemindersMutation.isPending ? "Sending…" : "Send reminder emails now"}
             </Button>
           </CardContent>
         </Card>
@@ -583,14 +564,7 @@ export default function DashboardSettings() {
           </CardHeader>
           <CardContent>
             <Button type="button" variant="outline" onClick={handleExportZip} disabled={exportZipLoading}>
-              {exportZipLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Exporting…
-                </>
-              ) : (
-                "Export all data (ZIP)"
-              )}
+              Export all data (ZIP)
             </Button>
           </CardContent>
         </Card>
@@ -660,14 +634,7 @@ export default function DashboardSettings() {
                 newPassword.length < 8
               }
             >
-              {changePasswordMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Updating…
-                </>
-              ) : (
-                "Update password"
-              )}
+              {changePasswordMutation.isPending ? "Updating…" : "Update password"}
             </Button>
           </DialogFooter>
         </DialogContent>

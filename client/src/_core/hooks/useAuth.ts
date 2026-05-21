@@ -27,6 +27,12 @@ export function useAuth(options?: UseAuthOptions) {
   const logout = useCallback(async () => {
     utils.auth.me.setData(undefined, null);
     try {
+      localStorage.removeItem("manus-runtime-user-info");
+    } catch {
+      // ignore storage errors (private mode, etc.)
+    }
+
+    try {
       await logoutMutation.mutateAsync(undefined);
     } catch (error) {
       if (
@@ -45,6 +51,10 @@ export function useAuth(options?: UseAuthOptions) {
   }, [logoutMutation, utils]);
 
   const state = useMemo(() => {
+    localStorage.setItem(
+      "manus-runtime-user-info",
+      JSON.stringify(meQuery.data)
+    );
     /** After login, `me` can be cached `null` while refetching; `isLoading` stays false in TanStack Query v5. */
     const loading =
       meQuery.isPending ||

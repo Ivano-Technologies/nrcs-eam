@@ -6,7 +6,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
 
 export function CtnInlineCreator({
   open,
@@ -142,14 +141,7 @@ export function CtnInlineCreator({
               Number(originalQuantity) <= 0
             }
           >
-            {createMutation.isPending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving…
-              </>
-            ) : (
-              "Save CTN"
-            )}
+            Save CTN
           </Button>
         </div>
       </DialogContent>

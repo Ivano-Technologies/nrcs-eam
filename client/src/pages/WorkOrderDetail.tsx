@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { useRoute, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
-import PageLoader from "@/components/ui/PageLoader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Edit, Loader2 } from "lucide-react";
+import { ArrowLeft, Edit } from "lucide-react";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -37,7 +36,9 @@ export default function WorkOrderDetail() {
     }
   };
 
-  if (isLoading || !workOrder) return <PageLoader />;
+  if (isLoading || !workOrder) {
+    return <div className="flex items-center justify-center h-96"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -87,7 +88,6 @@ export default function WorkOrderDetail() {
           <DialogFooter>
             <Button
               data-testid="work-order-update-btn"
-              disabled={updateMutation.isPending}
               onClick={() =>
                 updateMutation.mutate({
                   id: workOrderId,
@@ -96,14 +96,7 @@ export default function WorkOrderDetail() {
                 })
               }
             >
-              {updateMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Updating…
-                </>
-              ) : (
-                "Update"
-              )}
+              Update
             </Button>
           </DialogFooter>
         </DialogContent>

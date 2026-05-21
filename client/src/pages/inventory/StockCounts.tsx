@@ -10,7 +10,6 @@ import { usePermissions } from "@/_core/hooks/usePermissions";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { useLocation } from "wouter";
-import { Loader2 } from "lucide-react";
 
 export default function StockCounts({ embedInShell = false }: { embedInShell?: boolean } = {}) {
   const [location] = useLocation();
@@ -118,36 +117,10 @@ export default function StockCounts({ embedInShell = false }: { embedInShell?: b
                 <td className="px-2 py-2">{row.varianceCount ?? 0}</td>
                 <td className="px-2 py-2 space-x-2">
                   {isStaffOrAbove && row.status === "in_progress" ? (
-                    <Button
-                      size="sm"
-                      disabled={submitMutation.isPending && submitMutation.variables?.countId === row.id}
-                      onClick={() => submitMutation.mutate({ countId: row.id })}
-                    >
-                      {submitMutation.isPending && submitMutation.variables?.countId === row.id ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Submitting…
-                        </>
-                      ) : (
-                        "Submit"
-                      )}
-                    </Button>
+                    <Button size="sm" onClick={() => submitMutation.mutate({ countId: row.id })}>Submit</Button>
                   ) : null}
                   {isManagerOrAdmin && row.status === "pending_review" ? (
-                    <Button
-                      size="sm"
-                      disabled={approveMutation.isPending && approveMutation.variables?.countId === row.id}
-                      onClick={() => approveMutation.mutate({ countId: row.id })}
-                    >
-                      {approveMutation.isPending && approveMutation.variables?.countId === row.id ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Approving…
-                        </>
-                      ) : (
-                        "Approve All"
-                      )}
-                    </Button>
+                    <Button size="sm" onClick={() => approveMutation.mutate({ countId: row.id })}>Approve All</Button>
                   ) : null}
                 </td>
               </tr>
@@ -194,7 +167,6 @@ export default function StockCounts({ embedInShell = false }: { embedInShell?: b
                 <p>Scope</p>
                 <Input value="All items" readOnly />
                 <Button
-                  disabled={createMutation.isPending}
                   onClick={() =>
                     createMutation.mutate({
                       warehouseId: Number(warehouseId),
@@ -203,30 +175,14 @@ export default function StockCounts({ embedInShell = false }: { embedInShell?: b
                     })
                   }
                 >
-                  {createMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Generating…
-                    </>
-                  ) : (
-                    "Generate Count Session"
-                  )}
+                  Generate Count Session
                 </Button>
               </div>
             ) : null}
             {step === 4 && countId ? (
               <div className="space-y-2">
                 <p>Review and generate count sheet</p>
-                <Button disabled={generateSheet.isPending} onClick={() => generateSheet.mutate({ countId })}>
-                  {generateSheet.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Generating…
-                    </>
-                  ) : (
-                    "Generate Count Sheet"
-                  )}
-                </Button>
+                <Button onClick={() => generateSheet.mutate({ countId })}>Generate Count Sheet</Button>
               </div>
             ) : null}
           </div>

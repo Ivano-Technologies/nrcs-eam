@@ -27,8 +27,6 @@ export const systemRouter = router({
       ok: true,
     })),
 
-  ping: publicProcedure.query(() => ({ ok: true })),
-
   notifyOwner: adminProcedure
     .input(
       z.object({

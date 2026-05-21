@@ -1,12 +1,10 @@
 import { useState } from "react";
-import PageHeader from "@/components/ui/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { trpc } from "@/lib/trpc";
-import TableLoader from "@/components/ui/TableLoader";
-import { CheckCircle, XCircle, Clock, Loader2, UserCheck } from "lucide-react";
+import { CheckCircle, XCircle, Clock, Loader2 } from "lucide-react";
 
 export default function PendingUsers() {
   const [selectedUser, setSelectedUser] = useState<number | null>(null);
@@ -51,19 +49,24 @@ export default function PendingUsers() {
     rejectMutation.mutate({ id: userId, reason: reason || undefined });
   };
 
-  if (isLoading) return <TableLoader />;
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+      </div>
+    );
+  }
 
   const pending = pendingUsers?.filter((u) => u.status === "pending") || [];
   const processed = pendingUsers?.filter((u) => u.status !== "pending") || [];
 
   return (
     <div className="container mx-auto py-6 space-y-6">
-      <div data-testid="pending-users-heading">
-        <PageHeader
-          icon={UserCheck}
-          title="Pending Users"
-          subtitle="Review and approve user signup requests"
-        />
+      <div>
+        <h1 className="text-3xl font-bold" data-testid="pending-users-heading">
+          User Access Requests
+        </h1>
+        <p className="text-gray-600 mt-2">Review and approve user signup requests</p>
       </div>
 
       {pending.length === 0 && (
@@ -115,34 +118,16 @@ export default function PendingUsers() {
                       disabled={approveMutation.isPending}
                       className="bg-green-600 hover:bg-green-700"
                     >
-                      {approveMutation.isPending ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Approving…
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          Approve
-                        </>
-                      )}
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Approve
                     </Button>
                     <Button
                       onClick={() => handleReject(user.id)}
                       disabled={rejectMutation.isPending}
                       variant="destructive"
                     >
-                      {rejectMutation.isPending ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Rejecting…
-                        </>
-                      ) : (
-                        <>
-                          <XCircle className="h-4 w-4 mr-2" />
-                          Reject
-                        </>
-                      )}
+                      <XCircle className="h-4 w-4 mr-2" />
+                      Reject
                     </Button>
                   </div>
                 </div>

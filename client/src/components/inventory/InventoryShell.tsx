@@ -2,9 +2,7 @@ import { appPath } from "@/lib/routes";
 import type { InventoryShellTab } from "@/lib/inventoryRoutes";
 import { locationMatchesInventoryTracking } from "@/lib/inventoryTrackingNav";
 import { Link, useLocation } from "wouter";
-import PageHeader from "@/components/ui/PageHeader";
 import { cn } from "@/lib/utils";
-import { Boxes } from "lucide-react";
 
 const TABS: { tab: InventoryShellTab; label: string; path: string }[] = [
   { tab: "stock-overview", label: "Stock overview", path: "/inventory/stock-overview" },
@@ -39,12 +37,12 @@ export function InventoryShell({ activeTab, children }: InventoryShellProps) {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <PageHeader
-          icon={Boxes}
-          title="Inventory"
-          subtitle="Humanitarian stock management for relief materials across warehouses."
-          className="mb-0"
-        />
+        <div>
+          <h1 className="text-3xl font-bold">Inventory</h1>
+          <p className="mt-1 text-muted-foreground">
+            Humanitarian stock management for relief materials across warehouses.
+          </p>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2 border-b border-border pb-2">

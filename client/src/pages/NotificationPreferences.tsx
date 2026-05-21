@@ -1,6 +1,4 @@
 import { trpc } from "@/lib/trpc";
-import PageHeader from "@/components/ui/PageHeader";
-import PageLoader from "@/components/ui/PageLoader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -26,7 +24,13 @@ export default function NotificationPreferences() {
     updatePreferencesMutation.mutate({ [key]: value });
   };
 
-  if (isLoading) return <PageLoader />;
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   const notificationTypes = [
     {
@@ -82,11 +86,12 @@ export default function NotificationPreferences() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        icon={Bell}
-        title="Notification Preferences"
-        subtitle="Customize which notifications you want to receive"
-      />
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Notification Preferences</h1>
+        <p className="text-muted-foreground mt-2">
+          Customize which notifications you want to receive
+        </p>
+      </div>
 
       <Card className="border-t-4 border-t-primary">
         <CardHeader>

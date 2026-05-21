@@ -302,13 +302,6 @@
       "when": 1779190289330,
       "tag": "0042_unindexed_fk_indexes",
       "breakpoints": true
-    },
-    {
-      "idx": 43,
-      "version": "7",
-      "when": 1779312504042,
-      "tag": "0043_assets_core_indexes",
-      "breakpoints": true
     }
   ]
 }

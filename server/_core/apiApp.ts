@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import cors from "cors";
-import express, { type Express, type Request, type Response } from "express";
+import express, { type Express } from "express";
 import { appRouter } from "../routers";
 import setupRouter from "../routes/setup";
 import documentsRouter from "../routes/documents";
@@ -25,14 +25,13 @@ export function createApiApp(): Express {
   app.options("*", cors(createDynamicCorsMiddlewareOptions()));
   app.use(cors(createDynamicCorsMiddlewareOptions()));
 
-  function healthHandler(_req: Request, res: Response) {
-    res.setHeader("Cache-Control", "no-store");
-    return res.status(200).json({ ok: true, ts: Date.now() });
-  }
-
   // Expose both to support standalone (`/health`) and /api function mounting (`/api/health`).
-  app.get("/health", healthHandler);
-  app.get("/api/health", healthHandler);
+  app.get("/health", (_req, res) => {
+    res.status(200).json({ ok: true });
+  });
+  app.get("/api/health", (_req, res) => {
+    res.status(200).json({ ok: true });
+  });
 
   app.use("/api", express.json({ limit: "50mb" }));
   app.use("/api", express.urlencoded({ limit: "50mb", extended: true }));

@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
-import PageLoader from "@/components/ui/PageLoader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,7 +9,7 @@ import { Link } from "wouter";
 import { FACILITY_TYPE_LABELS } from "@shared/facilities";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { toast } from "sonner";
-import { Loader2, MapPin } from "lucide-react";
+import { MapPin } from "lucide-react";
 
 export default function FacilityDetail() {
   const { isManagerOrAdmin } = usePermissions();
@@ -62,7 +61,7 @@ export default function FacilityDetail() {
   );
 
   if (!enabled) return <div className="text-sm text-muted-foreground">Invalid facility id.</div>;
-  if (!facility) return <PageLoader />;
+  if (!facility) return <div className="text-sm text-muted-foreground">Loading facility...</div>;
 
   return (
     <div className="space-y-4">
@@ -80,17 +79,8 @@ export default function FacilityDetail() {
               disabled={syncCoordsMutation.isPending}
               onClick={() => syncCoordsMutation.mutate({ siteId: facility.id })}
             >
-              {syncCoordsMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Syncing…
-                </>
-              ) : (
-                <>
-                  <MapPin className="mr-2 h-4 w-4" />
-                  Sync asset coordinates from facility
-                </>
-              )}
+              <MapPin className="mr-2 h-4 w-4" />
+              Sync asset coordinates from facility
             </Button>
           ) : null}
         </CardHeader>

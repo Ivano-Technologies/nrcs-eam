@@ -1,5 +1,4 @@
 import { ManagerFinanceGate } from "@/components/finance/ManagerFinanceGate";
-import PageHeader from "@/components/ui/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,7 +22,7 @@ import { formatNaira } from "@/lib/format";
 import { KPI_VALUE_CLASS } from "@/lib/kpiTypography";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { FileSpreadsheet, Loader2, RefreshCw, TrendingDown } from "lucide-react";
+import { FileSpreadsheet, RefreshCw } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -74,40 +73,20 @@ export default function DepreciationReporting() {
     <ManagerFinanceGate>
       <div className="container mx-auto space-y-6 p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <PageHeader
-            icon={TrendingDown}
-            title="Depreciation Reporting"
-            subtitle="Asset depreciation schedule and net book values"
-            className="mb-0"
-          />
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Depreciation Reporting</h1>
+            <p className="text-muted-foreground">Asset depreciation schedule and net book values</p>
+          </div>
           <div className="flex flex-wrap gap-2">
             {isAdmin ? (
               <Button variant="outline" disabled={recalc.isPending} onClick={() => recalc.mutate()}>
-                {recalc.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Recalculating…
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    Recalculate
-                  </>
-                )}
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Recalculate
               </Button>
             ) : null}
             <Button variant="default" disabled={exportExcel.isPending} onClick={() => exportExcel.mutate({})}>
-              {exportExcel.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Exporting…
-                </>
-              ) : (
-                <>
-                  <FileSpreadsheet className="mr-2 h-4 w-4" />
-                  Export Excel
-                </>
-              )}
+              <FileSpreadsheet className="mr-2 h-4 w-4" />
+              Export Excel
             </Button>
           </div>
         </div>

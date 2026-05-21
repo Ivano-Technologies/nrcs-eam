@@ -23,14 +23,12 @@ import { downloadBase64File } from "@/lib/download";
 import { formatNaira } from "@/lib/format";
 import { KPI_VALUE_CLASS } from "@/lib/kpiTypography";
 import { trpc } from "@/lib/trpc";
-import TableLoader from "@/components/ui/TableLoader";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "../../../../server/routers";
 
 type DonorBreakdownRow = inferRouterOutputs<AppRouter>["donorAssets"]["report"]["donors"][number];
 type DonorAssetRow = DonorBreakdownRow["assets"][number];
-import PageHeader from "@/components/ui/PageHeader";
-import { ChevronDown, ChevronRight, FileSpreadsheet, Gift, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronRight, FileSpreadsheet, Gift } from "lucide-react";
 import { Fragment, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -85,29 +83,23 @@ export default function DonorAssets() {
   return (
     <div className="container mx-auto space-y-6 p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <PageHeader
-          icon={Gift}
-          title="Donor Assets Report"
-          subtitle="Donor-funded assets from the register — acquisition and book values by donor"
-          className="mb-0"
-        />
+        <div>
+          <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight">
+            <Gift className="h-8 w-8 text-primary" />
+            Donor Assets
+          </h1>
+          <p className="text-muted-foreground">
+            Donor-funded assets from the register — acquisition and book values by donor
+          </p>
+        </div>
         {canExport ? (
           <Button
             variant="outline"
             disabled={exportExcel.isPending}
             onClick={() => exportExcel.mutate(filters)}
           >
-            {exportExcel.isPending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Exporting…
-              </>
-            ) : (
-              <>
-                <FileSpreadsheet className="mr-2 h-4 w-4" />
-                Export to Excel
-              </>
-            )}
+            <FileSpreadsheet className="mr-2 h-4 w-4" />
+            Export to Excel
           </Button>
         ) : null}
       </div>
@@ -227,8 +219,8 @@ export default function DonorAssets() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6}>
-                    <TableLoader />
+                  <TableCell colSpan={6} className="text-center text-muted-foreground">
+                    Loading…
                   </TableCell>
                 </TableRow>
               ) : (report?.donors ?? []).length === 0 ? (

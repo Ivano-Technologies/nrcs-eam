@@ -1,11 +1,9 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
-import PageLoader from "@/components/ui/PageLoader";
-import PageHeader from "@/components/ui/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, Loader2, Mail, ShieldAlert } from "lucide-react";
+import { AlertTriangle, Calendar, Mail } from "lucide-react";
 import { toast } from "sonner";
 
 export default function WarrantyAlerts() {
@@ -35,18 +33,25 @@ export default function WarrantyAlerts() {
     return "secondary";
   };
 
-  if (isLoading) return <PageLoader />;
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <PageHeader
-          icon={ShieldAlert}
-          title="Warranty Alerts"
-          subtitle="Monitor asset warranties and receive expiration alerts"
-          className="mb-0"
-        />
+        <div>
+          <h1 className="text-3xl font-bold">Warranty Alerts</h1>
+          <p className="text-muted-foreground mt-2">
+            Monitor asset warranties and receive expiration alerts
+          </p>
+        </div>
         <div className="flex items-center gap-2">
+          <AlertTriangle className="h-5 w-5 text-destructive" />
           <span className="text-sm text-muted-foreground">
             {expiringWarranties?.filter(a => getDaysUntilExpiry(a.warrantyExpiry!) <= 90).length || 0} expiring soon
           </span>
@@ -96,17 +101,8 @@ export default function WarrantyAlerts() {
                   onClick={() => sendAlertMutation.mutate({ assetId: asset.id })}
                   disabled={sendAlertMutation.isPending}
                 >
-                  {sendAlertMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Sending…
-                    </>
-                  ) : (
-                    <>
-                      <Mail className="mr-2 h-4 w-4" />
-                      Send Alert Email
-                    </>
-                  )}
+                  <Mail className="mr-2 h-4 w-4" />
+                  Send Alert Email
                 </Button>
               </CardContent>
             </Card>

@@ -6,7 +6,6 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
 import { useBulkImportFileInput } from "@/hooks/useBulkImportFileInput";
 
 type DocType = "grn" | "waybill" | "monthly_report" | "stock_card";
@@ -118,14 +117,7 @@ export default function ImportPage({ embedInShell = false }: { embedInShell?: bo
               disabled={!rows.length || hasError || createDraft.isPending}
               onClick={() => createDraft.mutate({ source, documentType: docType, fileName, rows })}
             >
-              {createDraft.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Importing…
-                </>
-              ) : (
-                "Import as drafts"
-              )}
+              Import as drafts
             </Button>
             <Button variant="outline" onClick={() => location.assign("/app/inventory/import/drafts")}>
               Open drafts inbox

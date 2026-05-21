@@ -1,13 +1,11 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
-import PageHeader from "@/components/ui/PageHeader";
-import TableLoader from "@/components/ui/TableLoader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Plus, Search, Wrench, Calendar, ClipboardList } from "lucide-react";
+import { Plus, Search, Wrench, Calendar } from "lucide-react";
 import { Link } from "wouter";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -106,12 +104,12 @@ export default function WorkOrders() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <PageHeader
-          icon={ClipboardList}
-          title="Work Orders"
-          subtitle="Manage maintenance and repair work orders"
-          className="mb-0"
-        />
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Work Orders</h1>
+          <p className="text-muted-foreground mt-2">
+            Manage maintenance and repair work orders
+          </p>
+        </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button data-testid="work-order-create-btn">
@@ -245,14 +243,7 @@ export default function WorkOrders() {
                 onClick={handleCreateWorkOrder}
                 disabled={createWorkOrderMutation.isPending}
               >
-                {createWorkOrderMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  "Create Work Order"
-                )}
+                {createWorkOrderMutation.isPending ? "Creating..." : "Create Work Order"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -284,7 +275,9 @@ export default function WorkOrders() {
       </Card>
 
       {isLoading ? (
-        <TableLoader className="py-8" />
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
       ) : workOrders && workOrders.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3" data-testid="work-order-list">
           {workOrders.map((wo) => (

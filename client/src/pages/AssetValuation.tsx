@@ -15,10 +15,8 @@ import { downloadBase64File } from "@/lib/download";
 import { formatNaira, formatNairaSummaryCard } from "@/lib/format";
 import { KPI_VALUE_CLASS } from "@/lib/kpiTypography";
 import { trpc } from "@/lib/trpc";
-import PageHeader from "@/components/ui/PageHeader";
-import PageLoader from "@/components/ui/PageLoader";
 import { cn } from "@/lib/utils";
-import { AlertTriangle, ArrowDown, ArrowUp, Download, FileSpreadsheet, Loader2, TrendingUp } from "lucide-react";
+import { AlertTriangle, ArrowDown, ArrowUp, Download, FileSpreadsheet } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -227,7 +225,20 @@ export default function AssetValuation() {
     );
   }
 
-  if (reportQuery.isLoading) return <PageLoader />;
+  if (reportQuery.isLoading) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 w-1/3 rounded bg-muted" />
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="h-24 rounded bg-muted" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (reportQuery.isError || !reportQuery.data) {
     return (
@@ -248,12 +259,12 @@ export default function AssetValuation() {
   return (
     <div className="container mx-auto space-y-8 p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <PageHeader
-          icon={TrendingUp}
-          title="Asset Valuation"
-          subtitle="Property register, movable asset totals, and executive exports (Finance)."
-          className="mb-0"
-        />
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Asset Valuation</h1>
+          <p className="text-muted-foreground">
+            Property register, movable asset totals, and executive exports (Finance).
+          </p>
+        </div>
         <div className="flex flex-wrap gap-2">
           <Button
             type="button"
@@ -262,17 +273,8 @@ export default function AssetValuation() {
             disabled={excelMutation.isPending}
             onClick={() => excelMutation.mutate()}
           >
-            {excelMutation.isPending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Exporting…
-              </>
-            ) : (
-              <>
-                <FileSpreadsheet className="mr-2 h-4 w-4" />
-                Export to Excel
-              </>
-            )}
+            <FileSpreadsheet className="mr-2 h-4 w-4" />
+            Export to Excel
           </Button>
           <Button
             type="button"
@@ -280,17 +282,8 @@ export default function AssetValuation() {
             disabled={pdfMutation.isPending}
             onClick={() => pdfMutation.mutate()}
           >
-            {pdfMutation.isPending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Exporting…
-              </>
-            ) : (
-              <>
-                <Download className="mr-2 h-4 w-4" />
-                Export to PDF
-              </>
-            )}
+            <Download className="mr-2 h-4 w-4" />
+            Export to PDF
           </Button>
         </div>
       </div>
