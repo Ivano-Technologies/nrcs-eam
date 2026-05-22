@@ -21,7 +21,12 @@ export default function PageHeader({
         {title}
       </h1>
       {subtitle && (
-        <p className="mt-1 text-muted-foreground">{subtitle}</p>
+        <p
+          className="mt-1 text-muted-foreground max-w-2xl line-clamp-2 sm:line-clamp-none"
+          title={subtitle}
+        >
+          {subtitle}
+        </p>
       )}
     </div>
   );
