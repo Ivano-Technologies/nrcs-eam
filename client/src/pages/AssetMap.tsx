@@ -15,11 +15,55 @@ import { Switch } from "@/components/ui/switch";
 import { DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM_COUNTRY } from "@/lib/mapDefaults";
 import { appPath } from "@/lib/routes";
 import { trpc } from "@/lib/trpc";
+import type { AppRouter } from "../../../server/routers";
 import {
   FACILITY_TYPE_VALUES,
   type FacilityType,
 } from "@shared/facilities";
+import type { inferRouterOutputs } from "@trpc/server";
 import { Map as MapIcon } from "lucide-react";
+
+type SiteMapDataRow = inferRouterOutputs<AppRouter>["sites"]["mapData"][number];
+
+function buildInfoWindowContent(
+  facility: SiteMapDataRow,
+  photoUrl: string | null
+): string {
+  const facilityDetailHref = appPath(`/facilities/${facility.id}`);
+  return `
+    <div style="min-width:220px;font-family:sans-serif;border-radius:8px;overflow:hidden">
+      ${
+        photoUrl
+          ? `
+        <div style="width:100%;height:140px;overflow:hidden;margin-bottom:10px;border-radius:6px">
+          <img
+            src="${photoUrl}"
+            style="width:100%;height:100%;object-fit:cover"
+            alt="Facility photo"
+          />
+        </div>
+      `
+          : ""
+      }
+      <div style="padding: ${photoUrl ? "0 4px 4px" : "4px"}">
+        <div style="font-weight:700;font-size:15px;margin-bottom:4px">${facility.name}</div>
+        <div style="font-size:12px;color:#666;margin-bottom:8px">
+          ${FACILITY_LABELS[facility.facilityType]}
+        </div>
+        <div style="font-size:13px;margin-bottom:4px">
+          Assets: <strong>${facility.assetCount}</strong>
+        </div>
+        <div style="font-size:13px;margin-bottom:12px">
+          Inventory items: <strong>${facility.inventoryCount}</strong>
+        </div>
+        <a href="${facilityDetailHref}"
+          style="display:inline-block;background:#DC2626;color:#fff;padding:6px 14px;border-radius:6px;font-size:13px;text-decoration:none;font-weight:600">
+          View Details
+        </a>
+      </div>
+    </div>
+  `;
+}
 
 const FACILITY_COLOURS: Record<FacilityType, string> = {
   national_headquarters: "#DC2626",
@@ -57,6 +101,8 @@ function facilityPosition(
 export default function AssetMap() {
   const [selectedFacilityType, setSelectedFacilityType] = useState<string>("all");
   const [showAssetOverlay, setShowAssetOverlay] = useState(false);
+  const [activeFacilityPhoto, setActiveFacilityPhoto] = useState<string | null>(null);
+  const [activeFacilityId, setActiveFacilityId] = useState<number | null>(null);
 
   const mapRef = useRef<google.maps.Map | null>(null);
   const facilityMarkersRef = useRef<google.maps.Marker[]>([]);
@@ -69,6 +115,29 @@ export default function AssetMap() {
 
   const mapData = trpc.sites.mapData.useQuery();
   const assets = trpc.assets.list.useQuery({}, { enabled: showAssetOverlay });
+  const facilityPhotosQuery = trpc.facilityPhotos.list.useQuery(
+    { siteId: activeFacilityId! },
+    { enabled: activeFacilityId !== null }
+  );
+
+  useEffect(() => {
+    if (facilityPhotosQuery.data?.length) {
+      setActiveFacilityPhoto(facilityPhotosQuery.data[0].photoUrl);
+    } else {
+      setActiveFacilityPhoto(null);
+    }
+  }, [facilityPhotosQuery.data]);
+
+  useEffect(() => {
+    if (infoWindowRef.current && activeFacilityId !== null && mapRef.current) {
+      const facility = mapData.data?.find((f) => f.id === activeFacilityId);
+      if (facility) {
+        infoWindowRef.current.setContent(
+          buildInfoWindowContent(facility, activeFacilityPhoto)
+        );
+      }
+    }
+  }, [activeFacilityPhoto, activeFacilityId, mapData.data]);
 
   const resetPolylines = useCallback(() => {
     polylinesRef.current.forEach(({ line }) => {
@@ -146,23 +215,11 @@ export default function AssetMap() {
         marker.setOpacity(1);
       }
 
-      const facilityDetailHref = appPath(`/facilities/${facility.id}`);
-      const infoHtml = `
-        <div style="min-width:200px;font-family:sans-serif">
-          <div style="font-weight:700;font-size:15px;margin-bottom:4px">${facility.name}</div>
-          <div style="font-size:12px;color:#666;margin-bottom:8px">${FACILITY_LABELS[type]}</div>
-          <div style="font-size:13px;margin-bottom:4px">Assets: <strong>${facility.assetCount}</strong></div>
-          <div style="font-size:13px;margin-bottom:12px">Inventory items: <strong>${facility.inventoryCount}</strong></div>
-          <a href="${facilityDetailHref}"
-             style="display:inline-block;background:#DC2626;color:#fff;padding:6px 14px;border-radius:6px;font-size:13px;text-decoration:none;font-weight:600">
-            View Details
-          </a>
-        </div>
-      `;
-
       marker.addListener("click", () => {
         highlightPolylines(facility.id);
-        infoWindowRef.current?.setContent(infoHtml);
+        setActiveFacilityId(facility.id);
+        setActiveFacilityPhoto(null);
+        infoWindowRef.current?.setContent(buildInfoWindowContent(facility, null));
         infoWindowRef.current?.open({ map, anchor: marker });
       });
 
@@ -275,10 +332,14 @@ export default function AssetMap() {
       if (!mapListenersAttachedRef.current) {
         infoWindowRef.current.addListener("closeclick", () => {
           resetPolylines();
+          setActiveFacilityId(null);
+          setActiveFacilityPhoto(null);
         });
         googleMap.addListener("click", () => {
           infoWindowRef.current?.close();
           resetPolylines();
+          setActiveFacilityId(null);
+          setActiveFacilityPhoto(null);
         });
         mapListenersAttachedRef.current = true;
       }
