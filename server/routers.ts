@@ -387,6 +387,107 @@ export const appRouter = router({
       }),
   }),
 
+  facilityPhotos: router({
+    list: protectedProcedure
+      .input(z.object({ siteId: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getFacilityPhotos(input.siteId);
+      }),
+
+    upload: managerOrAdminProcedure
+      .input(
+        z.object({
+          siteId: z.number(),
+          photoUrl: z.string().url(),
+          photoKey: z.string(),
+          caption: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const site = await db.getSiteById(input.siteId);
+        if (!site) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Facility not found." });
+        }
+        const existing = await db.getFacilityPhotos(input.siteId);
+        if (existing.length >= 10) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Maximum 10 photos per facility",
+          });
+        }
+        return await db.addFacilityPhoto({
+          siteId: input.siteId,
+          photoUrl: input.photoUrl,
+          photoKey: input.photoKey,
+          caption: input.caption,
+          uploadedBy: ctx.user.id,
+        });
+      }),
+
+    delete: managerOrAdminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const photo = await db.getFacilityPhotoById(input.id);
+        if (!photo) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Photo not found." });
+        }
+        if (ctx.user.role === "admin") {
+          await db.deleteFacilityPhotoById(input.id);
+        } else {
+          await db.deleteFacilityPhoto(input.id, ctx.user.id);
+        }
+        return { success: true as const };
+      }),
+
+    uploadUrl: managerOrAdminProcedure
+      .input(
+        z.object({
+          siteId: z.number(),
+          fileName: z.string().min(1),
+          fileType: z.string().min(1),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const site = await db.getSiteById(input.siteId);
+        if (!site) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Facility not found." });
+        }
+        const allowed = ["image/jpeg", "image/png", "image/webp"];
+        if (!allowed.includes(input.fileType)) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Only JPEG, PNG, and WebP images are allowed",
+          });
+        }
+        const safeName = input.fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const photoKey = `facilities/${input.siteId}/${Date.now()}-${safeName}`;
+        const supabase = getSupabaseSecret();
+        const { data, error } = await supabase.storage
+          .from("facility-photos")
+          .createSignedUploadUrl(photoKey);
+        if (error || !data?.signedUrl) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: error?.message ?? "Failed to create upload URL",
+          });
+        }
+        const { data: publicData } = supabase.storage
+          .from("facility-photos")
+          .getPublicUrl(photoKey);
+        if (!publicData?.publicUrl) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Could not resolve public photo URL",
+          });
+        }
+        return {
+          uploadUrl: data.signedUrl,
+          photoKey,
+          publicUrl: publicData.publicUrl,
+        };
+      }),
+  }),
+
   nav: router({
     sidebarCounts: protectedProcedure.query(async () => await db.getNavSidebarCounts()),
   }),

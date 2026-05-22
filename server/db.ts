@@ -26,6 +26,9 @@ import {
   inventoryItems, InsertInventoryItem, inventoryTransactions, vendors, InsertVendor,
   financialTransactions, complianceRecords, auditLogs, documents,
   notifications, notificationPreferences, assetPhotos, InsertAssetPhoto,
+  facilityPhotos,
+  type FacilityPhoto,
+  type NewFacilityPhoto,
   scheduledReports, InsertScheduledReport, assetTransfers, quickbooksConfig, InsertQuickBooksConfig,
   userPreferences, InsertUserPreferences, emailNotifications, InsertEmailNotification,
   workOrderTemplates, InsertWorkOrderTemplate,
@@ -584,6 +587,49 @@ export async function updateSite(id: number, data: Partial<InsertSite>) {
   if (!db) return null;
   await db.update(sites).set(data).where(eq(sites.id, id));
   return await getSiteById(id);
+}
+
+export async function getFacilityPhotos(siteId: number): Promise<FacilityPhoto[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return await db
+    .select()
+    .from(facilityPhotos)
+    .where(eq(facilityPhotos.siteId, siteId))
+    .orderBy(desc(facilityPhotos.createdAt));
+}
+
+export async function addFacilityPhoto(data: NewFacilityPhoto): Promise<FacilityPhoto> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [row] = await db.insert(facilityPhotos).values(data).returning();
+  if (!row) throw new Error("Failed to insert facility photo");
+  return row;
+}
+
+export async function deleteFacilityPhoto(id: number, uploadedBy: number): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db
+    .delete(facilityPhotos)
+    .where(and(eq(facilityPhotos.id, id), eq(facilityPhotos.uploadedBy, uploadedBy)));
+}
+
+export async function deleteFacilityPhotoById(id: number): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(facilityPhotos).where(eq(facilityPhotos.id, id));
+}
+
+export async function getFacilityPhotoById(id: number): Promise<FacilityPhoto | null> {
+  const db = await getDb();
+  if (!db) return null;
+  return await db
+    .select()
+    .from(facilityPhotos)
+    .where(eq(facilityPhotos.id, id))
+    .limit(1)
+    .then((r) => r[0] ?? null);
 }
 
 // ============= ASSET CATEGORIES =============
