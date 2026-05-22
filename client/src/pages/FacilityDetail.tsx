@@ -2,12 +2,12 @@ import { useMemo } from "react";
 import { useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import PageLoader from "@/components/ui/PageLoader";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { appPath } from "@/lib/routes";
 import { Link } from "wouter";
-import { FACILITY_TYPE_LABELS } from "@shared/facilities";
+import { FACILITY_TYPE_DESCRIPTIONS, FACILITY_TYPE_LABELS } from "@shared/facilities";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { toast } from "sonner";
 import { Loader2, MapPin } from "lucide-react";
@@ -72,6 +72,12 @@ export default function FacilityDetail() {
             {facility.name}
             <Badge variant="outline">{FACILITY_TYPE_LABELS[facility.facilityType]}</Badge>
           </CardTitle>
+          <CardDescription
+            className="mt-1 text-sm text-muted-foreground max-w-2xl line-clamp-2 sm:line-clamp-none"
+            title={FACILITY_TYPE_DESCRIPTIONS[facility.facilityType]}
+          >
+            {FACILITY_TYPE_DESCRIPTIONS[facility.facilityType]}
+          </CardDescription>
           {isManagerOrAdmin ? (
             <Button
               type="button"
