@@ -1647,10 +1647,12 @@ export async function setAppSettingValue(key: string, value: string): Promise<vo
 
 const SEARCH_LIMIT = 8;
 
-export async function searchAssetsGlobal(pattern: string) {
+export async function searchAssetsGlobal(pattern: string, siteId?: number) {
+  if (siteId === -1) return [];
   const database = await getDb();
   if (!database) return [];
   const q = `%${pattern}%`;
+  const textMatch = or(ilike(assets.name, q), ilike(assets.assetTag, q))!;
   return database
     .select({
       id: assets.id,
@@ -1659,14 +1661,18 @@ export async function searchAssetsGlobal(pattern: string) {
       status: assets.status,
     })
     .from(assets)
-    .where(or(ilike(assets.name, q), ilike(assets.assetTag, q)))
+    .where(
+      siteId != null && siteId > 0 ? and(textMatch, eq(assets.siteId, siteId)) : textMatch
+    )
     .limit(SEARCH_LIMIT);
 }
 
-export async function searchWorkOrdersGlobal(pattern: string) {
+export async function searchWorkOrdersGlobal(pattern: string, siteId?: number) {
+  if (siteId === -1) return [];
   const database = await getDb();
   if (!database) return [];
   const q = `%${pattern}%`;
+  const textMatch = or(ilike(workOrders.workOrderNumber, q), ilike(workOrders.title, q))!;
   return database
     .select({
       id: workOrders.id,
@@ -1675,14 +1681,18 @@ export async function searchWorkOrdersGlobal(pattern: string) {
       status: workOrders.status,
     })
     .from(workOrders)
-    .where(or(ilike(workOrders.workOrderNumber, q), ilike(workOrders.title, q)))
+    .where(
+      siteId != null && siteId > 0 ? and(textMatch, eq(workOrders.siteId, siteId)) : textMatch
+    )
     .limit(SEARCH_LIMIT);
 }
 
-export async function searchInventoryGlobal(pattern: string) {
+export async function searchInventoryGlobal(pattern: string, siteId?: number) {
+  if (siteId === -1) return [];
   const database = await getDb();
   if (!database) return [];
   const q = `%${pattern}%`;
+  const textMatch = or(ilike(inventoryItems.name, q), ilike(inventoryItems.itemCode, q))!;
   return database
     .select({
       id: inventoryItems.id,
@@ -1691,7 +1701,9 @@ export async function searchInventoryGlobal(pattern: string) {
       currentStock: inventoryItems.currentStock,
     })
     .from(inventoryItems)
-    .where(or(ilike(inventoryItems.name, q), ilike(inventoryItems.itemCode, q)))
+    .where(
+      siteId != null && siteId > 0 ? and(textMatch, eq(inventoryItems.siteId, siteId)) : textMatch
+    )
     .limit(SEARCH_LIMIT);
 }
 

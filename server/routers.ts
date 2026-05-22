@@ -2825,10 +2825,11 @@ export const appRouter = router({
       .input(z.object({ query: z.string().min(2).max(100) }))
       .query(async ({ input, ctx }) => {
         const raw = input.query.trim();
+        const scopedSiteId = enforceFacilityScope(ctx.user);
         const [assets, workOrders, inventory, sites] = await Promise.all([
-          db.searchAssetsGlobal(raw),
-          db.searchWorkOrdersGlobal(raw),
-          db.searchInventoryGlobal(raw),
+          db.searchAssetsGlobal(raw, scopedSiteId),
+          db.searchWorkOrdersGlobal(raw, scopedSiteId),
+          db.searchInventoryGlobal(raw, scopedSiteId),
           db.searchSitesGlobal(raw),
         ]);
         const users = ctx.user.role === "admin" ? await db.searchUsersGlobal(raw) : [];

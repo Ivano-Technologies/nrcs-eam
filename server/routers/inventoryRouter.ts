@@ -27,6 +27,7 @@ import {
 } from "../../drizzle/schema";
 import { getDb, getAllUsers, createNotification, getUserById } from "../db";
 import { protectedProcedure, requireRole, router } from "../_core/trpc";
+import { enforceFacilityScope, assertFacilityAccess } from "../_core/facilityAccess";
 import { checkStockThreshold } from "../_core/inventoryAlerts";
 import {
   IFRC_CATALOGUE_SEED,
@@ -757,7 +758,10 @@ export const inventoryV2Router = router({
           })
           .optional()
       )
-      .query(async ({ input }) => {
+      .query(async ({ input, ctx }) => {
+        const scopedWarehouseId = enforceFacilityScope(ctx.user, input?.warehouseId);
+        if (scopedWarehouseId === -1) return [];
+
         const db = await getDb();
         if (!db) return [];
 
@@ -767,7 +771,9 @@ export const inventoryV2Router = router({
           .where(
             and(
               eq(sites.facilityType, "warehouse"),
-              input?.warehouseId ? eq(sites.id, input.warehouseId) : undefined
+              scopedWarehouseId != null && scopedWarehouseId > 0
+                ? eq(sites.id, scopedWarehouseId)
+                : undefined
             )
           )
           .orderBy(asc(sites.name));
@@ -865,7 +871,8 @@ export const inventoryV2Router = router({
 
     byWarehouse: protectedProcedure
       .input(z.object({ warehouseId: z.number() }))
-      .query(async ({ input }) => {
+      .query(async ({ input, ctx }) => {
+        assertFacilityAccess(ctx.user, input.warehouseId);
         const db = await getDb();
         if (!db) return [];
         const rows = await db
@@ -1029,12 +1036,15 @@ export const inventoryV2Router = router({
           })
           .optional()
       )
-      .query(async ({ input }) => {
+      .query(async ({ input, ctx }) => {
+        const scopedWarehouseId = enforceFacilityScope(ctx.user, input?.warehouseId);
+        if (scopedWarehouseId === -1) return [];
+
         const db = await getDb();
         if (!db) return [];
         const filters = [];
-        if (input?.warehouseId) {
-          filters.push(eq(stockCards.locationId, input.warehouseId));
+        if (scopedWarehouseId != null && scopedWarehouseId > 0) {
+          filters.push(eq(stockCards.locationId, scopedWarehouseId));
         }
         if (input?.itemId) filters.push(eq(commodityTrackingNumbers.itemId, input.itemId));
         if (input?.type) filters.push(eq(stockMovements.sourceType, input.type as any));
@@ -1375,7 +1385,10 @@ export const inventoryV2Router = router({
           })
           .optional()
       )
-      .query(async ({ input }) => {
+      .query(async ({ input, ctx }) => {
+        const scopedWarehouseId = enforceFacilityScope(ctx.user, input?.warehouseId);
+        if (scopedWarehouseId === -1) return [];
+
         const db = await getDb();
         if (!db) return [];
         const statusFilter =
@@ -1394,7 +1407,9 @@ export const inventoryV2Router = router({
           .where(
             and(
               eq(inventoryDocuments.documentType, "grn"),
-              input?.warehouseId ? eq(inventoryDocuments.toWarehouseId, input.warehouseId) : undefined,
+              scopedWarehouseId != null && scopedWarehouseId > 0
+                ? eq(inventoryDocuments.toWarehouseId, scopedWarehouseId)
+                : undefined,
               statusFilter ? eq(inventoryDocuments.status, statusFilter) : undefined,
               search
                 ? or(
@@ -1463,11 +1478,16 @@ export const inventoryV2Router = router({
           })
           .optional()
       )
-      .query(async ({ input }) => {
+      .query(async ({ input, ctx }) => {
+        const scopedWarehouseId = enforceFacilityScope(ctx.user, input?.warehouseId);
+        if (scopedWarehouseId === -1) return [];
+
         const db = await getDb();
         if (!db) return [];
         const filters = [];
-        if (input?.warehouseId) filters.push(eq(waybills.warehouseId, input.warehouseId));
+        if (scopedWarehouseId != null && scopedWarehouseId > 0) {
+          filters.push(eq(waybills.warehouseId, scopedWarehouseId));
+        }
         if (input?.status) filters.push(eq(waybills.status, input.status));
         if (input?.destinationType) filters.push(eq(waybills.destinationType, input.destinationType));
         if (input?.dateFrom) filters.push(gte(waybills.date, input.dateFrom));
@@ -2370,13 +2390,18 @@ export const inventoryV2Router = router({
 
     list: protectedProcedure
       .input(z.object({ status: z.string().optional(), priority: z.string().optional(), facilityId: z.number().optional(), search: z.string().optional() }).optional())
-      .query(async ({ input }) => {
+      .query(async ({ input, ctx }) => {
+        const scopedFacilityId = enforceFacilityScope(ctx.user, input?.facilityId);
+        if (scopedFacilityId === -1) return [];
+
         const db = await getDb();
         if (!db) return [];
         const filters = [];
         if (input?.status) filters.push(eq(requisitions.status, input.status));
         if (input?.priority) filters.push(eq(requisitions.priority, input.priority));
-        if (input?.facilityId) filters.push(eq(requisitions.requestingFacility, input.facilityId));
+        if (scopedFacilityId != null && scopedFacilityId > 0) {
+          filters.push(eq(requisitions.requestingFacility, scopedFacilityId));
+        }
         if (input?.search?.trim()) filters.push(ilike(requisitions.title, `%${input.search.trim()}%`));
         return db.select().from(requisitions).where(filters.length ? and(...filters) : undefined).orderBy(desc(requisitions.createdAt));
       }),
@@ -4123,7 +4148,10 @@ export const inventoryV2Router = router({
 
     list: protectedProcedure
       .input(z.object({ warehouseId: z.number().optional(), status: z.string().optional() }).optional())
-      .query(async ({ input }) => {
+      .query(async ({ input, ctx }) => {
+        const scopedWarehouseId = enforceFacilityScope(ctx.user, input?.warehouseId);
+        if (scopedWarehouseId === -1) return [];
+
         const db = await getDb();
         if (!db) return [];
         return db
@@ -4131,7 +4159,9 @@ export const inventoryV2Router = router({
           .from(inventoryCounts)
           .where(
             and(
-              input?.warehouseId ? eq(inventoryCounts.warehouseId, input.warehouseId) : undefined,
+              scopedWarehouseId != null && scopedWarehouseId > 0
+                ? eq(inventoryCounts.warehouseId, scopedWarehouseId)
+                : undefined,
               input?.status ? eq(inventoryCounts.status, input.status) : undefined
             )
           )
