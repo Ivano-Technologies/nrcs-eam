@@ -141,6 +141,9 @@ playwright/.auth/
 
 # Local screenshot / capture output
 artifacts/
+# Production/debug captures at repo root (not client/public assets)
+*-production-*.png
+*-login-redirect.png
 
 # MVP audit: regenerate with `pnpm test:e2e`
 tests/mvp-audit/screenshots/*
