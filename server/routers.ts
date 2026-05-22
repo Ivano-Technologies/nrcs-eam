@@ -4,6 +4,11 @@ import { and, asc, desc, eq, gte, ilike, lte, or, sql } from "drizzle-orm";
 import { toPublicUser } from "./_core/sanitizeUser";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
+import {
+  enforceFacilityScope,
+  assertFacilityAccess,
+  assertRecordFacilityAccess,
+} from "./_core/facilityAccess";
 import * as db from "./db";
 import * as notificationHelper from "./notificationHelper";
 import { generatePDFReport, generateExcelReport } from "./reportGenerator";
@@ -390,7 +395,8 @@ export const appRouter = router({
   facilityPhotos: router({
     list: protectedProcedure
       .input(z.object({ siteId: z.number() }))
-      .query(async ({ input }) => {
+      .query(async ({ input, ctx }) => {
+        assertFacilityAccess(ctx.user, input.siteId);
         return await db.getFacilityPhotos(input.siteId);
       }),
 
@@ -517,8 +523,9 @@ export const appRouter = router({
         categoryId: z.number().optional(),
         categoryIds: z.array(z.number().int().positive()).optional(),
       }).optional())
-      .query(async ({ input }) => {
-        return await db.getAllAssets(input);
+      .query(async ({ input, ctx }) => {
+        const scopedSiteId = enforceFacilityScope(ctx.user, input?.siteId);
+        return await db.getAllAssets({ ...(input ?? {}), siteId: scopedSiteId });
       }),
     
     getById: protectedProcedure
@@ -556,8 +563,9 @@ export const appRouter = router({
           })
           .optional()
       )
-      .query(async ({ input }) => {
-        return await db.getAssetRegisterList(input ?? {});
+      .query(async ({ input, ctx }) => {
+        const scopedSiteId = enforceFacilityScope(ctx.user, input?.siteId);
+        return await db.getAssetRegisterList({ ...(input ?? {}), siteId: scopedSiteId });
       }),
     
     create: managerOrAdminProcedure
@@ -1059,8 +1067,9 @@ export const appRouter = router({
         status: z.string().optional(),
         assignedTo: z.number().optional(),
       }).optional())
-      .query(async ({ input }) => {
-        return await db.getAllWorkOrders(input);
+      .query(async ({ input, ctx }) => {
+        const scopedSiteId = enforceFacilityScope(ctx.user, input?.siteId);
+        return await db.getAllWorkOrders({ ...(input ?? {}), siteId: scopedSiteId });
       }),
     
     getById: protectedProcedure
@@ -1261,14 +1270,16 @@ export const appRouter = router({
   inventory: router({
     list: protectedProcedure
       .input(z.object({ siteId: z.number().optional() }).optional())
-      .query(async ({ input }) => {
-        return await db.getAllInventoryItems(input?.siteId);
+      .query(async ({ input, ctx }) => {
+        const scopedSiteId = enforceFacilityScope(ctx.user, input?.siteId);
+        return await db.getAllInventoryItems(scopedSiteId);
       }),
     
     lowStock: protectedProcedure
       .input(z.object({ siteId: z.number().optional() }).optional())
-      .query(async ({ input }) => {
-        return await db.getLowStockItems(input?.siteId);
+      .query(async ({ input, ctx }) => {
+        const scopedSiteId = enforceFacilityScope(ctx.user, input?.siteId);
+        return await db.getLowStockItems(scopedSiteId);
       }),
     
     transactions: protectedProcedure
@@ -1339,8 +1350,9 @@ export const appRouter = router({
           })
           .optional()
       )
-      .query(async ({ input }) => {
-        return await db.getInventoryMovements(input ?? {});
+      .query(async ({ input, ctx }) => {
+        const scopedSiteId = enforceFacilityScope(ctx.user, input?.siteId);
+        return await db.getInventoryMovements({ ...(input ?? {}), siteId: scopedSiteId });
       }),
 
     submitStockCount: protectedProcedure
@@ -3758,8 +3770,9 @@ export const appRouter = router({
         assetId: z.number().optional(),
         siteId: z.number().optional(),
       }).optional())
-      .query(async ({ input }) => {
-        return await db.getAllAssetTransfers(input);
+      .query(async ({ input, ctx }) => {
+        const scopedSiteId = enforceFacilityScope(ctx.user, input?.siteId);
+        return await db.getAllAssetTransfers({ ...(input ?? {}), siteId: scopedSiteId });
       }),
 
     getById: protectedProcedure
