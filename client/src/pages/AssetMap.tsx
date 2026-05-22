@@ -1,330 +1,392 @@
-import { trpc } from "@/lib/trpc";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { MapView } from "@/components/Map";
 import PageHeader from "@/components/ui/PageHeader";
 import PageLoader from "@/components/ui/PageLoader";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MapView } from "@/components/Map";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Map, MapPin, Navigation } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM_COUNTRY } from "@/lib/mapDefaults";
 import { appPath } from "@/lib/routes";
+import { trpc } from "@/lib/trpc";
+import {
+  FACILITY_TYPE_VALUES,
+  type FacilityType,
+} from "@shared/facilities";
+import { Map as MapIcon } from "lucide-react";
+
+const FACILITY_COLOURS: Record<FacilityType, string> = {
+  national_headquarters: "#DC2626",
+  division: "#EAB308",
+  branch: "#EA580C",
+  clinic: "#2563EB",
+  warehouse: "#16A34A",
+};
+
+const FACILITY_LABELS: Record<FacilityType, string> = {
+  national_headquarters: "NHQ",
+  division: "Division",
+  branch: "Branch",
+  clinic: "Clinic",
+  warehouse: "Warehouse",
+};
+
+const ASSET_OVERLAY_COLOUR = "#F59E0B";
+
+function parseCoord(value: string | null | undefined): number | null {
+  if (value == null || value === "") return null;
+  const n = parseFloat(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function facilityPosition(
+  facility: { latitude: string | null; longitude: string | null }
+): google.maps.LatLngLiteral | null {
+  const lat = parseCoord(facility.latitude);
+  const lng = parseCoord(facility.longitude);
+  if (lat == null || lng == null) return null;
+  return { lat, lng };
+}
 
 export default function AssetMap() {
-  const [selectedSite, setSelectedSite] = useState<string>("all");
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [map, setMap] = useState<google.maps.Map | null>(null);
-  const [markers, setMarkers] = useState<google.maps.Marker[]>([]);
-  const [siteMarkers, setSiteMarkers] = useState<google.maps.Marker[]>([]);
+  const [selectedFacilityType, setSelectedFacilityType] = useState<string>("all");
+  const [showAssetOverlay, setShowAssetOverlay] = useState(false);
 
-  const { data: assets, isLoading } = trpc.assets.list.useQuery({});
-  const { data: sites } = trpc.sites.list.useQuery();
-  const { data: categories } = trpc.assetCategories.list.useQuery();
+  const mapRef = useRef<google.maps.Map | null>(null);
+  const facilityMarkersRef = useRef<google.maps.Marker[]>([]);
+  const polylinesRef = useRef<
+    { line: google.maps.Polyline; childId: number; parentId: number }[]
+  >([]);
+  const assetMarkersRef = useRef<google.maps.Marker[]>([]);
+  const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
+  const mapListenersAttachedRef = useRef(false);
 
-  const handleMapReady = (googleMap: google.maps.Map) => {
-    setMap(googleMap);
-    
-    // Clear existing markers
-    markers.forEach(marker => marker.setMap(null));
-    setMarkers([]);
-    siteMarkers.forEach(marker => marker.setMap(null));
-    setSiteMarkers([]);
+  const mapData = trpc.sites.mapData.useQuery();
+  const assets = trpc.assets.list.useQuery({}, { enabled: showAssetOverlay });
 
-    // Add site markers first
-    const newSiteMarkers: google.maps.Marker[] = [];
-    if (sites) {
-      sites.forEach(site => {
-        // Use default Nigeria coordinates if site doesn't have specific location
-        const lat = site.latitude
-          ? parseFloat(site.latitude)
-          : DEFAULT_MAP_CENTER.lat + (Math.random() - 0.5) * 2;
-        const lng = site.longitude
-          ? parseFloat(site.longitude)
-          : DEFAULT_MAP_CENTER.lng + (Math.random() - 0.5) * 2;
-        const position = { lat, lng };
-
-        const siteMarker = new google.maps.Marker({
-          position,
-          map: googleMap,
-          title: site.name,
-          icon: {
-            path: google.maps.SymbolPath.CIRCLE,
-            scale: 12,
-            fillColor: "#DC2626", // Red for sites
-            fillOpacity: 1,
-            strokeColor: "#FFFFFF",
-            strokeWeight: 3,
-          },
-          zIndex: 100, // Sites appear above assets
-        });
-
-        const siteInfoWindow = new google.maps.InfoWindow({
-          content: `
-            <div style="padding: 12px; max-width: 280px;">
-              <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: #DC2626;">📍 ${site.name}</h3>
-              <p style="margin: 4px 0; font-size: 14px;"><strong>Address:</strong> ${site.address || 'N/A'}</p>
-              <p style="margin: 4px 0; font-size: 14px;"><strong>City:</strong> ${site.city || 'N/A'}, ${site.state || 'N/A'}</p>
-              <p style="margin: 4px 0; font-size: 14px;"><strong>Contact:</strong> ${site.contactPerson || 'N/A'}</p>
-              <p style="margin: 4px 0; font-size: 14px;"><strong>Phone:</strong> ${site.contactPhone || 'N/A'}</p>
-              <a href={appPath("/facilities")} style="display: inline-block; margin-top: 8px; color: #DC2626; text-decoration: none; font-weight: 500;">View all facilities →</a>
-            </div>
-          `,
-        });
-
-        // Show info on hover
-        siteMarker.addListener("mouseover", () => {
-          siteInfoWindow.open(googleMap, siteMarker);
-        });
-
-        siteMarker.addListener("mouseout", () => {
-          siteInfoWindow.close();
-        });
-
-        // Also show on click
-        siteMarker.addListener("click", () => {
-          siteInfoWindow.open(googleMap, siteMarker);
-        });
-
-        newSiteMarkers.push(siteMarker);
+  const resetPolylines = useCallback(() => {
+    polylinesRef.current.forEach(({ line }) => {
+      line.setOptions({
+        strokeColor: "#9CA3AF",
+        strokeOpacity: 0.15,
+        strokeWeight: 1.5,
       });
-    }
-    setSiteMarkers(newSiteMarkers);
-
-    if (!assets || assets.length === 0) return;
-
-    // Filter assets based on selection (include rows that can be placed via asset coords or facility fallback)
-    const filteredAssets = assets.filter((asset) => {
-      const siteMatch = selectedSite === "all" || asset.siteId === parseInt(selectedSite);
-      const categoryMatch = selectedCategory === "all" || asset.categoryId === parseInt(selectedCategory);
-      if (!siteMatch || !categoryMatch) return false;
-      const site = sites?.find((s) => s.id === asset.siteId);
-      const hasCoords = Boolean(asset.latitude && asset.longitude);
-      const hasSiteCoords = Boolean(site?.latitude && site?.longitude);
-      return hasCoords || hasSiteCoords;
     });
+  }, []);
 
-    if (filteredAssets.length === 0) {
-      // Center on Nigeria if no assets with coordinates
-      googleMap.setCenter({ ...DEFAULT_MAP_CENTER });
-      googleMap.setZoom(DEFAULT_MAP_ZOOM_COUNTRY);
-      return;
+  const highlightPolylines = useCallback(
+    (facilityId: number) => {
+      resetPolylines();
+      polylinesRef.current.forEach(({ line, childId, parentId }) => {
+        if (childId === facilityId || parentId === facilityId) {
+          line.setOptions({
+            strokeColor: "#DC2626",
+            strokeOpacity: 0.85,
+            strokeWeight: 3,
+          });
+        }
+      });
+    },
+    [resetPolylines]
+  );
+
+  const renderMap = useCallback(() => {
+    const map = mapRef.current;
+    const facilities = mapData.data;
+    if (!map || !facilities) return;
+
+    facilityMarkersRef.current.forEach((m) => m.setMap(null));
+    facilityMarkersRef.current = [];
+    polylinesRef.current.forEach(({ line }) => line.setMap(null));
+    polylinesRef.current = [];
+    assetMarkersRef.current.forEach((m) => m.setMap(null));
+    assetMarkersRef.current = [];
+
+    if (!infoWindowRef.current) {
+      infoWindowRef.current = new google.maps.InfoWindow();
     }
 
-    const newMarkers: google.maps.Marker[] = [];
+    const facilityById = new globalThis.Map(
+      facilities.map((f) => [f.id, f] as const)
+    );
     const bounds = new google.maps.LatLngBounds();
+    let facilitiesWithValidCoords = 0;
 
-    // Add site positions to bounds
-    newSiteMarkers.forEach(marker => {
-      const pos = marker.getPosition();
-      if (pos) bounds.extend(pos);
-    });
+    for (const facility of facilities) {
+      const position = facilityPosition(facility);
+      if (!position) continue;
 
-    filteredAssets.forEach((asset) => {
-      const site = sites?.find((s) => s.id === asset.siteId);
-      const latStr = asset.latitude ?? site?.latitude;
-      const lngStr = asset.longitude ?? site?.longitude;
-      if (!latStr || !lngStr) return;
-
-      const lat = parseFloat(String(latStr));
-      const lng = parseFloat(String(lngStr));
-      const position = { lat, lng };
+      facilitiesWithValidCoords += 1;
+      const type = facility.facilityType;
 
       const marker = new google.maps.Marker({
         position,
-        map: googleMap,
-        title: asset.name,
+        map,
+        title: facility.name,
         icon: {
           path: google.maps.SymbolPath.CIRCLE,
-          scale: 8,
-          fillColor: "#DC2626", // Red for assets
-          fillOpacity: 0.9,
-          strokeColor: "#FFFFFF",
+          scale: type === "national_headquarters" ? 16 : 12,
+          fillColor: FACILITY_COLOURS[type],
+          fillOpacity: 1,
+          strokeColor: "#ffffff",
           strokeWeight: 2,
         },
-        zIndex: 50, // Assets below sites
+        zIndex: type === "national_headquarters" ? 200 : 100,
       });
 
-      const infoWindow = new google.maps.InfoWindow({
-        content: `
-          <div style="padding: 8px; max-width: 250px;">
-            <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600;">${asset.name}</h3>
-            <p style="margin: 4px 0; font-size: 14px;"><strong>Tag:</strong> ${asset.assetTag}</p>
-            <p style="margin: 4px 0; font-size: 14px;"><strong>Status:</strong> ${asset.status}</p>
-            <p style="margin: 4px 0; font-size: 14px;"><strong>Facility:</strong> ${site?.name || "N/A"}</p>
-            <p style="margin: 4px 0; font-size: 12px; color: #666;"><strong>Pin:</strong> ${asset.latitude && asset.longitude ? "Asset coordinates" : "Facility coordinates"}</p>
-            <a href="/app/assets/${asset.id}" style="display: inline-block; margin-top: 8px; color: #DC2626; text-decoration: none; font-weight: 500;">View Details →</a>
-          </div>
-        `,
-      });
+      if (selectedFacilityType !== "all" && type !== selectedFacilityType) {
+        marker.setOpacity(0.2);
+      } else {
+        marker.setOpacity(1);
+      }
 
-      // Show info on hover
-      marker.addListener("mouseover", () => {
-        infoWindow.open(googleMap, marker);
-      });
+      const facilityDetailHref = appPath(`/facilities/${facility.id}`);
+      const infoHtml = `
+        <div style="min-width:200px;font-family:sans-serif">
+          <div style="font-weight:700;font-size:15px;margin-bottom:4px">${facility.name}</div>
+          <div style="font-size:12px;color:#666;margin-bottom:8px">${FACILITY_LABELS[type]}</div>
+          <div style="font-size:13px;margin-bottom:4px">Assets: <strong>${facility.assetCount}</strong></div>
+          <div style="font-size:13px;margin-bottom:12px">Inventory items: <strong>${facility.inventoryCount}</strong></div>
+          <a href="${facilityDetailHref}"
+             style="display:inline-block;background:#DC2626;color:#fff;padding:6px 14px;border-radius:6px;font-size:13px;text-decoration:none;font-weight:600">
+            View Details
+          </a>
+        </div>
+      `;
 
-      marker.addListener("mouseout", () => {
-        infoWindow.close();
-      });
-
-      // Also show on click
       marker.addListener("click", () => {
-        infoWindow.open(googleMap, marker);
+        highlightPolylines(facility.id);
+        infoWindowRef.current?.setContent(infoHtml);
+        infoWindowRef.current?.open({ map, anchor: marker });
       });
 
-      newMarkers.push(marker);
+      facilityMarkersRef.current.push(marker);
       bounds.extend(position);
-    });
+    }
 
-    setMarkers(newMarkers);
+    for (const facility of facilities) {
+      if (facility.parentFacilityId == null) continue;
+      const parent = facilityById.get(facility.parentFacilityId);
+      if (!parent) continue;
+      const childPos = facilityPosition(facility);
+      const parentPos = facilityPosition(parent);
+      if (!childPos || !parentPos) continue;
 
-    // Fit map to show all markers (sites + assets)
-    if (newMarkers.length > 0 || newSiteMarkers.length > 0) {
-      googleMap.fitBounds(bounds);
-      if (newMarkers.length + newSiteMarkers.length === 1) {
-        googleMap.setZoom(15);
+      const line = new google.maps.Polyline({
+        map,
+        path: [childPos, parentPos],
+        strokeColor: "#9CA3AF",
+        strokeOpacity: 0.15,
+        strokeWeight: 1.5,
+        zIndex: 10,
+      });
+
+      polylinesRef.current.push({
+        line,
+        childId: facility.id,
+        parentId: facility.parentFacilityId,
+      });
+    }
+
+    if (showAssetOverlay && assets.data) {
+      for (const asset of assets.data) {
+        const facility = facilityById.get(asset.siteId);
+        const latStr = asset.latitude ?? facility?.latitude ?? null;
+        const lngStr = asset.longitude ?? facility?.longitude ?? null;
+        const lat = parseCoord(latStr);
+        const lng = parseCoord(lngStr);
+        if (lat == null || lng == null) continue;
+
+        const position = { lat, lng };
+        const marker = new google.maps.Marker({
+          position,
+          map,
+          title: asset.name,
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 6,
+            fillColor: ASSET_OVERLAY_COLOUR,
+            fillOpacity: 0.9,
+            strokeColor: "#ffffff",
+            strokeWeight: 1.5,
+          },
+          zIndex: 50,
+        });
+
+        const assetHref = appPath(`/assets/${asset.id}`);
+        const pinSource =
+          asset.latitude && asset.longitude
+            ? "Asset coordinates"
+            : "Facility coordinates";
+        const assetInfoHtml = `
+          <div style="min-width:200px;font-family:sans-serif">
+            <div style="font-weight:700;font-size:15px;margin-bottom:4px">${asset.name}</div>
+            <div style="font-size:13px;margin-bottom:4px">Tag: <strong>${asset.assetTag ?? "—"}</strong></div>
+            <div style="font-size:13px;margin-bottom:4px">Status: <strong>${asset.status}</strong></div>
+            <div style="font-size:13px;margin-bottom:4px">Facility: <strong>${facility?.name ?? "N/A"}</strong></div>
+            <div style="font-size:12px;color:#666;margin-bottom:12px">Pin: ${pinSource}</div>
+            <a href="${assetHref}"
+               style="display:inline-block;background:#DC2626;color:#fff;padding:6px 14px;border-radius:6px;font-size:13px;text-decoration:none;font-weight:600">
+              View Asset
+            </a>
+          </div>
+        `;
+
+        marker.addListener("click", () => {
+          infoWindowRef.current?.setContent(assetInfoHtml);
+          infoWindowRef.current?.open({ map, anchor: marker });
+        });
+
+        assetMarkersRef.current.push(marker);
+      }
+    }
+
+    if (facilitiesWithValidCoords > 0) {
+      map.fitBounds(bounds);
+      if (facilitiesWithValidCoords === 1) {
+        map.setZoom(12);
       }
     } else {
-      googleMap.setCenter({ ...DEFAULT_MAP_CENTER });
-      googleMap.setZoom(DEFAULT_MAP_ZOOM_COUNTRY);
+      map.setCenter({ ...DEFAULT_MAP_CENTER });
+      map.setZoom(DEFAULT_MAP_ZOOM_COUNTRY);
     }
-  };
+  }, [
+    mapData.data,
+    showAssetOverlay,
+    assets.data,
+    selectedFacilityType,
+    highlightPolylines,
+  ]);
 
-  const getStatusColor = (status: string): string => {
-    switch (status) {
-      case "operational":
-        return "#22C55E"; // green
-      case "maintenance":
-        return "#F59E0B"; // orange
-      case "repair":
-        return "#EF4444"; // red
-      case "retired":
-        return "#9CA3AF"; // gray
-      case "disposed":
-        return "#6B7280"; // dark gray
-      default:
-        return "#3B82F6"; // blue
+  const handleMapReady = useCallback(
+    (googleMap: google.maps.Map) => {
+      mapRef.current = googleMap;
+
+      if (!infoWindowRef.current) {
+        infoWindowRef.current = new google.maps.InfoWindow();
+      }
+
+      if (!mapListenersAttachedRef.current) {
+        infoWindowRef.current.addListener("closeclick", () => {
+          resetPolylines();
+        });
+        googleMap.addListener("click", () => {
+          infoWindowRef.current?.close();
+          resetPolylines();
+        });
+        mapListenersAttachedRef.current = true;
+      }
+
+      renderMap();
+    },
+    [renderMap, resetPolylines]
+  );
+
+  useEffect(() => {
+    if (mapRef.current && mapData.data) {
+      renderMap();
     }
-  };
+  }, [mapData.data, showAssetOverlay, assets.data, selectedFacilityType, renderMap]);
 
-  if (isLoading) return <PageLoader />;
+  if (mapData.isLoading) return <PageLoader />;
 
-  const assetsWithCoordinates = assets?.filter(a => a.latitude && a.longitude) || [];
+  const totalFacilities = mapData.data?.length ?? 0;
+  const facilitiesWithCoords =
+    mapData.data?.filter((f) => facilityPosition(f) != null).length ?? 0;
+  const missingCoords = totalFacilities - facilitiesWithCoords;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <PageHeader
-          icon={Map}
-          title="Asset Map"
-          subtitle="Interactive asset location mapping across NRCS facilities, branches, and operational sites nationwide."
-          className="mb-0"
-        />
-        <div className="flex items-center gap-2">
-          <MapPin className="h-5 w-5 text-muted-foreground" />
+    <div className="space-y-4">
+      <PageHeader
+        icon={MapIcon}
+        title="Asset Map"
+        subtitle="Geographic view of assets and facilities across Nigeria"
+      />
+
+      <div className="flex flex-wrap items-center gap-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="space-y-1">
+            <Label className="text-sm font-medium">Facility type</Label>
+            <Select value={selectedFacilityType} onValueChange={setSelectedFacilityType}>
+              <SelectTrigger className="w-[180px]" data-testid="asset-map-facility-type">
+                <SelectValue placeholder="All Types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                {FACILITY_TYPE_VALUES.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {FACILITY_LABELS[type]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center gap-2 pt-6">
+            <Switch
+              id="show-assets"
+              checked={showAssetOverlay}
+              onCheckedChange={setShowAssetOverlay}
+              data-testid="asset-map-show-assets"
+            />
+            <Label htmlFor="show-assets" className="cursor-pointer text-sm font-medium">
+              Show Assets
+            </Label>
+          </div>
+        </div>
+
+        <div className="ml-auto flex flex-wrap items-center gap-2">
           <span className="text-sm text-muted-foreground">
-            {assetsWithCoordinates.length} assets mapped
+            {facilitiesWithCoords} of {totalFacilities} facilities mapped
           </span>
+          {missingCoords > 0 ? (
+            <Badge
+              variant="outline"
+              className="border-amber-500/50 bg-amber-500/10 text-amber-800 dark:text-amber-200"
+            >
+              {missingCoords} missing coordinates
+            </Badge>
+          ) : null}
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Filters</CardTitle>
-        </CardHeader>
-        <CardContent className="flex gap-4">
-          <div className="flex-1">
-            <label className="text-sm font-medium mb-2 block">Site</label>
-            <Select value={selectedSite} onValueChange={setSelectedSite}>
-              <SelectTrigger>
-                <SelectValue placeholder="All facilities" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All facilities</SelectItem>
-                {sites?.map((site) => (
-                  <SelectItem key={site.id} value={site.id.toString()}>
-                    {site.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+      <div
+        className="min-h-[600px] w-full overflow-hidden rounded-lg border bg-muted/30"
+        data-testid="asset-map-panel"
+      >
+        <MapView
+          initialCenter={{ ...DEFAULT_MAP_CENTER }}
+          initialZoom={DEFAULT_MAP_ZOOM_COUNTRY}
+          onMapReady={handleMapReady}
+        />
+      </div>
 
-          <div className="flex-1">
-            <label className="text-sm font-medium mb-2 block">Category</label>
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger>
-                <SelectValue placeholder="All Categories" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {categories?.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id.toString()}>
-                    {cat.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex items-end">
-            <Button
-              onClick={() => {
-                if (map) handleMapReady(map);
-              }}
-            >
-              <Navigation className="mr-2 h-4 w-4" />
-              Update Map
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Map View</CardTitle>
-            <div className="flex gap-4">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                <span className="text-sm">Operational</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-orange-500"></div>
-                <span className="text-sm">Maintenance</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                <span className="text-sm">Repair</span>
-              </div>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div
-            className="h-[600px] w-full rounded-lg overflow-hidden border bg-muted/30"
-            data-testid="asset-map-panel"
-          >
-            <MapView
-              initialCenter={{ ...DEFAULT_MAP_CENTER }}
-              initialZoom={DEFAULT_MAP_ZOOM_COUNTRY}
-              onMapReady={handleMapReady}
+      <div className="flex flex-wrap items-center gap-4 text-sm">
+        {FACILITY_TYPE_VALUES.map((type) => (
+          <div key={type} className="flex items-center gap-2">
+            <span
+              className="inline-block h-3 w-3 rounded-full"
+              style={{ backgroundColor: FACILITY_COLOURS[type] }}
             />
+            <span>{FACILITY_LABELS[type]}</span>
           </div>
-        </CardContent>
-      </Card>
-
-      {assetsWithCoordinates.length === 0 && (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <MapPin className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No Assets with Coordinates</h3>
-            <p className="text-muted-foreground">
-              Add GPS coordinates to assets to see them on the map
-            </p>
-          </CardContent>
-        </Card>
-      )}
+        ))}
+        {showAssetOverlay ? (
+          <div className="flex items-center gap-2">
+            <span
+              className="inline-block h-2.5 w-2.5 rounded-full"
+              style={{ backgroundColor: ASSET_OVERLAY_COLOUR }}
+            />
+            <span>Assets</span>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }
