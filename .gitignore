@@ -136,6 +136,8 @@ certs/global-bundle.pem
 # Playwright (local runs)
 test-results/
 playwright/.auth/
+.playwright-mcp/
+*.playwright-mcp*
 
 # Local screenshot / capture output
 artifacts/
