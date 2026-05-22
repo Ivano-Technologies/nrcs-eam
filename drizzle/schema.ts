@@ -260,6 +260,23 @@ export const sites = pgTable("sites", {
   updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
 });
 
+export const facilityPhotos = pgTable("facility_photos", {
+  id: serial("id").primaryKey(),
+  siteId: integer("siteId")
+    .notNull()
+    .references(() => sites.id, { onDelete: "cascade" }),
+  photoUrl: text("photoUrl").notNull(),
+  photoKey: text("photoKey").notNull(),
+  caption: text("caption"),
+  uploadedBy: integer("uploadedBy").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type FacilityPhoto = typeof facilityPhotos.$inferSelect;
+export type NewFacilityPhoto = typeof facilityPhotos.$inferInsert;
+
 /** Formal land/property valuations linked to facilities (NRCS register). */
 export const siteValuations = pgTable(
   "site_valuations",
