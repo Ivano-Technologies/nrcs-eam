@@ -530,8 +530,10 @@ export const appRouter = router({
     
     getById: protectedProcedure
       .input(z.object({ id: z.number() }))
-      .query(async ({ input }) => {
-        return await db.getAssetById(input.id);
+      .query(async ({ input, ctx }) => {
+        const asset = await db.getAssetById(input.id);
+        assertRecordFacilityAccess(ctx.user, asset?.siteId);
+        return asset;
       }),
     
     getByTag: protectedProcedure
@@ -1074,8 +1076,10 @@ export const appRouter = router({
     
     getById: protectedProcedure
       .input(z.object({ id: z.number() }))
-      .query(async ({ input }) => {
-        return await db.getWorkOrderById(input.id);
+      .query(async ({ input, ctx }) => {
+        const workOrder = await db.getWorkOrderById(input.id);
+        assertRecordFacilityAccess(ctx.user, workOrder?.siteId);
+        return workOrder;
       }),
     
     create: protectedProcedure
@@ -1093,6 +1097,7 @@ export const appRouter = router({
         estimatedCost: z.string().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
+        assertFacilityAccess(ctx.user, input.siteId);
         const workOrder = await db.createWorkOrder({
           ...input,
           requestedBy: ctx.user.id,
@@ -1304,7 +1309,8 @@ export const appRouter = router({
         vendorId: z.number().optional(),
         location: z.string().optional(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        assertFacilityAccess(ctx.user, input.siteId);
         return await db.createInventoryItem(input);
       }),
     
@@ -1369,6 +1375,7 @@ export const appRouter = router({
       )
       .mutation(async ({ input, ctx }) => {
         requireRole(ctx, ["staff", "manager", "admin"]);
+        assertFacilityAccess(ctx.user, input.siteId);
 
         for (const line of input.lines) {
           const before = await db.getInventoryItemById(line.itemId);
@@ -1440,6 +1447,8 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         requireRole(ctx, ["staff", "manager", "admin"]);
+        if (input.fromSiteId) assertFacilityAccess(ctx.user, input.fromSiteId);
+        if (input.toSiteId) assertFacilityAccess(ctx.user, input.toSiteId);
 
         const itemBefore = await db.getInventoryItemById(input.itemId);
         if (!itemBefore) {
@@ -3777,8 +3786,10 @@ export const appRouter = router({
 
     getById: protectedProcedure
       .input(z.object({ id: z.number() }))
-      .query(async ({ input }) => {
-        return await db.getAssetTransferById(input.id);
+      .query(async ({ input, ctx }) => {
+        const transfer = await db.getAssetTransferById(input.id);
+        assertRecordFacilityAccess(ctx.user, transfer?.fromSiteId);
+        return transfer;
       }),
 
     create: protectedProcedure
@@ -3790,6 +3801,7 @@ export const appRouter = router({
         notes: z.string().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
+        assertFacilityAccess(ctx.user, input.fromSiteId);
         return await db.createAssetTransfer({
           ...input,
           requestedBy: ctx.user.id,
