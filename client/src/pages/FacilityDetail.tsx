@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import PageLoader from "@/components/ui/PageLoader";
@@ -10,7 +10,7 @@ import { Link } from "wouter";
 import { FACILITY_TYPE_DESCRIPTIONS, FACILITY_TYPE_LABELS } from "@shared/facilities";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { toast } from "sonner";
-import { Loader2, MapPin } from "lucide-react";
+import { Loader2, MapPin, Upload, X } from "lucide-react";
 
 export default function FacilityDetail() {
   const { isManagerOrAdmin } = usePermissions();
@@ -24,6 +24,21 @@ export default function FacilityDetail() {
   const { data: workOrders } = trpc.workOrders.list.useQuery({ siteId: id }, { enabled });
   const { data: movements } = trpc.inventory.movements.useQuery({ siteId: id }, { enabled });
   const { data: transfers } = trpc.transfers.list.useQuery({ siteId: id }, { enabled });
+  const photosQuery = trpc.facilityPhotos.list.useQuery(
+    { siteId: id },
+    { enabled: !!id }
+  );
+
+  const [uploading, setUploading] = useState(false);
+  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+
+  const uploadMutation = trpc.facilityPhotos.upload.useMutation({
+    onSuccess: () => photosQuery.refetch(),
+  });
+  const deleteMutation = trpc.facilityPhotos.delete.useMutation({
+    onSuccess: () => photosQuery.refetch(),
+  });
+  const uploadUrlMutation = trpc.facilityPhotos.uploadUrl.useMutation();
 
   const utils = trpc.useUtils();
   const syncCoordsMutation = trpc.assets.syncCoordinatesForSite.useMutation({
@@ -60,6 +75,44 @@ export default function FacilityDetail() {
         .slice(0, 5),
     [transfers]
   );
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Photo must be under 5MB");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const { uploadUrl, photoKey, publicUrl } = await uploadUrlMutation.mutateAsync({
+        siteId: id,
+        fileName: file.name,
+        fileType: file.type,
+      });
+
+      await fetch(uploadUrl, {
+        method: "PUT",
+        body: file,
+        headers: { "Content-Type": file.type },
+      });
+
+      await uploadMutation.mutateAsync({
+        siteId: id,
+        photoUrl: publicUrl,
+        photoKey,
+      });
+
+      toast.success("Photo uploaded successfully");
+    } catch {
+      toast.error("Failed to upload photo");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  };
 
   if (!enabled) return <div className="text-sm text-muted-foreground">Invalid facility id.</div>;
   if (!facility) return <PageLoader />;
@@ -134,6 +187,108 @@ export default function FacilityDetail() {
           ))}
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <CardTitle className="text-base font-semibold">
+            Facility Photos
+            <span className="ml-2 text-sm font-normal text-muted-foreground">
+              ({photosQuery.data?.length ?? 0}/10)
+            </span>
+          </CardTitle>
+          {isManagerOrAdmin && (photosQuery.data?.length ?? 0) < 10 && (
+            <label className="cursor-pointer">
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={handlePhotoUpload}
+                disabled={uploading}
+              />
+              <Button variant="outline" size="sm" disabled={uploading} asChild>
+                <span>
+                  {uploading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Add Photo
+                    </>
+                  )}
+                </span>
+              </Button>
+            </label>
+          )}
+        </CardHeader>
+        <CardContent>
+          {photosQuery.isLoading ? (
+            <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Loading photos...</span>
+            </div>
+          ) : photosQuery.data?.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">
+              No photos uploaded yet.
+            </p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              {photosQuery.data?.map((photo) => (
+                <div
+                  key={photo.id}
+                  className="relative group aspect-square rounded-lg overflow-hidden border bg-muted"
+                >
+                  <img
+                    src={photo.photoUrl}
+                    alt={photo.caption ?? "Facility photo"}
+                    className="w-full h-full object-cover cursor-pointer transition-opacity group-hover:opacity-80"
+                    onClick={() => setSelectedPhoto(photo.photoUrl)}
+                  />
+                  {isManagerOrAdmin && (
+                    <button
+                      type="button"
+                      className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => {
+                        if (confirm("Delete this photo?")) {
+                          deleteMutation.mutate({ id: photo.id });
+                        }
+                      }}
+                      disabled={deleteMutation.isPending}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {selectedPhoto && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+          onClick={() => setSelectedPhoto(null)}
+        >
+          <div className="relative max-w-4xl max-h-full">
+            <img
+              src={selectedPhoto}
+              alt="Facility photo"
+              className="max-w-full max-h-[90vh] object-contain rounded-lg"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <button
+              type="button"
+              className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-2"
+              onClick={() => setSelectedPhoto(null)}
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+      )}
 
       <Card>
         <CardHeader><CardTitle>Statistics</CardTitle></CardHeader>
