@@ -1762,17 +1762,61 @@ export const appRouter = router({
 
   // ============= DASHBOARD =============
   dashboard: router({
-    stats: protectedProcedure.query(async () => {
-      return await db.getDashboardStats();
+    /** @deprecated Not used in UI. Use dashboard.metrics instead. */
+    stats: protectedProcedure.query(async ({ ctx }) => {
+      const scope = dashboardDataScope(ctx);
+      if (scope.mode === "empty") {
+        return {
+          totalAssets: 0,
+          operationalAssets: 0,
+          maintenanceAssets: 0,
+          pendingWorkOrders: 0,
+          inProgressWorkOrders: 0,
+          lowStockItems: 0,
+        };
+      }
+      const siteId = scope.mode === "site" ? scope.siteId : undefined;
+      return await db.getDashboardStats(siteId ? { siteId } : undefined);
     }),
-    weeklyInsights: protectedProcedure.query(async () => {
-      return await db.getWeeklyInsights();
+    /** @deprecated Not used in UI. Use dashboard.metrics instead. */
+    weeklyInsights: protectedProcedure.query(async ({ ctx }) => {
+      const scope = dashboardDataScope(ctx);
+      if (scope.mode === "empty") {
+        return {
+          maintenanceDueNext30Days: 0,
+          warrantiesExpiringNext30Days: 0,
+          lowStockItems: 0,
+          overdueWorkOrders: 0,
+          pendingUserRequests: 0,
+        };
+      }
+      const siteId = scope.mode === "site" ? scope.siteId : undefined;
+      return await db.getWeeklyInsights(siteId ? { siteId } : undefined);
     }),
-    smartInsights: protectedProcedure.query(async () => {
+    /** @deprecated Not used in UI. Use dashboard.metrics instead. */
+    smartInsights: protectedProcedure.query(async ({ ctx }) => {
+      const scope = dashboardDataScope(ctx);
+      if (scope.mode === "empty") {
+        return {
+          good: { stockAvailabilityPct: 0, successfulDistributions: 0 },
+          attentionNeeded: {
+            belowSafetyStock: 0,
+            expiringWithin30Days: 0,
+            emergencyRequisitionsPending: 0,
+          },
+          recommendations: {
+            safetyStockAdjustments: [],
+            overstockTransfers: [],
+            deadStockReview: [],
+          },
+        };
+      }
+      const siteId = scope.mode === "site" ? scope.siteId : undefined;
+      const opts = siteId ? { siteId } : undefined;
       const [stats, weekly, lowStock] = await Promise.all([
-        db.getDashboardStats(),
-        db.getWeeklyInsights(),
-        db.getLowStockItems(),
+        db.getDashboardStats(opts),
+        db.getWeeklyInsights(opts),
+        db.getLowStockItems(siteId),
       ]);
       const totalInventory = Math.max(1, Number((stats as any)?.totalInventory ?? 0));
       const lowStockCount = Number((stats as any)?.lowStockItems ?? lowStock.length);

@@ -1558,7 +1558,7 @@ export async function getDashboardStats(opts?: { siteId?: number }) {
 }
 
 /** Counts for Reports “Weekly insights” widget (30-day windows where applicable). */
-export async function getWeeklyInsights() {
+export async function getWeeklyInsights(opts?: { siteId?: number }) {
   const database = await getDb();
   if (!database) {
     return {
@@ -1569,47 +1569,72 @@ export async function getWeeklyInsights() {
       pendingUserRequests: 0,
     };
   }
+  const siteId = opts?.siteId;
   const now = new Date();
   const in30 = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-  const [maintDue] = await database
-    .select({ count: sql<number>`count(*)` })
-    .from(maintenanceSchedules)
-    .where(
-      and(
-        eq(maintenanceSchedules.isActive, true),
-        gte(maintenanceSchedules.nextDue, now),
-        lte(maintenanceSchedules.nextDue, in30)
-      )
-    );
+  const maintDueWindow = and(
+    eq(maintenanceSchedules.isActive, true),
+    gte(maintenanceSchedules.nextDue, now),
+    lte(maintenanceSchedules.nextDue, in30)
+  );
+
+  const [maintDue] =
+    siteId != null
+      ? await database
+          .select({ count: sql<number>`count(*)` })
+          .from(maintenanceSchedules)
+          .innerJoin(assets, eq(maintenanceSchedules.assetId, assets.id))
+          .where(and(maintDueWindow, eq(assets.siteId, siteId)))
+      : await database
+          .select({ count: sql<number>`count(*)` })
+          .from(maintenanceSchedules)
+          .where(maintDueWindow);
+
+  const warrantyWindow = and(
+    isNotNull(assets.warrantyExpiry),
+    lte(assets.warrantyExpiry, in30),
+    gte(assets.warrantyExpiry, now),
+    siteId != null ? eq(assets.siteId, siteId) : undefined
+  );
 
   const [warrantyExp] = await database
     .select({ count: sql<number>`count(*)` })
     .from(assets)
-    .where(
-      and(isNotNull(assets.warrantyExpiry), lte(assets.warrantyExpiry, in30), gte(assets.warrantyExpiry, now))
-    );
+    .where(warrantyWindow);
+
+  const lowStockWhere =
+    siteId != null
+      ? and(
+          sql`${inventoryItems.currentStock} < ${inventoryItems.minStockLevel}`,
+          eq(inventoryItems.siteId, siteId)
+        )
+      : sql`${inventoryItems.currentStock} < ${inventoryItems.minStockLevel}`;
 
   const [lowStock] = await database
     .select({ count: sql<number>`count(*)` })
     .from(inventoryItems)
-    .where(sql`${inventoryItems.currentStock} < ${inventoryItems.minStockLevel}`);
+    .where(lowStockWhere);
+
+  const overdueWoWhere = and(
+    notInArray(workOrders.status, ["completed", "cancelled"]),
+    isNotNull(workOrders.scheduledEnd),
+    lt(workOrders.scheduledEnd, now),
+    siteId != null ? eq(workOrders.siteId, siteId) : undefined
+  );
 
   const [overdueWo] = await database
     .select({ count: sql<number>`count(*)` })
     .from(workOrders)
-    .where(
-      and(
-        notInArray(workOrders.status, ["completed", "cancelled"]),
-        isNotNull(workOrders.scheduledEnd),
-        lt(workOrders.scheduledEnd, now)
-      )
-    );
+    .where(overdueWoWhere);
 
-  const [pendingReq] = await database
-    .select({ count: sql<number>`count(*)` })
-    .from(pendingUsers)
-    .where(eq(pendingUsers.status, "pending"));
+  const [pendingReq] =
+    siteId != null
+      ? [{ count: 0 }]
+      : await database
+          .select({ count: sql<number>`count(*)` })
+          .from(pendingUsers)
+          .where(eq(pendingUsers.status, "pending"));
 
   return {
     maintenanceDueNext30Days: Number(maintDue?.count ?? 0),
