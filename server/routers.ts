@@ -538,14 +538,22 @@ export const appRouter = router({
     
     getByTag: protectedProcedure
       .input(z.object({ assetTag: z.string() }))
-      .query(async ({ input }) => {
-        return await db.getAssetByTag(input.assetTag);
+      .query(async ({ input, ctx }) => {
+        const asset = await db.getAssetByTag(input.assetTag);
+        if (asset) assertRecordFacilityAccess(ctx.user, asset.siteId);
+        return asset;
       }),
     
     search: protectedProcedure
       .input(z.object({ searchTerm: z.string() }))
-      .query(async ({ input }) => {
-        return await db.searchAssets(input.searchTerm);
+      .query(async ({ input, ctx }) => {
+        const scopedSiteId = enforceFacilityScope(ctx.user);
+        if (scopedSiteId === -1) return [];
+        const results = await db.searchAssets(input.searchTerm);
+        if (scopedSiteId != null && scopedSiteId > 0) {
+          return results.filter((a) => a.siteId === scopedSiteId);
+        }
+        return results;
       }),
 
     registerList: protectedProcedure
@@ -1138,11 +1146,17 @@ export const appRouter = router({
         completionNotes: z.string().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
+        const existing = await db.getWorkOrderById(input.id);
+        if (!existing) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Work order not found",
+          });
+        }
+        assertRecordFacilityAccess(ctx.user, existing.siteId);
+
         const { id, ...data } = input;
-        
-        // Get existing work order to check for changes
-        const existingWorkOrder = await db.getWorkOrderById(id);
-        
+
         await db.createAuditLog({
           userId: ctx.user.id,
           action: "update_work_order",
@@ -1154,22 +1168,22 @@ export const appRouter = router({
         const result = await db.updateWorkOrder(id, data);
         
         // Notify on status change to completed
-        if (data.status === "completed" && existingWorkOrder?.status !== "completed") {
-          if (existingWorkOrder?.requestedBy) {
+        if (data.status === "completed" && existing.status !== "completed") {
+          if (existing.requestedBy) {
             await notificationHelper.notifyWorkOrderCompleted(
-              existingWorkOrder.requestedBy,
+              existing.requestedBy,
               id,
-              existingWorkOrder.title
+              existing.title
             );
           }
         }
         
         // Notify newly assigned user
-        if (data.assignedTo && data.assignedTo !== existingWorkOrder?.assignedTo) {
+        if (data.assignedTo && data.assignedTo !== existing.assignedTo) {
           await notificationHelper.notifyWorkOrderAssigned(
             data.assignedTo,
             id,
-            existingWorkOrder?.title || "Work Order"
+            existing.title || "Work Order"
           );
         }
         
@@ -2870,12 +2884,16 @@ export const appRouter = router({
       .query(async ({ input, ctx }) => {
         const raw = input.query.trim();
         const scopedSiteId = enforceFacilityScope(ctx.user);
-        const [assets, workOrders, inventory, sites] = await Promise.all([
+        const [assets, workOrders, inventory, sitesResults] = await Promise.all([
           db.searchAssetsGlobal(raw, scopedSiteId),
           db.searchWorkOrdersGlobal(raw, scopedSiteId),
           db.searchInventoryGlobal(raw, scopedSiteId),
           db.searchSitesGlobal(raw),
         ]);
+        const sites =
+          ctx.user.role === "staff" || ctx.user.role === "field"
+            ? sitesResults.filter((s) => s.id === ctx.user.siteId)
+            : sitesResults;
         const users = ctx.user.role === "admin" ? await db.searchUsersGlobal(raw) : [];
         return { assets, workOrders, inventory, sites, users };
       }),

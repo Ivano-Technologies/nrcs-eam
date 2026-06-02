@@ -27,7 +27,11 @@ import {
 } from "../../drizzle/schema";
 import { getDb, getAllUsers, createNotification, getUserById } from "../db";
 import { protectedProcedure, requireRole, router } from "../_core/trpc";
-import { enforceFacilityScope, assertFacilityAccess } from "../_core/facilityAccess";
+import {
+  enforceFacilityScope,
+  assertFacilityAccess,
+  assertRecordFacilityAccess,
+} from "../_core/facilityAccess";
 import { checkStockThreshold } from "../_core/inventoryAlerts";
 import {
   IFRC_CATALOGUE_SEED,
@@ -1427,7 +1431,7 @@ export const inventoryV2Router = router({
 
     get: protectedProcedure
       .input(z.object({ documentId: z.number() }))
-      .query(async ({ input }) => {
+      .query(async ({ input, ctx }) => {
         const db = await getDb();
         if (!db) return null;
         const [doc] = await db
@@ -1435,11 +1439,13 @@ export const inventoryV2Router = router({
           .from(inventoryDocuments)
           .where(and(eq(inventoryDocuments.id, input.documentId), eq(inventoryDocuments.documentType, "grn")))
           .limit(1);
-        return doc ?? null;
+        if (!doc) return null;
+        assertRecordFacilityAccess(ctx.user, doc.toWarehouseId);
+        return doc;
       }),
     downloadPdf: protectedProcedure
       .input(z.object({ documentId: z.number() }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
         const [doc] = await db
@@ -1448,6 +1454,7 @@ export const inventoryV2Router = router({
           .where(and(eq(inventoryDocuments.id, input.documentId), eq(inventoryDocuments.documentType, "grn")))
           .limit(1);
         if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "GRN not found." });
+        assertRecordFacilityAccess(ctx.user, doc.toWarehouseId);
         const rows = [
           { label: "Document Number", value: doc.documentNumber },
           { label: "Status", value: doc.status ?? "draft" },
@@ -1511,11 +1518,12 @@ export const inventoryV2Router = router({
         return withCounts;
       }),
 
-    get: protectedProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
+    get: protectedProcedure.input(z.object({ id: z.number() })).query(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) return null;
       const [wb] = await db.select().from(waybills).where(eq(waybills.id, input.id)).limit(1);
       if (!wb) return null;
+      assertRecordFacilityAccess(ctx.user, wb.warehouseId);
       const lines = await db.select().from(waybillLines).where(eq(waybillLines.waybillId, wb.id)).orderBy(asc(waybillLines.lineOrder));
       const lineIds = lines.map((line) => line.id);
       const sources =
@@ -1616,6 +1624,8 @@ export const inventoryV2Router = router({
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
         const [existing] = await db.select().from(waybills).where(eq(waybills.id, input.id)).limit(1);
         if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Waybill not found." });
+        assertRecordFacilityAccess(ctx.user, existing.warehouseId);
+        assertFacilityAccess(ctx.user, input.payload.warehouseId);
         if (existing.status !== "draft") throw new TRPCError({ code: "BAD_REQUEST", message: "Only draft waybills can be updated." });
 
         await db
@@ -1701,6 +1711,7 @@ export const inventoryV2Router = router({
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
         const [wb] = await db.select().from(waybills).where(eq(waybills.id, input.id)).limit(1);
         if (!wb) throw new TRPCError({ code: "NOT_FOUND", message: "Waybill not found." });
+        assertRecordFacilityAccess(ctx.user, wb.warehouseId);
         if (wb.status !== "draft") throw new TRPCError({ code: "BAD_REQUEST", message: "Waybill is not in draft state." });
         if (!wb.loadedByName || !wb.transportedByName) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Loaded by and transported by signatures are required." });
@@ -2329,6 +2340,8 @@ export const inventoryV2Router = router({
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
         const [req] = await db.select().from(requisitions).where(eq(requisitions.id, input.requisitionId)).limit(1);
         if (!req) throw new TRPCError({ code: "NOT_FOUND", message: "Requisition not found." });
+        assertRecordFacilityAccess(ctx.user, req.requestingFacility);
+        assertFacilityAccess(ctx.user, input.fromWarehouseId);
         if (req.status !== "hq_approved") throw new TRPCError({ code: "BAD_REQUEST", message: "Requisition must be HQ approved." });
         const items = Array.isArray(req.items) ? (req.items as Array<{ catalogueId: number; quantity: number; notes?: string }>) : [];
         const documentNumber = await nextDocumentNumber("WB");
@@ -2406,11 +2419,13 @@ export const inventoryV2Router = router({
         return db.select().from(requisitions).where(filters.length ? and(...filters) : undefined).orderBy(desc(requisitions.createdAt));
       }),
 
-    get: protectedProcedure.input(z.object({ requisitionId: z.number() })).query(async ({ input }) => {
+    get: protectedProcedure.input(z.object({ requisitionId: z.number() })).query(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) return null;
       const [req] = await db.select().from(requisitions).where(eq(requisitions.id, input.requisitionId)).limit(1);
-      return req ?? null;
+      if (!req) return null;
+      assertRecordFacilityAccess(ctx.user, req.requestingFacility);
+      return req;
     }),
 
     suggestWarehouse: protectedProcedure.input(z.object({ requisitionId: z.number() })).query(async ({ input }) => {
@@ -2620,6 +2635,7 @@ export const inventoryV2Router = router({
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
         const [kit] = await db.select().from(inventoryKits).where(eq(inventoryKits.id, input.kitId)).limit(1);
         if (!kit) throw new TRPCError({ code: "NOT_FOUND", message: "Kit not found." });
+        assertFacilityAccess(ctx.user, input.warehouseId);
         const components = Array.isArray(kit.components) ? (kit.components as Array<{ catalogueId: number; quantity: number }>) : [];
         const blendedDonorCode = "BLENDED";
         const [blendedDonor] = await db
@@ -2729,6 +2745,7 @@ export const inventoryV2Router = router({
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
         const [kit] = await db.select().from(inventoryKits).where(eq(inventoryKits.id, input.kitId)).limit(1);
         if (!kit || !kit.catalogueId) throw new TRPCError({ code: "NOT_FOUND", message: "Kit not found." });
+        assertFacilityAccess(ctx.user, input.warehouseId);
         const [kitBalanceAgg] = await db
           .select({
             qty: sql<number>`coalesce(sum(${stockMovements.quantityIn} - ${stockMovements.quantityOut}), 0)`.mapWith(Number),
@@ -4170,11 +4187,12 @@ export const inventoryV2Router = router({
 
     get: protectedProcedure
       .input(z.object({ countId: z.number() }))
-      .query(async ({ input }) => {
+      .query(async ({ input, ctx }) => {
         const db = await getDb();
         if (!db) return null;
         const [count] = await db.select().from(inventoryCounts).where(eq(inventoryCounts.id, input.countId)).limit(1);
         if (!count) return null;
+        assertRecordFacilityAccess(ctx.user, count.warehouseId);
         const lines = await db
           .select({
             lineId: inventoryCountLines.id,

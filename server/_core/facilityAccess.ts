@@ -109,5 +109,10 @@ export function assertRecordFacilityAccess(
         message: "You do not have access to this record.",
       });
     }
+    return;
   }
+  throw new TRPCError({
+    code: "FORBIDDEN",
+    message: "Insufficient permissions to access this record.",
+  });
 }
