@@ -164,3 +164,7 @@ vercel.production
 
 .agents/
 skills-lock.json
+
+# Local one-off scripts (not part of the app)
+build_presentation.py
+generate_assets.py
