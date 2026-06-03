@@ -173,7 +173,7 @@
     "vite": "^7.1.7",
     "vite-plugin-manus-runtime": "^0.0.57",
     "vite-plugin-pwa": "^1.2.0",
-    "vitest": "^2.1.4"
+    "vitest": "^4.1.8"
   },
   "//xlsx-note": "SheetJS CE 0.18.5 has known advisories with no public patch. Used server-side only for trusted admin file uploads. Review for replacement with exceljs or SheetJS Pro.",
   "packageManager": "pnpm@10.4.1+sha512.c753b6c3ad7afa13af388fa6d808035a008e30ea9993f58c6663e2bc5ff21679aa834db094987129aa4d488b86df57f7b634981b2f827cdcacc698cc0cfb88af",
