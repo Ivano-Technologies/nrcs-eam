@@ -8,12 +8,10 @@
       "regions": ["dub1"]
     },
     "api/keep-alive.ts": {
-      "memory": 512,
       "maxDuration": 10,
       "regions": ["dub1"]
     },
     "api/health.ts": {
-      "memory": 512,
       "maxDuration": 10
     }
   },
