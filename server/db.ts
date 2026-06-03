@@ -35,6 +35,10 @@ import {
   pendingUsers,
   inventoryCatalogue,
   requisitions,
+  stockCards,
+  stockMovements,
+  stockSettings,
+  commodityTrackingNumbers,
 } from "../drizzle/schema";
 import type { FacilityType } from "../shared/facilities";
 import {
@@ -1517,13 +1521,20 @@ export async function getDashboardStats(opts?: { siteId?: number }) {
 
   const siteId = opts?.siteId;
   const assetScope = siteId != null ? eq(assets.siteId, siteId) : undefined;
-  const lowStockWhere =
-    siteId != null
-      ? and(
-          sql`${inventoryItems.currentStock} < ${inventoryItems.minStockLevel}`,
-          eq(inventoryItems.siteId, siteId)
-        )
-      : sql`${inventoryItems.currentStock} < ${inventoryItems.minStockLevel}`;
+
+  const movementTotals = db
+    .select({
+      stockCardId: stockMovements.stockCardId,
+      netQuantity: sql<number>`coalesce(sum(${stockMovements.quantityIn} - ${stockMovements.quantityOut}), 0)`
+        .mapWith(Number)
+        .as("netQuantity"),
+    })
+    .from(stockMovements)
+    .groupBy(stockMovements.stockCardId)
+    .as("movement_net_kpi");
+
+  const thresholdSql = sql`coalesce(${stockSettings.minLevel}, ${stockCards.stockMinimum}, 0)`;
+  const lowStockScope = siteId != null ? eq(stockCards.locationId, siteId) : undefined;
 
   const [totalAssets] = assetScope
     ? await db.select({ count: sql<number>`count(*)` }).from(assets).where(assetScope)
@@ -1545,7 +1556,25 @@ export async function getDashboardStats(opts?: { siteId?: number }) {
     .select({ count: sql<number>`count(*)` })
     .from(workOrders)
     .where(eq(workOrders.status, "in_progress"));
-  const [lowStockCount] = await db.select({ count: sql<number>`count(*)` }).from(inventoryItems).where(lowStockWhere);
+  const [lowStockCount] = await db
+    .select({ count: sql<number>`count(distinct ${stockCards.id})`.mapWith(Number) })
+    .from(stockCards)
+    .innerJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
+    .leftJoin(movementTotals, eq(movementTotals.stockCardId, stockCards.id))
+    .leftJoin(
+      stockSettings,
+      and(
+        eq(stockSettings.catalogueId, commodityTrackingNumbers.itemId),
+        eq(stockSettings.warehouseId, stockCards.locationId)
+      )
+    )
+    .where(
+      and(
+        lowStockScope,
+        sql`${thresholdSql} > 0`,
+        sql`coalesce(${movementTotals.netQuantity}, 0) < ${thresholdSql}`
+      )
+    );
 
   return {
     totalAssets: Number(totalAssets?.count ?? 0),

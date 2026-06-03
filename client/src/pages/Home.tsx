@@ -46,7 +46,12 @@ export default function Home() {
   const rawRole = user?.role ?? "";
   const fixedLayout = rawRole === "staff" || rawRole === "field";
 
-  const { data: metrics, isLoading: metricsLoading } = trpc.dashboard.metrics.useQuery({ period });
+  const {
+    data: metrics,
+    isLoading: metricsLoading,
+    isError: metricsError,
+    refetch: refetchMetrics,
+  } = trpc.dashboard.metrics.useQuery({ period });
   const { data: totalAssetValue, isLoading: totalAssetValueLoading } = trpc.dashboard.totalAssetValue.useQuery();
   const { data: movement } = trpc.dashboard.stockMovement.useQuery({ weeks: period === "Today" ? 4 : 12 });
   const { data: userPreferences } = trpc.userPreferences.get.useQuery();
@@ -185,6 +190,15 @@ export default function Home() {
           <PeriodSelector value={period} onChange={setPeriod} />
         </div>
       </div>
+
+      {metricsError ? (
+        <div className="mb-4 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-600 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300">
+          Some metrics could not be loaded. Values shown may be incomplete.{" "}
+          <button type="button" onClick={() => void refetchMetrics()} className="ml-2 underline">
+            Retry
+          </button>
+        </div>
+      ) : null}
 
       {showWidgets("kpiCards") ? (
         <div className="grid max-[359px]:grid-cols-1 grid-cols-2 gap-3 md:grid-cols-2 md:gap-4 xl:grid-cols-5">

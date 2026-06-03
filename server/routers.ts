@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { and, asc, desc, eq, gte, ilike, lte, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, exists, gte, ilike, inArray, lte, not, or, sql } from "drizzle-orm";
 import { toPublicUser } from "./_core/sanitizeUser";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
@@ -82,6 +82,62 @@ function normalizeAssetItemType(
   value: z.infer<typeof assetItemTypeInputZod> | undefined
 ): "Asset" | "Inventory" {
   return value?.toLowerCase() === "inventory" ? "Inventory" : "Asset";
+}
+
+const WAYBILL_DISTRIBUTION_DESTINATIONS = ["beneficiary", "distribution_point"] as const;
+
+type DashboardDb = NonNullable<Awaited<ReturnType<typeof db.getDb>>>;
+
+/** Active sites with no under-threshold stock cards (net balance vs min level). */
+async function countAdequatelyStockedActiveSites(
+  database: DashboardDb,
+  opts: { siteId?: number; asOfDate?: string }
+): Promise<number> {
+  const movementDateFilter = opts.asOfDate ? lte(stockMovements.date, opts.asOfDate) : undefined;
+  const movementTotals = database
+    .select({
+      stockCardId: stockMovements.stockCardId,
+      netQuantity: sql<number>`coalesce(sum(${stockMovements.quantityIn} - ${stockMovements.quantityOut}), 0)`
+        .mapWith(Number)
+        .as("netQuantity"),
+    })
+    .from(stockMovements)
+    .where(movementDateFilter)
+    .groupBy(stockMovements.stockCardId)
+    .as("movement_net_dr");
+
+  const thresholdSql = sql`coalesce(${stockSettings.minLevel}, ${stockCards.stockMinimum}, 0)`;
+  const activeSiteWhere =
+    opts.siteId != null ? and(eq(sites.isActive, true), eq(sites.id, opts.siteId)) : eq(sites.isActive, true);
+
+  const underStockAtSite = exists(
+    database
+      .select({ one: sql`1` })
+      .from(stockCards)
+      .innerJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
+      .leftJoin(movementTotals, eq(movementTotals.stockCardId, stockCards.id))
+      .leftJoin(
+        stockSettings,
+        and(
+          eq(stockSettings.catalogueId, commodityTrackingNumbers.itemId),
+          eq(stockSettings.warehouseId, stockCards.locationId)
+        )
+      )
+      .where(
+        and(
+          eq(stockCards.locationId, sites.id),
+          sql`${thresholdSql} > 0`,
+          sql`coalesce(${movementTotals.netQuantity}, 0) < ${thresholdSql}`
+        )
+      )
+  );
+
+  const [row] = await database
+    .select({ adequate: sql<number>`count(*)`.mapWith(Number) })
+    .from(sites)
+    .where(and(activeSiteWhere, not(underStockAtSite)));
+
+  return Number(row?.adequate ?? 0);
 }
 
 /** Staff/Field see only their assigned facility; admin/manager see org-wide. */
@@ -1948,6 +2004,7 @@ export const appRouter = router({
           goodWhen: "up" as const,
         };
         let activeFacilitiesKpi = { value: 0, total: 0, offline: 0, goodWhen: "up" as const };
+        let metricsTimedOut = false;
 
         if (database) {
           const window = getPeriodWindow(input.period);
@@ -1962,13 +2019,14 @@ export const appRouter = router({
             { id: number }[],
             { total: number }[],
             { total: number }[],
-            { locationId: number }[],
-            { locationId: number }[],
+            number,
+            number,
             { total: number }[],
             { total: number }[],
             { total: number }[],
           ];
           let metricsBatch: MetricsBatch;
+          const distributionDestFilter = inArray(waybills.destinationType, [...WAYBILL_DISTRIBUTION_DESTINATIONS]);
           try {
             metricsBatch = await Promise.race([
               Promise.all([
@@ -1983,42 +2041,8 @@ export const appRouter = router({
                   .select({ total: sql<number>`count(*)`.mapWith(Number) })
                   .from(sites)
                   .where(inactiveSiteWhere),
-                database
-                  .selectDistinct({ locationId: stockCards.locationId })
-                  .from(stockMovements)
-                  .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
-                  .innerJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
-                  .leftJoin(
-                    stockSettings,
-                    and(
-                      eq(stockSettings.catalogueId, commodityTrackingNumbers.itemId),
-                      eq(stockSettings.warehouseId, stockCards.locationId)
-                    )
-                  )
-                  .innerJoin(sites, eq(stockCards.locationId, sites.id))
-                  .where(
-                    and(
-                      eq(sites.isActive, true),
-                      cardSiteFilter ?? sql`true`,
-                      sql`(${stockMovements.quantityIn} - ${stockMovements.quantityOut}) > coalesce(${stockSettings.minLevel}, 0)`
-                    )
-                  ),
-                database
-                  .selectDistinct({ locationId: stockCards.locationId })
-                  .from(stockMovements)
-                  .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
-                  .innerJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
-                  .leftJoin(
-                    stockSettings,
-                    and(eq(stockSettings.warehouseId, stockCards.locationId), eq(stockSettings.catalogueId, commodityTrackingNumbers.itemId))
-                  )
-                  .where(
-                    and(
-                      lte(stockMovements.date, window.previousEndIso),
-                      cardSiteFilter ?? sql`true`,
-                      sql`(${stockMovements.quantityIn} - ${stockMovements.quantityOut}) > coalesce(${stockSettings.minLevel}, 0)`
-                    )
-                  ),
+                countAdequatelyStockedActiveSites(database, { siteId }),
+                countAdequatelyStockedActiveSites(database, { siteId, asOfDate: window.previousEndIso }),
                 database
                   .select({ total: sql<number>`coalesce(sum(${stockMovements.quantityOut}),0)`.mapWith(Number) })
                   .from(stockMovements)
@@ -2027,7 +2051,7 @@ export const appRouter = router({
                   .where(
                     and(
                       eq(stockMovements.sourceType, "waybill"),
-                      eq(waybills.destinationType, "distribution_point"),
+                      distributionDestFilter,
                       gte(stockMovements.date, window.currentStartIso),
                       lte(stockMovements.date, window.currentEndIso),
                       cardSiteFilter ?? sql`true`
@@ -2041,7 +2065,7 @@ export const appRouter = router({
                   .where(
                     and(
                       eq(stockMovements.sourceType, "waybill"),
-                      eq(waybills.destinationType, "distribution_point"),
+                      distributionDestFilter,
                       gte(stockMovements.date, window.previousStartIso),
                       lte(stockMovements.date, window.previousEndIso),
                       cardSiteFilter ?? sql`true`
@@ -2055,7 +2079,7 @@ export const appRouter = router({
                   .where(
                     and(
                       eq(stockMovements.sourceType, "waybill"),
-                      eq(waybills.destinationType, "distribution_point"),
+                      distributionDestFilter,
                       cardSiteFilter ?? sql`true`
                     )
                   ),
@@ -2064,23 +2088,28 @@ export const appRouter = router({
                 setTimeout(() => reject(new Error("metrics_timeout")), METRICS_TIMEOUT)
               ),
             ]);
-          } catch {
-            metricsBatch = [[], [{ total: 0 }], [{ total: 0 }], [], [], [{ total: 0 }], [{ total: 0 }], [{ total: 0 }]];
+          } catch (err) {
+            metricsTimedOut = true;
+            console.warn("[dashboard.metrics] metrics_timeout", {
+              event: "metrics_timeout",
+              siteId: siteId ?? null,
+              period: input.period,
+              err: err instanceof Error ? err.message : String(err),
+            });
+            metricsBatch = [[], [{ total: 0 }], [{ total: 0 }], 0, 0, [{ total: 0 }], [{ total: 0 }], [{ total: 0 }]];
           }
 
           const [
             activeFacilities,
             totalFacilities,
             inactiveFacilities,
-            currentAdequateRows,
-            previousAdequateRows,
+            adequate,
+            previousAdequate,
             currentDist,
             previousDist,
             historicalDist,
           ] = metricsBatch;
 
-          const adequate = currentAdequateRows.length;
-          const previousAdequate = previousAdequateRows.length;
           const total = activeFacilities.length;
           stockReadiness = buildStockReadiness({ adequate, total, previousAdequate });
 
@@ -2121,7 +2150,9 @@ export const appRouter = router({
           stockReadiness,
           distributionVelocity,
         };
-        await cacheSetJson(metricsCacheKey, metricsPayload, 300);
+        if (!metricsTimedOut) {
+          await cacheSetJson(metricsCacheKey, metricsPayload, 300);
+        }
         return metricsPayload;
       }),
     stockMovement: protectedProcedure
