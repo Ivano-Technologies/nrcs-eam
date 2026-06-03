@@ -46,8 +46,8 @@
     "test:e2e:headed": "playwright test --headed"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1049.0",
-    "@aws-sdk/s3-request-presigner": "^3.1049.0",
+    "@aws-sdk/client-s3": "^3.1060.0",
+    "@aws-sdk/s3-request-presigner": "^3.1060.0",
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",
