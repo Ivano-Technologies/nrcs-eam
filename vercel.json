@@ -1,6 +1,6 @@
 {
   "installCommand": "pnpm install --frozen-lockfile",
-  "buildCommand": "pnpm run build:frontend && pnpm exec esbuild server/_core/vercelTrpcHandler.ts --platform=node --bundle --format=cjs --outfile=api/trpc/_handler.cjs --external:canvas --external:*.node",
+  "buildCommand": "pnpm run build:frontend && pnpm run build:vercel-handlers",
   "outputDirectory": "dist/public",
   "functions": {
     "api/trpc/[trpc].js": {
