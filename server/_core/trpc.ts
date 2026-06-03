@@ -7,8 +7,20 @@ const t = initTRPC.context<TrpcContext>().create({
   transformer: superjson,
 });
 
+const timingMiddleware = t.middleware(async ({ path, type, next }) => {
+  const start = Date.now();
+  const result = await next();
+  const durationMs = Date.now() - start;
+  if (durationMs >= 2000 || process.env.LOG_SLOW_TRPC === "1") {
+    console.info(JSON.stringify({ type: "trpc_timing", path, procedureType: type, durationMs }));
+  }
+  return result;
+});
+
+const baseProcedure = t.procedure.use(timingMiddleware);
+
 export const router = t.router;
-export const publicProcedure = t.procedure;
+export const publicProcedure = baseProcedure;
 
 const requireUser = t.middleware(async opts => {
   const { ctx, next } = opts;
@@ -25,7 +37,7 @@ const requireUser = t.middleware(async opts => {
   });
 });
 
-export const protectedProcedure = t.procedure.use(requireUser);
+export const protectedProcedure = baseProcedure.use(requireUser);
 
 /**
  * Ensures the request is authenticated and the user's role is one of `roles`.

@@ -1,3 +1,7 @@
+import { initOtel } from "./otel";
+
+initOtel();
+
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import cors from "cors";
 import express from "express";

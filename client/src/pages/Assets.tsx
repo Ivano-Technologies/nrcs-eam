@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { REFERENCE_DATA_STALE_MS } from "@/lib/queryDefaults";
 import { trpc } from "@/lib/trpc";
 import PageHeader from "@/components/ui/PageHeader";
 import TableLoader from "@/components/ui/TableLoader";
@@ -228,8 +229,8 @@ export default function Assets() {
     pageSize === "all" ? 50_000 : Number.parseInt(pageSize, 10) || 50;
   const offset = page * limit;
 
-  const { data: sites } = trpc.sites.list.useQuery();
-  const { data: categories } = trpc.assetCategories.list.useQuery();
+  const { data: sites } = trpc.sites.list.useQuery(undefined, { staleTime: REFERENCE_DATA_STALE_MS });
+  const { data: categories } = trpc.assetCategories.list.useQuery(undefined, { staleTime: REFERENCE_DATA_STALE_MS });
 
   /** One row per distinct category name; value is sorted ids joined by comma for filter + selects. */
   const categoryGroups = useMemo(() => {

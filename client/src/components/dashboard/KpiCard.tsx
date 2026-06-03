@@ -24,7 +24,7 @@ type Props = {
   sub?: ReactNode;
   icon: LucideIcon;
   tone: KpiTone;
-  delta?: string;
+  delta?: string | number;
   deltaDirection?: DeltaDirection;
   goodWhen?: GoodWhen;
   valueTestId?: string;
@@ -36,7 +36,7 @@ function DeltaPill({
   deltaDirection,
   goodWhen,
 }: {
-  delta: string;
+  delta: string | number;
   deltaDirection: Exclude<DeltaDirection, "flat">;
   goodWhen: GoodWhen;
 }) {
@@ -49,7 +49,7 @@ function DeltaPill({
       )}
     >
       {isGood ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-      {delta}
+      {String(delta)}
     </span>
   );
 }

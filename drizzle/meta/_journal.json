@@ -323,6 +323,20 @@
       "when": 1779418832268,
       "tag": "0045_facility_photos",
       "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1779500000000,
+      "tag": "0046_performance_list_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1779500001000,
+      "tag": "0047_async_jobs",
+      "breakpoints": true
     }
   ]
 }

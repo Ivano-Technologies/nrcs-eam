@@ -55,6 +55,7 @@ import {
   waybills,
 } from "../drizzle/schema";
 import { buildDistributionVelocity, buildStockReadiness, getPeriodWindow } from "./wms/dashboard";
+import { cacheGetJson, cacheSetJson } from "./_core/cache";
 import {
   legacyStatusFromRegister,
   registerStatusZodEnum,
@@ -1894,6 +1895,27 @@ export const appRouter = router({
           };
         }
         const siteId = scope.mode === "site" ? scope.siteId : undefined;
+        const metricsCacheKey = `dashboard:metrics:${scope.mode}:${siteId ?? "all"}:${input.period}`;
+        const cachedMetrics = await cacheGetJson<{
+          lowStockItems: { value: number; delta?: number; direction: "up" | "down" | "flat"; goodWhen: "down" };
+          activeFacilities: { value: number; total: number; offline: number; goodWhen: "up" };
+          stockReadiness: {
+            adequate: number;
+            total: number;
+            delta: number;
+            direction: "up" | "down" | "flat";
+            tone: "green" | "amber" | "red";
+            goodWhen: "up";
+          };
+          distributionVelocity: {
+            value: number;
+            deltaPercent: number;
+            direction: "up" | "down" | "flat";
+            hasData: boolean;
+            goodWhen: "up";
+          };
+        }>(metricsCacheKey);
+        if (cachedMetrics) return cachedMetrics;
         const stats = await db.getDashboardStats(siteId != null ? { siteId } : undefined);
         const database = await db.getDb();
 
@@ -2087,7 +2109,7 @@ export const appRouter = router({
             goodWhen: "up" as const,
           };
         }
-        return {
+        const metricsPayload = {
           lowStockItems: {
             value: Number(stats?.lowStockItems ?? 0),
             // Hide delta until there is a validated period-over-period low-stock query.
@@ -2099,6 +2121,8 @@ export const appRouter = router({
           stockReadiness,
           distributionVelocity,
         };
+        await cacheSetJson(metricsCacheKey, metricsPayload, 300);
+        return metricsPayload;
       }),
     stockMovement: protectedProcedure
       .input(z.object({ weeks: z.number().min(4).max(26).default(12) }).optional())

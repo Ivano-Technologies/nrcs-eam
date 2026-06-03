@@ -1,4 +1,7 @@
 import "dotenv/config";
+import { initOtel } from "./otel";
+
+initOtel();
 import { sql } from "drizzle-orm";
 import {
   logStartupSummary,

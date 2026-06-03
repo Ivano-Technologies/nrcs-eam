@@ -1,5 +1,6 @@
 import { and, eq, gte, lte, sql } from "drizzle-orm";
-import { createNotification, getAllUsers, getDb } from "../db";
+import { createNotificationDeduped, hasRecentNotification } from "./notificationDedup";
+import { getAllUsers, getDb } from "../db";
 import {
   commodityTrackingNumbers,
   donors,
@@ -116,7 +117,7 @@ export async function checkStockThreshold(params: { catalogueId: number; warehou
   for (const user of users) {
     if (!["manager", "admin"].includes(user.role)) continue;
     if ((safetyStockLevel ?? 0) > 0 && quantityOnHand < (safetyStockLevel ?? 0)) {
-      await createNotification({
+      await createNotificationDeduped({
         userId: user.id,
         type: "critical_stock",
         title: "Critical Stock Alert",
@@ -125,7 +126,7 @@ export async function checkStockThreshold(params: { catalogueId: number; warehou
         relatedEntityId: params.relatedEntityId ?? null,
       });
     } else if (quantityOnHand < minLevel) {
-      await createNotification({
+      await createNotificationDeduped({
         userId: user.id,
         type: "low_stock",
         title: "Low Stock Alert",
@@ -139,7 +140,7 @@ export async function checkStockThreshold(params: { catalogueId: number; warehou
 
 export async function runDailyChecks() {
   const db = await getDb();
-  if (!db) return { checked: 0, expiredMarked: 0 };
+  if (!db) return { checked: 0, expiredMarked: 0, notificationsSkipped: 0 };
   const now = new Date();
   const in90 = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
   const in90Iso = in90.toISOString().slice(0, 10);
@@ -161,6 +162,7 @@ export async function runDailyChecks() {
     .where(and(eq(inventoryBatches.status, "active"), lte(inventoryBatches.expiryDate, in90Iso)));
 
   let expiredMarked = 0;
+  let notificationsSkipped = 0;
   const users = await getAllUsers();
   for (const b of batches) {
     if (!b.expiryDate) continue;
@@ -168,7 +170,18 @@ export async function runDailyChecks() {
     const type = days <= 30 ? "expiry_warning_30" : days <= 60 ? "expiry_warning_60" : "expiry_warning_90";
     for (const user of users) {
       if (!["manager", "admin"].includes(user.role)) continue;
-      await createNotification({
+      const dup = await hasRecentNotification({
+        userId: user.id,
+        type,
+        relatedEntityType: "inventory",
+        relatedEntityId: b.stockCardId,
+        withinHours: 24,
+      });
+      if (dup) {
+        notificationsSkipped += 1;
+        continue;
+      }
+      await createNotificationDeduped({
         userId: user.id,
         type,
         title: "Expiry warning",
@@ -206,20 +219,39 @@ export async function runDailyChecks() {
       expiredMarked += 1;
     }
   }
-  return { checked: batches.length, expiredMarked };
+  return { checked: batches.length, expiredMarked, notificationsSkipped };
 }
 
 export async function runWeeklyChecks() {
   const db = await getDb();
   if (!db) return { lowStockItems: 0, criticalStockItems: 0, reorderCandidates: 0 };
   const settingsRows = await db.select().from(stockSettings);
+  const balanceRows = await db
+    .select({
+      catalogueId: stockSettings.catalogueId,
+      warehouseId: stockSettings.warehouseId,
+      balance: sql<number>`coalesce(sum(${stockMovements.quantityIn}) - sum(${stockMovements.quantityOut}), 0)`.mapWith(Number),
+    })
+    .from(stockSettings)
+    .innerJoin(stockCards, eq(stockCards.locationId, stockSettings.warehouseId))
+    .innerJoin(
+      commodityTrackingNumbers,
+      and(eq(stockCards.ctnId, commodityTrackingNumbers.id), eq(commodityTrackingNumbers.itemId, stockSettings.catalogueId))
+    )
+    .leftJoin(stockMovements, eq(stockMovements.stockCardId, stockCards.id))
+    .groupBy(stockSettings.catalogueId, stockSettings.warehouseId);
+
+  const balanceByKey = new Map(
+    balanceRows.map((r) => [`${r.catalogueId}:${r.warehouseId}`, Number(r.balance ?? 0)])
+  );
+
   let lowStockItems = 0;
   let criticalStockItems = 0;
   for (const s of settingsRows) {
-    const quantityOnHand = await itemWarehouseNet(s.catalogueId, s.warehouseId);
-    if ((s.safetyStockLevel ?? 0) > 0 && Number(quantityOnHand) < Number(s.safetyStockLevel ?? 0)) {
+    const quantityOnHand = balanceByKey.get(`${s.catalogueId}:${s.warehouseId}`) ?? 0;
+    if ((s.safetyStockLevel ?? 0) > 0 && quantityOnHand < Number(s.safetyStockLevel ?? 0)) {
       criticalStockItems += 1;
-    } else if (Number(quantityOnHand) < Number(s.minLevel ?? 0)) {
+    } else if (quantityOnHand < Number(s.minLevel ?? 0)) {
       lowStockItems += 1;
     }
   }
@@ -227,14 +259,14 @@ export async function runWeeklyChecks() {
   const users = await getAllUsers();
   for (const u of users) {
     if (!["manager", "admin"].includes(u.role)) continue;
-    await createNotification({
+    await createNotificationDeduped({
       userId: u.id,
       type: "system_alert",
       title: "Weekly Inventory Insights",
       message: `Low stock: ${lowStockItems}, critical: ${criticalStockItems}, reorder candidates: ${reorderCandidates}.`,
       relatedEntityType: "inventory",
       relatedEntityId: null,
-    });
+    }, { withinHours: 168 });
   }
   return { lowStockItems, criticalStockItems, reorderCandidates };
 }
@@ -257,14 +289,14 @@ export async function runMonthlyChecks() {
   const users = await getAllUsers();
   for (const u of users) {
     if (!["manager", "admin"].includes(u.role)) continue;
-    await createNotification({
+    await createNotificationDeduped({
       userId: u.id,
       type: "system_alert",
       title: "Monthly Inventory Scorecard",
       message: `VED refresh rows: ${vedRows.length}, forecasted items: ${forecastedItems}, warehouses: ${warehouses.length}.`,
       relatedEntityType: "inventory",
       relatedEntityId: null,
-    });
+    }, { withinHours: 720 });
   }
   return { vedRefreshCount: vedRows.length, forecastedItems, warehouseScorecards: warehouses.length };
 }

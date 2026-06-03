@@ -1,4 +1,5 @@
 import { getLoginUrl } from "@/const";
+import { identifyUser, resetPostHog } from "@/lib/posthog";
 import { trpc } from "@/lib/trpc";
 import { TRPCClientError } from "@trpc/client";
 import { useCallback, useEffect, useMemo } from "react";
@@ -21,6 +22,7 @@ export function useAuth(options?: UseAuthOptions) {
   const logoutMutation = trpc.auth.logout.useMutation({
     onSuccess: () => {
       utils.auth.me.setData(undefined, null);
+      resetPostHog();
     },
   });
 
@@ -64,6 +66,12 @@ export function useAuth(options?: UseAuthOptions) {
     logoutMutation.error,
     logoutMutation.isPending,
   ]);
+
+  useEffect(() => {
+    const user = meQuery.data;
+    if (!user) return;
+    identifyUser(String(user.id), user.role, String(user.siteId ?? "hq"));
+  }, [meQuery.data]);
 
   useEffect(() => {
     if (!redirectOnUnauthenticated) return;

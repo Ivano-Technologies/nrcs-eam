@@ -40,6 +40,7 @@ import {
   type InventoryCatalogueSeedItem,
 } from "../../shared/inventoryCatalogueSeed";
 import { itemCategoryZod, type ItemCategory } from "../../shared/itemCategory";
+import { listPaginationInput, resolveListLimit, resolveListOffset } from "../../shared/listPagination";
 import { generateGrnPdf } from "../_core/pdfTemplates/grnPdf";
 import { generateWaybillPdf } from "../_core/pdfTemplates/waybillPdf";
 import { generateRequisitionPdf } from "../_core/pdfTemplates/requisitionPdf";
@@ -1387,6 +1388,7 @@ export const inventoryV2Router = router({
             dateFrom: z.string().optional(),
             dateTo: z.string().optional(),
           })
+          .merge(listPaginationInput)
           .optional()
       )
       .query(async ({ input, ctx }) => {
@@ -1405,6 +1407,8 @@ export const inventoryV2Router = router({
                 : undefined;
         const search = input?.search?.trim();
         const receivedFrom = input?.receivedFrom?.trim();
+        const limit = resolveListLimit(input?.limit);
+        const offset = resolveListOffset(input?.offset);
         return db
           .select()
           .from(inventoryDocuments)
@@ -1426,7 +1430,9 @@ export const inventoryV2Router = router({
               input?.dateTo ? lte(inventoryDocuments.createdAt, new Date(`${input.dateTo}T23:59:59.999Z`)) : undefined
             )
           )
-          .orderBy(desc(inventoryDocuments.createdAt));
+          .orderBy(desc(inventoryDocuments.createdAt))
+          .limit(limit)
+          .offset(offset);
       }),
 
     get: protectedProcedure
@@ -1483,6 +1489,7 @@ export const inventoryV2Router = router({
             status: z.enum(["draft", "dispatched", "received", "claim_raised"]).optional(),
             destinationType: z.enum(["beneficiary", "branch_store", "other"]).optional(),
           })
+          .merge(listPaginationInput)
           .optional()
       )
       .query(async ({ input, ctx }) => {
@@ -1503,19 +1510,31 @@ export const inventoryV2Router = router({
           const q = `%${input.search.trim()}%`;
           filters.push(or(ilike(waybills.wbNumber, q), ilike(waybills.destinationBeneficiary, q))!);
         }
-        const rows = await db.select().from(waybills).where(filters.length ? and(...filters) : undefined).orderBy(desc(waybills.createdAt));
-        const withCounts = await Promise.all(
-          rows.map(async (row) => {
-            const lineRows = await db.select().from(waybillLines).where(eq(waybillLines.waybillId, row.id));
-            const totalUnits = lineRows.reduce((sum, line) => sum + Number(line.nbOfUnits), 0);
-            return {
-              ...row,
-              lineCount: lineRows.length,
-              totalUnits,
-            };
-          })
-        );
-        return withCounts;
+        const limit = resolveListLimit(input?.limit);
+        const offset = resolveListOffset(input?.offset);
+        const rows = await db
+          .select()
+          .from(waybills)
+          .where(filters.length ? and(...filters) : undefined)
+          .orderBy(desc(waybills.createdAt))
+          .limit(limit)
+          .offset(offset);
+        const waybillIds = rows.map((r) => r.id);
+        const allLines =
+          waybillIds.length > 0
+            ? await db.select().from(waybillLines).where(inArray(waybillLines.waybillId, waybillIds))
+            : [];
+        const linesByWaybill = new Map<number, typeof allLines>();
+        for (const line of allLines) {
+          const bucket = linesByWaybill.get(line.waybillId) ?? [];
+          bucket.push(line);
+          linesByWaybill.set(line.waybillId, bucket);
+        }
+        return rows.map((row) => {
+          const lineRows = linesByWaybill.get(row.id) ?? [];
+          const totalUnits = lineRows.reduce((sum, line) => sum + Number(line.nbOfUnits), 0);
+          return { ...row, lineCount: lineRows.length, totalUnits };
+        });
       }),
 
     get: protectedProcedure.input(z.object({ id: z.number() })).query(async ({ input, ctx }) => {
@@ -1814,6 +1833,16 @@ export const inventoryV2Router = router({
           }
         }
         await db.update(waybills).set({ status: "dispatched", updatedAt: new Date() }).where(eq(waybills.id, wb.id));
+        const notifiedCatalogue = new Set<number>();
+        for (const line of lines) {
+          if (notifiedCatalogue.has(line.itemId)) continue;
+          notifiedCatalogue.add(line.itemId);
+          await checkStockThreshold({
+            catalogueId: line.itemId,
+            warehouseId: wb.warehouseId,
+            relatedEntityId: wb.id,
+          });
+        }
         if (process.env.WMS_WAYBILL_NOTIFY_TO) {
           const emailService = createEmailService();
           await emailService.send({
@@ -1946,6 +1975,11 @@ export const inventoryV2Router = router({
             sourceType: "transfer_out",
             createdBy: ctx.user.id,
           });
+          await checkStockThreshold({
+            catalogueId: line.catalogueId,
+            warehouseId: Number(doc.fromWarehouseId),
+            relatedEntityId: doc.id,
+          });
         }
         await db.update(inventoryDocuments).set({ status: "dispatched" }).where(eq(inventoryDocuments.id, doc.id));
         return { success: true as const };
@@ -1985,6 +2019,11 @@ export const inventoryV2Router = router({
             remarks: "Transfer receive",
             sourceType: "transfer_in",
             createdBy: ctx.user.id,
+          });
+          await checkStockThreshold({
+            catalogueId: line.catalogueId,
+            warehouseId: Number(doc.toWarehouseId),
+            relatedEntityId: doc.id,
           });
         }
         await db
@@ -2178,6 +2217,9 @@ export const inventoryV2Router = router({
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
         const [draft] = await db.select().from(inventoryImportDrafts).where(eq(inventoryImportDrafts.id, input.id)).limit(1);
         if (!draft) throw new TRPCError({ code: "NOT_FOUND", message: "Import draft not found." });
+        if (draft.status === "finalized") {
+          return { success: true as const, alreadyFinalized: true as const };
+        }
         const rows = Array.isArray(draft.rowsJson) ? (draft.rowsJson as any[]) : [];
         const validated = await validateImportRows(db, rows as any);
         const errorRows = validated.filter((r) => r.status === "error");
@@ -2402,7 +2444,17 @@ export const inventoryV2Router = router({
       }),
 
     list: protectedProcedure
-      .input(z.object({ status: z.string().optional(), priority: z.string().optional(), facilityId: z.number().optional(), search: z.string().optional() }).optional())
+      .input(
+        z
+          .object({
+            status: z.string().optional(),
+            priority: z.string().optional(),
+            facilityId: z.number().optional(),
+            search: z.string().optional(),
+          })
+          .merge(listPaginationInput)
+          .optional()
+      )
       .query(async ({ input, ctx }) => {
         const scopedFacilityId = enforceFacilityScope(ctx.user, input?.facilityId);
         if (scopedFacilityId === -1) return [];
@@ -2416,7 +2468,15 @@ export const inventoryV2Router = router({
           filters.push(eq(requisitions.requestingFacility, scopedFacilityId));
         }
         if (input?.search?.trim()) filters.push(ilike(requisitions.title, `%${input.search.trim()}%`));
-        return db.select().from(requisitions).where(filters.length ? and(...filters) : undefined).orderBy(desc(requisitions.createdAt));
+        const limit = resolveListLimit(input?.limit);
+        const offset = resolveListOffset(input?.offset);
+        return db
+          .select()
+          .from(requisitions)
+          .where(filters.length ? and(...filters) : undefined)
+          .orderBy(desc(requisitions.createdAt))
+          .limit(limit)
+          .offset(offset);
       }),
 
     get: protectedProcedure.input(z.object({ requisitionId: z.number() })).query(async ({ input, ctx }) => {

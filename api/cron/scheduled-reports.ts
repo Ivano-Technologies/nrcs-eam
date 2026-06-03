@@ -1,5 +1,5 @@
 import { authorizeCronRequest, logCronRun } from "../../server/_core/cronAuth";
-import { runDailyChecks } from "../../server/_core/inventoryAlerts";
+import { runScheduledReports } from "../../server/_core/scheduledReportsCron";
 import { captureServerEvent } from "../../server/_core/serverAnalytics";
 
 export default async function handler(req: any, res: any) {
@@ -10,12 +10,12 @@ export default async function handler(req: any, res: any) {
     return;
   }
   try {
-    const result = await runDailyChecks();
-    logCronRun("daily", startedAt, result);
-    captureServerEvent("cron", "cron_daily_complete", result);
+    const result = await runScheduledReports();
+    logCronRun("scheduled-reports", startedAt, result);
+    captureServerEvent("cron", "cron_scheduled_reports_complete", result);
     res.status(200).json({ ok: true, result });
   } catch (error) {
-    logCronRun("daily", startedAt, null, error);
+    logCronRun("scheduled-reports", startedAt, null, error);
     res.status(500).json({ ok: false, error: error instanceof Error ? error.message : "Failed" });
   }
 }

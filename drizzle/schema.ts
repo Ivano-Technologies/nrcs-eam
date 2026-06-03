@@ -1649,3 +1649,33 @@ export type BuildingSafety = typeof buildingSafety.$inferSelect;
 export type InsertBuildingSafety = typeof buildingSafety.$inferInsert;
 export type DonorReporting = typeof donorReporting.$inferSelect;
 export type InsertDonorReporting = typeof donorReporting.$inferInsert;
+
+export const asyncJobStatusEnum = pgEnum("async_job_status", [
+  "pending",
+  "running",
+  "completed",
+  "failed",
+]);
+
+export const asyncJobTypeEnum = pgEnum("async_job_type", [
+  "pdf_generate",
+  "email_send",
+  "import_finalize",
+]);
+
+export const asyncJobs = pgTable("async_jobs", {
+  id: serial("id").primaryKey(),
+  jobType: asyncJobTypeEnum("job_type").notNull(),
+  payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
+  status: asyncJobStatusEnum("status").notNull().default("pending"),
+  runAfter: timestamp("run_after", { mode: "date" }).notNull(),
+  startedAt: timestamp("started_at", { mode: "date" }),
+  finishedAt: timestamp("finished_at", { mode: "date" }),
+  result: jsonb("result").$type<Record<string, unknown>>(),
+  lastError: text("last_error"),
+  attempts: integer("attempts").default(0).notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+});
+
+export type AsyncJob = typeof asyncJobs.$inferSelect;
+export type InsertAsyncJob = typeof asyncJobs.$inferInsert;
