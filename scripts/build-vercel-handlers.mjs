@@ -35,6 +35,26 @@ const bundles = [
     entryPoints: [path.join(repoRoot, "server/_core/vercelTrpcHandler.ts")],
     outfile: path.join(repoRoot, "api/trpc/_handler.cjs"),
   },
+  {
+    entryPoints: [path.join(repoRoot, "api/cron/daily.ts")],
+    outfile: path.join(repoRoot, "api/cron/_daily.cjs"),
+  },
+  {
+    entryPoints: [path.join(repoRoot, "api/cron/weekly.ts")],
+    outfile: path.join(repoRoot, "api/cron/_weekly.cjs"),
+  },
+  {
+    entryPoints: [path.join(repoRoot, "api/cron/monthly.ts")],
+    outfile: path.join(repoRoot, "api/cron/_monthly.cjs"),
+  },
+  {
+    entryPoints: [path.join(repoRoot, "api/cron/process-jobs.ts")],
+    outfile: path.join(repoRoot, "api/cron/_process-jobs.cjs"),
+  },
+  {
+    entryPoints: [path.join(repoRoot, "api/cron/scheduled-reports.ts")],
+    outfile: path.join(repoRoot, "api/cron/_scheduled-reports.cjs"),
+  },
 ];
 
 for (const options of bundles) {

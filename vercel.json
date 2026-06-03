@@ -13,12 +13,52 @@
     },
     "api/health.ts": {
       "maxDuration": 10
+    },
+    "api/cron/daily.js": {
+      "maxDuration": 60,
+      "regions": ["dub1"]
+    },
+    "api/cron/weekly.js": {
+      "maxDuration": 60,
+      "regions": ["dub1"]
+    },
+    "api/cron/monthly.js": {
+      "maxDuration": 60,
+      "regions": ["dub1"]
+    },
+    "api/cron/process-jobs.js": {
+      "maxDuration": 60,
+      "regions": ["dub1"]
+    },
+    "api/cron/scheduled-reports.js": {
+      "maxDuration": 60,
+      "regions": ["dub1"]
     }
   },
   "crons": [
     {
       "path": "/api/keep-alive",
       "schedule": "0 9 */5 * *"
+    },
+    {
+      "path": "/api/cron/daily",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/weekly",
+      "schedule": "0 6 * * 1"
+    },
+    {
+      "path": "/api/cron/monthly",
+      "schedule": "0 6 1 * *"
+    },
+    {
+      "path": "/api/cron/process-jobs",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/scheduled-reports",
+      "schedule": "0 7 * * *"
     }
   ],
   "rewrites": [
