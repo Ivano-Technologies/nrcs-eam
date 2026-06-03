@@ -110,7 +110,7 @@
     "nodemailer": "^8.0.4",
     "pdf-lib": "^1.17.1",
     "pdf-parse": "^2.4.5",
-    "pdfkit": "^0.17.2",
+    "pdfkit": "^0.18.0",
     "postgres": "^3.4.5",
     "posthog-js": "^1.372.6",
     "posthog-node": "^5.33.0",
