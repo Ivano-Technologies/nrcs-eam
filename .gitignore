@@ -9,6 +9,7 @@ build/
 api/trpc/data/
 api/trpc/_handler.cjs
 api/cron/_*.cjs
+api/cron/*.js
 
 # Environment variables
 .env
