@@ -93,7 +93,23 @@ async function countAdequatelyStockedActiveSites(
   database: DashboardDb,
   opts: { siteId?: number; asOfDate?: string }
 ): Promise<number> {
+  const activeSiteWhere =
+    opts.siteId != null ? and(eq(sites.isActive, true), eq(sites.id, opts.siteId)) : eq(sites.isActive, true);
+
   const movementDateFilter = opts.asOfDate ? lte(stockMovements.date, opts.asOfDate) : undefined;
+  const [anyMovement] = await database
+    .select({ id: stockMovements.id })
+    .from(stockMovements)
+    .where(movementDateFilter)
+    .limit(1);
+  if (!anyMovement) {
+    const [siteCount] = await database
+      .select({ count: sql<number>`count(*)`.mapWith(Number) })
+      .from(sites)
+      .where(activeSiteWhere);
+    return Number(siteCount?.count ?? 0);
+  }
+
   const movementTotals = database
     .select({
       stockCardId: stockMovements.stockCardId,
@@ -107,8 +123,6 @@ async function countAdequatelyStockedActiveSites(
     .as("movement_net_dr");
 
   const thresholdSql = sql`coalesce(${stockSettings.minLevel}, ${stockCards.stockMinimum}, 0)`;
-  const activeSiteWhere =
-    opts.siteId != null ? and(eq(sites.isActive, true), eq(sites.id, opts.siteId)) : eq(sites.isActive, true);
 
   const underStockAtSite = exists(
     database
@@ -2014,7 +2028,7 @@ export const appRouter = router({
           const inactiveSiteWhere =
             siteId != null ? and(eq(sites.isActive, false), eq(sites.id, siteId)) : eq(sites.isActive, false);
           const cardSiteFilter = siteId != null ? eq(stockCards.locationId, siteId) : undefined;
-          const METRICS_TIMEOUT = 9_000;
+          const METRICS_TIMEOUT = 6_000;
           type MetricsBatch = [
             { id: number }[],
             { total: number }[],

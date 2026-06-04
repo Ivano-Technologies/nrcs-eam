@@ -1522,19 +1522,7 @@ export async function getDashboardStats(opts?: { siteId?: number }) {
   const siteId = opts?.siteId;
   const assetScope = siteId != null ? eq(assets.siteId, siteId) : undefined;
 
-  const movementTotals = db
-    .select({
-      stockCardId: stockMovements.stockCardId,
-      netQuantity: sql<number>`coalesce(sum(${stockMovements.quantityIn} - ${stockMovements.quantityOut}), 0)`
-        .mapWith(Number)
-        .as("netQuantity"),
-    })
-    .from(stockMovements)
-    .groupBy(stockMovements.stockCardId)
-    .as("movement_net_kpi");
-
-  const thresholdSql = sql`coalesce(${stockSettings.minLevel}, ${stockCards.stockMinimum}, 0)`;
-  const lowStockScope = siteId != null ? eq(stockCards.locationId, siteId) : undefined;
+  const [anyMovement] = await db.select({ id: stockMovements.id }).from(stockMovements).limit(1);
 
   const [totalAssets] = assetScope
     ? await db.select({ count: sql<number>`count(*)` }).from(assets).where(assetScope)
@@ -1556,25 +1544,44 @@ export async function getDashboardStats(opts?: { siteId?: number }) {
     .select({ count: sql<number>`count(*)` })
     .from(workOrders)
     .where(eq(workOrders.status, "in_progress"));
-  const [lowStockCount] = await db
-    .select({ count: sql<number>`count(distinct ${stockCards.id})`.mapWith(Number) })
-    .from(stockCards)
-    .innerJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
-    .leftJoin(movementTotals, eq(movementTotals.stockCardId, stockCards.id))
-    .leftJoin(
-      stockSettings,
-      and(
-        eq(stockSettings.catalogueId, commodityTrackingNumbers.itemId),
-        eq(stockSettings.warehouseId, stockCards.locationId)
+
+  let lowStockItems = 0;
+  if (anyMovement) {
+    const movementTotals = db
+      .select({
+        stockCardId: stockMovements.stockCardId,
+        netQuantity: sql<number>`coalesce(sum(${stockMovements.quantityIn} - ${stockMovements.quantityOut}), 0)`
+          .mapWith(Number)
+          .as("netQuantity"),
+      })
+      .from(stockMovements)
+      .groupBy(stockMovements.stockCardId)
+      .as("movement_net_kpi");
+
+    const thresholdSql = sql`coalesce(${stockSettings.minLevel}, ${stockCards.stockMinimum}, 0)`;
+    const lowStockScope = siteId != null ? eq(stockCards.locationId, siteId) : undefined;
+
+    const [lowStockCount] = await db
+      .select({ count: sql<number>`count(distinct ${stockCards.id})`.mapWith(Number) })
+      .from(stockCards)
+      .innerJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
+      .leftJoin(movementTotals, eq(movementTotals.stockCardId, stockCards.id))
+      .leftJoin(
+        stockSettings,
+        and(
+          eq(stockSettings.catalogueId, commodityTrackingNumbers.itemId),
+          eq(stockSettings.warehouseId, stockCards.locationId)
+        )
       )
-    )
-    .where(
-      and(
-        lowStockScope,
-        sql`${thresholdSql} > 0`,
-        sql`coalesce(${movementTotals.netQuantity}, 0) < ${thresholdSql}`
-      )
-    );
+      .where(
+        and(
+          lowStockScope,
+          sql`${thresholdSql} > 0`,
+          sql`coalesce(${movementTotals.netQuantity}, 0) < ${thresholdSql}`
+        )
+      );
+    lowStockItems = Number(lowStockCount?.count ?? 0);
+  }
 
   return {
     totalAssets: Number(totalAssets?.count ?? 0),
@@ -1582,7 +1589,7 @@ export async function getDashboardStats(opts?: { siteId?: number }) {
     maintenanceAssets: Number(maintenanceAssets?.count ?? 0),
     pendingWorkOrders: Number(pendingWorkOrders?.count ?? 0),
     inProgressWorkOrders: Number(inProgressWorkOrders?.count ?? 0),
-    lowStockItems: Number(lowStockCount?.count ?? 0),
+    lowStockItems,
   };
 }
 
