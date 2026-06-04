@@ -14,23 +14,23 @@
     "api/health.ts": {
       "maxDuration": 10
     },
-    "api/cron/daily.js": {
+    "api/cron/daily.ts": {
       "maxDuration": 60,
       "regions": ["dub1"]
     },
-    "api/cron/weekly.js": {
+    "api/cron/weekly.ts": {
       "maxDuration": 60,
       "regions": ["dub1"]
     },
-    "api/cron/monthly.js": {
+    "api/cron/monthly.ts": {
       "maxDuration": 60,
       "regions": ["dub1"]
     },
-    "api/cron/process-jobs.js": {
+    "api/cron/process-jobs.ts": {
       "maxDuration": 60,
       "regions": ["dub1"]
     },
-    "api/cron/scheduled-reports.js": {
+    "api/cron/scheduled-reports.ts": {
       "maxDuration": 60,
       "regions": ["dub1"]
     }
