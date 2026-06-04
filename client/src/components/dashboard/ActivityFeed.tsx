@@ -1,3 +1,4 @@
+import { useDashboardBundle } from "@/components/dashboard/DashboardBundleContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
@@ -12,7 +13,12 @@ const KIND_DOT: Record<string, string> = {
 };
 
 export function ActivityFeed() {
-  const { data } = trpc.dashboard.recentActivity.useQuery({ limit: 5 });
+  const bundle = useDashboardBundle();
+  const { data: fetched } = trpc.dashboard.recentActivity.useQuery(
+    { limit: 5 },
+    { enabled: bundle === undefined, staleTime: 60_000 }
+  );
+  const data = bundle?.recentActivity ?? fetched;
 
   return (
     <Card className="dashboard-card">

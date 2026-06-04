@@ -1,3 +1,4 @@
+import { useDashboardBundle } from "@/components/dashboard/DashboardBundleContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
@@ -48,7 +49,12 @@ type Props = {
 
 export function AttentionPanel({ role }: Props) {
   const [, setLocation] = useLocation();
-  const { data } = trpc.dashboard.attentionItems.useQuery({ role });
+  const bundle = useDashboardBundle();
+  const { data: fetched } = trpc.dashboard.attentionItems.useQuery(
+    { role },
+    { enabled: bundle === undefined, staleTime: 60_000 }
+  );
+  const data = bundle?.attentionItems ?? fetched;
 
   return (
     <Card className="dashboard-card">

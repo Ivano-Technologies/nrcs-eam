@@ -1,3 +1,4 @@
+import { useDashboardBundle } from "@/components/dashboard/DashboardBundleContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { KPI_VALUE_CLASS } from "@/lib/kpiTypography";
@@ -7,7 +8,12 @@ import { trpc } from "@/lib/trpc";
 import { Link } from "wouter";
 
 export function RequisitionsTable() {
-  const { data } = trpc.dashboard.pendingRequisitions.useQuery({ limit: 4 });
+  const bundle = useDashboardBundle();
+  const { data: fetched } = trpc.dashboard.pendingRequisitions.useQuery(
+    { limit: 4 },
+    { enabled: bundle === undefined, staleTime: 60_000 }
+  );
+  const data = bundle?.pendingRequisitions ?? fetched;
 
   return (
     <Card className="dashboard-card">

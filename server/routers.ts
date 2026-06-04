@@ -56,6 +56,9 @@ import {
 } from "../drizzle/schema";
 import { buildDistributionVelocity, buildStockReadiness, getPeriodWindow } from "./wms/dashboard";
 import { cacheGetJson, cacheSetJson } from "./_core/cache";
+import { withTimeout } from "./_core/withTimeout";
+import type { TrpcContext } from "./_core/context";
+import type { DashboardPeriod } from "./wms/dashboard";
 import {
   legacyStatusFromRegister,
   registerStatusZodEnum,
@@ -85,6 +88,81 @@ function normalizeAssetItemType(
 }
 
 const WAYBILL_DISTRIBUTION_DESTINATIONS = ["beneficiary", "distribution_point"] as const;
+
+const DASHBOARD_EMPTY_METRICS = {
+  lowStockItems: {
+    value: 0,
+    delta: undefined,
+    direction: "flat" as const,
+    goodWhen: "down" as const,
+  },
+  activeFacilities: { value: 0, total: 0, offline: 0, goodWhen: "up" as const },
+  stockReadiness: {
+    adequate: 0,
+    total: 0,
+    delta: 0,
+    direction: "flat" as const,
+    tone: "red" as const,
+    goodWhen: "up" as const,
+  },
+  distributionVelocity: {
+    value: 0,
+    deltaPercent: 0,
+    direction: "flat" as const,
+    hasData: false,
+    goodWhen: "up" as const,
+  },
+} as const;
+
+type DashboardMetricsPayload = {
+  lowStockItems: {
+    value: number;
+    delta?: number;
+    direction: "up" | "down" | "flat";
+    goodWhen: "down";
+  };
+  activeFacilities: { value: number; total: number; offline: number; goodWhen: "up" };
+  stockReadiness: {
+    adequate: number;
+    total: number;
+    delta: number;
+    direction: "up" | "down" | "flat";
+    tone: "green" | "amber" | "red";
+    goodWhen: "up";
+  };
+  distributionVelocity: {
+    value: number;
+    deltaPercent: number;
+    direction: "up" | "down" | "flat";
+    hasData: boolean;
+    goodWhen: "up";
+  };
+};
+
+type DashboardAllOutput = {
+  metrics: DashboardMetricsPayload;
+  totalAssetValue: { totalNgn: number; propertyNgn: number; movableNgn: number };
+  stockMovement: StockMovementPoint[];
+  facilityStatus: FacilityStatusRow[];
+  recentActivity: RecentActivityRow[];
+  pendingRequisitions: { total: number; urgent: number; oldestDaysAgo: number | null };
+  attentionItems: Array<{
+    icon: string;
+    tone: string;
+    label: string;
+    meta: string;
+    href: string | null;
+  }>;
+  branchPerformance: Array<{
+    id: number;
+    name: string;
+    code: string | null;
+    isActive: boolean;
+    stockScorePercent: number | null;
+    adequateCards: number;
+    totalCards: number;
+  }>;
+};
 
 type DashboardDb = NonNullable<Awaited<ReturnType<typeof db.getDb>>>;
 
@@ -152,6 +230,272 @@ async function countAdequatelyStockedActiveSites(
     .where(and(activeSiteWhere, not(underStockAtSite)));
 
   return Number(row?.adequate ?? 0);
+}
+
+type FacilityStatusRow = {
+  id: number;
+  name: string;
+  code: string | null;
+  type: string;
+  status: "active" | "offline";
+  stockScore: number | null;
+};
+
+async function queryFacilityStatus(ctx: { user: { role: string; siteId: number | null } }): Promise<FacilityStatusRow[]> {
+  const scope = dashboardDataScope(ctx);
+  if (scope.mode === "empty") return [];
+  const siteId = scope.mode === "site" ? scope.siteId : undefined;
+  const database = await db.getDb();
+  if (!database) return [];
+
+  const rows = await database
+    .select({
+      id: sites.id,
+      name: sites.name,
+      code: sites.code,
+      type: sites.facilityType,
+      isActive: sites.isActive,
+    })
+    .from(sites)
+    .where(siteId != null ? eq(sites.id, siteId) : sql`true`)
+    .orderBy(sql`${sites.facilityType} asc, ${sites.name} asc`)
+    .limit(siteId != null ? 1 : 10);
+
+  const sortFacilities = (items: FacilityStatusRow[]) =>
+    items.sort((a, b) => {
+      if (a.stockScore === null && b.stockScore === null) return 0;
+      if (a.stockScore === null) return 1;
+      if (b.stockScore === null) return -1;
+      return a.stockScore - b.stockScore;
+    });
+
+  const [anyMovement] = await database.select({ id: stockMovements.id }).from(stockMovements).limit(1);
+  if (!anyMovement) {
+    return sortFacilities(
+      rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        code: row.code,
+        type: row.type,
+        status: row.isActive ? ("active" as const) : ("offline" as const),
+        stockScore: null,
+      }))
+    );
+  }
+
+  const movementTotals = database
+    .select({
+      stockCardId: stockMovements.stockCardId,
+      netQuantity: sql<number>`coalesce(sum(${stockMovements.quantityIn} - ${stockMovements.quantityOut}), 0)`.mapWith(Number).as("netQuantity"),
+    })
+    .from(stockMovements)
+    .groupBy(stockMovements.stockCardId)
+    .as("movement_totals");
+
+  const scoreSite = siteId != null ? eq(stockCards.locationId, siteId) : sql`true`;
+  const scoreRows = await database
+    .select({
+      locationId: stockCards.locationId,
+      total: sql<number>`count(distinct ${stockCards.id})`.mapWith(Number),
+      adequate: sql<number>`count(distinct ${stockCards.id}) filter (where coalesce(${movementTotals.netQuantity}, 0) > coalesce(${stockSettings.minLevel}, 0))`.mapWith(Number),
+    })
+    .from(stockCards)
+    .leftJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
+    .leftJoin(
+      stockSettings,
+      and(
+        eq(stockSettings.catalogueId, commodityTrackingNumbers.itemId),
+        eq(stockSettings.warehouseId, stockCards.locationId)
+      )
+    )
+    .leftJoin(movementTotals, eq(movementTotals.stockCardId, stockCards.id))
+    .where(scoreSite)
+    .groupBy(stockCards.locationId);
+
+  const scoreByLocation = new Map<number, { total: number; adequate: number }>();
+  for (const row of scoreRows) {
+    scoreByLocation.set(row.locationId, {
+      total: Number(row.total ?? 0),
+      adequate: Number(row.adequate ?? 0),
+    });
+  }
+
+  return sortFacilities(
+    rows.map((row) => {
+      const score = scoreByLocation.get(row.id);
+      const stockScore = score && score.total > 0 ? Math.round((score.adequate / score.total) * 100) : null;
+      return {
+        id: row.id,
+        name: row.name,
+        code: row.code,
+        type: row.type,
+        status: row.isActive ? ("active" as const) : ("offline" as const),
+        stockScore,
+      };
+    })
+  );
+}
+
+type StockMovementPoint = { w: string; inbound: number; outbound: number };
+
+async function queryStockMovement(
+  ctx: { user: { role: string; siteId: number | null } },
+  weeks: number
+): Promise<StockMovementPoint[]> {
+  const scope = dashboardDataScope(ctx);
+  if (scope.mode === "empty") return [];
+  const siteId = scope.mode === "site" ? scope.siteId : undefined;
+  const database = await db.getDb();
+  if (!database) return [];
+
+  const [anyMovement] = await database.select({ id: stockMovements.id }).from(stockMovements).limit(1);
+  if (!anyMovement) return [];
+
+  const startDate = new Date();
+  startDate.setUTCDate(startDate.getUTCDate() - (weeks * 7 - 1));
+  const startDateIso = startDate.toISOString().slice(0, 10);
+
+  const siteCard = siteId != null ? eq(stockCards.locationId, siteId) : sql`true`;
+  const rows = await database
+    .select({
+      weekStart: sql<string>`to_char(date_trunc('week', ${stockMovements.date}::timestamp), 'YYYY-MM-DD')`,
+      inbound: sql<number>`coalesce(sum(${stockMovements.quantityIn}), 0)`.mapWith(Number),
+      outbound: sql<number>`coalesce(sum(${stockMovements.quantityOut}), 0)`.mapWith(Number),
+    })
+    .from(stockMovements)
+    .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
+    .where(and(gte(stockMovements.date, startDateIso), siteCard))
+    .groupBy(sql`date_trunc('week', ${stockMovements.date}::timestamp)`)
+    .orderBy(sql`date_trunc('week', ${stockMovements.date}::timestamp) asc`);
+
+  return rows.map((row) => ({
+    w: row.weekStart,
+    inbound: Number(row.inbound ?? 0),
+    outbound: Number(row.outbound ?? 0),
+  }));
+}
+
+type RecentActivityRow = {
+  type: string;
+  description: string;
+  timestamp: string;
+  facilityName: string;
+};
+
+async function queryRecentActivity(
+  ctx: { user: { role: string; siteId: number | null } },
+  limit: number
+): Promise<RecentActivityRow[]> {
+  const scope = dashboardDataScope(ctx);
+  if (scope.mode === "empty") return [];
+  const siteId = scope.mode === "site" ? scope.siteId : undefined;
+  const database = await db.getDb();
+  if (!database) return [];
+
+  const siteMove = siteId != null ? eq(stockCards.locationId, siteId) : sql`true`;
+  const recentMovementRows = await database
+    .select({
+      type: stockMovements.sourceType,
+      description: stockMovements.documentRef,
+      timestamp: stockMovements.createdAt,
+      facilityName: sites.name,
+    })
+    .from(stockMovements)
+    .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
+    .innerJoin(sites, eq(stockCards.locationId, sites.id))
+    .where(and(sql`${stockMovements.sourceType} in ('grn', 'waybill')`, siteMove))
+    .orderBy(sql`${stockMovements.createdAt} desc`)
+    .limit(10);
+
+  const siteReq = siteId != null ? eq(requisitions.requestingFacility, siteId) : sql`true`;
+  const recentRequisitionRows = await database
+    .select({
+      type: sql<string>`'requisition'`,
+      description: sql<string>`case
+              when ${requisitions.status} = 'approved' then concat('Requisition approved · ', ${requisitions.reqNumber})
+              else concat('Requisition submitted · ', ${requisitions.reqNumber})
+            end`,
+      timestamp: sql<Date>`coalesce(${requisitions.approvedHqAt}, ${requisitions.approvedBranchAt}, ${requisitions.createdAt})`,
+      facilityName: sites.name,
+    })
+    .from(requisitions)
+    .innerJoin(sites, eq(requisitions.requestingFacility, sites.id))
+    .where(and(sql`${requisitions.status} in ('submitted', 'approved')`, siteReq))
+    .orderBy(sql`coalesce(${requisitions.approvedHqAt}, ${requisitions.approvedBranchAt}, ${requisitions.createdAt}) desc`)
+    .limit(10);
+
+  const siteAsset = siteId != null ? eq(assets.siteId, siteId) : sql`true`;
+  const recentAssetRows = await database
+    .select({
+      type: sql<string>`'asset'`,
+      description: sql<string>`concat('Asset created · ', ${assets.assetTag})`,
+      timestamp: assets.createdAt,
+      facilityName: sites.name,
+    })
+    .from(assets)
+    .innerJoin(sites, eq(assets.siteId, sites.id))
+    .where(siteAsset)
+    .orderBy(sql`${assets.createdAt} desc`)
+    .limit(10);
+
+  const siteXfer = siteId != null ? eq(assetTransfers.toSiteId, siteId) : sql`true`;
+  const recentTransferRows = await database
+    .select({
+      type: sql<string>`'asset_transfer'`,
+      description: sql<string>`concat('Asset transferred · ', ${assets.assetTag})`,
+      timestamp: sql<Date>`coalesce(${assetTransfers.transferDate}, ${assetTransfers.createdAt})`,
+      facilityName: sites.name,
+    })
+    .from(assetTransfers)
+    .innerJoin(assets, eq(assetTransfers.assetId, assets.id))
+    .innerJoin(sites, eq(assetTransfers.toSiteId, sites.id))
+    .where(siteXfer)
+    .orderBy(sql`coalesce(${assetTransfers.transferDate}, ${assetTransfers.createdAt}) desc`)
+    .limit(10);
+
+  return [...recentMovementRows, ...recentRequisitionRows, ...recentAssetRows, ...recentTransferRows]
+    .filter((row) => row.timestamp)
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+    .slice(0, limit)
+    .map((row) => ({
+      type: String(row.type),
+      description: row.description
+        ? String(row.description)
+        : row.type === "grn"
+          ? "Goods received posted"
+          : row.type === "waybill"
+            ? "Waybill posted"
+            : "Activity recorded",
+      timestamp: new Date(row.timestamp).toISOString(),
+      facilityName: row.facilityName ?? "Unknown facility",
+    }));
+}
+
+async function queryPendingRequisitions(ctx: { user: { role: string; siteId: number | null } }) {
+  const scope = dashboardDataScope(ctx);
+  if (scope.mode === "empty") return { total: 0, urgent: 0, oldestDaysAgo: null as number | null };
+  const siteId = scope.mode === "site" ? scope.siteId : undefined;
+  const database = await db.getDb();
+  if (!database) return { total: 0, urgent: 0, oldestDaysAgo: null as number | null };
+
+  const siteReq = siteId != null ? eq(requisitions.requestingFacility, siteId) : sql`true`;
+  const rows = await database
+    .select({
+      total: sql<number>`count(*)`.mapWith(Number),
+      urgent: sql<number>`count(*) filter (where lower(${requisitions.priority}) = 'urgent')`.mapWith(Number),
+      oldest: sql<Date | null>`min(${requisitions.createdAt})`,
+    })
+    .from(requisitions)
+    .where(and(sql`${requisitions.status} in ('submitted', 'approved')`, siteReq));
+
+  const summary = rows[0];
+  const total = Number(summary?.total ?? 0);
+  const urgent = Number(summary?.urgent ?? 0);
+  const oldest = summary?.oldest ? new Date(summary.oldest) : null;
+  const oldestDaysAgo =
+    oldest === null ? null : Math.max(0, Math.floor((Date.now() - oldest.getTime()) / (1000 * 60 * 60 * 24)));
+
+  return { total, urgent, oldestDaysAgo };
 }
 
 /** Staff/Field see only their assigned facility; admin/manager see org-wide. */
@@ -2169,244 +2513,76 @@ export const appRouter = router({
         }
         return metricsPayload;
       }),
+    /** Single round-trip for dashboard page — one pool, sequential sections. */
+    all: protectedProcedure
+      .input(
+        z.object({
+          period: z.enum(["Today", "Week", "Month", "Quarter", "Year"]),
+          role: z.enum(["Admin", "Manager", "Staff", "Field"]),
+          stockMovementWeeks: z.number().min(4).max(26).default(12),
+        })
+      )
+      .query(async ({ input, ctx }): Promise<DashboardAllOutput> => loadDashboardAll(ctx, input)),
     stockMovement: protectedProcedure
       .input(z.object({ weeks: z.number().min(4).max(26).default(12) }).optional())
       .query(async ({ input, ctx }) => {
-        const scope = dashboardDataScope(ctx);
-        if (scope.mode === "empty") return [];
-        const siteId = scope.mode === "site" ? scope.siteId : undefined;
-        const weeks = input?.weeks ?? 12;
-        const database = await db.getDb();
-        if (!database) return [];
-
-        const startDate = new Date();
-        startDate.setUTCDate(startDate.getUTCDate() - (weeks * 7 - 1));
-        const startDateIso = startDate.toISOString().slice(0, 10);
-
-        const siteCard = siteId != null ? eq(stockCards.locationId, siteId) : sql`true`;
-        const rows = await database
-          .select({
-            weekStart: sql<string>`to_char(date_trunc('week', ${stockMovements.date}::timestamp), 'YYYY-MM-DD')`,
-            inbound: sql<number>`coalesce(sum(${stockMovements.quantityIn}), 0)`.mapWith(Number),
-            outbound: sql<number>`coalesce(sum(${stockMovements.quantityOut}), 0)`.mapWith(Number),
-          })
-          .from(stockMovements)
-          .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
-          .where(and(gte(stockMovements.date, startDateIso), siteCard))
-          .groupBy(sql`date_trunc('week', ${stockMovements.date}::timestamp)`)
-          .orderBy(sql`date_trunc('week', ${stockMovements.date}::timestamp) asc`);
-
-        return rows.map((row) => ({
-          w: row.weekStart,
-          inbound: Number(row.inbound ?? 0),
-          outbound: Number(row.outbound ?? 0),
-        }));
+        try {
+          return await withTimeout(queryStockMovement(ctx, input?.weeks ?? 12), 8000, "stockMovement");
+        } catch {
+          return [];
+        }
       }),
     recentActivity: protectedProcedure
       .input(z.object({ limit: z.number().min(1).max(20).default(5) }).optional())
       .query(async ({ input, ctx }) => {
-        const scope = dashboardDataScope(ctx);
-        if (scope.mode === "empty") return [];
-        const siteId = scope.mode === "site" ? scope.siteId : undefined;
-        const database = await db.getDb();
-        if (!database) return [];
-
-        const limit = input?.limit ?? 5;
-        const siteMove = siteId != null ? eq(stockCards.locationId, siteId) : sql`true`;
-        const recentMovementRows = await database
-          .select({
-            type: stockMovements.sourceType,
-            description: stockMovements.documentRef,
-            timestamp: stockMovements.createdAt,
-            facilityName: sites.name,
-          })
-          .from(stockMovements)
-          .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
-          .innerJoin(sites, eq(stockCards.locationId, sites.id))
-          .where(and(sql`${stockMovements.sourceType} in ('grn', 'waybill')`, siteMove))
-          .orderBy(sql`${stockMovements.createdAt} desc`)
-          .limit(10);
-
-        const siteReq = siteId != null ? eq(requisitions.requestingFacility, siteId) : sql`true`;
-        const recentRequisitionRows = await database
-          .select({
-            type: sql<string>`'requisition'`,
-            description: sql<string>`case
-              when ${requisitions.status} = 'approved' then concat('Requisition approved · ', ${requisitions.reqNumber})
-              else concat('Requisition submitted · ', ${requisitions.reqNumber})
-            end`,
-            timestamp: sql<Date>`coalesce(${requisitions.approvedHqAt}, ${requisitions.approvedBranchAt}, ${requisitions.createdAt})`,
-            facilityName: sites.name,
-          })
-          .from(requisitions)
-          .innerJoin(sites, eq(requisitions.requestingFacility, sites.id))
-          .where(and(sql`${requisitions.status} in ('submitted', 'approved')`, siteReq))
-          .orderBy(sql`coalesce(${requisitions.approvedHqAt}, ${requisitions.approvedBranchAt}, ${requisitions.createdAt}) desc`)
-          .limit(10);
-
-        const siteAsset = siteId != null ? eq(assets.siteId, siteId) : sql`true`;
-        const recentAssetRows = await database
-          .select({
-            type: sql<string>`'asset'`,
-            description: sql<string>`concat('Asset created · ', ${assets.assetTag})`,
-            timestamp: assets.createdAt,
-            facilityName: sites.name,
-          })
-          .from(assets)
-          .innerJoin(sites, eq(assets.siteId, sites.id))
-          .where(siteAsset)
-          .orderBy(sql`${assets.createdAt} desc`)
-          .limit(10);
-
-        const siteXfer = siteId != null ? eq(assetTransfers.toSiteId, siteId) : sql`true`;
-        const recentTransferRows = await database
-          .select({
-            type: sql<string>`'asset_transfer'`,
-            description: sql<string>`concat('Asset transferred · ', ${assets.assetTag})`,
-            timestamp: sql<Date>`coalesce(${assetTransfers.transferDate}, ${assetTransfers.createdAt})`,
-            facilityName: sites.name,
-          })
-          .from(assetTransfers)
-          .innerJoin(assets, eq(assetTransfers.assetId, assets.id))
-          .innerJoin(sites, eq(assetTransfers.toSiteId, sites.id))
-          .where(siteXfer)
-          .orderBy(sql`coalesce(${assetTransfers.transferDate}, ${assetTransfers.createdAt}) desc`)
-          .limit(10);
-
-        return [...recentMovementRows, ...recentRequisitionRows, ...recentAssetRows, ...recentTransferRows]
-          .filter((row) => row.timestamp)
-          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-          .slice(0, limit)
-          .map((row) => ({
-            type: String(row.type),
-            description: row.description
-              ? String(row.description)
-              : row.type === "grn"
-                ? "Goods received posted"
-                : row.type === "waybill"
-                  ? "Waybill posted"
-                  : "Activity recorded",
-            timestamp: new Date(row.timestamp).toISOString(),
-            facilityName: row.facilityName ?? "Unknown facility",
-          }));
+        try {
+          return await withTimeout(queryRecentActivity(ctx, input?.limit ?? 5), 8000, "recentActivity");
+        } catch {
+          return [];
+        }
       }),
     facilityStatus: protectedProcedure.query(async ({ ctx }) => {
-      const scope = dashboardDataScope(ctx);
-      if (scope.mode === "empty") return [];
-      const siteId = scope.mode === "site" ? scope.siteId : undefined;
-      const database = await db.getDb();
-      if (!database) return [];
-
-      const movementTotals = database
-        .select({
-          stockCardId: stockMovements.stockCardId,
-          netQuantity: sql<number>`coalesce(sum(${stockMovements.quantityIn} - ${stockMovements.quantityOut}), 0)`.mapWith(Number).as("netQuantity"),
-        })
-        .from(stockMovements)
-        .groupBy(stockMovements.stockCardId)
-        .as("movement_totals");
-
-      const rows = await database
-        .select({
-          id: sites.id,
-          name: sites.name,
-          code: sites.code,
-          type: sites.facilityType,
-          isActive: sites.isActive,
-        })
-        .from(sites)
-        .where(siteId != null ? eq(sites.id, siteId) : sql`true`)
-        .orderBy(sql`${sites.facilityType} asc, ${sites.name} asc`)
-        .limit(siteId != null ? 1 : 10);
-
-      const scoreSite = siteId != null ? eq(stockCards.locationId, siteId) : sql`true`;
-      const scoreRows = await database
-        .select({
-          locationId: stockCards.locationId,
-          total: sql<number>`count(distinct ${stockCards.id})`.mapWith(Number),
-          adequate: sql<number>`count(distinct ${stockCards.id}) filter (where coalesce(${movementTotals.netQuantity}, 0) > coalesce(${stockSettings.minLevel}, 0))`.mapWith(Number),
-        })
-        .from(stockCards)
-        .leftJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
-        .leftJoin(
-          stockSettings,
-          and(
-            eq(stockSettings.catalogueId, commodityTrackingNumbers.itemId),
-            eq(stockSettings.warehouseId, stockCards.locationId)
-          )
-        )
-        .leftJoin(movementTotals, eq(movementTotals.stockCardId, stockCards.id))
-        .where(scoreSite)
-        .groupBy(stockCards.locationId);
-
-      const scoreByLocation = new Map<number, { total: number; adequate: number }>();
-      for (const row of scoreRows) {
-        scoreByLocation.set(row.locationId, {
-          total: Number(row.total ?? 0),
-          adequate: Number(row.adequate ?? 0),
-        });
+      try {
+        return await withTimeout(queryFacilityStatus(ctx), 5000, "facilityStatus");
+      } catch (err) {
+        console.warn(
+          JSON.stringify({
+            event: "dashboard_facility_status_failed",
+            err: err instanceof Error ? err.message : String(err),
+          })
+        );
+        return [];
       }
-
-      return rows
-        .map((row) => {
-          const score = scoreByLocation.get(row.id);
-          const stockScore = score && score.total > 0 ? Math.round((score.adequate / score.total) * 100) : null;
-          return {
-            id: row.id,
-            name: row.name,
-            code: row.code,
-            type: row.type,
-            status: row.isActive ? ("active" as const) : ("offline" as const),
-            stockScore,
-          };
-        })
-        .sort((a, b) => {
-          if (a.stockScore === null && b.stockScore === null) return 0;
-          if (a.stockScore === null) return 1;
-          if (b.stockScore === null) return -1;
-          return a.stockScore - b.stockScore;
-        });
     }),
     pendingRequisitions: protectedProcedure
       .input(z.object({ limit: z.number().min(1).max(12).default(4) }).optional())
       .query(async ({ ctx }) => {
-        const scope = dashboardDataScope(ctx);
-        if (scope.mode === "empty") return { total: 0, urgent: 0, oldestDaysAgo: null as number | null };
-        const siteId = scope.mode === "site" ? scope.siteId : undefined;
-        const database = await db.getDb();
-        if (!database) return { total: 0, urgent: 0, oldestDaysAgo: null as number | null };
-
-        const siteReq = siteId != null ? eq(requisitions.requestingFacility, siteId) : sql`true`;
-        const rows = await database
-          .select({
-            total: sql<number>`count(*)`.mapWith(Number),
-            urgent: sql<number>`count(*) filter (where lower(${requisitions.priority}) = 'urgent')`.mapWith(Number),
-            oldest: sql<Date | null>`min(${requisitions.createdAt})`,
-          })
-          .from(requisitions)
-          .where(and(sql`${requisitions.status} in ('submitted', 'approved')`, siteReq));
-
-        const summary = rows[0];
-        const total = Number(summary?.total ?? 0);
-        const urgent = Number(summary?.urgent ?? 0);
-        const oldest = summary?.oldest ? new Date(summary.oldest) : null;
-        const oldestDaysAgo =
-          oldest === null ? null : Math.max(0, Math.floor((Date.now() - oldest.getTime()) / (1000 * 60 * 60 * 24)));
-
-        return { total, urgent, oldestDaysAgo };
+        try {
+          return await withTimeout(queryPendingRequisitions(ctx), 8000, "pendingRequisitions");
+        } catch {
+          return { total: 0, urgent: 0, oldestDaysAgo: null as number | null };
+        }
       }),
 
     /** Sum of register `actual_unit_value` for assets the user can see (org-wide for admin/manager; home site for staff/field). */
     totalAssetValue: protectedProcedure.query(async ({ ctx }) => {
-      const scope = dashboardDataScope(ctx);
-      if (scope.mode === "empty") return { totalNgn: 0, propertyNgn: 0, movableNgn: 0 };
-      const database = await db.getDb();
-      if (!database) return { totalNgn: 0, propertyNgn: 0, movableNgn: 0 };
-      const breakdown =
-        scope.mode === "all"
-          ? await db.getDashboardTotalAssetValue({ mode: "all" })
-          : await db.getDashboardTotalAssetValue({ mode: "site", siteId: scope.siteId });
-      return breakdown;
+      try {
+        return await withTimeout(
+          (async () => {
+            const scope = dashboardDataScope(ctx);
+            if (scope.mode === "empty") return { totalNgn: 0, propertyNgn: 0, movableNgn: 0 };
+            const database = await db.getDb();
+            if (!database) return { totalNgn: 0, propertyNgn: 0, movableNgn: 0 };
+            return scope.mode === "all"
+              ? await db.getDashboardTotalAssetValue({ mode: "all" })
+              : await db.getDashboardTotalAssetValue({ mode: "site", siteId: scope.siteId });
+          })(),
+          8000,
+          "totalAssetValue"
+        );
+      } catch {
+        return { totalNgn: 0, propertyNgn: 0, movableNgn: 0 };
+      }
     }),
 
     /** Per-branch stock readiness for Manager/Admin dashboards. */
@@ -2414,6 +2590,25 @@ export const appRouter = router({
       requireRole(ctx, ["admin", "manager"]);
       const database = await db.getDb();
       if (!database) return [];
+
+      const branches = await database
+        .select({ id: sites.id, name: sites.name, code: sites.code, isActive: sites.isActive })
+        .from(sites)
+        .where(eq(sites.facilityType, "branch"))
+        .orderBy(asc(sites.name));
+
+      const [anyMovement] = await database.select({ id: stockMovements.id }).from(stockMovements).limit(1);
+      if (!anyMovement) {
+        return branches.map((b) => ({
+          id: b.id,
+          name: b.name,
+          code: b.code,
+          isActive: b.isActive,
+          stockScorePercent: null,
+          adequateCards: 0,
+          totalCards: 0,
+        }));
+      }
 
       const movementTotals = database
         .select({
@@ -2449,12 +2644,6 @@ export const appRouter = router({
           adequate: Number(row.adequate ?? 0),
         });
       }
-
-      const branches = await database
-        .select({ id: sites.id, name: sites.name, code: sites.code, isActive: sites.isActive })
-        .from(sites)
-        .where(eq(sites.facilityType, "branch"))
-        .orderBy(asc(sites.name));
 
       return branches.map((b) => {
         const score = scoreByLocation.get(b.id);
@@ -4478,5 +4667,85 @@ export const appRouter = router({
       }),
   }),
 });
+
+const DASHBOARD_ALL_CLEAR_ATTENTION = [
+  {
+    icon: "CheckCircle2",
+    tone: "green",
+    label: "No action items right now",
+    meta: "All clear",
+    href: null as string | null,
+  },
+] as const;
+
+/** Runs after `appRouter` is defined — avoids circular type inference from createCaller inside the router. */
+async function loadDashboardAll(
+  ctx: TrpcContext,
+  input: { period: DashboardPeriod; role: "Admin" | "Manager" | "Staff" | "Field"; stockMovementWeeks: number }
+): Promise<DashboardAllOutput> {
+  const caller = appRouter.createCaller(ctx);
+  const runSection = async <T>(label: string, fn: () => Promise<T>, fallback: T): Promise<T> => {
+    try {
+      return await withTimeout(fn(), 8000, label);
+    } catch (err) {
+      console.warn(
+        JSON.stringify({
+          event: "dashboard_all_section_failed",
+          section: label,
+          err: err instanceof Error ? err.message : String(err),
+        })
+      );
+      return fallback;
+    }
+  };
+
+  const includeBranch = ctx.user?.role === "admin" || ctx.user?.role === "manager";
+
+  const metrics = await runSection(
+    "metrics",
+    () => caller.dashboard.metrics({ period: input.period }),
+    { ...DASHBOARD_EMPTY_METRICS }
+  );
+  const totalAssetValue = await runSection(
+    "totalAssetValue",
+    () => caller.dashboard.totalAssetValue(),
+    { totalNgn: 0, propertyNgn: 0, movableNgn: 0 }
+  );
+  const stockMovement = await runSection(
+    "stockMovement",
+    () => caller.dashboard.stockMovement({ weeks: input.stockMovementWeeks }),
+    []
+  );
+  const facilityStatus = await runSection("facilityStatus", () => caller.dashboard.facilityStatus(), []);
+  const recentActivity = await runSection(
+    "recentActivity",
+    () => caller.dashboard.recentActivity({ limit: 5 }),
+    []
+  );
+  const pendingRequisitions = await runSection(
+    "pendingRequisitions",
+    () => caller.dashboard.pendingRequisitions({ limit: 4 }),
+    { total: 0, urgent: 0, oldestDaysAgo: null }
+  );
+  const attentionItems = await runSection(
+    "attentionItems",
+    () => caller.dashboard.attentionItems({ role: input.role }),
+    [...DASHBOARD_ALL_CLEAR_ATTENTION]
+  );
+  const branchPerformance = includeBranch
+    ? await runSection("branchPerformance", () => caller.dashboard.branchPerformance(), [])
+    : [];
+
+  return {
+    metrics,
+    totalAssetValue,
+    stockMovement,
+    facilityStatus,
+    recentActivity,
+    pendingRequisitions,
+    attentionItems,
+    branchPerformance,
+  };
+}
 
 export type AppRouter = typeof appRouter;

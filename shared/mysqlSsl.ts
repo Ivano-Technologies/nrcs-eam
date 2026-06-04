@@ -157,12 +157,12 @@ export function getPostgresJsPoolOptions(
     prepare: false,
     max:
       serverless || supabase
-        ? 1
+        ? 3
         : Number(process.env.DB_POOL_MAX ?? 10),
     idle_timeout: 20,
     connect_timeout: serverless ? 10 : 30,
-    // Rotate connections on warm serverless instances (e.g. after DATABASE_URL password change).
-    ...(serverless ? { max_lifetime: 60 * 5 } : {}),
+    // Recycle connections on warm serverless instances (e.g. after DATABASE_URL password change).
+    ...(serverless ? { max_lifetime: 60 * 30 } : {}),
     ...(e2eSchema
       ? {
           connection: {

@@ -1,3 +1,4 @@
+import { useDashboardBundle } from "@/components/dashboard/DashboardBundleContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
@@ -8,7 +9,12 @@ function statusClass(status: "active" | "offline") {
 }
 
 export function FacilityStatusList() {
-  const { data } = trpc.dashboard.facilityStatus.useQuery();
+  const bundle = useDashboardBundle();
+  const { data: fetched } = trpc.dashboard.facilityStatus.useQuery(undefined, {
+    enabled: bundle === undefined,
+    staleTime: 60_000,
+  });
+  const data = bundle?.facilityStatus ?? fetched;
   const scoreToneClass = (score: number) => {
     if (score >= 70) return "bg-green-500";
     if (score >= 40) return "bg-amber-500";

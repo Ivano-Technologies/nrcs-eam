@@ -1,3 +1,4 @@
+import type { DashboardBundle } from "@/components/dashboard/DashboardBundleContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { KPI_VALUE_CLASS } from "@/lib/kpiTypography";
@@ -18,15 +19,23 @@ const STATUS_LABEL: Record<string, string> = {
   cancelled: "Cancelled",
 };
 
-export function FieldDashboard() {
-  const { data: metrics, isLoading: metricsLoading } = trpc.dashboard.metrics.useQuery({ period: "Month" });
+type FieldDashboardProps = {
+  metrics?: DashboardBundle["metrics"];
+};
+
+export function FieldDashboard({ metrics: metricsProp }: FieldDashboardProps) {
+  const { data: fetchedMetrics, isLoading: metricsLoading } = trpc.dashboard.metrics.useQuery(
+    { period: "Month" },
+    { enabled: metricsProp === undefined, staleTime: 60_000 }
+  );
+  const metrics = metricsProp ?? fetchedMetrics;
   const { data: myReqs, isLoading: reqsLoading } = trpc.inventoryV2.requisitions.listMine.useQuery({ limit: 15 });
 
   const total = metrics?.stockReadiness?.total ?? 0;
   const adequate = metrics?.stockReadiness?.adequate ?? 0;
   const pct = total > 0 ? Math.round((adequate / total) * 100) : 0;
 
-  if (metricsLoading) {
+  if (metricsLoading && metrics === undefined) {
     return (
       <div className="flex h-48 items-center justify-center">
         <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
