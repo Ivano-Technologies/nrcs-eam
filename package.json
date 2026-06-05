@@ -44,7 +44,8 @@
     "dev:e2e": "dotenv -e .env.e2e -- cross-env NODE_ENV=development SUPABASE_TEST_SCHEMA=test tsx server/_core/index.ts",
     "mailpit": "C:\\Antigravity\\Tools\\mailpit\\mailpit.exe --smtp 127.0.0.1:1025 --listen 127.0.0.1:8025",
     "test:e2e": "cross-env CI=true DISABLE_VITE_JSX_LOC=1 playwright test",
-    "test:e2e:headed": "playwright test --headed"
+    "test:e2e:headed": "playwright test --headed",
+    "swap": "node scripts/swap.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1049.0",
