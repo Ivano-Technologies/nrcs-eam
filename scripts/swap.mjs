@@ -105,7 +105,22 @@ async function vercelPatch(path, payload, params = {}) {
 
 /** Change the project-level production branch (affects all Production-environment domains). */
 async function setProductionBranch(branch) {
-  return vercelPatch(`/v9/projects/${PROJECT_ID}`, { link: { productionBranch: branch } });
+  const url = `${API_BASE}/v9/projects/${PROJECT_ID}?${qs({ teamId: TEAM_ID })}`;
+  const res = await fetch(url, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${VERCEL_TOKEN}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ productionBranch: branch }),
+  });
+  const body = await res.json();
+  if (!res.ok) {
+    // Print full body so we can diagnose any future shape mismatches
+    console.error("    Vercel response:", JSON.stringify(body, null, 2));
+    throw new Error(`PATCH /v9/projects → ${res.status}: ${body?.error?.message ?? JSON.stringify(body)}`);
+  }
+  return body;
 }
 
 async function confirm(question) {
