@@ -100,3 +100,110 @@ Both branches share the same environment variables configured in Vercel. If a ne
 ## 8. Security vulnerability backlog
 
 As of June 2026, GitHub Dependabot has flagged 50 vulnerabilities (2 critical, 26 high, 22 moderate) on the default branch. Review and address these at [github.com/Ivano-Technologies/nrcs-eam/security/dependabot](https://github.com/Ivano-Technologies/nrcs-eam/security/dependabot) before the next major feature cycle. Do not merge Dependabot PRs without testing on the staging branch first.
+
+---
+
+## Section 9 — Official Domain Migration Plan
+
+### Overview
+
+The system is currently hosted at `nrcseam.techivano.com` (Ivano Technologies infrastructure). The intended final production domain is `eam.redcrossnigeria.org` (Nigerian Red Cross Society official domain). This section documents the full migration plan when NRCS is ready to cut over.
+
+The approach is **domain aliasing, not migration** — both domains will run simultaneously pointing at the same Vercel deployment, eliminating downtime and preserving a rollback path.
+
+---
+
+### Prerequisites before starting
+
+- [ ] DNS management access for `redcrossnigeria.org` confirmed (NRCS IT department)
+- [ ] `redcrossnigeria.org` domain is registered and resolves (`nslookup redcrossnigeria.org`)
+- [ ] NRCS leadership sign-off on official domain usage
+- [ ] At least 2 weeks user communication period planned
+
+---
+
+### Phase 1 — Add domain alias in Vercel
+
+No code changes required. Both domains will serve the identical app from the same deployment.
+
+**In Vercel → nrcs-eam → Settings → Domains:**
+1. Click **Add Existing**
+2. Enter `eam.redcrossnigeria.org`
+3. Assign to `main` (Production)
+4. Vercel will provision an SSL certificate automatically
+
+**In the `redcrossnigeria.org` DNS provider (Cloudflare or equivalent):**
+
+| Type | Name | Target | Proxy status |
+|------|------|--------|--------------|
+| CNAME | `eam` | `cc052f39af8cf355.vercel-dns-016.com` | DNS only (grey cloud) |
+
+Verify both URLs serve the app correctly before proceeding:
+```bash
+curl -I https://nrcseam.techivano.com
+curl -I https://eam.redcrossnigeria.org
+```
+
+Both should return `HTTP/2 200`.
+
+---
+
+### Phase 2 — Code updates required
+
+The following must be updated before or immediately after the domain alias goes live:
+
+**Cookie domain (`server/_core/cookies.ts`)**
+The `deriveParentDomain()` function already derives the parent domain dynamically from `req.hostname`. Verify it returns `.redcrossnigeria.org` correctly when requests arrive from the new domain. No code change should be needed but confirm with a login test on `eam.redcrossnigeria.org`.
+
+**CORS origin allowlist**
+Search `server/` for any hardcoded `nrcseam.techivano.com` in CORS configuration. Add `eam.redcrossnigeria.org` alongside it. Do not remove the existing origin until the cutover is complete.
+
+**Base URL environment variable**
+Any system emails containing links back to the app (password reset, notifications, waybill links) must use a `BASE_URL` or `APP_URL` environment variable rather than a hardcoded domain. Search the codebase for `nrcseam.techivano.com` in email templates and replace with the environment variable. Add `BASE_URL=https://eam.redcrossnigeria.org` to Vercel environment variables for Production when ready.
+
+**PWA manifest**
+Check `vite.config.ts` or `public/manifest.webmanifest` for any hardcoded domain references in `start_url` or `scope`. These should use relative paths (`/`) rather than absolute URLs to work correctly on both domains.
+
+---
+
+### Phase 3 — User communication and cutover
+
+1. Send notification to all NRCS EAM users at least **2 weeks before cutover** — new URL, date of change, what action (if any) is needed
+2. On cutover day, add a **301 permanent redirect** from `nrcseam.techivano.com` to `eam.redcrossnigeria.org` via Vercel domain redirect settings
+3. Keep `nrcseam.techivano.com` as a redirect (not removed) for a minimum of **6 months** to preserve existing bookmarks and links
+4. Update all NRCS documentation, training materials, and onboarding guides to reference the new URL
+
+---
+
+### Phase 4 — Blue/green on the official domain
+
+Once the cutover is complete, add a staging subdomain for the official domain alongside the existing `blue.nrcseam.techivano.com`:
+
+**Target domain map:**
+
+| URL | Branch | Role |
+|-----|--------|------|
+| `eam.redcrossnigeria.org` | `main` | 🟢 Production |
+| `staging.eam.redcrossnigeria.org` | `blue` | 🔵 Staging |
+| `nrcseam.techivano.com` | redirects to production | 🔀 Legacy redirect |
+| `blue.nrcseam.techivano.com` | `blue` | 🔵 Staging (legacy) |
+
+Add `staging.eam.redcrossnigeria.org` using the same process as Phase 1 above, assigning it to the `blue` branch.
+
+---
+
+### Phase 5 — Update this document
+
+After the cutover is complete:
+1. Update the **Current state** table in Section 2 to reflect the new primary domain
+2. Update the **Swap procedure** in Section 5 to reference `eam.redcrossnigeria.org`
+3. Commit the updated `DEPLOYMENT.md` to both `main` and `blue`
+
+---
+
+### Rollback
+
+If issues arise after cutover:
+1. Remove the 301 redirect from `nrcseam.techivano.com`
+2. Both domains continue serving the app — users on the old URL are immediately unaffected
+3. Investigate and resolve before re-attempting the cutover
