@@ -15,7 +15,7 @@ All new features, dependency updates, and experimental changes are developed and
 
 | Branch | URL | Role |
 |--------|-----|------|
-| `blue` | `nrcseam.techivano.com` | 🟢 Production |
+| `main` | `nrcseam.techivano.com` | 🟢 Production |
 | `blue` | `blue.nrcseam.techivano.com` | 🔵 Staging |
 **Update this table every time a swap is performed.**
 
