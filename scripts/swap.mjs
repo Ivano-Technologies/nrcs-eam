@@ -127,10 +127,11 @@ async function httpStatus(url) {
 // Step 1 — Detect current state
 // ---------------------------------------------------------------------------
 
-// All domains are assigned a gitBranch via the domain-level PATCH endpoint.
-// On first run, Production-environment domains (nrcseam.techivano.com, www…) will
-// not yet have a gitBranch set — we treat that as 'main' (the default production branch).
-// After the first swap they carry explicit gitBranch values just like the blue domain.
+// blue.nrcseam.techivano.com ALWAYS serves the 'blue' branch — it is a permanent
+// preview URL and never changes. Only the production domains rotate between branches.
+//
+// The production domain (nrcseam.techivano.com) may not have gitBranch set on first
+// run — treat null as 'main'. After the first swap it carries an explicit value.
 
 console.log("\n🔍  Fetching domain assignments from Vercel…\n");
 
@@ -144,8 +145,7 @@ try {
 
 const domains = domainsData.domains ?? [];
 
-const prodDomainEntry    = domains.find(d => d.name === PROD_DOMAIN);
-const stagingDomainEntry = domains.find(d => d.name === STAGING_DOMAIN);
+const prodDomainEntry = domains.find(d => d.name === PROD_DOMAIN);
 
 if (!prodDomainEntry) {
   console.error(`❌  Domain ${PROD_DOMAIN} not found on this project.`);
@@ -153,34 +153,20 @@ if (!prodDomainEntry) {
   for (const d of domains) console.error(`      ${d.name}`);
   process.exit(1);
 }
-if (!stagingDomainEntry) {
-  console.error(`❌  Domain ${STAGING_DOMAIN} not found on this project.`);
-  process.exit(1);
-}
 
-// gitBranch is null for Production-environment domains on first run — default to 'main'
-const prodBranch    = prodDomainEntry?.gitBranch    ?? "main";
-const stagingBranch = stagingDomainEntry?.gitBranch ?? null;
+// gitBranch is null on first run for Production-environment domains — default to 'main'
+const prodBranch = prodDomainEntry?.gitBranch ?? "main";
 
-if (!stagingBranch) {
-  console.error(`❌  Could not read gitBranch from ${STAGING_DOMAIN}.`);
-  console.error("    Domains found on this project:");
-  for (const d of domains) {
-    console.error(`      ${d.name} → ${d.gitBranch ?? "(no gitBranch set)"}`);
-  }
-  process.exit(1);
-}
-
-const newProdBranch    = stagingBranch;
-const newStagingBranch = prodBranch;
+// The new production branch is whichever of main/blue is not currently live
+const newProdBranch = prodBranch === "main" ? "blue" : "main";
 
 console.log("Current state detected:");
 console.log(`  🟢 Production: ${PROD_DOMAIN} → ${prodBranch}`);
-console.log(`  🔵 Staging:    ${STAGING_DOMAIN} → ${stagingBranch}`);
+console.log(`  🔵 Staging:    ${STAGING_DOMAIN} → blue (permanent)`);
 console.log("");
 console.log("Swap will result in:");
 console.log(`  🟢 Production: ${PROD_DOMAIN} → ${newProdBranch}`);
-console.log(`  🔵 Staging:    ${STAGING_DOMAIN} → ${newStagingBranch}`);
+console.log(`  🔵 Staging:    ${STAGING_DOMAIN} → blue (unchanged)`);
 console.log("");
 
 // ---------------------------------------------------------------------------
@@ -199,13 +185,11 @@ console.log("");
 // Step 3 — Execute the swap
 // ---------------------------------------------------------------------------
 //
-// Patch each domain's gitBranch individually. Production domains will gain an
-// explicit gitBranch for the first time; subsequent swaps will read it back correctly.
+// Only production domains rotate. blue.nrcseam.techivano.com is permanent and untouched.
 
 const swapPlan = [
-  { domain: PROD_DOMAIN,    branch: newProdBranch,    prev: prodBranch },
-  { domain: WWW_DOMAIN,     branch: newProdBranch,    prev: prodBranch },
-  { domain: STAGING_DOMAIN, branch: newStagingBranch, prev: stagingBranch },
+  { domain: PROD_DOMAIN, branch: newProdBranch, prev: prodBranch },
+  { domain: WWW_DOMAIN,  branch: newProdBranch, prev: prodBranch },
 ];
 
 const completed = [];
@@ -239,6 +223,8 @@ for (const { domain, branch, prev } of swapPlan) {
     process.exit(1);
   }
 }
+console.log(`  — ${STAGING_DOMAIN} → blue (unchanged)`);
+
 
 // ---------------------------------------------------------------------------
 // Step 4 — Verify
@@ -284,7 +270,7 @@ if (deploymentMd !== null) {
     `| Branch | URL | Role |\n` +
     `|--------|-----|------|\n` +
     `| \`${newProdBranch}\` | \`${PROD_DOMAIN}\` | 🟢 Production |\n` +
-    `| \`${newStagingBranch}\` | \`${STAGING_DOMAIN}\` | 🔵 Staging |`;
+    `| \`blue\` | \`${STAGING_DOMAIN}\` | 🔵 Staging |`;
 
   if (!tableRegex.test(deploymentMd)) {
     console.warn("  ⚠  Could not locate the Current state table in DEPLOYMENT.md — skipping file update");
@@ -320,5 +306,8 @@ if (deploymentMd !== null) {
 console.log(`
 ✅  Swap complete.
     Production: ${PROD_DOMAIN} → ${newProdBranch}
-    Staging:    ${STAGING_DOMAIN} → ${newStagingBranch}
+    Staging:    ${STAGING_DOMAIN} → blue (permanent)
+
+ℹ  blue.nrcseam.techivano.com always serves the 'blue' branch.
+   After this swap, begin new feature work on '${prodBranch}' to diverge staging from production.
 `);
