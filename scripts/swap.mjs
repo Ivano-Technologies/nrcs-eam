@@ -103,25 +103,6 @@ async function vercelPatch(path, payload, params = {}) {
   return body;
 }
 
-/** Change the project-level production branch (affects all Production-environment domains). */
-async function setProductionBranch(branch) {
-  const url = `${API_BASE}/v9/projects/${PROJECT_ID}?${qs({ teamId: TEAM_ID })}`;
-  const res = await fetch(url, {
-    method: "PATCH",
-    headers: {
-      Authorization: `Bearer ${VERCEL_TOKEN}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ productionBranch: branch }),
-  });
-  const body = await res.json();
-  if (!res.ok) {
-    // Print full body so we can diagnose any future shape mismatches
-    console.error("    Vercel response:", JSON.stringify(body, null, 2));
-    throw new Error(`PATCH /v9/projects → ${res.status}: ${body?.error?.message ?? JSON.stringify(body)}`);
-  }
-  return body;
-}
 
 async function confirm(question) {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
@@ -146,39 +127,13 @@ async function httpStatus(url) {
 // Step 1 — Detect current state
 // ---------------------------------------------------------------------------
 
-// Vercel's domain model has two tiers:
-//   • Production domains (nrcseam.techivano.com, www, nrcs-eam.vercel.app …) are bound to the
-//     project-level Production environment — they have no gitBranch field. The production branch
-//     is a project setting (link.productionBranch).
-//   • Preview/branch domains (blue.nrcseam.techivano.com) have an explicit gitBranch field.
-//
-// The swap therefore requires:
-//   1. PATCH the project to change its production branch.
-//   2. PATCH blue.nrcseam.techivano.com to update its gitBranch.
+// All domains are assigned a gitBranch via the domain-level PATCH endpoint.
+// On first run, Production-environment domains (nrcseam.techivano.com, www…) will
+// not yet have a gitBranch set — we treat that as 'main' (the default production branch).
+// After the first swap they carry explicit gitBranch values just like the blue domain.
 
-console.log("\n🔍  Fetching project settings from Vercel…\n");
+console.log("\n🔍  Fetching domain assignments from Vercel…\n");
 
-let project;
-try {
-  project = await vercelGet(`/v9/projects/${PROJECT_ID}`);
-} catch (err) {
-  console.error(`❌  Failed to fetch project: ${err.message}`);
-  process.exit(1);
-}
-
-// Read the production branch — Vercel returns it in link.productionBranch
-const prodBranch =
-  project?.link?.productionBranch ??
-  project?.targets?.production?.branch ??
-  null;
-
-if (!prodBranch) {
-  console.error("❌  Could not read productionBranch from project settings.");
-  console.error("    Raw project.link:", JSON.stringify(project?.link ?? {}, null, 2));
-  process.exit(1);
-}
-
-// Read the staging branch from the blue preview domain's gitBranch field
 let domainsData;
 try {
   domainsData = await vercelGet(`/v9/projects/${PROJECT_ID}/domains`);
@@ -188,23 +143,39 @@ try {
 }
 
 const domains = domainsData.domains ?? [];
+
+const prodDomainEntry    = domains.find(d => d.name === PROD_DOMAIN);
 const stagingDomainEntry = domains.find(d => d.name === STAGING_DOMAIN);
+
+if (!prodDomainEntry) {
+  console.error(`❌  Domain ${PROD_DOMAIN} not found on this project.`);
+  console.error("    Domains found:");
+  for (const d of domains) console.error(`      ${d.name}`);
+  process.exit(1);
+}
+if (!stagingDomainEntry) {
+  console.error(`❌  Domain ${STAGING_DOMAIN} not found on this project.`);
+  process.exit(1);
+}
+
+// gitBranch is null for Production-environment domains on first run — default to 'main'
+const prodBranch    = prodDomainEntry?.gitBranch    ?? "main";
 const stagingBranch = stagingDomainEntry?.gitBranch ?? null;
 
 if (!stagingBranch) {
   console.error(`❌  Could not read gitBranch from ${STAGING_DOMAIN}.`);
   console.error("    Domains found on this project:");
   for (const d of domains) {
-    console.error(`      ${d.name} → ${d.gitBranch ?? "(Production environment — no gitBranch)"}`);
+    console.error(`      ${d.name} → ${d.gitBranch ?? "(no gitBranch set)"}`);
   }
   process.exit(1);
 }
 
-const newProdBranch = stagingBranch;
+const newProdBranch    = stagingBranch;
 const newStagingBranch = prodBranch;
 
 console.log("Current state detected:");
-console.log(`  🟢 Production: ${PROD_DOMAIN} → ${prodBranch}  (+ all Production-env domains)`);
+console.log(`  🟢 Production: ${PROD_DOMAIN} → ${prodBranch}`);
 console.log(`  🔵 Staging:    ${STAGING_DOMAIN} → ${stagingBranch}`);
 console.log("");
 console.log("Swap will result in:");
@@ -228,44 +199,45 @@ console.log("");
 // Step 3 — Execute the swap
 // ---------------------------------------------------------------------------
 //
-// Two separate operations map to Vercel's domain model:
-//   Op A — change the project-level production branch (moves ALL Production-env domains at once)
-//   Op B — update blue.nrcseam.techivano.com's gitBranch (the Preview branch domain)
+// Patch each domain's gitBranch individually. Production domains will gain an
+// explicit gitBranch for the first time; subsequent swaps will read it back correctly.
 
-let opADone = false;
+const swapPlan = [
+  { domain: PROD_DOMAIN,    branch: newProdBranch,    prev: prodBranch },
+  { domain: WWW_DOMAIN,     branch: newProdBranch,    prev: prodBranch },
+  { domain: STAGING_DOMAIN, branch: newStagingBranch, prev: stagingBranch },
+];
 
-// Op A — set production branch
-try {
-  await setProductionBranch(newProdBranch);
-  opADone = true;
-  console.log(`  ✓ Production branch → ${newProdBranch}  (${PROD_DOMAIN} + all Production-env domains)`);
-} catch (err) {
-  console.error(`\n  ❌ Failed to update production branch: ${err.message}`);
-  process.exit(1);
-}
+const completed = [];
 
-// Op B — update the blue preview domain's gitBranch
-try {
-  await vercelPatch(
-    `/v9/projects/${PROJECT_ID}/domains/${STAGING_DOMAIN}`,
-    { gitBranch: newStagingBranch }
-  );
-  console.log(`  ✓ ${STAGING_DOMAIN} → ${newStagingBranch}`);
-} catch (err) {
-  console.error(`\n  ❌ Failed to update ${STAGING_DOMAIN}: ${err.message}`);
+for (const { domain, branch, prev } of swapPlan) {
+  try {
+    await vercelPatch(
+      `/v9/projects/${PROJECT_ID}/domains/${domain}`,
+      { gitBranch: branch }
+    );
+    console.log(`  ✓ ${domain} → ${branch}`);
+    completed.push({ domain, prev });
+  } catch (err) {
+    console.error(`\n  ❌ Failed to update ${domain}: ${err.message}`);
 
-  if (opADone) {
-    console.log("\n  ⏪ Rolling back production branch to original value…");
-    try {
-      await setProductionBranch(prodBranch);
-      console.log(`  ↩ Production branch → ${prodBranch} (restored)`);
-    } catch (rollbackErr) {
-      console.error(`  ❌ Rollback failed: ${rollbackErr.message}`);
-      console.error(`     Manual fix: set production branch back to '${prodBranch}' in Vercel dashboard`);
+    if (completed.length > 0) {
+      console.log("\n  ⏪ Rolling back completed assignments…");
+      for (const { domain: d, prev: prevBranch } of completed) {
+        try {
+          await vercelPatch(
+            `/v9/projects/${PROJECT_ID}/domains/${d}`,
+            { gitBranch: prevBranch }
+          );
+          console.log(`  ↩ ${d} → ${prevBranch} (restored)`);
+        } catch (rollbackErr) {
+          console.error(`  ❌ Rollback failed for ${d}: ${rollbackErr.message}`);
+        }
+      }
     }
-  }
 
-  process.exit(1);
+    process.exit(1);
+  }
 }
 
 // ---------------------------------------------------------------------------
