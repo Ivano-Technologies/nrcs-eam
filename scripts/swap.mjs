@@ -2,15 +2,20 @@
 /**
  * NRCS EAM — Blue/Green Swap Automation
  *
- * Swaps domain assignments between main (production) and blue (staging) branches
- * using the Vercel REST API. Updates DEPLOYMENT.md and commits the change.
+ * Changes the GitHub repository default branch (main ↔ blue). Vercel automatically
+ * treats the GitHub default branch as the production branch, so all production domains
+ * (nrcseam.techivano.com, www, eam.redcrossnigeria.org) pick up the new branch without
+ * any domain-level API calls.
  *
  * Usage: node scripts/swap.mjs   OR   pnpm swap
  *
  * Required env vars (in .env or shell):
- *   VERCEL_TOKEN       — Vercel personal access token
- *   VERCEL_PROJECT_ID  — Vercel project ID
- *   VERCEL_TEAM_ID     — Vercel team ID
+ *   GITHUB_TOKEN  — GitHub personal access token with repo scope
+ *
+ * Optional env vars:
+ *   VERCEL_TOKEN       — Vercel personal access token (state display only)
+ *   VERCEL_PROJECT_ID  — defaults to the NRCS EAM project ID
+ *   VERCEL_TEAM_ID     — defaults to the Ivano Technologies team ID
  */
 
 import { createInterface } from "readline";
@@ -43,13 +48,16 @@ try {
   // .env not present — rely on shell environment
 }
 
-const VERCEL_TOKEN = process.env.VERCEL_TOKEN;
-const PROJECT_ID = process.env.VERCEL_PROJECT_ID ?? "prj_r2m3v9oahEjGdTNiztkVEPE2R6Nn";
-const TEAM_ID = process.env.VERCEL_TEAM_ID ?? "team_ynjdsXvq1g0haS8lVNnyjIZj";
+const GITHUB_TOKEN    = process.env.GITHUB_TOKEN;
+const VERCEL_TOKEN    = process.env.VERCEL_TOKEN;   // optional
+const PROJECT_ID      = process.env.VERCEL_PROJECT_ID ?? "prj_r2m3v9oahEjGdTNiztkVEPE2R6Nn";
+const TEAM_ID         = process.env.VERCEL_TEAM_ID  ?? "team_ynjdsXvq1g0haS8lVNnyjIZj";
+const GITHUB_REPO     = "Ivano-Technologies/nrcs-eam";
 
-if (!VERCEL_TOKEN) {
-  console.error("❌  VERCEL_TOKEN is not set. Add it to .env or export it in your shell.");
-  console.error("    Create a token at: https://vercel.com/account/tokens");
+if (!GITHUB_TOKEN) {
+  console.error("❌  GITHUB_TOKEN is not set. Add it to .env or export it in your shell.");
+  console.error("    Create a token at: https://github.com/settings/tokens");
+  console.error("    Required scope: repo");
   process.exit(1);
 }
 
@@ -57,60 +65,51 @@ if (!VERCEL_TOKEN) {
 // Constants
 // ---------------------------------------------------------------------------
 
-const PROD_DOMAIN = "nrcseam.techivano.com";
-const WWW_DOMAIN = "www.nrcseam.techivano.com";
+const PROD_DOMAIN    = "nrcseam.techivano.com";
 const STAGING_DOMAIN = "blue.nrcseam.techivano.com";
-
-const API_BASE = "https://api.vercel.com";
+const GH_API         = "https://api.github.com";
+const VERCEL_API     = "https://api.vercel.com";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function qs(params) {
-  return new URLSearchParams(params).toString();
+function ghHeaders() {
+  return {
+    Authorization: `Bearer ${GITHUB_TOKEN}`,
+    "User-Agent":  "nrcs-eam-swap",
+    "Content-Type": "application/json",
+    Accept: "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2022-11-28",
+  };
 }
 
-async function vercelGet(path, params = {}) {
-  const url = `${API_BASE}${path}?${qs({ teamId: TEAM_ID, ...params })}`;
-  const res = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${VERCEL_TOKEN}`,
-      "Content-Type": "application/json",
-    },
-  });
+async function ghGet(path) {
+  const res  = await fetch(`${GH_API}${path}`, { headers: ghHeaders() });
   const body = await res.json();
   if (!res.ok) {
-    throw new Error(`GET ${path} → ${res.status}: ${body?.error?.message ?? JSON.stringify(body)}`);
+    throw new Error(`GET ${path} → ${res.status}: ${body?.message ?? JSON.stringify(body)}`);
   }
   return body;
 }
 
-async function vercelPatch(path, payload, params = {}) {
-  const url = `${API_BASE}${path}?${qs({ teamId: TEAM_ID, ...params })}`;
-  const res = await fetch(url, {
+async function ghPatch(path, payload) {
+  const res  = await fetch(`${GH_API}${path}`, {
     method: "PATCH",
-    headers: {
-      Authorization: `Bearer ${VERCEL_TOKEN}`,
-      "Content-Type": "application/json",
-    },
+    headers: ghHeaders(),
     body: JSON.stringify(payload),
   });
   const body = await res.json();
   if (!res.ok) {
-    throw new Error(`PATCH ${path} → ${res.status}: ${body?.error?.message ?? JSON.stringify(body)}`);
+    throw new Error(`PATCH ${path} → ${res.status}: ${body?.message ?? JSON.stringify(body)}`);
   }
   return body;
 }
 
-
 async function confirm(question) {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
-  return new Promise(resolve => {
-    rl.question(question, answer => {
-      rl.close();
-      resolve(answer.trim());
-    });
+  return new Promise(res => {
+    rl.question(question, answer => { rl.close(); res(answer.trim()); });
   });
 }
 
@@ -127,46 +126,26 @@ async function httpStatus(url) {
 // Step 1 — Detect current state
 // ---------------------------------------------------------------------------
 
-// blue.nrcseam.techivano.com ALWAYS serves the 'blue' branch — it is a permanent
-// preview URL and never changes. Only the production domains rotate between branches.
-//
-// The production domain (nrcseam.techivano.com) may not have gitBranch set on first
-// run — treat null as 'main'. After the first swap it carries an explicit value.
+console.log("\n🔍  Reading current GitHub default branch…\n");
 
-console.log("\n🔍  Fetching domain assignments from Vercel…\n");
-
-let domainsData;
+let repo;
 try {
-  domainsData = await vercelGet(`/v9/projects/${PROJECT_ID}/domains`);
+  repo = await ghGet(`/repos/${GITHUB_REPO}`);
 } catch (err) {
-  console.error(`❌  Failed to fetch domains: ${err.message}`);
+  console.error(`❌  Failed to read GitHub repo: ${err.message}`);
   process.exit(1);
 }
 
-const domains = domainsData.domains ?? [];
-
-const prodDomainEntry = domains.find(d => d.name === PROD_DOMAIN);
-
-if (!prodDomainEntry) {
-  console.error(`❌  Domain ${PROD_DOMAIN} not found on this project.`);
-  console.error("    Domains found:");
-  for (const d of domains) console.error(`      ${d.name}`);
-  process.exit(1);
-}
-
-// gitBranch is null on first run for Production-environment domains — default to 'main'
-const prodBranch = prodDomainEntry?.gitBranch ?? "main";
-
-// The new production branch is whichever of main/blue is not currently live
+const prodBranch    = repo.default_branch;           // current production branch
 const newProdBranch = prodBranch === "main" ? "blue" : "main";
 
 console.log("Current state detected:");
-console.log(`  🟢 Production: ${PROD_DOMAIN} → ${prodBranch}`);
-console.log(`  🔵 Staging:    ${STAGING_DOMAIN} → blue (permanent)`);
+console.log(`  🟢 Production: ${PROD_DOMAIN} → ${prodBranch}  (GitHub default branch)`);
+console.log(`  🔵 Staging:    ${STAGING_DOMAIN} → blue  (permanent)`);
 console.log("");
 console.log("Swap will result in:");
 console.log(`  🟢 Production: ${PROD_DOMAIN} → ${newProdBranch}`);
-console.log(`  🔵 Staging:    ${STAGING_DOMAIN} → blue (unchanged)`);
+console.log(`  🔵 Staging:    ${STAGING_DOMAIN} → blue  (unchanged)`);
 console.log("");
 
 // ---------------------------------------------------------------------------
@@ -182,74 +161,39 @@ if (answer !== "yes") {
 console.log("");
 
 // ---------------------------------------------------------------------------
-// Step 3 — Execute the swap
+// Step 3 — Change GitHub default branch
 // ---------------------------------------------------------------------------
-//
-// Only production domains rotate. blue.nrcseam.techivano.com is permanent and untouched.
 
-const swapPlan = [
-  { domain: PROD_DOMAIN, branch: newProdBranch, prev: prodBranch },
-  { domain: WWW_DOMAIN,  branch: newProdBranch, prev: prodBranch },
-];
-
-const completed = [];
-
-for (const { domain, branch, prev } of swapPlan) {
-  try {
-    await vercelPatch(
-      `/v9/projects/${PROJECT_ID}/domains/${domain}`,
-      { gitBranch: branch }
-    );
-    console.log(`  ✓ ${domain} → ${branch}`);
-    completed.push({ domain, prev });
-  } catch (err) {
-    console.error(`\n  ❌ Failed to update ${domain}: ${err.message}`);
-
-    if (completed.length > 0) {
-      console.log("\n  ⏪ Rolling back completed assignments…");
-      for (const { domain: d, prev: prevBranch } of completed) {
-        try {
-          await vercelPatch(
-            `/v9/projects/${PROJECT_ID}/domains/${d}`,
-            { gitBranch: prevBranch }
-          );
-          console.log(`  ↩ ${d} → ${prevBranch} (restored)`);
-        } catch (rollbackErr) {
-          console.error(`  ❌ Rollback failed for ${d}: ${rollbackErr.message}`);
-        }
-      }
-    }
-
-    process.exit(1);
-  }
+console.log(`  Updating GitHub default branch to '${newProdBranch}'…`);
+try {
+  await ghPatch(`/repos/${GITHUB_REPO}`, { default_branch: newProdBranch });
+  console.log(`  ✓ GitHub default branch → ${newProdBranch}`);
+  console.log("    Vercel will detect this change and promote the new branch to production.");
+} catch (err) {
+  console.error(`\n  ❌ Failed to update GitHub default branch: ${err.message}`);
+  process.exit(1);
 }
-console.log(`  — ${STAGING_DOMAIN} → blue (unchanged)`);
-
 
 // ---------------------------------------------------------------------------
 // Step 4 — Verify
 // ---------------------------------------------------------------------------
 
-console.log("\n⏳  Waiting 3 seconds for propagation…");
-await new Promise(r => setTimeout(r, 3000));
+console.log("\n⏳  Waiting 5 seconds for Vercel to pick up the change…");
+console.log("    (Full redeployment may take up to 60 seconds.)");
+await new Promise(r => setTimeout(r, 5000));
 
-console.log("\nVerification:");
-const checkUrls = [
-  `https://${PROD_DOMAIN}`,
-  `https://${STAGING_DOMAIN}`,
-];
-
-for (const url of checkUrls) {
+console.log("\nVerification (HTTP HEAD checks):");
+for (const url of [`https://${PROD_DOMAIN}`, `https://${STAGING_DOMAIN}`]) {
   const status = await httpStatus(url);
   if (status === 200) {
     console.log(`  ${url} → ${status} ✓`);
   } else {
-    console.warn(`  ${url} → ${status ?? "unreachable"} ⚠  (DNS propagation may still be in progress)`);
+    console.warn(`  ${url} → ${status ?? "unreachable"} ⚠  (Vercel redeployment may still be in progress)`);
   }
 }
 
 // ---------------------------------------------------------------------------
-// Step 5 — Update DEPLOYMENT.md
+// Step 5 — Update DEPLOYMENT.md and commit
 // ---------------------------------------------------------------------------
 
 console.log("");
@@ -264,7 +208,6 @@ try {
 }
 
 if (deploymentMd !== null) {
-  // Replace the Current state table (matches the | Branch | URL | Role | header row)
   const tableRegex = /\| Branch \| URL \| Role \|[\s\S]*?(?=\n\*\*Update this table|\n---|\n##)/;
   const newTable =
     `| Branch | URL | Role |\n` +
@@ -273,24 +216,17 @@ if (deploymentMd !== null) {
     `| \`blue\` | \`${STAGING_DOMAIN}\` | 🔵 Staging |`;
 
   if (!tableRegex.test(deploymentMd)) {
-    console.warn("  ⚠  Could not locate the Current state table in DEPLOYMENT.md — skipping file update");
+    console.warn("  ⚠  Could not locate Current state table in DEPLOYMENT.md — skipping file update");
   } else {
-    const updated = deploymentMd.replace(tableRegex, newTable);
-    writeFileSync(deploymentPath, updated, "utf8");
-
+    writeFileSync(deploymentPath, deploymentMd.replace(tableRegex, newTable), "utf8");
     try {
       let currentGitBranch = "main";
       try {
-        currentGitBranch = execSync("git rev-parse --abbrev-ref HEAD", { cwd: ROOT })
-          .toString()
-          .trim();
+        currentGitBranch = execSync("git rev-parse --abbrev-ref HEAD", { cwd: ROOT }).toString().trim();
       } catch { /* fall through */ }
 
       execSync("git add DEPLOYMENT.md", { cwd: ROOT });
-      execSync(
-        `git commit -m "ops: blue/green swap — ${newProdBranch} is now production"`,
-        { cwd: ROOT }
-      );
+      execSync(`git commit -m "ops: blue/green swap — ${newProdBranch} is now production"`, { cwd: ROOT });
       execSync(`git push origin ${currentGitBranch}`, { cwd: ROOT, stdio: "inherit" });
       console.log("  ✓ DEPLOYMENT.md updated and pushed");
     } catch (gitErr) {
