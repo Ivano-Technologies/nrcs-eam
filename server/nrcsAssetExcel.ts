@@ -1,5 +1,4 @@
 import ExcelJS from "exceljs";
-import * as XLSX from "xlsx";
 import * as db from "./db";
 import {
   REGISTER_STATUS_LABELS,
@@ -410,20 +409,29 @@ function strAtCol(row: unknown[] | undefined, colIdx: number): string {
   return strCell(cellAtCol(row, colIdx));
 }
 
-/** Column I (Asset Code): prefer worksheet cell for correct `w` / formula metadata vs matrix row. */
-function readAssetCodeCellFromSheet(sheet: XLSX.WorkSheet, row0: number): { display: string } {
-  const addr = XLSX.utils.encode_cell({ r: row0, c: AR_COL.ASSET_CODE });
-  const cell = sheet[addr] as { v?: unknown; w?: string; f?: string } | undefined;
-  if (!cell) return { display: "" };
-  let display = "";
-  if (cell.w != null && String(cell.w).trim()) {
-    display = String(cell.w).trim();
-  } else if (cell.v != null && cell.v !== "") {
-    if (typeof cell.v === "number" && Number.isFinite(cell.v)) display = String(cell.v);
-    else if (cell.v instanceof Date) display = cell.v.toISOString();
-    else display = String(cell.v).trim();
-  }
-  return { display };
+/** A1-style cell address for single-letter columns (col 0–25 → A–Z). */
+function encodeCell(r: number, c: number): string {
+  return `${String.fromCharCode(65 + c)}${r + 1}`;
+}
+
+/** Column I (Asset Code): prefer worksheet cell for correct display/formula metadata vs matrix row. */
+function readAssetCodeCellFromSheet(sheet: ExcelJS.Worksheet, row0: number): { display: string } {
+  const addr = encodeCell(row0, AR_COL.ASSET_CODE);
+  const cell = sheet.getCell(addr);
+  if (cell.value == null) return { display: "" };
+  // cell.text gives the formatted display string (equivalent to xlsx `w`)
+  const text = (cell.text ?? "").trim();
+  if (text) return { display: text };
+  // Fall back to raw value; unwrap formula result via duck-typing
+  const rawVal = cell.value;
+  const raw =
+    rawVal != null && typeof rawVal === "object" && "result" in rawVal
+      ? (rawVal as { result?: unknown }).result
+      : rawVal;
+  if (raw == null || raw === "") return { display: "" };
+  if (typeof raw === "number" && Number.isFinite(raw)) return { display: String(raw) };
+  if (raw instanceof Date) return { display: raw.toISOString() };
+  return { display: String(raw).trim() };
 }
 
 function normalizeSpacesUpperAssetTag(raw: string): string {
@@ -447,7 +455,7 @@ function parseNonNegativeIntLoose(s: string): number | undefined {
  * Resolve `assetTag` for import: (1) column I cached value, (2) NRCS_<F><G><H####>, (3) unique fallback + warning.
  */
 function resolveImportAssetTag(input: {
-  sheet: XLSX.WorkSheet;
+  sheet: ExcelJS.Worksheet;
   row0: number;
   matrixRow: unknown[] | undefined;
   sheetRow: number;
@@ -670,36 +678,35 @@ export async function previewNRCSAssetImport(fileBuffer: Buffer): Promise<{
   headerRow: number;
   rows: NRCSImportPreviewRow[];
 }> {
-  let wb: XLSX.WorkBook;
+  let wb: ExcelJS.Workbook;
   try {
-    wb = XLSX.read(fileBuffer, {
-      type: "buffer",
-      cellDates: true,
-      cellFormula: true,
-      cellHTML: false,
-    });
+    wb = new ExcelJS.Workbook();
+    // ExcelJS @types uses a narrower Buffer type than Node.js Buffer<T> — safe cast.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await wb.xlsx.load(fileBuffer as any);
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Unknown error";
     throw new Error(`Could not read Excel file: ${msg}`);
   }
 
-  const sheetName = pickAssetRegisterSheetName(wb.SheetNames ?? []);
+  const sheetName = pickAssetRegisterSheetName(wb.worksheets.map((ws) => ws.name));
   if (!sheetName) {
     return { headerRow: 0, rows: [] };
   }
-  const sheet = wb.Sheets[sheetName];
+  const sheet = wb.getWorksheet(sheetName);
   if (!sheet) {
     throw new Error(`Worksheet "${sheetName}" was not found in the workbook.`);
   }
 
   let matrix: unknown[][];
   try {
-    matrix = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
-      header: 1,
-      defval: "",
-      raw: false,
-      blankrows: false,
-    }) as unknown[][];
+    const rows: unknown[][] = [];
+    sheet.eachRow({ includeEmpty: false }, (row) => {
+      // slice(1) removes the leading undefined exceljs inserts at index 0 (1-based rows).
+      // Map null/undefined cells to "" to match defval:"" behaviour.
+      rows.push((row.values as unknown[]).slice(1).map((c) => (c == null ? "" : c)));
+    });
+    matrix = rows;
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Unknown error";
     throw new Error(`Could not parse worksheet "${sheetName}": ${msg}`);

@@ -1,3 +1,4 @@
+import ExcelJS from "exceljs";
 import { TRPCError } from "@trpc/server";
 import { and, asc, desc, eq, gte, ilike, inArray, lte, or, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -63,7 +64,6 @@ import {
 import { assertBinCardLifecycleTransition, getBinCardDetail, listBinCards } from "../wms/binCard";
 import { buildTemplateWorkbook, parseExcelRows, parseTypedPdfText, type ImportDocumentType } from "../wms/importPipeline";
 import { buildHistoricalStockMovement } from "../wms/historicalImport";
-import * as XLSX from "xlsx";
 import {
   buildMonthlyWarehouseReport,
   monthlyReportColumns,
@@ -2075,7 +2075,8 @@ export const inventoryV2Router = router({
       .input(z.object({ type: z.enum(["grn", "waybill", "monthly_report", "stock_card"]) }))
       .query(async ({ input }) => {
         const wb = buildTemplateWorkbook(input.type as ImportDocumentType);
-        const data = XLSX.write(wb, { type: "base64", bookType: "xlsx" });
+        const buf = await wb.xlsx.writeBuffer();
+        const data = Buffer.from(buf).toString("base64");
         return {
           data,
           filename: `${input.type}-template.xlsx`,
@@ -2088,7 +2089,7 @@ export const inventoryV2Router = router({
       .mutation(async ({ input }) => {
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
-        const parsed = parseExcelRows(input.type as ImportDocumentType, input.base64File);
+        const parsed = await parseExcelRows(input.type as ImportDocumentType, input.base64File);
         return validateImportRows(db, parsed);
       }),
 
@@ -2879,6 +2880,31 @@ export const inventoryV2Router = router({
       }),
   }),
 
+  parseExcelSheet: protectedProcedure
+    .input(z.object({ base64: z.string() }))
+    .mutation(async ({ input }) => {
+      const wb = new ExcelJS.Workbook();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await wb.xlsx.load(Buffer.from(input.base64, "base64") as any);
+      const ws = wb.worksheets[0];
+      if (!ws) return [] as Record<string, unknown>[];
+      const headers: string[] = [];
+      const rows: Record<string, unknown>[] = [];
+      ws.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+        const values = (row.values as unknown[]).slice(1).map((c) => (c == null ? "" : c));
+        if (rowNumber === 1) {
+          values.forEach((v) => headers.push(String(v ?? "")));
+        } else {
+          const obj: Record<string, unknown> = {};
+          headers.forEach((h, i) => {
+            obj[h] = values[i] ?? "";
+          });
+          rows.push(obj);
+        }
+      });
+      return rows;
+    }),
+
   reports: router({
     monthlyWarehouseReport: protectedProcedure
       .input(z.object({ warehouseId: z.number().int().positive(), year: z.number().int(), month: z.number().int().min(1).max(12) }))
@@ -3192,6 +3218,25 @@ export const inventoryV2Router = router({
           contributingCtnAndDonor: `${row.componentCtnId ?? "—"} / ${donorById.get(row.componentDonorId ?? -1) ?? "—"}`,
           assemblerName: row.createdBy,
         }));
+      }),
+
+    exportReport: protectedProcedure
+      .input(
+        z.object({
+          rows: z.array(z.record(z.string(), z.unknown())),
+          sheetName: z.string().default("Report"),
+          filename: z.string(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const wb = new ExcelJS.Workbook();
+        const ws = wb.addWorksheet(input.sheetName);
+        if (input.rows.length > 0) {
+          ws.columns = Object.keys(input.rows[0]!).map((key) => ({ header: key, key }));
+          ws.addRows(input.rows as any[]);
+        }
+        const buf = await wb.xlsx.writeBuffer();
+        return { base64: Buffer.from(buf).toString("base64") };
       }),
 
     expiryWms: protectedProcedure
