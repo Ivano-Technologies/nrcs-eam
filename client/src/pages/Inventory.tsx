@@ -87,19 +87,19 @@ function maxRef(row: StockOverviewRow): number {
   return Math.max(1, row.quantityOnHand);
 }
 
-async function parseExcelFirstSheetRows(file: File): Promise<Record<string, unknown>[]> {
-  const XLSX = await import("xlsx");
-  const data = await file.arrayBuffer();
-  const wb = XLSX.read(data, { type: "array" });
-  const sheet = wb.Sheets[wb.SheetNames[0]];
-  return XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
-}
 
 type InventoryMainTab = "overview" | "catalogue" | "settings";
 
 export default function Inventory({ embedInShell = false }: { embedInShell?: boolean } = {}) {
   const urlSearch = useSearch();
   const { isAdmin, isManagerOrAdmin, isStaffOrAbove } = usePermissions();
+  const parseExcelSheetMutation = trpc.inventoryV2.parseExcelSheet.useMutation();
+
+  async function parseExcelFirstSheetRows(file: File): Promise<Record<string, unknown>[]> {
+    const buf = await file.arrayBuffer();
+    const base64 = btoa(Array.from(new Uint8Array(buf), (b) => String.fromCharCode(b)).join(""));
+    return parseExcelSheetMutation.mutateAsync({ base64 });
+  }
   const [mainTab, setMainTab] = useState<InventoryMainTab>("overview");
 
   useEffect(() => {

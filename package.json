@@ -132,7 +132,6 @@
     "vaul": "^1.1.2",
     "workbox-window": "^7.4.0",
     "wouter": "^3.3.5",
-    "xlsx": "^0.18.5",
     "zod": "^4.1.12"
   },
   "devDependencies": {
@@ -177,7 +176,6 @@
     "vite-plugin-pwa": "^1.2.0",
     "vitest": "^3.2.6"
   },
-  "//xlsx-note": "SheetJS CE 0.18.5 is the latest version on npm — no patched release exists for known advisories (Prototype Pollution, ReDoS). Used server-side only for trusted admin uploads. Dependabot alert intentionally unfixed; track at github.com/advisories. Evaluate migration to exceljs (already installed) or SheetJS Pro before next major feature cycle.",
   "packageManager": "pnpm@10.18.0",
   "pnpm": {
     "onlyBuiltDependencies": [
