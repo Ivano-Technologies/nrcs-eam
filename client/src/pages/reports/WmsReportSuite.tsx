@@ -8,7 +8,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc";
 import { Warehouse } from "lucide-react";
-import * as XLSX from "xlsx";
 
 function exportCsv(filename: string, columns: string[], rows: Array<Record<string, unknown>>) {
   const body = rows.map((row) => columns.map((col) => JSON.stringify(row[col] ?? "")).join(",")).join("\n");
@@ -21,13 +20,6 @@ function exportCsv(filename: string, columns: string[], rows: Array<Record<strin
   URL.revokeObjectURL(url);
 }
 
-function exportExcel(filename: string, rows: Array<Record<string, unknown>>) {
-  const ws = XLSX.utils.json_to_sheet(rows);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Report");
-  XLSX.writeFile(wb, filename);
-}
-
 export default function WmsReportSuite(props: any) {
   const initialTab = props.initialTab ?? "movements";
   const [warehouseId, setWarehouseId] = useState<string>("all");
@@ -36,6 +28,22 @@ export default function WmsReportSuite(props: any) {
   const [search, setSearch] = useState("");
   const [sourceType, setSourceType] = useState("all");
   const [direction, setDirection] = useState<"all" | "in" | "out">("all");
+
+  const exportReportMutation = trpc.inventoryV2.reports.exportReport.useMutation();
+
+  async function downloadExcel(filename: string, rows: Array<Record<string, unknown>>) {
+    const result = await exportReportMutation.mutateAsync({ rows, filename, sheetName: "Report" });
+    const blob = new Blob(
+      [Uint8Array.from(atob(result.base64), (c) => c.charCodeAt(0))],
+      { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }
+    );
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   const sitesQuery = trpc.sites.list.useQuery();
   const movementsQuery = trpc.inventoryV2.reports.wmsStockMovements.useQuery({
@@ -103,7 +111,7 @@ export default function WmsReportSuite(props: any) {
         <TabsContent value="movements" className="space-y-2">
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => exportCsv("wms-stock-movements.csv", ["date","documentRef","item","ctn","donor","warehouse","fromTo","qtyIn","qtyOut","balanceAfter","sourceType"], (movementsQuery.data ?? []) as any)}>Export CSV</Button>
-            <Button variant="outline" onClick={() => exportExcel("wms-stock-movements.xlsx", (movementsQuery.data ?? []) as any)}>Export Excel</Button>
+            <Button variant="outline" disabled={exportReportMutation.isPending} onClick={() => { void downloadExcel("wms-stock-movements.xlsx", (movementsQuery.data ?? []) as any); }}>Export Excel</Button>
           </div>
           <div className="rounded-md border">
             <Table><TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Document ref</TableHead><TableHead>Item</TableHead><TableHead>CTN</TableHead><TableHead>Donor</TableHead><TableHead>From/To</TableHead><TableHead>Qty in</TableHead><TableHead>Qty out</TableHead><TableHead>Balance</TableHead><TableHead>Source</TableHead></TableRow></TableHeader>
@@ -122,7 +130,7 @@ export default function WmsReportSuite(props: any) {
         </TabsContent>
 
         <TabsContent value="donor" className="space-y-2">
-          <Button variant="outline" onClick={() => exportExcel("wms-donor-contribution.xlsx", (donorQuery.data ?? []) as any)}>Export Excel</Button>
+          <Button variant="outline" disabled={exportReportMutation.isPending} onClick={() => { void downloadExcel("wms-donor-contribution.xlsx", (donorQuery.data ?? []) as any); }}>Export Excel</Button>
           <div className="rounded-md border">
             <Table><TableHeader><TableRow><TableHead>Donor</TableHead><TableHead>Item</TableHead><TableHead>Total units received</TableHead><TableHead>Total distributed</TableHead><TableHead>In stock</TableHead><TableHead>% distributed</TableHead></TableRow></TableHeader>
               <TableBody>{(donorQuery.data ?? []).map((row, idx) => <TableRow key={idx}><TableCell>{row.donor}</TableCell><TableCell>{row.item}</TableCell><TableCell>{row.received}</TableCell><TableCell>{row.distributed}</TableCell><TableCell>{row.inStock}</TableCell><TableCell>{row.percentDistributed.toFixed(2)}%</TableCell></TableRow>)}</TableBody>

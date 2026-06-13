@@ -1,6 +1,6 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { Router, type Request, type Response } from "express";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import type { User } from "../../drizzle/schema";
 import { authenticateRequest } from "../_core/supabaseSession";
 import { documentPrintLog, goodsReceivedNotes, inventoryDocuments, waybills, waybillLines, waybillLineCtnSources } from "../../drizzle/schema";
@@ -41,11 +41,15 @@ function mimeFor(format: ExportFormat): string {
   return format === "pdf" ? "application/pdf" : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 }
 
-function toSheetBuffer(rows: Record<string, unknown>[], sheetName: string): Buffer {
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.json_to_sheet(rows);
-  XLSX.utils.book_append_sheet(wb, ws, sheetName);
-  return Buffer.from(XLSX.write(wb, { bookType: "xlsx", type: "buffer" }));
+async function toSheetBuffer(rows: Record<string, unknown>[], sheetName: string): Promise<Buffer> {
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet(sheetName);
+  if (rows.length > 0) {
+    ws.columns = Object.keys(rows[0]!).map((key) => ({ header: key, key }));
+    ws.addRows(rows);
+  }
+  const buf = await wb.xlsx.writeBuffer();
+  return Buffer.from(buf);
 }
 
 router.get("/documents/:type/:id/export", async (req, res) => {
@@ -92,7 +96,7 @@ router.get("/documents/:type/:id/export", async (req, res) => {
         ];
         buffer = await generateGrnPdf({ rows });
       } else {
-        buffer = toSheetBuffer([doc], "GRN");
+        buffer = await toSheetBuffer([doc], "GRN");
       }
       if (copyType && ["white", "green", "blue", "yellow"].includes(copyType)) {
         const priorInventory = (doc.copiesPrinted ?? {}) as Record<string, string | null>;
@@ -147,7 +151,7 @@ router.get("/documents/:type/:id/export", async (req, res) => {
             .map((source) => `${source.ctnId}:${source.quantity}`)
             .join(", "),
         }));
-        buffer = toSheetBuffer(sheetRows, "Waybill");
+        buffer = await toSheetBuffer(sheetRows, "Waybill");
       }
       if (copyType && ["white", "green", "blue", "yellow"].includes(copyType)) {
         const prior = (wb.copiesPrinted ?? {}) as Record<string, string | null>;
@@ -181,7 +185,7 @@ router.get("/documents/:type/:id/export", async (req, res) => {
           { subtitle: `${detail.card.itemName} / ${detail.card.ctnCode}` }
         );
       } else {
-        buffer = toSheetBuffer(detail.ledger, "StockCard");
+        buffer = await toSheetBuffer(detail.ledger, "StockCard");
       }
     } else if (type === "bin-card") {
       const detail = await getBinCardDetail(db, id);
@@ -200,7 +204,7 @@ router.get("/documents/:type/:id/export", async (req, res) => {
           { subtitle: `${detail.card.itemDescription ?? "—"} / ${detail.card.binNumber ?? id}` }
         );
       } else {
-        buffer = toSheetBuffer(detail.ledger, "BinCard");
+        buffer = await toSheetBuffer(detail.ledger, "BinCard");
       }
     } else {
       const now = new Date();

@@ -1,4 +1,4 @@
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 
 export type ImportDocumentType = "grn" | "waybill" | "monthly_report" | "stock_card";
 export type ImportSource = "excel" | "pdf";
@@ -43,13 +43,13 @@ const TEMPLATE_HINTS: Record<string, string> = {
   remarks: "Optional notes",
 };
 
-export function buildTemplateWorkbook(type: ImportDocumentType): XLSX.WorkBook {
+export function buildTemplateWorkbook(type: ImportDocumentType): ExcelJS.Workbook {
   const cols = TEMPLATE_COLUMNS[type];
   const head = cols;
   const hints = cols.map((c) => TEMPLATE_HINTS[c] ?? "");
-  const ws = XLSX.utils.aoa_to_sheet([head, hints]);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Template");
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet("Template");
+  ws.addRows([head, hints]);
   return wb;
 }
 
@@ -60,11 +60,20 @@ function normalizeCell(value: unknown): string | number | null {
   return text.length ? text : null;
 }
 
-export function parseExcelRows(type: ImportDocumentType, base64File: string): ParsedImportRow[] {
-  const workbook = XLSX.read(Buffer.from(base64File, "base64"), { type: "buffer", cellDates: true });
-  const ws = workbook.Sheets[workbook.SheetNames[0] ?? ""];
+export async function parseExcelRows(type: ImportDocumentType, base64File: string): Promise<ParsedImportRow[]> {
+  const wb = new ExcelJS.Workbook();
+  // ExcelJS @types/exceljs declares load(input: Buffer) but at runtime it
+  // accepts any ArrayBuffer-backed object; cast silences the Buffer<T> mismatch.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await wb.xlsx.load(Buffer.from(base64File, "base64") as any);
+  const ws = wb.worksheets[0];
   if (!ws) return [];
-  const allRows = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: null }) as unknown[][];
+  // Build a 0-based row matrix (same shape as XLSX header:1 output).
+  // ExcelJS getSheetValues() is 1-based: index 0 is null; each row's index 0 is also undefined.
+  const allRows: unknown[][] = [];
+  ws.eachRow({ includeEmpty: false }, (row) => {
+    allRows.push((row.values as unknown[]).slice(1));
+  });
   const headers = (allRows[0] ?? []).map((h) => String(h ?? "").trim());
   const rows = allRows.slice(2).map((cells) => {
     const obj: Record<string, unknown> = {};
