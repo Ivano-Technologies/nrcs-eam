@@ -1,6 +1,5 @@
 import { sql } from "drizzle-orm";
 import { authorizeCronRequest, logCronRun } from "../server/_core/cronAuth";
-import { getDb } from "../server/db";
 
 export default async function handler(
   req: { method?: string; headers?: { authorization?: string } },
@@ -13,6 +12,7 @@ export default async function handler(
     return;
   }
   try {
+    const { getDb } = await import("../server/db");
     const db = await getDb();
     if (db) await db.execute(sql`SELECT 1`);
     logCronRun("keep-alive", startedAt, { ok: true });
