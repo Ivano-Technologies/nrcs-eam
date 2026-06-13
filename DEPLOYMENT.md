@@ -45,8 +45,25 @@ Never commit directly to the live branch. It must remain stable at all times.
 
 ## 4. Pre-swap checklist
 
-Before swapping staging to production, verify all of the following on the staging URL:
+Before swapping staging to production, complete every step below in order.
 
+### Sync `main` into `blue` first
+
+The `blue` branch is the live production build when it is assigned the production domain. If it lags `main`, security fixes and auth changes are not deployed. **Always merge before swapping.**
+
+```bash
+git checkout blue
+git merge main --no-ff -m "merge(main→blue): sync security and feature fixes"
+git push origin blue
+```
+
+Wait for the Vercel `blue` deployment to finish building successfully before continuing.
+
+### Staging smoke tests
+
+Verify all of the following on the staging URL (`blue.nrcseam.techivano.com`):
+
+- [ ] `main → blue` merge completed and Vercel build succeeded
 - [ ] Login and authentication works
 - [ ] Dashboard KPIs load correctly (Active Facilities, Total Asset Value)
 - [ ] Asset register loads and displays data
@@ -59,6 +76,8 @@ Before swapping staging to production, verify all of the following on the stagin
 ## 5. Swap procedure
 
 The swap reassigns the production domain from one branch to the other. This takes approximately 60 seconds and causes zero downtime.
+
+**IMPORTANT:** Complete the `main → blue` merge in Section 4 before running `pnpm swap` or changing the GitHub default branch. Skipping this step leaves production on an outdated build.
 
 ### Via Vercel dashboard
 
