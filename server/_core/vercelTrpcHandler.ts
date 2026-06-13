@@ -11,7 +11,7 @@ import { createDynamicCorsMiddlewareOptions } from "./corsConfig";
 
 const app = express();
 app.set("trust proxy", 1);
-app.options("*", cors(createDynamicCorsMiddlewareOptions()));
+app.options("/*splat", cors(createDynamicCorsMiddlewareOptions()));
 app.use(cors(createDynamicCorsMiddlewareOptions()));
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));

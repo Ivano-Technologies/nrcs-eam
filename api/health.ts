@@ -1,9 +1,8 @@
-import { sql } from "drizzle-orm";
-import { getDb } from "../server/db";
-
 export default async function handler(req: any, res: any) {
   if (req.query?.deep === "1") {
     try {
+      const { sql } = await import("drizzle-orm");
+      const { getDb } = await import("../server/db");
       const db = await getDb();
       if (!db) {
         throw new Error("Database not initialized");
