@@ -15,8 +15,9 @@ All new features, dependency updates, and experimental changes are developed and
 
 | Branch | URL | Role |
 |--------|-----|------|
-| `blue` | `nrcseam.techivano.com` | 🟢 Production |
-| `blue` | `blue.nrcseam.techivano.com` | 🔵 Staging |
+| `main` | `nrcseam.techivano.com` | 🟢 Production |
+| `blue` | `blue.nrcseam.techivano.com` | 🔵 Staging / testing |
+
 **Update this table every time a swap is performed.**
 
 ---
@@ -47,23 +48,23 @@ Never commit directly to the live branch. It must remain stable at all times.
 
 Before swapping staging to production, complete every step below in order.
 
-### Sync `main` into `blue` first
+### Sync `blue` into `main` before swapping to production
 
-The `blue` branch is the live production build when it is assigned the production domain. If it lags `main`, security fixes and auth changes are not deployed. **Always merge before swapping.**
+`main` is the production branch (GitHub default → Vercel production). If it lags `blue`, security fixes and feature work on staging are not deployed. **Merge staging into `main` before running `pnpm swap` or promoting to production.**
 
 ```bash
-git checkout blue
-git merge main --no-ff -m "merge(main→blue): sync security and feature fixes"
-git push origin blue
+git checkout main
+git merge blue --no-ff -m "merge(blue→main): sync staging fixes to production"
+git push origin main
 ```
 
-Wait for the Vercel `blue` deployment to finish building successfully before continuing.
+Wait for the Vercel `main` production deployment to finish building successfully before continuing.
 
 ### Staging smoke tests
 
 Verify all of the following on the staging URL (`blue.nrcseam.techivano.com`):
 
-- [ ] `main → blue` merge completed and Vercel build succeeded
+- [ ] `blue → main` merge completed and Vercel production build succeeded
 - [ ] Login and authentication works
 - [ ] Dashboard KPIs load correctly (Active Facilities, Total Asset Value)
 - [ ] Asset register loads and displays data
@@ -77,7 +78,7 @@ Verify all of the following on the staging URL (`blue.nrcseam.techivano.com`):
 
 The swap reassigns the production domain from one branch to the other. This takes approximately 60 seconds and causes zero downtime.
 
-**IMPORTANT:** Complete the `main → blue` merge in Section 4 before running `pnpm swap` or changing the GitHub default branch. Skipping this step leaves production on an outdated build.
+**IMPORTANT:** Complete the `blue → main` merge in Section 4 before running `pnpm swap`. Skipping this step leaves production on an outdated build.
 
 ### Via Vercel dashboard
 

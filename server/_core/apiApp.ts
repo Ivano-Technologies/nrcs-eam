@@ -24,7 +24,7 @@ export function createApiApp(): Express {
   app.set("trust proxy", 1);
 
   logCorsStartup(getAllowedOriginsList());
-  app.options("*", cors(createDynamicCorsMiddlewareOptions()));
+  app.options("/*splat", cors(createDynamicCorsMiddlewareOptions()));
   app.use(cors(createDynamicCorsMiddlewareOptions()));
 
   // Expose both to support standalone (`/health`) and /api function mounting (`/api/health`).
