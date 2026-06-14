@@ -926,6 +926,7 @@ export const stockCards = pgTable(
   (table) => ({
     stockCardCtnLocationUnique: unique("stock_card_ctn_location_unique").on(table.ctnId, table.locationId),
     stockCardLocationIdx: index("stock_card_location_idx").on(table.locationId),
+    stockCardsLocationIdIdx: index("idx_stock_cards_location_id").on(table.locationId),
   })
 );
 
@@ -979,6 +980,8 @@ export const stockMovements = pgTable(
   },
   (table) => ({
     stockMovementsCardDateIdx: index("stock_movements_card_date_idx").on(table.stockCardId, table.date),
+    stockMovementsSourceDateIdx: index("idx_stock_movements_source_date").on(table.sourceType, table.date),
+    stockMovementsDocumentRefIdx: index("idx_stock_movements_document_ref").on(table.documentRef),
   })
 );
 
@@ -1167,7 +1170,10 @@ export const auditLogs = pgTable("auditLogs", {
   ipAddress: varchar("ipAddress", { length: 50 }),
   userAgent: text("userAgent"),
   timestamp: timestamp("timestamp", { mode: "date" }).defaultNow().notNull(),
-});
+}, (t) => [
+  index("idx_audit_logs_timestamp").on(t.timestamp),
+  index("idx_audit_logs_action").on(t.action),
+]);
 
 /**
  * Documents and Attachments
