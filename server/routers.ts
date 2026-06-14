@@ -14,6 +14,7 @@ import * as notificationHelper from "./notificationHelper";
 import { generatePDFReport, generateExcelReport } from "./reportGenerator";
 import { generateEmailTemplate, sendBulkEmails, sendEmail } from "./emailService";
 import { authRouter } from "./routers/authRouter";
+import { AUDIT_ACTIONS, logAuditEvent } from "./_core/auditHelper";
 import {
   adminProcedure,
   managerOrAdminProcedure,
@@ -188,47 +189,37 @@ async function countAdequatelyStockedActiveSites(
     return Number(siteCount?.count ?? 0);
   }
 
-  const movementTotals = database
-    .select({
-      stockCardId: stockMovements.stockCardId,
-      netQuantity: sql<number>`coalesce(sum(${stockMovements.quantityIn} - ${stockMovements.quantityOut}), 0)`
-        .mapWith(Number)
-        .as("netQuantity"),
-    })
-    .from(stockMovements)
-    .where(movementDateFilter)
-    .groupBy(stockMovements.stockCardId)
-    .as("movement_net_dr");
+  const movementDateSql = opts.asOfDate ? sql`AND sm.date <= ${opts.asOfDate}` : sql``;
+  const siteIdSql = opts.siteId != null ? sql`AND s.id = ${opts.siteId}` : sql``;
 
-  const thresholdSql = sql`coalesce(${stockSettings.minLevel}, ${stockCards.stockMinimum}, 0)`;
+  const rows = await database.execute(sql`
+    WITH movement_net AS (
+      SELECT
+        sm.stock_card_id,
+        COALESCE(SUM(sm.quantity_in - sm.quantity_out), 0) AS net_quantity
+      FROM stock_movements sm
+      WHERE TRUE ${movementDateSql}
+      GROUP BY sm.stock_card_id
+    ),
+    understock_locations AS (
+      SELECT DISTINCT sc.location_id
+      FROM stock_cards sc
+      INNER JOIN commodity_tracking_numbers ctn ON sc.ctn_id = ctn.id
+      LEFT JOIN movement_net mn ON mn.stock_card_id = sc.id
+      LEFT JOIN stock_settings ss
+        ON ss.catalogue_id = ctn.item_id
+        AND ss.warehouse_id = sc.location_id
+      WHERE COALESCE(ss.min_level, sc.stock_minimum, 0) > 0
+        AND COALESCE(mn.net_quantity, 0) < COALESCE(ss.min_level, sc.stock_minimum, 0)
+    )
+    SELECT COUNT(*)::int AS adequate
+    FROM sites s
+    WHERE s.is_active = TRUE
+      ${siteIdSql}
+      AND s.id NOT IN (SELECT location_id FROM understock_locations)
+  `);
 
-  const underStockAtSite = exists(
-    database
-      .select({ one: sql`1` })
-      .from(stockCards)
-      .innerJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
-      .leftJoin(movementTotals, eq(movementTotals.stockCardId, stockCards.id))
-      .leftJoin(
-        stockSettings,
-        and(
-          eq(stockSettings.catalogueId, commodityTrackingNumbers.itemId),
-          eq(stockSettings.warehouseId, stockCards.locationId)
-        )
-      )
-      .where(
-        and(
-          eq(stockCards.locationId, sites.id),
-          sql`${thresholdSql} > 0`,
-          sql`coalesce(${movementTotals.netQuantity}, 0) < ${thresholdSql}`
-        )
-      )
-  );
-
-  const [row] = await database
-    .select({ adequate: sql<number>`count(*)`.mapWith(Number) })
-    .from(sites)
-    .where(and(activeSiteWhere, not(underStockAtSite)));
-
+  const row = (Array.isArray(rows) ? rows[0] : undefined) as { adequate?: number } | undefined;
   return Number(row?.adequate ?? 0);
 }
 
@@ -725,15 +716,31 @@ export const appRouter = router({
           isActive: z.boolean().optional(),
         })
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         const { facilityType, parentFacilityId, code, ...rest } = input;
         const parentResolved = await resolveFacilityParentForSave({ facilityType, parentFacilityId });
-        return await db.createSite({
+        const site = await db.createSite({
           ...(code ? { code } : {}),
           ...rest,
           facilityType,
           parentFacilityId: parentResolved,
         });
+        if (site) {
+          await logAuditEvent({
+            userId: ctx.user.id,
+            action: AUDIT_ACTIONS.FACILITY_CREATE,
+            entityType: "site",
+            entityId: site.id,
+            changes: {
+              name: site.name,
+              code: site.code,
+              facilityType: site.facilityType,
+              isActive: site.isActive,
+            },
+            req: ctx.req,
+          });
+        }
+        return site;
       }),
 
     update: managerOrAdminProcedure
@@ -756,7 +763,7 @@ export const appRouter = router({
           isActive: z.boolean().optional(),
         })
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         const { id, facilityType, parentFacilityId, ...data } = input;
         const existing = await db.getSiteById(id);
         if (!existing) {
@@ -778,11 +785,35 @@ export const appRouter = router({
           siteId: id,
         });
 
-        return await db.updateSite(id, {
+        const updated = await db.updateSite(id, {
           ...data,
           ...(facilityType !== undefined ? { facilityType } : {}),
           parentFacilityId: nextParent,
         });
+        await logAuditEvent({
+          userId: ctx.user.id,
+          action: AUDIT_ACTIONS.FACILITY_UPDATE,
+          entityType: "site",
+          entityId: id,
+          changes: {
+            before: {
+              name: existing.name,
+              code: existing.code,
+              facilityType: existing.facilityType,
+              isActive: existing.isActive,
+              parentFacilityId: existing.parentFacilityId,
+            },
+            after: {
+              name: updated?.name ?? data.name ?? existing.name,
+              code: updated?.code ?? data.code ?? existing.code,
+              facilityType: updated?.facilityType ?? nextType,
+              isActive: updated?.isActive ?? data.isActive ?? existing.isActive,
+              parentFacilityId: nextParent,
+            },
+          },
+          req: ctx.req,
+        });
+        return updated;
       }),
 
     bulkDelete: managerOrAdminProcedure
@@ -856,6 +887,25 @@ export const appRouter = router({
           await db.deleteFacilityPhotoById(input.id);
         } else {
           await db.deleteFacilityPhoto(input.id, ctx.user.id);
+        }
+        if (photo.photoKey) {
+          try {
+            const supabase = getSupabaseSecret();
+            const { error } = await supabase.storage
+              .from("facility-photos")
+              .remove([photo.photoKey]);
+            if (error) {
+              console.warn(
+                `Failed to remove facility photo from storage: ${photo.photoKey}`,
+                error.message
+              );
+            }
+          } catch (err) {
+            console.warn(
+              `Failed to remove facility photo from storage: ${photo.photoKey}`,
+              err
+            );
+          }
         }
         return { success: true as const };
       }),
@@ -2571,11 +2621,21 @@ export const appRouter = router({
           (async () => {
             const scope = dashboardDataScope(ctx);
             if (scope.mode === "empty") return { totalNgn: 0, propertyNgn: 0, movableNgn: 0 };
+            const cacheKey = `dashboard:totalAssetValue:${scope.mode}:${scope.mode === "site" ? scope.siteId : "all"}`;
+            const cached = await cacheGetJson<{
+              totalNgn: number;
+              propertyNgn: number;
+              movableNgn: number;
+            }>(cacheKey);
+            if (cached) return cached;
             const database = await db.getDb();
             if (!database) return { totalNgn: 0, propertyNgn: 0, movableNgn: 0 };
-            return scope.mode === "all"
-              ? await db.getDashboardTotalAssetValue({ mode: "all" })
-              : await db.getDashboardTotalAssetValue({ mode: "site", siteId: scope.siteId });
+            const result =
+              scope.mode === "all"
+                ? await db.getDashboardTotalAssetValue({ mode: "all" })
+                : await db.getDashboardTotalAssetValue({ mode: "site", siteId: scope.siteId });
+            await cacheSetJson(cacheKey, result, 600);
+            return result;
           })(),
           8000,
           "totalAssetValue"
@@ -2588,6 +2648,19 @@ export const appRouter = router({
     /** Per-branch stock readiness for Manager/Admin dashboards. */
     branchPerformance: protectedProcedure.query(async ({ ctx }) => {
       requireRole(ctx, ["admin", "manager"]);
+      const cacheKey = "dashboard:branchPerformance:all";
+      type BranchPerformanceRow = {
+        id: number;
+        name: string;
+        code: string | null;
+        isActive: boolean;
+        stockScorePercent: number | null;
+        adequateCards: number;
+        totalCards: number;
+      };
+      const cached = await cacheGetJson<BranchPerformanceRow[]>(cacheKey);
+      if (cached) return cached;
+
       const database = await db.getDb();
       if (!database) return [];
 
@@ -2599,7 +2672,7 @@ export const appRouter = router({
 
       const [anyMovement] = await database.select({ id: stockMovements.id }).from(stockMovements).limit(1);
       if (!anyMovement) {
-        return branches.map((b) => ({
+        const emptyScores = branches.map((b) => ({
           id: b.id,
           name: b.name,
           code: b.code,
@@ -2608,6 +2681,8 @@ export const appRouter = router({
           adequateCards: 0,
           totalCards: 0,
         }));
+        await cacheSetJson(cacheKey, emptyScores, 600);
+        return emptyScores;
       }
 
       const movementTotals = database
@@ -2645,7 +2720,7 @@ export const appRouter = router({
         });
       }
 
-      return branches.map((b) => {
+      const result = branches.map((b) => {
         const score = scoreByLocation.get(b.id);
         const pct = score && score.total > 0 ? Math.round((score.adequate / score.total) * 100) : null;
         return {
@@ -2658,6 +2733,8 @@ export const appRouter = router({
           totalCards: score?.total ?? 0,
         };
       });
+      await cacheSetJson(cacheKey, result, 600);
+      return result;
     }),
 
     attentionItems: protectedProcedure
@@ -3200,7 +3277,7 @@ export const appRouter = router({
           sendWelcomeEmail: z.boolean().default(true),
         })
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         const email = input.email.trim().toLowerCase();
         const existing = await db.getUserByEmailLowercase(email);
         if (existing) {
@@ -3228,8 +3305,9 @@ export const appRouter = router({
           });
         }
 
+        let createdUserId: number;
         try {
-          await db.insertAppUserLinkedToAuth({
+          createdUserId = await db.insertAppUserLinkedToAuth({
             authUserId: data.user.id,
             email,
             name: input.name.trim(),
@@ -3272,6 +3350,20 @@ export const appRouter = router({
             console.error("[users.create] Welcome email not sent (configure email delivery)");
           }
         }
+
+        await logAuditEvent({
+          userId: ctx.user.id,
+          action: AUDIT_ACTIONS.USER_CREATE,
+          entityType: "user",
+          entityId: createdUserId,
+          changes: {
+            email,
+            role: input.role,
+            facilityId: input.facilityId ?? null,
+            name: input.name.trim(),
+          },
+          req: ctx.req,
+        });
 
         return { success: true as const };
       }),
@@ -3320,6 +3412,28 @@ export const appRouter = router({
           });
         }
 
+        await logAuditEvent({
+          userId: ctx.user.id,
+          action: AUDIT_ACTIONS.USER_UPDATE,
+          entityType: "user",
+          entityId: id,
+          changes: {
+            before: {
+              name: target.name,
+              role: target.role,
+              facilityId: target.siteId,
+              status: target.status,
+            },
+            after: {
+              name: patch.name ?? target.name,
+              role: patch.role ?? target.role,
+              facilityId: patch.siteId !== undefined ? patch.siteId : target.siteId,
+              status: patch.status ?? target.status,
+            },
+          },
+          req: ctx.req,
+        });
+
         return { success: true as const };
       }),
 
@@ -3337,6 +3451,14 @@ export const appRouter = router({
           throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
         }
         await db.updateUser(input.id, { status: "inactive", updatedAt: new Date() });
+        await logAuditEvent({
+          userId: ctx.user.id,
+          action: AUDIT_ACTIONS.USER_DEACTIVATE,
+          entityType: "user",
+          entityId: input.id,
+          changes: { email: target.email, name: target.name },
+          req: ctx.req,
+        });
         return { success: true as const };
       }),
 
@@ -3370,6 +3492,15 @@ export const appRouter = router({
           await db.deleteUser(input.id);
         }
 
+        await logAuditEvent({
+          userId: ctx.user.id,
+          action: AUDIT_ACTIONS.USER_DELETE,
+          entityType: "user",
+          entityId: input.id,
+          changes: { email: target.email, name: target.name, role: target.role },
+          req: ctx.req,
+        });
+
         return { success: true as const };
       }),
 
@@ -3377,8 +3508,9 @@ export const appRouter = router({
 
     resetPassword: adminProcedure
       .input(z.object({ email: z.string().email() }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         const email = input.email.trim().toLowerCase();
+        const target = await db.getUserByEmailLowercase(email);
         const supabase = getSupabaseSecret();
         const redirectTo = `${getFrontendOriginForUserEmails()}/reset-password`;
         const { data, error } = await supabase.auth.admin.generateLink({
@@ -3416,6 +3548,14 @@ export const appRouter = router({
               "Recovery link was generated but email could not be sent. Configure RESEND_API_KEY or SMTP.",
           });
         }
+        await logAuditEvent({
+          userId: ctx.user.id,
+          action: AUDIT_ACTIONS.USER_RESET_PASSWORD,
+          entityType: "user",
+          entityId: target?.id,
+          changes: { email },
+          req: ctx.req,
+        });
         return {
           success: true as const,
           message: `Password reset email sent to ${email}`,
@@ -4701,40 +4841,37 @@ async function loadDashboardAll(
 
   const includeBranch = ctx.user?.role === "admin" || ctx.user?.role === "manager";
 
-  const metrics = await runSection(
-    "metrics",
-    () => caller.dashboard.metrics({ period: input.period }),
-    { ...DASHBOARD_EMPTY_METRICS }
-  );
-  const totalAssetValue = await runSection(
-    "totalAssetValue",
-    () => caller.dashboard.totalAssetValue(),
-    { totalNgn: 0, propertyNgn: 0, movableNgn: 0 }
-  );
-  const stockMovement = await runSection(
-    "stockMovement",
-    () => caller.dashboard.stockMovement({ weeks: input.stockMovementWeeks }),
-    []
-  );
-  const facilityStatus = await runSection("facilityStatus", () => caller.dashboard.facilityStatus(), []);
-  const recentActivity = await runSection(
-    "recentActivity",
-    () => caller.dashboard.recentActivity({ limit: 5 }),
-    []
-  );
-  const pendingRequisitions = await runSection(
-    "pendingRequisitions",
-    () => caller.dashboard.pendingRequisitions({ limit: 4 }),
-    { total: 0, urgent: 0, oldestDaysAgo: null }
-  );
-  const attentionItems = await runSection(
-    "attentionItems",
-    () => caller.dashboard.attentionItems({ role: input.role }),
-    [...DASHBOARD_ALL_CLEAR_ATTENTION]
-  );
-  const branchPerformance = includeBranch
-    ? await runSection("branchPerformance", () => caller.dashboard.branchPerformance(), [])
-    : [];
+  const [
+    metrics,
+    totalAssetValue,
+    stockMovement,
+    facilityStatus,
+    recentActivity,
+    pendingRequisitions,
+    attentionItems,
+    branchPerformance,
+  ] = await Promise.all([
+    runSection("metrics", () => caller.dashboard.metrics({ period: input.period }), { ...DASHBOARD_EMPTY_METRICS }),
+    runSection("totalAssetValue", () => caller.dashboard.totalAssetValue(), {
+      totalNgn: 0,
+      propertyNgn: 0,
+      movableNgn: 0,
+    }),
+    runSection("stockMovement", () => caller.dashboard.stockMovement({ weeks: input.stockMovementWeeks }), []),
+    runSection("facilityStatus", () => caller.dashboard.facilityStatus(), []),
+    runSection("recentActivity", () => caller.dashboard.recentActivity({ limit: 5 }), []),
+    runSection("pendingRequisitions", () => caller.dashboard.pendingRequisitions({ limit: 4 }), {
+      total: 0,
+      urgent: 0,
+      oldestDaysAgo: null,
+    }),
+    runSection("attentionItems", () => caller.dashboard.attentionItems({ role: input.role }), [
+      ...DASHBOARD_ALL_CLEAR_ATTENTION,
+    ]),
+    includeBranch
+      ? runSection("branchPerformance", () => caller.dashboard.branchPerformance(), [])
+      : Promise.resolve([]),
+  ]);
 
   return {
     metrics,
