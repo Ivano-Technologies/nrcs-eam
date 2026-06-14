@@ -75,7 +75,7 @@ export default function Observability() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="admin-observability-page">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <PageHeader
           icon={BarChart3}
