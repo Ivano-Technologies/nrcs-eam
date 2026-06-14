@@ -29,6 +29,7 @@ import {
   insuranceRecordsRouter,
 } from "./financeRouters";
 import { complianceTrackingRouter } from "./complianceTrackingRouters";
+import { observabilityRouter } from "./routers/observabilityRouter";
 import { donorAssetsRouter } from "./donorAssetsRouters";
 import {
   countDonorReportsDueSoon,
@@ -67,6 +68,11 @@ import {
   type DashboardQueryTier,
   type DashboardSection,
 } from "./_core/dashboardQueryPriority";
+import {
+  recordDashboardRequest,
+  type DashboardRequestRecord,
+  type TierLoadingState,
+} from "./_core/dashboardRequestBuffer";
 import type { TrpcContext } from "./_core/context";
 import type { DashboardPeriod } from "./wms/dashboard";
 import {
@@ -723,6 +729,15 @@ export const appRouter = router({
 
     mapData: protectedProcedure.query(async () => {
       return await db.getSitesMapData();
+    }),
+
+    mapNetworkData: protectedProcedure.query(async () => {
+      const cacheKey = "sites:mapNetworkData:v1";
+      const cached = await cacheGetJson<Awaited<ReturnType<typeof db.getSitesMapNetworkData>>>(cacheKey);
+      if (cached) return cached;
+      const rows = await db.getSitesMapNetworkData();
+      await cacheSetJson(cacheKey, rows, 300);
+      return rows;
     }),
 
     getById: protectedProcedure
@@ -2636,13 +2651,25 @@ export const appRouter = router({
         })
       )
       .query(async ({ input, ctx }) => {
-        const data = await loadDashboardTier(ctx, {
+        const result = await loadDashboardTier(ctx, {
           period: input.period,
           role: input.role,
           stockMovementWeeks: input.stockMovementWeeks,
           tier: input.tier,
         });
-        return { tier: input.tier, data };
+        if (ctx.user) {
+          void recordDashboardRequest(
+            buildDashboardRequestRecord({
+              source: "byTier",
+              wallClockMs: result.durationMs,
+              tier1: input.tier === 1 ? result : null,
+              tier2: input.tier === 2 ? result : null,
+              tier3: input.tier === 3 ? result : null,
+              userId: ctx.user.id,
+            })
+          );
+        }
+        return { tier: input.tier, data: result.data };
       }),
     stockMovement: protectedProcedure
       .input(z.object({ weeks: z.number().min(4).max(26).default(12) }).optional())
@@ -4902,6 +4929,10 @@ export const appRouter = router({
         };
       }),
   }),
+
+  admin: router({
+    observability: observabilityRouter,
+  }),
 });
 
 const DASHBOARD_ALL_CLEAR_ATTENTION = [
@@ -4933,11 +4964,17 @@ function emptyDashboardAllOutput(includeBranch: boolean): DashboardAllOutput {
   };
 }
 
+type SectionFailureTracker = {
+  timedOutSections: string[];
+  failedSections: string[];
+};
+
 async function runQueuedDashboardSection(
   caller: ReturnType<typeof appRouter.createCaller>,
   input: DashboardAllInput,
   section: DashboardSection,
-  includeBranch: boolean
+  includeBranch: boolean,
+  failures?: SectionFailureTracker
 ): Promise<Partial<DashboardAllOutput>> {
   if (section === "branchPerformance" && !includeBranch) {
     return { branchPerformance: [] };
@@ -4945,6 +4982,9 @@ async function runQueuedDashboardSection(
 
   const priority = tierForSection(section);
   const enqueuedAt = Date.now();
+
+  let sectionFailed = false;
+  let sectionTimedOut = false;
 
   const sectionResult = await dashboardQueryQueue.enqueue(
     priority,
@@ -4975,11 +5015,15 @@ async function runQueuedDashboardSection(
             throw new Error(`Unknown dashboard section: ${section satisfies never}`);
         }
       } catch (err) {
+        sectionFailed = true;
+        const msg = err instanceof Error ? err.message : String(err);
+        sectionTimedOut = msg.startsWith("timeout:") || msg === "metrics_timeout";
         console.warn(
           JSON.stringify({
             event: "dashboard_all_section_failed",
             section,
-            err: err instanceof Error ? err.message : String(err),
+            err: msg,
+            timedOut: sectionTimedOut,
           })
         );
         const empty = emptyDashboardAllOutput(includeBranch);
@@ -4988,6 +5032,11 @@ async function runQueuedDashboardSection(
     },
     section
   );
+
+  if (sectionFailed && failures) {
+    if (sectionTimedOut) failures.timedOutSections.push(section);
+    else failures.failedSections.push(section);
+  }
 
   const waitMs = Date.now() - enqueuedAt;
   if (waitMs > 50) {
@@ -5005,28 +5054,94 @@ async function runQueuedDashboardSection(
   return { [section]: sectionResult } as Partial<DashboardAllOutput>;
 }
 
+type TierLoadResult = {
+  data: Partial<DashboardAllOutput>;
+  durationMs: number;
+  timedOutSections: string[];
+  failedSections: string[];
+};
+
+function tierLoadingState(
+  tier: DashboardQueryTier,
+  timedOut: string[],
+  failed: string[]
+): TierLoadingState {
+  const sections = sectionsForTier(tier);
+  const hasTimeout = sections.some((s) => timedOut.includes(s));
+  const hasFailed = sections.some((s) => failed.includes(s));
+  if (hasTimeout) return "timeout";
+  if (hasFailed) return "failed";
+  return "complete";
+}
+
 async function loadDashboardTier(
   ctx: TrpcContext,
   input: DashboardAllInput & { tier: DashboardQueryTier }
-): Promise<Partial<DashboardAllOutput>> {
+): Promise<TierLoadResult> {
   const caller = appRouter.createCaller(ctx);
   const includeBranch = ctx.user?.role === "admin" || ctx.user?.role === "manager";
   const tierStarted = Date.now();
   const sections = sectionsForTier(input.tier);
+  const failures: SectionFailureTracker = { timedOutSections: [], failedSections: [] };
   const parts = await Promise.all(
-    sections.map((section) => runQueuedDashboardSection(caller, input, section, includeBranch))
+    sections.map((section) =>
+      runQueuedDashboardSection(caller, input, section, includeBranch, failures)
+    )
   );
   const merged = Object.assign({}, ...parts) as Partial<DashboardAllOutput>;
+  const durationMs = Date.now() - tierStarted;
   console.log(
     JSON.stringify({
       event: "dashboard_tier_complete",
       tier: input.tier,
-      durationMs: Date.now() - tierStarted,
+      durationMs,
       sections,
       queue: dashboardQueryQueue.getStats(),
+      timedOutSections: failures.timedOutSections,
     })
   );
-  return merged;
+  return {
+    data: merged,
+    durationMs,
+    timedOutSections: failures.timedOutSections,
+    failedSections: failures.failedSections,
+  };
+}
+
+function buildDashboardRequestRecord(params: {
+  source: DashboardRequestRecord["source"];
+  wallClockMs: number;
+  tier1: TierLoadResult | null;
+  tier2: TierLoadResult | null;
+  tier3: TierLoadResult | null;
+  userId: number;
+}): DashboardRequestRecord {
+  const allTimedOut = [
+    ...(params.tier1?.timedOutSections ?? []),
+    ...(params.tier2?.timedOutSections ?? []),
+    ...(params.tier3?.timedOutSections ?? []),
+  ];
+  return {
+    source: params.source,
+    wallClockMs: params.wallClockMs,
+    tier1Ms: params.tier1?.durationMs ?? null,
+    tier2Ms: params.tier2?.durationMs ?? null,
+    tier3Ms: params.tier3?.durationMs ?? null,
+    timedOutSections: allTimedOut,
+    userId: String(params.userId),
+    timestamp: new Date().toISOString(),
+    loadingState: {
+      tier1: params.tier1
+        ? tierLoadingState(DASHBOARD_QUERY_TIERS.TIER_1, params.tier1.timedOutSections, params.tier1.failedSections)
+        : "complete",
+      tier2: params.tier2
+        ? tierLoadingState(DASHBOARD_QUERY_TIERS.TIER_2, params.tier2.timedOutSections, params.tier2.failedSections)
+        : "complete",
+      tier3: params.tier3
+        ? tierLoadingState(DASHBOARD_QUERY_TIERS.TIER_3, params.tier3.timedOutSections, params.tier3.failedSections)
+        : "complete",
+    },
+  };
 }
 
 /** Runs after `appRouter` is defined — avoids circular type inference from createCaller inside the router. */
@@ -5038,23 +5153,37 @@ async function loadDashboardAll(
   const empty = emptyDashboardAllOutput(includeBranch);
   const allStarted = Date.now();
 
-  const tier1 = await loadDashboardTier(ctx, { ...input, tier: DASHBOARD_QUERY_TIERS.TIER_1 });
-  const tier2 = await loadDashboardTier(ctx, { ...input, tier: DASHBOARD_QUERY_TIERS.TIER_2 });
-  const tier3 = await loadDashboardTier(ctx, { ...input, tier: DASHBOARD_QUERY_TIERS.TIER_3 });
+  const tier1Result = await loadDashboardTier(ctx, { ...input, tier: DASHBOARD_QUERY_TIERS.TIER_1 });
+  const tier2Result = await loadDashboardTier(ctx, { ...input, tier: DASHBOARD_QUERY_TIERS.TIER_2 });
+  const tier3Result = await loadDashboardTier(ctx, { ...input, tier: DASHBOARD_QUERY_TIERS.TIER_3 });
 
+  const wallClockMs = Date.now() - allStarted;
   console.log(
     JSON.stringify({
       event: "dashboard_all_complete",
-      durationMs: Date.now() - allStarted,
+      durationMs: wallClockMs,
       queue: dashboardQueryQueue.getStats(),
     })
   );
 
+  if (ctx.user) {
+    void recordDashboardRequest(
+      buildDashboardRequestRecord({
+        source: "all",
+        wallClockMs,
+        tier1: tier1Result,
+        tier2: tier2Result,
+        tier3: tier3Result,
+        userId: ctx.user.id,
+      })
+    );
+  }
+
   return {
     ...empty,
-    ...tier1,
-    ...tier2,
-    ...tier3,
+    ...tier1Result.data,
+    ...tier2Result.data,
+    ...tier3Result.data,
   };
 }
 
