@@ -2,6 +2,9 @@
  * Optional shared cache (Upstash Redis REST). Falls back to in-process Map when unset.
  */
 
+import { recordCacheHit, recordCacheMiss } from "./cacheMetrics";
+import { upstashFetch } from "./upstashRedis";
+
 type CacheEntry = { value: string; expiresAt: number };
 
 const memory = new Map<string, CacheEntry>();
@@ -20,23 +23,24 @@ function memorySet(key: string, value: string, ttlSeconds: number): void {
   memory.set(key, { value, expiresAt: Date.now() + ttlSeconds * 1000 });
 }
 
-async function upstashFetch(path: string, init?: RequestInit): Promise<Response | null> {
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-  if (!url || !token) return null;
-  return fetch(`${url}${path}`, {
-    ...init,
-    headers: { Authorization: `Bearer ${token}`, ...(init?.headers ?? {}) },
-  });
-}
-
 export async function cacheGet(key: string): Promise<string | null> {
+  const started = Date.now();
   const res = await upstashFetch(`/get/${encodeURIComponent(key)}`);
   if (res?.ok) {
     const body = (await res.json()) as { result?: string | null };
-    if (body.result != null) return body.result;
+    if (body.result != null) {
+      void recordCacheHit(key, Date.now() - started);
+      return body.result;
+    }
   }
-  return memoryGet(key);
+  const mem = memoryGet(key);
+  const durationMs = Date.now() - started;
+  if (mem != null) {
+    void recordCacheHit(key, durationMs);
+    return mem;
+  }
+  void recordCacheMiss(key, durationMs);
+  return null;
 }
 
 export async function cacheSet(key: string, value: string, ttlSeconds: number): Promise<void> {
