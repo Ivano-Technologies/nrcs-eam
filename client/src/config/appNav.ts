@@ -253,6 +253,7 @@ export const SIDEBAR_GROUPS_ADMIN: AppNavGroup[] = [
       { label: "Pending Users", path: appPath("/settings/pending-users"), icon: UserPlus },
       { label: "Vendors", path: appPath("/settings/vendors"), icon: Store },
       { label: "Activity Log", path: appPath("/administration/activity-log"), icon: History },
+      { label: "Observability", path: appPath("/administration/observability"), icon: BarChart3 },
     ],
   },
 ];
@@ -313,6 +314,7 @@ const GROUP_PREFIXES: { groupId: string; pathPrefix: string }[] = [
   { groupId: "administration", pathPrefix: appPath("/settings/pending-users") },
   { groupId: "administration", pathPrefix: appPath("/settings/vendors") },
   { groupId: "administration", pathPrefix: appPath("/administration/activity-log") },
+  { groupId: "administration", pathPrefix: appPath("/administration/observability") },
   // Legacy aliases still routed in app shell.
   { groupId: "administration", pathPrefix: appPath("/pending-users") },
   { groupId: "administration", pathPrefix: appPath("/vendors") },

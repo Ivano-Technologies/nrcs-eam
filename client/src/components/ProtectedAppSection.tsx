@@ -7,6 +7,7 @@ import { lazy, Suspense } from "react";
 import { Redirect, Route, Switch, useRoute } from "wouter";
 
 const ActivityLog = lazy(() => import("@/pages/ActivityLog"));
+const Observability = lazy(() => import("@/pages/Administration/Observability"));
 const AssetDetail = lazy(() => import("@/pages/AssetDetail"));
 const AssetMap = lazy(() => import("@/pages/AssetMap"));
 const AssetScanner = lazy(() => import("@/pages/AssetScanner"));
@@ -250,6 +251,7 @@ function ProtectedAppSectionRoutes() {
             <Route path="/app/audit-trail" component={AuditTrail} />
             <Route path="/app/activity-log" component={ActivityLog} />
             <Route path="/app/administration/activity-log" component={ActivityLog} />
+            <Route path="/app/administration/observability" component={Observability} />
             <Route path="/app/work-orders/:id" component={WorkOrderDetail} />
             <Route path="/app/work-orders" component={WorkOrders} />
             <Route path="/app/mobile-work-orders" component={MobileWorkOrders} />
