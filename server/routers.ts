@@ -716,15 +716,31 @@ export const appRouter = router({
           isActive: z.boolean().optional(),
         })
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         const { facilityType, parentFacilityId, code, ...rest } = input;
         const parentResolved = await resolveFacilityParentForSave({ facilityType, parentFacilityId });
-        return await db.createSite({
+        const site = await db.createSite({
           ...(code ? { code } : {}),
           ...rest,
           facilityType,
           parentFacilityId: parentResolved,
         });
+        if (site) {
+          await logAuditEvent({
+            userId: ctx.user.id,
+            action: AUDIT_ACTIONS.FACILITY_CREATE,
+            entityType: "site",
+            entityId: site.id,
+            changes: {
+              name: site.name,
+              code: site.code,
+              facilityType: site.facilityType,
+              isActive: site.isActive,
+            },
+            req: ctx.req,
+          });
+        }
+        return site;
       }),
 
     update: managerOrAdminProcedure
