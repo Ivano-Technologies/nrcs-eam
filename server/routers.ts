@@ -189,8 +189,34 @@ async function countAdequatelyStockedActiveSites(
     return Number(siteCount?.count ?? 0);
   }
 
-  const movementDateSql = opts.asOfDate ? sql`AND sm.date <= ${opts.asOfDate}` : sql``;
   const siteIdSql = opts.siteId != null ? sql`AND s.id = ${opts.siteId}` : sql``;
+  const { isStockCardBalancesMvAvailable } = await import("./_core/stockCardBalancesMv");
+  const useMv = !opts.asOfDate && (await isStockCardBalancesMvAvailable(database));
+
+  if (useMv) {
+    const rows = await database.execute(sql`
+      WITH understock_locations AS (
+        SELECT DISTINCT sc.location_id
+        FROM stock_cards sc
+        INNER JOIN commodity_tracking_numbers ctn ON sc.ctn_id = ctn.id
+        LEFT JOIN stock_card_balances scb ON scb.stock_card_id = sc.id
+        LEFT JOIN stock_settings ss
+          ON ss.catalogue_id = ctn.item_id
+          AND ss.warehouse_id = sc.location_id
+        WHERE COALESCE(ss.min_level, sc.stock_minimum, 0) > 0
+          AND COALESCE(scb.net_quantity, 0) < COALESCE(ss.min_level, sc.stock_minimum, 0)
+      )
+      SELECT COUNT(*)::int AS adequate
+      FROM sites s
+      WHERE s.is_active = TRUE
+        ${siteIdSql}
+        AND s.id NOT IN (SELECT location_id FROM understock_locations)
+    `);
+    const row = (Array.isArray(rows) ? rows[0] : undefined) as { adequate?: number } | undefined;
+    return Number(row?.adequate ?? 0);
+  }
+
+  const movementDateSql = opts.asOfDate ? sql`AND sm.date <= ${opts.asOfDate}` : sql``;
 
   const rows = await database.execute(sql`
     WITH movement_net AS (
@@ -2685,32 +2711,57 @@ export const appRouter = router({
         return emptyScores;
       }
 
-      const movementTotals = database
-        .select({
-          stockCardId: stockMovements.stockCardId,
-          netQuantity: sql<number>`coalesce(sum(${stockMovements.quantityIn} - ${stockMovements.quantityOut}), 0)`.mapWith(Number).as("netQuantity"),
-        })
-        .from(stockMovements)
-        .groupBy(stockMovements.stockCardId)
-        .as("movement_totals_bp");
+      const { isStockCardBalancesMvAvailable } = await import("./_core/stockCardBalancesMv");
+      const useMv = await isStockCardBalancesMvAvailable(database);
 
-      const scoreRows = await database
-        .select({
-          locationId: stockCards.locationId,
-          total: sql<number>`count(distinct ${stockCards.id})`.mapWith(Number),
-          adequate: sql<number>`count(distinct ${stockCards.id}) filter (where coalesce(${movementTotals.netQuantity}, 0) > coalesce(${stockSettings.minLevel}, 0))`.mapWith(Number),
-        })
-        .from(stockCards)
-        .leftJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
-        .leftJoin(
-          stockSettings,
-          and(
-            eq(stockSettings.catalogueId, commodityTrackingNumbers.itemId),
-            eq(stockSettings.warehouseId, stockCards.locationId)
+      let scoreRows: { locationId: number; total: number; adequate: number }[];
+
+      if (useMv) {
+        scoreRows = await database
+          .select({
+            locationId: stockCards.locationId,
+            total: sql<number>`count(distinct ${stockCards.id})`.mapWith(Number),
+            adequate: sql<number>`count(distinct ${stockCards.id}) filter (where coalesce(scb.net_quantity, 0) > coalesce(${stockSettings.minLevel}, 0))`.mapWith(Number),
+          })
+          .from(stockCards)
+          .leftJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
+          .leftJoin(
+            stockSettings,
+            and(
+              eq(stockSettings.catalogueId, commodityTrackingNumbers.itemId),
+              eq(stockSettings.warehouseId, stockCards.locationId)
+            )
           )
-        )
-        .leftJoin(movementTotals, eq(movementTotals.stockCardId, stockCards.id))
-        .groupBy(stockCards.locationId);
+          .leftJoin(sql`stock_card_balances scb`, sql`scb.stock_card_id = ${stockCards.id}`)
+          .groupBy(stockCards.locationId);
+      } else {
+        const movementTotals = database
+          .select({
+            stockCardId: stockMovements.stockCardId,
+            netQuantity: sql<number>`coalesce(sum(${stockMovements.quantityIn} - ${stockMovements.quantityOut}), 0)`.mapWith(Number).as("netQuantity"),
+          })
+          .from(stockMovements)
+          .groupBy(stockMovements.stockCardId)
+          .as("movement_totals_bp");
+
+        scoreRows = await database
+          .select({
+            locationId: stockCards.locationId,
+            total: sql<number>`count(distinct ${stockCards.id})`.mapWith(Number),
+            adequate: sql<number>`count(distinct ${stockCards.id}) filter (where coalesce(${movementTotals.netQuantity}, 0) > coalesce(${stockSettings.minLevel}, 0))`.mapWith(Number),
+          })
+          .from(stockCards)
+          .leftJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
+          .leftJoin(
+            stockSettings,
+            and(
+              eq(stockSettings.catalogueId, commodityTrackingNumbers.itemId),
+              eq(stockSettings.warehouseId, stockCards.locationId)
+            )
+          )
+          .leftJoin(movementTotals, eq(movementTotals.stockCardId, stockCards.id))
+          .groupBy(stockCards.locationId);
+      }
 
       const scoreByLocation = new Map<number, { total: number; adequate: number }>();
       for (const row of scoreRows) {
