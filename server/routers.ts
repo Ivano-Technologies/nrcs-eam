@@ -58,6 +58,15 @@ import {
 import { buildDistributionVelocity, buildStockReadiness, getPeriodWindow } from "./wms/dashboard";
 import { cacheGetJson, cacheSetJson } from "./_core/cache";
 import { withTimeout } from "./_core/withTimeout";
+import { dashboardQueryQueue } from "./_core/dashboardQueryQueue";
+import {
+  DASHBOARD_QUERY_TIERS,
+  priorityForMetricsSubquery,
+  sectionsForTier,
+  tierForSection,
+  type DashboardQueryTier,
+  type DashboardSection,
+} from "./_core/dashboardQueryPriority";
 import type { TrpcContext } from "./_core/context";
 import type { DashboardPeriod } from "./wms/dashboard";
 import {
@@ -2462,61 +2471,78 @@ export const appRouter = router({
           let metricsBatch: MetricsBatch;
           const distributionDestFilter = inArray(waybills.destinationType, [...WAYBILL_DISTRIBUTION_DESTINATIONS]);
           try {
+            const q = dashboardQueryQueue;
             metricsBatch = await Promise.race([
               Promise.all([
-                database.select({ id: sites.id }).from(sites).where(activeSiteWhere),
-                siteId != null
-                  ? database
-                      .select({ total: sql<number>`count(*)`.mapWith(Number) })
-                      .from(sites)
-                      .where(eq(sites.id, siteId))
-                  : database.select({ total: sql<number>`count(*)`.mapWith(Number) }).from(sites),
-                database
-                  .select({ total: sql<number>`count(*)`.mapWith(Number) })
-                  .from(sites)
-                  .where(inactiveSiteWhere),
-                countAdequatelyStockedActiveSites(database, { siteId }),
-                countAdequatelyStockedActiveSites(database, { siteId, asOfDate: window.previousEndIso }),
-                database
-                  .select({ total: sql<number>`coalesce(sum(${stockMovements.quantityOut}),0)`.mapWith(Number) })
-                  .from(stockMovements)
-                  .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
-                  .innerJoin(waybills, eq(stockMovements.documentRef, waybills.wbNumber))
-                  .where(
-                    and(
-                      eq(stockMovements.sourceType, "waybill"),
-                      distributionDestFilter,
-                      gte(stockMovements.date, window.currentStartIso),
-                      lte(stockMovements.date, window.currentEndIso),
-                      cardSiteFilter ?? sql`true`
+                q.enqueue(priorityForMetricsSubquery("activeFacilities"), () =>
+                  database.select({ id: sites.id }).from(sites).where(activeSiteWhere)
+                ),
+                q.enqueue(priorityForMetricsSubquery("totalFacilities"), () =>
+                  siteId != null
+                    ? database
+                        .select({ total: sql<number>`count(*)`.mapWith(Number) })
+                        .from(sites)
+                        .where(eq(sites.id, siteId))
+                    : database.select({ total: sql<number>`count(*)`.mapWith(Number) }).from(sites)
+                ),
+                q.enqueue(priorityForMetricsSubquery("inactiveFacilities"), () =>
+                  database
+                    .select({ total: sql<number>`count(*)`.mapWith(Number) })
+                    .from(sites)
+                    .where(inactiveSiteWhere)
+                ),
+                q.enqueue(priorityForMetricsSubquery("adequateSites"), () =>
+                  countAdequatelyStockedActiveSites(database, { siteId })
+                ),
+                q.enqueue(priorityForMetricsSubquery("previousAdequateSites"), () =>
+                  countAdequatelyStockedActiveSites(database, { siteId, asOfDate: window.previousEndIso })
+                ),
+                q.enqueue(priorityForMetricsSubquery("currentDistribution"), () =>
+                  database
+                    .select({ total: sql<number>`coalesce(sum(${stockMovements.quantityOut}),0)`.mapWith(Number) })
+                    .from(stockMovements)
+                    .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
+                    .innerJoin(waybills, eq(stockMovements.documentRef, waybills.wbNumber))
+                    .where(
+                      and(
+                        eq(stockMovements.sourceType, "waybill"),
+                        distributionDestFilter,
+                        gte(stockMovements.date, window.currentStartIso),
+                        lte(stockMovements.date, window.currentEndIso),
+                        cardSiteFilter ?? sql`true`
+                      )
                     )
-                  ),
-                database
-                  .select({ total: sql<number>`coalesce(sum(${stockMovements.quantityOut}),0)`.mapWith(Number) })
-                  .from(stockMovements)
-                  .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
-                  .innerJoin(waybills, eq(stockMovements.documentRef, waybills.wbNumber))
-                  .where(
-                    and(
-                      eq(stockMovements.sourceType, "waybill"),
-                      distributionDestFilter,
-                      gte(stockMovements.date, window.previousStartIso),
-                      lte(stockMovements.date, window.previousEndIso),
-                      cardSiteFilter ?? sql`true`
+                ),
+                q.enqueue(priorityForMetricsSubquery("previousDistribution"), () =>
+                  database
+                    .select({ total: sql<number>`coalesce(sum(${stockMovements.quantityOut}),0)`.mapWith(Number) })
+                    .from(stockMovements)
+                    .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
+                    .innerJoin(waybills, eq(stockMovements.documentRef, waybills.wbNumber))
+                    .where(
+                      and(
+                        eq(stockMovements.sourceType, "waybill"),
+                        distributionDestFilter,
+                        gte(stockMovements.date, window.previousStartIso),
+                        lte(stockMovements.date, window.previousEndIso),
+                        cardSiteFilter ?? sql`true`
+                      )
                     )
-                  ),
-                database
-                  .select({ total: sql<number>`coalesce(sum(${stockMovements.quantityOut}),0)`.mapWith(Number) })
-                  .from(stockMovements)
-                  .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
-                  .innerJoin(waybills, eq(stockMovements.documentRef, waybills.wbNumber))
-                  .where(
-                    and(
-                      eq(stockMovements.sourceType, "waybill"),
-                      distributionDestFilter,
-                      cardSiteFilter ?? sql`true`
+                ),
+                q.enqueue(priorityForMetricsSubquery("historicalDistribution"), () =>
+                  database
+                    .select({ total: sql<number>`coalesce(sum(${stockMovements.quantityOut}),0)`.mapWith(Number) })
+                    .from(stockMovements)
+                    .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
+                    .innerJoin(waybills, eq(stockMovements.documentRef, waybills.wbNumber))
+                    .where(
+                      and(
+                        eq(stockMovements.sourceType, "waybill"),
+                        distributionDestFilter,
+                        cardSiteFilter ?? sql`true`
+                      )
                     )
-                  ),
+                ),
               ]),
               new Promise<never>((_, reject) =>
                 setTimeout(() => reject(new Error("metrics_timeout")), METRICS_TIMEOUT)
@@ -2599,6 +2625,25 @@ export const appRouter = router({
         })
       )
       .query(async ({ input, ctx }): Promise<DashboardAllOutput> => loadDashboardAll(ctx, input)),
+    /** Progressive tier load — returns partial bundle for one tier (1=critical KPIs first). */
+    byTier: protectedProcedure
+      .input(
+        z.object({
+          period: z.enum(["Today", "Week", "Month", "Quarter", "Year"]),
+          role: z.enum(["Admin", "Manager", "Staff", "Field"]),
+          stockMovementWeeks: z.number().min(4).max(26).default(12),
+          tier: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+        })
+      )
+      .query(async ({ input, ctx }) => {
+        const data = await loadDashboardTier(ctx, {
+          period: input.period,
+          role: input.role,
+          stockMovementWeeks: input.stockMovementWeeks,
+          tier: input.tier,
+        });
+        return { tier: input.tier, data };
+      }),
     stockMovement: protectedProcedure
       .input(z.object({ weeks: z.number().min(4).max(26).default(12) }).optional())
       .query(async ({ input, ctx }) => {
@@ -4869,70 +4914,147 @@ const DASHBOARD_ALL_CLEAR_ATTENTION = [
   },
 ] as const;
 
+type DashboardAllInput = {
+  period: DashboardPeriod;
+  role: "Admin" | "Manager" | "Staff" | "Field";
+  stockMovementWeeks: number;
+};
+
+function emptyDashboardAllOutput(includeBranch: boolean): DashboardAllOutput {
+  return {
+    metrics: { ...DASHBOARD_EMPTY_METRICS },
+    totalAssetValue: { totalNgn: 0, propertyNgn: 0, movableNgn: 0 },
+    stockMovement: [],
+    facilityStatus: [],
+    recentActivity: [],
+    pendingRequisitions: { total: 0, urgent: 0, oldestDaysAgo: null },
+    attentionItems: [...DASHBOARD_ALL_CLEAR_ATTENTION],
+    branchPerformance: includeBranch ? [] : [],
+  };
+}
+
+async function runQueuedDashboardSection(
+  caller: ReturnType<typeof appRouter.createCaller>,
+  input: DashboardAllInput,
+  section: DashboardSection,
+  includeBranch: boolean
+): Promise<Partial<DashboardAllOutput>> {
+  if (section === "branchPerformance" && !includeBranch) {
+    return { branchPerformance: [] };
+  }
+
+  const priority = tierForSection(section);
+  const enqueuedAt = Date.now();
+
+  const sectionResult = await dashboardQueryQueue.enqueue(
+    priority,
+    async () => {
+      try {
+        switch (section) {
+          case "metrics":
+            return await withTimeout(caller.dashboard.metrics({ period: input.period }), 8000, "metrics");
+          case "totalAssetValue":
+            return await withTimeout(caller.dashboard.totalAssetValue(), 8000, "totalAssetValue");
+          case "stockMovement":
+            return await withTimeout(
+              caller.dashboard.stockMovement({ weeks: input.stockMovementWeeks }),
+              8000,
+              "stockMovement"
+            );
+          case "facilityStatus":
+            return await withTimeout(caller.dashboard.facilityStatus(), 8000, "facilityStatus");
+          case "recentActivity":
+            return await withTimeout(caller.dashboard.recentActivity({ limit: 5 }), 8000, "recentActivity");
+          case "pendingRequisitions":
+            return await withTimeout(caller.dashboard.pendingRequisitions({ limit: 4 }), 8000, "pendingRequisitions");
+          case "attentionItems":
+            return await withTimeout(caller.dashboard.attentionItems({ role: input.role }), 8000, "attentionItems");
+          case "branchPerformance":
+            return await withTimeout(caller.dashboard.branchPerformance(), 8000, "branchPerformance");
+          default:
+            throw new Error(`Unknown dashboard section: ${section satisfies never}`);
+        }
+      } catch (err) {
+        console.warn(
+          JSON.stringify({
+            event: "dashboard_all_section_failed",
+            section,
+            err: err instanceof Error ? err.message : String(err),
+          })
+        );
+        const empty = emptyDashboardAllOutput(includeBranch);
+        return empty[section];
+      }
+    },
+    section
+  );
+
+  const waitMs = Date.now() - enqueuedAt;
+  if (waitMs > 50) {
+    console.log(
+      JSON.stringify({
+        event: "dashboard_section_dequeued",
+        section,
+        waitMs,
+        priority,
+        queue: dashboardQueryQueue.getStats(),
+      })
+    );
+  }
+
+  return { [section]: sectionResult } as Partial<DashboardAllOutput>;
+}
+
+async function loadDashboardTier(
+  ctx: TrpcContext,
+  input: DashboardAllInput & { tier: DashboardQueryTier }
+): Promise<Partial<DashboardAllOutput>> {
+  const caller = appRouter.createCaller(ctx);
+  const includeBranch = ctx.user?.role === "admin" || ctx.user?.role === "manager";
+  const tierStarted = Date.now();
+  const sections = sectionsForTier(input.tier);
+  const parts = await Promise.all(
+    sections.map((section) => runQueuedDashboardSection(caller, input, section, includeBranch))
+  );
+  const merged = Object.assign({}, ...parts) as Partial<DashboardAllOutput>;
+  console.log(
+    JSON.stringify({
+      event: "dashboard_tier_complete",
+      tier: input.tier,
+      durationMs: Date.now() - tierStarted,
+      sections,
+      queue: dashboardQueryQueue.getStats(),
+    })
+  );
+  return merged;
+}
+
 /** Runs after `appRouter` is defined — avoids circular type inference from createCaller inside the router. */
 async function loadDashboardAll(
   ctx: TrpcContext,
-  input: { period: DashboardPeriod; role: "Admin" | "Manager" | "Staff" | "Field"; stockMovementWeeks: number }
+  input: DashboardAllInput
 ): Promise<DashboardAllOutput> {
-  const caller = appRouter.createCaller(ctx);
-  const runSection = async <T>(label: string, fn: () => Promise<T>, fallback: T): Promise<T> => {
-    try {
-      return await withTimeout(fn(), 8000, label);
-    } catch (err) {
-      console.warn(
-        JSON.stringify({
-          event: "dashboard_all_section_failed",
-          section: label,
-          err: err instanceof Error ? err.message : String(err),
-        })
-      );
-      return fallback;
-    }
-  };
-
   const includeBranch = ctx.user?.role === "admin" || ctx.user?.role === "manager";
+  const empty = emptyDashboardAllOutput(includeBranch);
+  const allStarted = Date.now();
 
-  const [
-    metrics,
-    totalAssetValue,
-    stockMovement,
-    facilityStatus,
-    recentActivity,
-    pendingRequisitions,
-    attentionItems,
-    branchPerformance,
-  ] = await Promise.all([
-    runSection("metrics", () => caller.dashboard.metrics({ period: input.period }), { ...DASHBOARD_EMPTY_METRICS }),
-    runSection("totalAssetValue", () => caller.dashboard.totalAssetValue(), {
-      totalNgn: 0,
-      propertyNgn: 0,
-      movableNgn: 0,
-    }),
-    runSection("stockMovement", () => caller.dashboard.stockMovement({ weeks: input.stockMovementWeeks }), []),
-    runSection("facilityStatus", () => caller.dashboard.facilityStatus(), []),
-    runSection("recentActivity", () => caller.dashboard.recentActivity({ limit: 5 }), []),
-    runSection("pendingRequisitions", () => caller.dashboard.pendingRequisitions({ limit: 4 }), {
-      total: 0,
-      urgent: 0,
-      oldestDaysAgo: null,
-    }),
-    runSection("attentionItems", () => caller.dashboard.attentionItems({ role: input.role }), [
-      ...DASHBOARD_ALL_CLEAR_ATTENTION,
-    ]),
-    includeBranch
-      ? runSection("branchPerformance", () => caller.dashboard.branchPerformance(), [])
-      : Promise.resolve([]),
-  ]);
+  const tier1 = await loadDashboardTier(ctx, { ...input, tier: DASHBOARD_QUERY_TIERS.TIER_1 });
+  const tier2 = await loadDashboardTier(ctx, { ...input, tier: DASHBOARD_QUERY_TIERS.TIER_2 });
+  const tier3 = await loadDashboardTier(ctx, { ...input, tier: DASHBOARD_QUERY_TIERS.TIER_3 });
+
+  console.log(
+    JSON.stringify({
+      event: "dashboard_all_complete",
+      durationMs: Date.now() - allStarted,
+      queue: dashboardQueryQueue.getStats(),
+    })
+  );
 
   return {
-    metrics,
-    totalAssetValue,
-    stockMovement,
-    facilityStatus,
-    recentActivity,
-    pendingRequisitions,
-    attentionItems,
-    branchPerformance,
+    ...empty,
+    ...tier1,
+    ...tier2,
+    ...tier3,
   };
 }
 
