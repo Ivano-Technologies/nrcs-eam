@@ -27,6 +27,7 @@ import {
   waybills,
 } from "../../drizzle/schema";
 import { getDb, getAllUsers, createNotification, getUserById } from "../db";
+import { AUDIT_ACTIONS, logAuditEvent } from "../_core/auditHelper";
 import { protectedProcedure, requireRole, router } from "../_core/trpc";
 import {
   enforceFacilityScope,
@@ -1374,6 +1375,22 @@ export const inventoryV2Router = router({
             html: `<p>GRN <strong>${doc.documentNumber}</strong> has been finalized with ${lines.length} line item(s).</p>`,
           });
         }
+        await logAuditEvent({
+          userId: ctx.user.id,
+          action: AUDIT_ACTIONS.INVENTORY_GOODS_RECEIVED,
+          entityType: "grn",
+          entityId: doc.id,
+          changes: {
+            documentNumber: doc.documentNumber,
+            warehouseId: doc.toWarehouseId,
+            lineCount: lines.length,
+            items: lines.map((line) => ({
+              catalogueId: line.catalogueId,
+              quantity: line.quantity,
+            })),
+          },
+          req: ctx.req,
+        });
         return { success: true as const };
       }),
 
@@ -1852,6 +1869,20 @@ export const inventoryV2Router = router({
             html: `<p>Waybill <strong>${wb.wbNumber}</strong> has been dispatched to ${wb.destinationBeneficiary}.</p>`,
           });
         }
+        await logAuditEvent({
+          userId: ctx.user.id,
+          action: AUDIT_ACTIONS.INVENTORY_DISTRIBUTION,
+          entityType: "waybill",
+          entityId: wb.id,
+          changes: {
+            documentRef: wb.wbNumber,
+            warehouseId: wb.warehouseId,
+            destination: wb.destinationBeneficiary,
+            lineCount: lines.length,
+            totalUnits: lines.reduce((sum, line) => sum + Number(line.nbOfUnits), 0),
+          },
+          req: ctx.req,
+        });
         return { success: true as const };
       }),
 
@@ -2338,6 +2369,14 @@ export const inventoryV2Router = router({
         statusRaw: "branch_approved",
         approver: { name: ctx.user.name, email: ctx.user.email },
       });
+      await logAuditEvent({
+        userId: ctx.user.id,
+        action: AUDIT_ACTIONS.REQUISITION_APPROVE_BRANCH,
+        entityType: "requisition",
+        entityId: input.requisitionId,
+        changes: { status: "branch_approved", approverId: ctx.user.id },
+        req: ctx.req,
+      });
       return { success: true as const };
     }),
 
@@ -2353,6 +2392,14 @@ export const inventoryV2Router = router({
         requisitionId: input.requisitionId,
         statusRaw: "hq_approved",
         approver: { name: ctx.user.name, email: ctx.user.email },
+      });
+      await logAuditEvent({
+        userId: ctx.user.id,
+        action: AUDIT_ACTIONS.REQUISITION_APPROVE_HQ,
+        entityType: "requisition",
+        entityId: input.requisitionId,
+        changes: { status: "hq_approved", approverId: ctx.user.id },
+        req: ctx.req,
       });
       return { success: true as const };
     }),
@@ -2371,6 +2418,14 @@ export const inventoryV2Router = router({
           requisitionId: input.requisitionId,
           statusRaw: "rejected",
           approver: { name: ctx.user.name, email: ctx.user.email },
+        });
+        await logAuditEvent({
+          userId: ctx.user.id,
+          action: AUDIT_ACTIONS.REQUISITION_REJECT,
+          entityType: "requisition",
+          entityId: input.requisitionId,
+          changes: { status: "rejected", approverId: ctx.user.id, reason: input.reason },
+          req: ctx.req,
         });
         return { success: true as const };
       }),
@@ -2564,6 +2619,19 @@ export const inventoryV2Router = router({
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
         const distributionNumber = await nextDistributionNumber();
         const [created] = await db.insert(distributions).values({ ...input, distributionNumber, conductedBy: ctx.user.id }).returning();
+        await logAuditEvent({
+          userId: ctx.user.id,
+          action: AUDIT_ACTIONS.INVENTORY_DISTRIBUTION,
+          entityType: "distribution",
+          entityId: created.id,
+          changes: {
+            distributionNumber: created.distributionNumber,
+            location: created.location,
+            waybillId: created.waybillId ?? null,
+            beneficiaryCount: created.beneficiaryCount ?? null,
+          },
+          req: ctx.req,
+        });
         return created;
       }),
 
@@ -3785,6 +3853,21 @@ export const inventoryV2Router = router({
           })
           .returning({ id: stockMovements.id });
 
+        await logAuditEvent({
+          userId: ctx.user.id,
+          action: AUDIT_ACTIONS.INVENTORY_ADJUSTMENT,
+          entityType: "stock_card",
+          entityId: card.id,
+          changes: {
+            documentRef: "— STOCK CHECK",
+            variance: computed.variance,
+            countedQty: input.countedQty,
+            balanceAfter: computed.balanceAfter,
+            retroactiveEntry: isRetroactive,
+          },
+          req: ctx.req,
+        });
+
         return {
           success: true as const,
           movementId: movement.id,
@@ -4110,6 +4193,22 @@ export const inventoryV2Router = router({
             stockCardId,
           });
           await db.insert(stockMovements).values(movement.row);
+          if (row.movementType === "adjustment") {
+            await logAuditEvent({
+              userId: ctx.user.id,
+              action: AUDIT_ACTIONS.INVENTORY_ADJUSTMENT,
+              entityType: "stock_movement",
+              entityId: stockCardId,
+              changes: {
+                documentRef: row.documentNumber ?? null,
+                quantity: row.quantity,
+                movementType: row.movementType,
+                warehouseId: row.warehouseId,
+                catalogueId: row.catalogueId,
+              },
+              req: ctx.req,
+            });
+          }
           imported += 1;
         }
         return { imported, skipped, errors };
@@ -4265,6 +4364,19 @@ export const inventoryV2Router = router({
             totalItemsCounted: lines.length,
           })
           .where(eq(inventoryCounts.id, count.id));
+        await logAuditEvent({
+          userId: ctx.user.id,
+          action: AUDIT_ACTIONS.INVENTORY_CYCLE_COUNT,
+          entityType: "inventory_count",
+          entityId: count.id,
+          changes: {
+            countNumber: count.countNumber,
+            warehouseId: count.warehouseId,
+            varianceCount,
+            totalItemsCounted: lines.length,
+          },
+          req: ctx.req,
+        });
         return { success: true as const, varianceCount };
       }),
 

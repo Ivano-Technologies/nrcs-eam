@@ -12,6 +12,7 @@ import { toPublicUser } from "../_core/sanitizeUser";
 import * as db from "../db";
 import type { InsertUser } from "../../drizzle/schema";
 import { createSignupRequest } from "../pendingUsersService";
+import { AUDIT_ACTIONS, AUDIT_UNKNOWN_ACTOR, logAuditEvent } from "../_core/auditHelper";
 
 const emailSchema = z.string().email();
 const AVATARS_BUCKET = "avatars";
@@ -97,6 +98,16 @@ export const authRouter = router({
 
       const appUser = await db.getLoginUserByEmailLowercase(input.email);
       if (!appUser) {
+        await logAuditEvent({
+          userId: AUDIT_UNKNOWN_ACTOR,
+          action: AUDIT_ACTIONS.AUTH_LOGIN_FAILURE,
+          entityType: "auth",
+          changes: {
+            email: input.email.trim().toLowerCase(),
+            reason: "unknown_email",
+          },
+          req: ctx.req,
+        });
         throw new TRPCError({
           code: "UNAUTHORIZED",
           message: "Invalid email or password",
@@ -104,6 +115,14 @@ export const authRouter = router({
       }
 
       if (appUser.status === "inactive") {
+        await logAuditEvent({
+          userId: appUser.id,
+          action: AUDIT_ACTIONS.AUTH_LOGIN_FAILURE,
+          entityType: "auth",
+          entityId: appUser.id,
+          changes: { email: appUser.email, reason: "inactive" },
+          req: ctx.req,
+        });
         throw new TRPCError({
           code: "UNAUTHORIZED",
           message:
@@ -125,6 +144,14 @@ export const authRouter = router({
       }
 
       if (error || !data.session) {
+        await logAuditEvent({
+          userId: appUser.id,
+          action: AUDIT_ACTIONS.AUTH_LOGIN_FAILURE,
+          entityType: "auth",
+          entityId: appUser.id,
+          changes: { email: appUser.email, reason: "invalid_password" },
+          req: ctx.req,
+        });
         throw new TRPCError({
           code: "UNAUTHORIZED",
           message: "Invalid email or password",
@@ -134,6 +161,14 @@ export const authRouter = router({
       const supabaseEmail = data.user.email?.trim().toLowerCase() ?? "";
       const appEmail = appUser.email?.trim().toLowerCase() ?? "";
       if (supabaseEmail && appEmail && supabaseEmail !== appEmail) {
+        await logAuditEvent({
+          userId: appUser.id,
+          action: AUDIT_ACTIONS.AUTH_LOGIN_FAILURE,
+          entityType: "auth",
+          entityId: appUser.id,
+          changes: { email: appUser.email, reason: "email_mismatch" },
+          req: ctx.req,
+        });
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "Email does not match this account",
@@ -141,6 +176,14 @@ export const authRouter = router({
       }
 
       if (data.user.id !== appUser.authUserId && appUser.authUserId) {
+        await logAuditEvent({
+          userId: appUser.id,
+          action: AUDIT_ACTIONS.AUTH_LOGIN_FAILURE,
+          entityType: "auth",
+          entityId: appUser.id,
+          changes: { email: appUser.email, reason: "session_mismatch" },
+          req: ctx.req,
+        });
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "Session does not match this account",
@@ -156,6 +199,14 @@ export const authRouter = router({
 
       setSessionCookies(ctx.req, ctx.res, data.session);
       await db.touchUserLastSignedInById(appUser.id);
+      await logAuditEvent({
+        userId: appUser.id,
+        action: AUDIT_ACTIONS.AUTH_LOGIN_SUCCESS,
+        entityType: "auth",
+        entityId: appUser.id,
+        changes: { email: appUser.email },
+        req: ctx.req,
+      });
       return {
         success: true as const,
         mustChangePasswordOnLogin: appUser.mustChangePasswordOnLogin,
