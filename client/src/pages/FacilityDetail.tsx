@@ -5,12 +5,26 @@ import PageLoader from "@/components/ui/PageLoader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import PhotoUploadZone from "@/components/PhotoUploadZone";
 import { appPath } from "@/lib/routes";
 import { Link } from "wouter";
 import { FACILITY_TYPE_DESCRIPTIONS, FACILITY_TYPE_LABELS } from "@shared/facilities";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { toast } from "sonner";
-import { Loader2, MapPin, Upload, X } from "lucide-react";
+import { Loader2, MapPin, X } from "lucide-react";
+
+const MAX_PHOTOS = 10;
+const MAX_FILE_SIZE_MB = 5;
 
 export default function FacilityDetail() {
   const { isManagerOrAdmin } = usePermissions();
@@ -31,12 +45,18 @@ export default function FacilityDetail() {
 
   const [uploading, setUploading] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+  const [deletePhotoId, setDeletePhotoId] = useState<number | null>(null);
 
   const uploadMutation = trpc.facilityPhotos.upload.useMutation({
     onSuccess: () => photosQuery.refetch(),
   });
   const deleteMutation = trpc.facilityPhotos.delete.useMutation({
-    onSuccess: () => photosQuery.refetch(),
+    onSuccess: () => {
+      photosQuery.refetch();
+      setDeletePhotoId(null);
+      toast.success("Photo deleted");
+    },
+    onError: (e) => toast.error(e.message ?? "Failed to delete photo"),
   });
   const uploadUrlMutation = trpc.facilityPhotos.uploadUrl.useMutation();
 
@@ -48,6 +68,10 @@ export default function FacilityDetail() {
     },
     onError: (e) => toast.error(e.message ?? "Sync failed"),
   });
+
+  const photoCount = photosQuery.data?.length ?? 0;
+  const remainingPhotoSlots = MAX_PHOTOS - photoCount;
+  const canUploadPhotos = isManagerOrAdmin && remainingPhotoSlots > 0;
 
   const childFacilities = useMemo(
     () => (allFacilities ?? []).filter((f) => f.parentFacilityId === id),
@@ -76,13 +100,12 @@ export default function FacilityDetail() {
     [transfers]
   );
 
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handlePhotoUpload = async (files: File[], caption?: string) => {
+    const file = files[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Photo must be under 5MB");
-      return;
+    if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+      throw new Error(`${file.name} exceeds ${MAX_FILE_SIZE_MB}MB limit`);
     }
 
     setUploading(true);
@@ -93,24 +116,23 @@ export default function FacilityDetail() {
         fileType: file.type,
       });
 
-      await fetch(uploadUrl, {
+      const putRes = await fetch(uploadUrl, {
         method: "PUT",
         body: file,
         headers: { "Content-Type": file.type },
       });
+      if (!putRes.ok) {
+        throw new Error(`Upload failed for ${file.name}`);
+      }
 
       await uploadMutation.mutateAsync({
         siteId: id,
         photoUrl: publicUrl,
         photoKey,
+        caption,
       });
-
-      toast.success("Photo uploaded successfully");
-    } catch {
-      toast.error("Failed to upload photo");
     } finally {
       setUploading(false);
-      e.target.value = "";
     }
   };
 
@@ -189,41 +211,25 @@ export default function FacilityDetail() {
       </Card>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+        <CardHeader>
           <CardTitle className="text-base font-semibold">
             Facility Photos
             <span className="ml-2 text-sm font-normal text-muted-foreground">
-              ({photosQuery.data?.length ?? 0}/10)
+              ({photoCount}/{MAX_PHOTOS})
             </span>
           </CardTitle>
-          {isManagerOrAdmin && (photosQuery.data?.length ?? 0) < 10 && (
-            <label className="cursor-pointer">
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className="hidden"
-                onChange={handlePhotoUpload}
-                disabled={uploading}
-              />
-              <Button variant="outline" size="sm" disabled={uploading} asChild>
-                <span>
-                  {uploading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Uploading...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="mr-2 h-4 w-4" />
-                      Add Photo
-                    </>
-                  )}
-                </span>
-              </Button>
-            </label>
-          )}
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          {canUploadPhotos && (
+            <PhotoUploadZone
+              maxFiles={remainingPhotoSlots}
+              maxFileSizeMb={MAX_FILE_SIZE_MB}
+              disabled={uploading}
+              uploading={uploading}
+              onUpload={handlePhotoUpload}
+            />
+          )}
+
           {photosQuery.isLoading ? (
             <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -236,29 +242,27 @@ export default function FacilityDetail() {
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
               {photosQuery.data?.map((photo) => (
-                <div
-                  key={photo.id}
-                  className="relative group aspect-square rounded-lg overflow-hidden border bg-muted"
-                >
-                  <img
-                    src={photo.photoUrl}
-                    alt={photo.caption ?? "Facility photo"}
-                    className="w-full h-full object-cover cursor-pointer transition-opacity group-hover:opacity-80"
-                    onClick={() => setSelectedPhoto(photo.photoUrl)}
-                  />
-                  {isManagerOrAdmin && (
-                    <button
-                      type="button"
-                      className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => {
-                        if (confirm("Delete this photo?")) {
-                          deleteMutation.mutate({ id: photo.id });
-                        }
-                      }}
-                      disabled={deleteMutation.isPending}
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
+                <div key={photo.id} className="space-y-1">
+                  <div className="relative group aspect-square rounded-lg overflow-hidden border bg-muted">
+                    <img
+                      src={photo.photoUrl}
+                      alt={photo.caption ?? "Facility photo"}
+                      className="w-full h-full object-cover cursor-pointer transition-opacity group-hover:opacity-80"
+                      onClick={() => setSelectedPhoto(photo.photoUrl)}
+                    />
+                    {isManagerOrAdmin && (
+                      <button
+                        type="button"
+                        className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => setDeletePhotoId(photo.id)}
+                        disabled={deleteMutation.isPending}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
+                  {photo.caption && (
+                    <p className="text-xs text-muted-foreground truncate px-0.5">{photo.caption}</p>
                   )}
                 </div>
               ))}
@@ -266,6 +270,33 @@ export default function FacilityDetail() {
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog
+        open={deletePhotoId !== null}
+        onOpenChange={(open) => !open && setDeletePhotoId(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete photo?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove the photo from this facility. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (deletePhotoId !== null) {
+                  deleteMutation.mutate({ id: deletePhotoId });
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {selectedPhoto && (
         <div
