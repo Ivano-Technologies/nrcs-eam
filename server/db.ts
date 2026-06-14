@@ -464,6 +464,152 @@ export async function getSitesMapData(): Promise<SiteMapDataRow[]> {
   }));
 }
 
+export type SiteMapNetworkDataRow = {
+  id: number;
+  name: string;
+  code: string | null;
+  facilityType: FacilityType;
+  latitude: string | null;
+  longitude: string | null;
+  isActive: boolean;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  stockScorePercent: number | null;
+  adequateCards: number;
+  totalCards: number;
+  lastMovementDate: string | null;
+};
+
+/** Facilities for network map — coordinates + stock readiness per site. */
+export async function getSitesMapNetworkData(): Promise<SiteMapNetworkDataRow[]> {
+  const database = await getDb();
+  if (!database) return [];
+
+  const siteRows = await database
+    .select({
+      id: sites.id,
+      name: sites.name,
+      code: sites.code,
+      facilityType: sites.facilityType,
+      latitude: sites.latitude,
+      longitude: sites.longitude,
+      isActive: sites.isActive,
+      address: sites.address,
+      city: sites.city,
+      state: sites.state,
+    })
+    .from(sites)
+    .orderBy(asc(sites.name));
+
+  const [anyMovement] = await database.select({ id: stockMovements.id }).from(stockMovements).limit(1);
+
+  const scoreByLocation = new Map<number, { adequate: number; total: number; lastMovement: string | null }>();
+
+  if (anyMovement) {
+    const { isStockCardBalancesMvAvailable } = await import("./_core/stockCardBalancesMv");
+    const useMv = await isStockCardBalancesMvAvailable(database);
+
+    if (useMv) {
+      const scoreRows = await database.execute(sql`
+        SELECT
+          sc.location_id AS location_id,
+          COUNT(DISTINCT sc.id)::int AS total,
+          COUNT(DISTINCT sc.id) FILTER (
+            WHERE COALESCE(scb.net_quantity, 0) >= COALESCE(ss.min_level, sc.stock_minimum, 0)
+              AND COALESCE(ss.min_level, sc.stock_minimum, 0) > 0
+          )::int AS adequate,
+          MAX(scb.last_movement_date)::text AS last_movement
+        FROM stock_cards sc
+        INNER JOIN commodity_tracking_numbers ctn ON sc.ctn_id = ctn.id
+        LEFT JOIN stock_card_balances scb ON scb.stock_card_id = sc.id
+        LEFT JOIN stock_settings ss
+          ON ss.catalogue_id = ctn.item_id AND ss.warehouse_id = sc.location_id
+        WHERE COALESCE(ss.min_level, sc.stock_minimum, 0) > 0
+        GROUP BY sc.location_id
+      `);
+      const list = Array.isArray(scoreRows) ? scoreRows : (scoreRows as { rows?: unknown[] }).rows ?? [];
+      for (const row of list as Array<{
+        location_id: number;
+        total: number;
+        adequate: number;
+        last_movement: string | null;
+      }>) {
+        scoreByLocation.set(Number(row.location_id), {
+          adequate: Number(row.adequate ?? 0),
+          total: Number(row.total ?? 0),
+          lastMovement: row.last_movement,
+        });
+      }
+    } else {
+      const movementTotals = database
+        .select({
+          stockCardId: stockMovements.stockCardId,
+          netQuantity: sql<number>`coalesce(sum(${stockMovements.quantityIn} - ${stockMovements.quantityOut}), 0)`
+            .mapWith(Number)
+            .as("netQuantity"),
+        })
+        .from(stockMovements)
+        .groupBy(stockMovements.stockCardId)
+        .as("movement_totals");
+
+      const scoreRows = await database
+        .select({
+          locationId: stockCards.locationId,
+          total: sql<number>`count(distinct ${stockCards.id})`.mapWith(Number),
+          adequate: sql<number>`count(distinct ${stockCards.id}) filter (where coalesce(${movementTotals.netQuantity}, 0) >= coalesce(${stockSettings.minLevel}, ${stockCards.stockMinimum}, 0) and coalesce(${stockSettings.minLevel}, ${stockCards.stockMinimum}, 0) > 0)`.mapWith(
+            Number
+          ),
+        })
+        .from(stockCards)
+        .leftJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
+        .leftJoin(
+          stockSettings,
+          and(
+            eq(stockSettings.catalogueId, commodityTrackingNumbers.itemId),
+            eq(stockSettings.warehouseId, stockCards.locationId)
+          )
+        )
+        .leftJoin(movementTotals, eq(movementTotals.stockCardId, stockCards.id))
+        .groupBy(stockCards.locationId);
+
+      for (const row of scoreRows) {
+        if (row.locationId == null) continue;
+        scoreByLocation.set(row.locationId, {
+          adequate: row.adequate ?? 0,
+          total: row.total ?? 0,
+          lastMovement: null,
+        });
+      }
+    }
+  }
+
+  return siteRows.map((site) => {
+    const score = scoreByLocation.get(site.id);
+    const totalCards = score?.total ?? 0;
+    const adequateCards = score?.adequate ?? 0;
+    const stockScorePercent =
+      totalCards > 0 ? Math.round((adequateCards / totalCards) * 100) : null;
+
+    return {
+      id: site.id,
+      name: site.name,
+      code: site.code,
+      facilityType: site.facilityType,
+      latitude: site.latitude != null ? String(site.latitude) : null,
+      longitude: site.longitude != null ? String(site.longitude) : null,
+      isActive: site.isActive,
+      address: site.address,
+      city: site.city,
+      state: site.state,
+      stockScorePercent,
+      adequateCards,
+      totalCards,
+      lastMovementDate: score?.lastMovement ?? null,
+    };
+  });
+}
+
 export type SidebarNavCounts = {
   facilities: {
     all: number;
