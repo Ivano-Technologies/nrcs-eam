@@ -34,6 +34,11 @@ import {
 } from "@shared/facilities";
 import type { inferRouterOutputs } from "@trpc/server";
 import { Map as MapIcon, Search } from "lucide-react";
+import {
+  matchesStockTierForTest as matchesStockTier,
+  stockPinColorForTest as stockPinColor,
+  type StockTier,
+} from "@/lib/facilityMapHelpers";
 
 type SiteMapDataRow = inferRouterOutputs<AppRouter>["sites"]["mapData"][number];
 type SiteNetworkRow = inferRouterOutputs<AppRouter>["sites"]["mapNetworkData"][number];
@@ -79,28 +84,6 @@ function facilityPosition(facility: {
   const lng = parseCoord(facility.longitude);
   if (lat == null || lng == null) return null;
   return { lat, lng };
-}
-
-function stockPinColor(facility: SiteNetworkRow): string {
-  if (!facility.isActive) return STOCK_COLOURS.offline;
-  const score = facility.stockScorePercent;
-  if (score == null || facility.totalCards === 0) return STOCK_COLOURS.offline;
-  if (score >= 75) return STOCK_COLOURS.adequate;
-  if (score >= 50) return STOCK_COLOURS.partial;
-  return STOCK_COLOURS.low;
-}
-
-type StockTier = "all" | "adequate" | "partial" | "low" | "none";
-
-function matchesStockTier(facility: SiteNetworkRow, tier: StockTier): boolean {
-  if (tier === "all") return true;
-  if (!facility.isActive) return tier === "none";
-  const score = facility.stockScorePercent;
-  if (score == null || facility.totalCards === 0) return tier === "none";
-  if (tier === "adequate") return score >= 75;
-  if (tier === "partial") return score >= 50 && score < 75;
-  if (tier === "low") return score < 50;
-  return false;
 }
 
 function buildAssetInfoWindow(
