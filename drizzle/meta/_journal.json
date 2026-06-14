@@ -351,6 +351,13 @@
       "when": 1779600000000,
       "tag": "0049_audit_logs_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1779700000000,
+      "tag": "0050_stock_card_balances_mv",
+      "breakpoints": true
     }
   ]
 }

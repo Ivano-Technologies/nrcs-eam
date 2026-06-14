@@ -1547,40 +1547,65 @@ export async function getDashboardStats(opts?: { siteId?: number }) {
 
   let lowStockItems = 0;
   if (anyMovement) {
-    const movementTotals = db
-      .select({
-        stockCardId: stockMovements.stockCardId,
-        netQuantity: sql<number>`coalesce(sum(${stockMovements.quantityIn} - ${stockMovements.quantityOut}), 0)`
-          .mapWith(Number)
-          .as("netQuantity"),
-      })
-      .from(stockMovements)
-      .groupBy(stockMovements.stockCardId)
-      .as("movement_net_kpi");
-
+    const { isStockCardBalancesMvAvailable } = await import("./_core/stockCardBalancesMv");
+    const useMv = await isStockCardBalancesMvAvailable(db);
     const thresholdSql = sql`coalesce(${stockSettings.minLevel}, ${stockCards.stockMinimum}, 0)`;
     const lowStockScope = siteId != null ? eq(stockCards.locationId, siteId) : undefined;
 
-    const [lowStockCount] = await db
-      .select({ count: sql<number>`count(distinct ${stockCards.id})`.mapWith(Number) })
-      .from(stockCards)
-      .innerJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
-      .leftJoin(movementTotals, eq(movementTotals.stockCardId, stockCards.id))
-      .leftJoin(
-        stockSettings,
-        and(
-          eq(stockSettings.catalogueId, commodityTrackingNumbers.itemId),
-          eq(stockSettings.warehouseId, stockCards.locationId)
+    if (useMv) {
+      const [lowStockCount] = await db
+        .select({ count: sql<number>`count(distinct ${stockCards.id})`.mapWith(Number) })
+        .from(stockCards)
+        .innerJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
+        .leftJoin(sql`stock_card_balances scb`, sql`scb.stock_card_id = ${stockCards.id}`)
+        .leftJoin(
+          stockSettings,
+          and(
+            eq(stockSettings.catalogueId, commodityTrackingNumbers.itemId),
+            eq(stockSettings.warehouseId, stockCards.locationId)
+          )
         )
-      )
-      .where(
-        and(
-          lowStockScope,
-          sql`${thresholdSql} > 0`,
-          sql`coalesce(${movementTotals.netQuantity}, 0) < ${thresholdSql}`
+        .where(
+          and(
+            lowStockScope,
+            sql`${thresholdSql} > 0`,
+            sql`coalesce(scb.net_quantity, 0) < ${thresholdSql}`
+          )
+        );
+      lowStockItems = Number(lowStockCount?.count ?? 0);
+    } else {
+      const movementTotals = db
+        .select({
+          stockCardId: stockMovements.stockCardId,
+          netQuantity: sql<number>`coalesce(sum(${stockMovements.quantityIn} - ${stockMovements.quantityOut}), 0)`
+            .mapWith(Number)
+            .as("netQuantity"),
+        })
+        .from(stockMovements)
+        .groupBy(stockMovements.stockCardId)
+        .as("movement_net_kpi");
+
+      const [lowStockCount] = await db
+        .select({ count: sql<number>`count(distinct ${stockCards.id})`.mapWith(Number) })
+        .from(stockCards)
+        .innerJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
+        .leftJoin(movementTotals, eq(movementTotals.stockCardId, stockCards.id))
+        .leftJoin(
+          stockSettings,
+          and(
+            eq(stockSettings.catalogueId, commodityTrackingNumbers.itemId),
+            eq(stockSettings.warehouseId, stockCards.locationId)
+          )
         )
-      );
-    lowStockItems = Number(lowStockCount?.count ?? 0);
+        .where(
+          and(
+            lowStockScope,
+            sql`${thresholdSql} > 0`,
+            sql`coalesce(${movementTotals.netQuantity}, 0) < ${thresholdSql}`
+          )
+        );
+      lowStockItems = Number(lowStockCount?.count ?? 0);
+    }
   }
 
   return {

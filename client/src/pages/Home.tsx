@@ -24,7 +24,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 
 import PageHeader from "@/components/ui/PageHeader";
 
-import PageLoader from "@/components/ui/PageLoader";
+import { Skeleton } from "@/components/ui/skeleton";
 
 import { waybillsPeriodHref } from "@/lib/dashboardPeriodRange";
 
@@ -98,23 +98,53 @@ export default function Home() {
 
 
 
-  const {
-
-    data: bundle,
-
-    isLoading: bundleLoading,
-
-    isError: bundleError,
-
-    refetch: refetchBundle,
-
-  } = trpc.dashboard.all.useQuery(
-
-    { period, role: effectiveRole, stockMovementWeeks },
-
-    { staleTime: 60_000 }
-
+  const dashboardQueryInput = useMemo(
+    () => ({ period, role: effectiveRole, stockMovementWeeks }),
+    [period, effectiveRole, stockMovementWeeks]
   );
+
+  const {
+    data: tier1Result,
+    isLoading: tier1Loading,
+    isError: tier1Error,
+    refetch: refetchTier1,
+  } = trpc.dashboard.byTier.useQuery({ ...dashboardQueryInput, tier: 1 }, { staleTime: 60_000 });
+
+  const {
+    data: tier2Result,
+    isLoading: tier2Loading,
+    refetch: refetchTier2,
+  } = trpc.dashboard.byTier.useQuery(
+    { ...dashboardQueryInput, tier: 2 },
+    { staleTime: 60_000, enabled: tier1Result !== undefined }
+  );
+
+  const {
+    data: tier3Result,
+    isLoading: tier3Loading,
+    refetch: refetchTier3,
+  } = trpc.dashboard.byTier.useQuery(
+    { ...dashboardQueryInput, tier: 3 },
+    { staleTime: 60_000, enabled: tier1Result !== undefined }
+  );
+
+  const bundle = useMemo(() => {
+    if (!tier1Result?.data) return undefined;
+    return {
+      ...tier1Result.data,
+      ...tier2Result?.data,
+      ...tier3Result?.data,
+    };
+  }, [tier1Result, tier2Result, tier3Result]);
+
+  const bundleLoading = tier1Loading;
+  const bundleError = tier1Error;
+
+  const refetchBundle = () => {
+    void refetchTier1();
+    void refetchTier2();
+    void refetchTier3();
+  };
 
 
 
@@ -160,7 +190,23 @@ export default function Home() {
 
 
 
-  if (bundleLoading) return <PageLoader />;
+  if (bundleLoading) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          icon={LayoutDashboard}
+          title="Dashboard"
+          subtitle="Loading critical metrics…"
+          className="mb-0"
+        />
+        <div className="grid max-[359px]:grid-cols-1 grid-cols-2 gap-3 md:grid-cols-2 md:gap-4 xl:grid-cols-5">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="h-28 rounded-xl" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
 
 
@@ -457,54 +503,54 @@ export default function Home() {
 
 
         {effectiveRole === "Staff" ? (
-
           showWidgets("stockMovement") ? (
-
-            <div className="grid gap-6">
-
-              <StockMovementChart data={movement ?? []} />
-
-            </div>
-
+            tier3Loading ? (
+              <Skeleton className="h-72 rounded-xl" />
+            ) : (
+              <div className="grid gap-6">
+                <StockMovementChart data={movement ?? []} />
+              </div>
+            )
           ) : null
-
-        ) : (
-
-          showWidgets("stockMovement") || showWidgets("attentionPanel") ? (
-
+        ) : showWidgets("stockMovement") || showWidgets("attentionPanel") ? (
+          tier3Loading ? (
             <div className="grid gap-6 md:grid-cols-1 xl:grid-cols-[1.55fr_1fr]">
-
-              {showWidgets("stockMovement") ? <StockMovementChart data={movement ?? []} /> : null}
-
-              {showWidgets("attentionPanel") ? <AttentionPanel role={effectiveRole} /> : null}
-
+              {showWidgets("stockMovement") ? <Skeleton className="h-72 rounded-xl" /> : null}
+              {showWidgets("attentionPanel") ? <Skeleton className="h-72 rounded-xl" /> : null}
             </div>
-
-          ) : null
-
-        )}
-
-
-
-        {showWidgets("facilityStatus") ? (
-
-          <div className="space-y-2">
-
-            <h2 className="text-lg font-semibold">Facility status</h2>
-
-            <FacilityStatusList />
-
-          </div>
-
+          ) : (
+            <div className="grid gap-6 md:grid-cols-1 xl:grid-cols-[1.55fr_1fr]">
+              {showWidgets("stockMovement") ? <StockMovementChart data={movement ?? []} /> : null}
+              {showWidgets("attentionPanel") ? <AttentionPanel role={effectiveRole} /> : null}
+            </div>
+          )
         ) : null}
 
 
 
-        {showWidgets("requisitionsTable") ? <RequisitionsTable /> : null}
+        {showWidgets("facilityStatus") ? (
+          tier2Loading ? (
+            <Skeleton className="h-40 rounded-xl" />
+          ) : (
+            <div className="space-y-2">
+              <h2 className="text-lg font-semibold">Facility status</h2>
+              <FacilityStatusList />
+            </div>
+          )
+        ) : null}
 
 
 
-        {(effectiveRole === "Manager" || effectiveRole === "Admin") && branchPerf?.length ? (
+        {showWidgets("requisitionsTable") ? (
+          tier2Loading ? <Skeleton className="h-48 rounded-xl" /> : <RequisitionsTable />
+        ) : null}
+
+
+
+        {(effectiveRole === "Manager" || effectiveRole === "Admin") && (tier3Loading || (branchPerf?.length ?? 0) > 0) ? (
+          tier3Loading ? (
+            <Skeleton className="h-56 rounded-xl" />
+          ) : branchPerf?.length ? (
 
           <Card>
 
@@ -543,12 +589,14 @@ export default function Home() {
             </CardContent>
 
           </Card>
-
+          ) : null
         ) : null}
 
 
 
-        {showWidgets("activityFeed") ? <ActivityFeed /> : null}
+        {showWidgets("activityFeed") ? (
+          tier2Loading ? <Skeleton className="h-40 rounded-xl" /> : <ActivityFeed />
+        ) : null}
 
       </div>
 
