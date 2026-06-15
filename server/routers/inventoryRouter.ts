@@ -1979,6 +1979,12 @@ export const inventoryV2Router = router({
           .where(and(eq(inventoryDocuments.id, input.documentId), eq(inventoryDocuments.documentType, "transfer_note")))
           .limit(1);
         if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "Transfer note not found." });
+        if (doc.status !== "approved") {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Transfer must be approved before dispatch.",
+          });
+        }
         const lines = Array.isArray(doc.items) ? (doc.items as z.infer<typeof documentItemSchema>[]) : [];
         for (const line of lines) {
           await ensureStockSettingsRecord(line.catalogueId, Number(doc.fromWarehouseId));
