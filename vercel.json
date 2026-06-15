@@ -33,10 +33,6 @@
     "api/cron/scheduled-reports.ts": {
       "maxDuration": 60,
       "regions": ["dub1"]
-    },
-    "api/cron/hourly-mv-refresh.ts": {
-      "maxDuration": 60,
-      "regions": ["dub1"]
     }
   },
   "crons": [
@@ -63,10 +59,6 @@
     {
       "path": "/api/cron/scheduled-reports",
       "schedule": "0 7 * * *"
-    },
-    {
-      "path": "/api/cron/hourly-mv-refresh",
-      "schedule": "0 * * * *"
     }
   ],
   "rewrites": [

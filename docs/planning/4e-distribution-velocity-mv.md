@@ -26,7 +26,7 @@ flowchart LR
     MV[distribution_outbound_daily]
     Q[single conditional SUM]
     MV --> Q
-    R[dispatch hook + hourly cron]
+    R[dispatch hook + daily cron]
     R --> MV
   end
 ```
@@ -51,7 +51,7 @@ Migration [`drizzle/0052_distribution_velocity_mv.sql`](../../drizzle/0052_distr
 | [`server/wms/distributionVelocity.ts`](../../server/wms/distributionVelocity.ts) | `queryDistributionVelocityTotals` — MV path + join fallback |
 | [`server/routers.ts`](../../server/routers.ts) | `dashboard.metrics` — 1 subquery instead of 3 |
 | [`server/wms/waybillStockLedger.ts`](../../server/wms/waybillStockLedger.ts) | Fire-and-forget MV refresh after dispatch |
-| [`api/cron/hourly-mv-refresh.ts`](../../api/cron/hourly-mv-refresh.ts) | Hourly refresh of distribution + stock_card_balances MVs |
+| [`api/cron/daily.ts`](../../api/cron/daily.ts) | Daily refresh of distribution + stock_card_balances MVs (via `refreshDashboardMaterializedViews`) |
 
 ---
 
@@ -60,7 +60,7 @@ Migration [`drizzle/0052_distribution_velocity_mv.sql`](../../drizzle/0052_distr
 | Trigger | Schedule |
 |---------|----------|
 | Waybill dispatch | Non-blocking after `dispatchWaybillLedger` |
-| Vercel cron | `0 * * * *` → `/api/cron/hourly-mv-refresh` |
+| Vercel cron | `0 2 * * *` → `/api/cron/daily` (Hobby plan: max once per day) |
 
 ---
 
@@ -78,7 +78,7 @@ Migration [`drizzle/0052_distribution_velocity_mv.sql`](../../drizzle/0052_distr
 1. MV exists and returns rows
 2. `dashboard.metrics` KPI shape unchanged
 3. Site-scoped and org-wide filters work via `location_id`
-4. Dispatch + hourly cron refresh without errors
+4. Dispatch + daily cron refresh without errors
 5. `pnpm check` passes
 
 ---

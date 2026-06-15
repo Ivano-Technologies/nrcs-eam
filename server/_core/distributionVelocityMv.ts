@@ -45,7 +45,7 @@ export async function refreshStockCardBalancesMv(
   await database.execute(sql`SELECT refresh_stock_card_balances(${concurrent})`);
 }
 
-/** Refresh dashboard materialized views (hourly cron / manual). */
+/** Refresh dashboard materialized views (daily cron / manual). */
 export async function refreshDashboardMaterializedViews(database: Db): Promise<{
   distributionOutbound: boolean;
   stockCardBalances: boolean;
