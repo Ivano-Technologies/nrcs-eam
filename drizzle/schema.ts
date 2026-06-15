@@ -183,6 +183,13 @@ export const waybillStatusEnum = pgEnum("waybill_status", [
   "claim_raised",
 ]);
 
+export const transferNoteStatusEnum = pgEnum("transfer_note_status", [
+  "pending_approval",
+  "approved",
+  "dispatched",
+  "completed",
+]);
+
 /** WMS ledger source — sole quantity ledger per Decision 1 (inventory-ledger-architecture.md). */
 export const wmsStockMovementSourceEnum = pgEnum("wms_stock_movement_source", [
   "grn",
@@ -911,6 +918,77 @@ export const waybillLineCtnSources = pgTable(
   })
 );
 
+export const transferNotes = pgTable(
+  "transfer_notes",
+  {
+    id: serial("id").primaryKey(),
+    tnNumber: varchar("tn_number", { length: 100 }).notNull().unique(),
+    fromWarehouseId: integer("from_warehouse_id")
+      .notNull()
+      .references(() => sites.id),
+    toWarehouseId: integer("to_warehouse_id")
+      .notNull()
+      .references(() => sites.id),
+    status: transferNoteStatusEnum("status").notNull().default("pending_approval"),
+    referenceDocument: varchar("reference_document", { length: 255 }),
+    transportDetails: jsonb("transport_details").$type<Record<string, unknown>>(),
+    notes: text("notes"),
+    approvedBy: integer("approved_by").references(() => users.id),
+    approvedAt: timestamp("approved_at", { mode: "date" }),
+    dispatchedAt: timestamp("dispatched_at", { mode: "date" }),
+    completedAt: timestamp("completed_at", { mode: "date" }),
+    createdBy: integer("created_by").references(() => users.id),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+  },
+  (table) => ({
+    fromWarehouseIdx: index("transfer_notes_from_warehouse_idx").on(table.fromWarehouseId),
+    toWarehouseIdx: index("transfer_notes_to_warehouse_idx").on(table.toWarehouseId),
+    statusIdx: index("transfer_notes_status_idx").on(table.status),
+  })
+);
+
+export const transferNoteLines = pgTable(
+  "transfer_note_lines",
+  {
+    id: serial("id").primaryKey(),
+    transferNoteId: integer("transfer_note_id")
+      .notNull()
+      .references(() => transferNotes.id, { onDelete: "cascade" }),
+    catalogueId: integer("catalogue_id")
+      .notNull()
+      .references(() => inventoryCatalogue.id),
+    quantity: doublePrecision("quantity").notNull(),
+    lineOrder: integer("line_order").default(0).notNull(),
+  },
+  (table) => ({
+    transferNoteIdx: index("transfer_note_lines_transfer_note_idx").on(table.transferNoteId),
+  })
+);
+
+export const transferNoteLineCtnSources = pgTable(
+  "transfer_note_line_ctn_sources",
+  {
+    id: serial("id").primaryKey(),
+    transferNoteLineId: integer("transfer_note_line_id")
+      .notNull()
+      .references(() => transferNoteLines.id, { onDelete: "cascade" }),
+    ctnId: integer("ctn_id")
+      .notNull()
+      .references(() => commodityTrackingNumbers.id),
+    quantity: doublePrecision("quantity").notNull(),
+    overrideByUserId: integer("override_by_user_id").references(() => users.id),
+    overrideAt: timestamp("override_at", { mode: "date" }),
+    overrideReason: text("override_reason"),
+    sourceOrder: integer("source_order").default(0).notNull(),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  },
+  (table) => ({
+    lineSourceIdx: index("transfer_note_line_ctn_sources_line_idx").on(table.transferNoteLineId),
+    ctnSourceIdx: index("transfer_note_line_ctn_sources_ctn_idx").on(table.ctnId),
+  })
+);
+
 /**
  * WMS — one stock card per CTN per stock location (facility).
  */
@@ -1242,6 +1320,9 @@ export type GoodsReceivedNoteLine = typeof goodsReceivedNoteLines.$inferSelect;
 export type Waybill = typeof waybills.$inferSelect;
 export type WaybillLine = typeof waybillLines.$inferSelect;
 export type WaybillLineCtnSource = typeof waybillLineCtnSources.$inferSelect;
+export type TransferNote = typeof transferNotes.$inferSelect;
+export type TransferNoteLine = typeof transferNoteLines.$inferSelect;
+export type TransferNoteLineCtnSource = typeof transferNoteLineCtnSources.$inferSelect;
 export type DocumentPrintLog = typeof documentPrintLog.$inferSelect;
 export type StockCard = typeof stockCards.$inferSelect;
 export type BinCard = typeof binCards.$inferSelect;

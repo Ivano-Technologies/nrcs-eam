@@ -26,6 +26,10 @@ export const AUDIT_ACTIONS = {
   INVENTORY_DISTRIBUTION: "inventory.distribution",
   INVENTORY_CYCLE_COUNT: "inventory.cycle_count",
   INVENTORY_ADJUSTMENT: "inventory.adjustment",
+  INVENTORY_TRANSFER_CREATED: "inventory.transfer_created",
+  INVENTORY_TRANSFER_APPROVED: "inventory.transfer_approved",
+  INVENTORY_TRANSFER_DISPATCHED: "inventory.transfer_dispatched",
+  INVENTORY_TRANSFER_RECEIVED: "inventory.transfer_received",
 } as const;
 
 type AuditReq = Pick<CreateExpressContextOptions["req"], "headers" | "socket"> & {

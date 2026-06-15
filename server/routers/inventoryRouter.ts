@@ -23,6 +23,9 @@ import {
   stockCards,
   stockMovements,
   sites,
+  transferNoteLineCtnSources,
+  transferNoteLines,
+  transferNotes,
   users,
   waybillLineCtnSources,
   waybillLines,
@@ -71,12 +74,30 @@ import {
   type GrnDraftHeaderInput,
   type GrnSource,
 } from "../wms/grnRelational";
-import { pickFefoCtnSources } from "../wms/ctnAllocation";
+import { pickFefoCtnSources, loadFefoCandidates, allocateFefoFromCandidates } from "../wms/ctnAllocation";
 import {
   dispatchWaybillLedger,
   loadWaybillDispatchContext,
   validateWaybillDispatch,
 } from "../wms/waybillStockLedger";
+import {
+  dispatchTransferLedger,
+  loadTransferDispatchContext,
+  receiveTransferLedger,
+  validateTransferDispatch,
+  validateTransferReceive,
+  type TransferDispatchOverride,
+} from "../wms/transferStockLedger";
+import {
+  insertTransferWithLines,
+  loadRelationalTransferCtnSources,
+  loadRelationalTransferLines,
+  mapLegacyTransferToListRow,
+  mapRelationalTransferToDetail,
+  mapRelationalTransferToListRow,
+  resolveLegacyTransfer,
+  resolveRelationalTransfer,
+} from "../wms/transferRelational";
 import { expandKitDonorContribution } from "../wms/kitDonorContribution";
 import {
   buildRetroactiveStockCheckRemark,
@@ -252,6 +273,109 @@ const grnDocumentItemSchema = documentItemSchema.extend({
   receivedInGoodCondition: z.boolean().optional(),
   claimNotes: z.string().optional(),
 });
+
+const transferSourceSchema = z.enum(["relational", "legacy"]);
+const transferRefSchema = z.object({
+  id: z.number(),
+  source: transferSourceSchema,
+});
+const transferLineAllocationSchema = z.object({
+  lineId: z.number(),
+  sources: z
+    .array(
+      z.object({
+        ctnId: z.number(),
+        quantity: z.number().positive(),
+      })
+    )
+    .min(1),
+});
+const transferExpiredOverrideSchema = z.object({
+  lineId: z.number(),
+  ctnId: z.number(),
+  overrideReason: z.string().min(1),
+});
+
+async function legacyTransferDispatch(
+  db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
+  doc: typeof inventoryDocuments.$inferSelect,
+  userId: number
+) {
+  const lines = Array.isArray(doc.items) ? (doc.items as z.infer<typeof documentItemSchema>[]) : [];
+  for (const line of lines) {
+    await ensureStockSettingsRecord(line.catalogueId, Number(doc.fromWarehouseId));
+    await ensureStockSettingsRecord(line.catalogueId, Number(doc.toWarehouseId));
+    const sourceOnHand = await itemWarehouseNet(line.catalogueId, Number(doc.fromWarehouseId));
+    const sourceStockCardId = await ensureCountStockCardForItemLocation({
+      itemId: line.catalogueId,
+      locationId: Number(doc.fromWarehouseId),
+      expectedBalance: Number(sourceOnHand),
+      createdBy: userId,
+    });
+    const sourceBalance = await stockCardNet(sourceStockCardId);
+    if (sourceBalance < Number(line.quantity)) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: `Insufficient stock for item ${line.catalogueId}.` });
+    }
+    await db.insert(stockMovements).values({
+      stockCardId: sourceStockCardId,
+      date: new Date().toISOString().slice(0, 10),
+      documentRef: doc.documentNumber,
+      fromTo: `transfer:${doc.toWarehouseId}`,
+      quantityIn: 0,
+      quantityOut: Math.abs(Number(line.quantity)),
+      balanceAfter: sourceBalance - Number(line.quantity),
+      remarks: "Transfer dispatch",
+      sourceType: "transfer_out",
+      createdBy: userId,
+    });
+    await checkStockThreshold({
+      catalogueId: line.catalogueId,
+      warehouseId: Number(doc.fromWarehouseId),
+      relatedEntityId: doc.id,
+    });
+  }
+  await db.update(inventoryDocuments).set({ status: "dispatched" }).where(eq(inventoryDocuments.id, doc.id));
+}
+
+async function legacyTransferReceive(
+  db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
+  doc: typeof inventoryDocuments.$inferSelect,
+  userId: number
+) {
+  const lines = Array.isArray(doc.items) ? (doc.items as z.infer<typeof documentItemSchema>[]) : [];
+  for (const line of lines) {
+    await ensureStockSettingsRecord(line.catalogueId, Number(doc.toWarehouseId));
+    const destOnHand = await itemWarehouseNet(line.catalogueId, Number(doc.toWarehouseId));
+    const destinationStockCardId = await ensureCountStockCardForItemLocation({
+      itemId: line.catalogueId,
+      locationId: Number(doc.toWarehouseId),
+      expectedBalance: Number(destOnHand),
+      createdBy: userId,
+    });
+    const destBalance = await stockCardNet(destinationStockCardId);
+    await db.insert(stockMovements).values({
+      stockCardId: destinationStockCardId,
+      date: new Date().toISOString().slice(0, 10),
+      documentRef: doc.documentNumber,
+      fromTo: `transfer:${doc.fromWarehouseId}`,
+      quantityIn: Math.abs(Number(line.quantity)),
+      quantityOut: 0,
+      balanceAfter: destBalance + Number(line.quantity),
+      remarks: "Transfer receive",
+      sourceType: "transfer_in",
+      createdBy: userId,
+    });
+    await checkStockThreshold({
+      catalogueId: line.catalogueId,
+      warehouseId: Number(doc.toWarehouseId),
+      relatedEntityId: doc.id,
+    });
+  }
+  await db
+    .update(inventoryDocuments)
+    .set({ status: "completed", completedAt: new Date() })
+    .where(eq(inventoryDocuments.id, doc.id));
+}
 
 const grnSourceSchema = z.enum(["relational", "legacy"]).optional();
 
@@ -1951,140 +2075,340 @@ export const inventoryV2Router = router({
       )
       .mutation(async ({ input, ctx }) => {
         requireRole(ctx, ["manager", "admin"]);
+        if (input.fromWarehouseId === input.toWarehouseId) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Source and destination warehouses must differ." });
+        }
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
-        const documentNumber = await nextDocumentNumber("TN");
-        const [doc] = await db
-          .insert(inventoryDocuments)
-          .values({
-            documentType: "transfer_note",
-            documentNumber,
-            status: "pending_approval",
-            fromWarehouseId: input.fromWarehouseId,
-            toWarehouseId: input.toWarehouseId,
-            items: input.items,
-            referenceDocument: input.referenceDocument ?? null,
-            transportDetails: input.transportDetails ?? null,
-            notes: input.notes ?? null,
-            createdBy: ctx.user.id,
-          })
-          .returning();
-        return doc;
+        const tnNumber = await nextDocumentNumber("TN");
+        const note = await insertTransferWithLines(db, {
+          tnNumber,
+          fromWarehouseId: input.fromWarehouseId,
+          toWarehouseId: input.toWarehouseId,
+          referenceDocument: input.referenceDocument,
+          transportDetails: input.transportDetails ?? null,
+          notes: input.notes,
+          createdBy: ctx.user.id,
+          items: input.items.map((item) => ({
+            catalogueId: item.catalogueId,
+            quantity: item.quantity,
+          })),
+        });
+        await logAuditEvent({
+          userId: ctx.user.id,
+          action: AUDIT_ACTIONS.INVENTORY_TRANSFER_CREATED,
+          entityType: "transfer_note",
+          entityId: note.id,
+          changes: {
+            tnNumber: note.tnNumber,
+            fromWarehouseId: note.fromWarehouseId,
+            toWarehouseId: note.toWarehouseId,
+            lineCount: input.items.length,
+          },
+          req: ctx.req,
+        });
+        return {
+          id: note.id,
+          source: "relational" as const,
+          documentNumber: note.tnNumber,
+          status: note.status,
+        };
       }),
 
     approve: protectedProcedure
-      .input(z.object({ documentId: z.number() }))
+      .input(transferRefSchema)
       .mutation(async ({ input, ctx }) => {
         requireRole(ctx, ["admin"]);
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+
+        if (input.source === "legacy") {
+          const doc = await resolveLegacyTransfer(db, input.id);
+          if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "Transfer note not found." });
+          if (doc.status !== "pending_approval") {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Transfer is not pending approval." });
+          }
+          await db
+            .update(inventoryDocuments)
+            .set({ status: "approved", approvedBy: ctx.user.id, approvedAt: new Date() })
+            .where(eq(inventoryDocuments.id, doc.id));
+          await logAuditEvent({
+            userId: ctx.user.id,
+            action: AUDIT_ACTIONS.INVENTORY_TRANSFER_APPROVED,
+            entityType: "transfer_note",
+            entityId: doc.id,
+            changes: { source: "legacy", documentNumber: doc.documentNumber },
+            req: ctx.req,
+          });
+          return { success: true as const };
+        }
+
+        const note = await resolveRelationalTransfer(db, input.id);
+        if (!note) throw new TRPCError({ code: "NOT_FOUND", message: "Transfer note not found." });
+        if (note.status !== "pending_approval") {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Transfer is not pending approval." });
+        }
         await db
-          .update(inventoryDocuments)
-          .set({ status: "approved", approvedBy: ctx.user.id, approvedAt: new Date() })
-          .where(and(eq(inventoryDocuments.id, input.documentId), eq(inventoryDocuments.documentType, "transfer_note")));
+          .update(transferNotes)
+          .set({ status: "approved", approvedBy: ctx.user.id, approvedAt: new Date(), updatedAt: new Date() })
+          .where(eq(transferNotes.id, note.id));
+        await logAuditEvent({
+          userId: ctx.user.id,
+          action: AUDIT_ACTIONS.INVENTORY_TRANSFER_APPROVED,
+          entityType: "transfer_note",
+          entityId: note.id,
+          changes: { source: "relational", tnNumber: note.tnNumber },
+          req: ctx.req,
+        });
         return { success: true as const };
       }),
 
+    allocateDispatch: protectedProcedure
+      .input(transferRefSchema)
+      .query(async ({ input, ctx }) => {
+        requireRole(ctx, ["staff", "manager", "admin"]);
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+
+        if (input.source === "legacy") {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "CTN allocation preview is only available for relational transfers.",
+          });
+        }
+
+        const note = await resolveRelationalTransfer(db, input.id);
+        if (!note) throw new TRPCError({ code: "NOT_FOUND", message: "Transfer note not found." });
+        if (note.status !== "approved") {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Transfer must be approved before dispatch." });
+        }
+
+        const lines = await loadRelationalTransferLines(db, note.id);
+        const today = new Date().toISOString().slice(0, 10);
+        const suggestedAllocations = [];
+
+        for (const line of lines) {
+          const candidates = await loadFefoCandidates(db, {
+            itemId: line.catalogueId,
+            warehouseId: note.fromWarehouseId,
+          });
+          let sources;
+          try {
+            sources = allocateFefoFromCandidates(candidates, Number(line.quantity), today);
+          } catch (error) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: error instanceof Error ? error.message : "FEFO allocation failed.",
+            });
+          }
+          suggestedAllocations.push({
+            lineId: line.id,
+            catalogueId: line.catalogueId,
+            quantity: Number(line.quantity),
+            sources: sources.map((source) => {
+              const candidate = candidates.find((row) => row.ctnId === source.ctnId);
+              return {
+                ctnId: source.ctnId,
+                ctnCode: candidate?.ctnCode ?? null,
+                quantity: source.quantity,
+                expiryDate: candidate?.expiryDate ?? null,
+                balance: candidate?.balance ?? null,
+              };
+            }),
+          });
+        }
+
+        const existingSources = await loadRelationalTransferCtnSources(
+          db,
+          lines.map((line) => line.id)
+        );
+        const detail = await mapRelationalTransferToDetail(db, note, lines, existingSources);
+
+        return { transfer: detail, suggestedAllocations };
+      }),
+
     dispatch: protectedProcedure
-      .input(z.object({ documentId: z.number() }))
+      .input(
+        transferRefSchema.extend({
+          lineAllocations: z.array(transferLineAllocationSchema).optional(),
+          expiredOverrides: z.array(transferExpiredOverrideSchema).optional(),
+        })
+      )
       .mutation(async ({ input, ctx }) => {
         requireRole(ctx, ["staff", "manager", "admin"]);
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
-        const [doc] = await db
-          .select()
-          .from(inventoryDocuments)
-          .where(and(eq(inventoryDocuments.id, input.documentId), eq(inventoryDocuments.documentType, "transfer_note")))
-          .limit(1);
-        if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "Transfer note not found." });
-        if (doc.status !== "approved") {
+
+        if (input.source === "legacy") {
+          const doc = await resolveLegacyTransfer(db, input.id);
+          if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "Transfer note not found." });
+          if (doc.status !== "approved") {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Transfer must be approved before dispatch." });
+          }
+          await legacyTransferDispatch(db, doc, ctx.user.id);
+          await logAuditEvent({
+            userId: ctx.user.id,
+            action: AUDIT_ACTIONS.INVENTORY_TRANSFER_DISPATCHED,
+            entityType: "transfer_note",
+            entityId: doc.id,
+            changes: { source: "legacy", documentNumber: doc.documentNumber },
+            req: ctx.req,
+          });
+          return { success: true as const };
+        }
+
+        const note = await resolveRelationalTransfer(db, input.id);
+        if (!note) throw new TRPCError({ code: "NOT_FOUND", message: "Transfer note not found." });
+        if (note.status !== "approved") {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Transfer must be approved before dispatch." });
+        }
+
+        const lines = await loadRelationalTransferLines(db, note.id);
+        const today = new Date().toISOString().slice(0, 10);
+        const allocationByLineId = new Map(
+          (input.lineAllocations ?? []).map((entry) => [entry.lineId, entry.sources])
+        );
+
+        if (lines.length > 0) {
+          await db.delete(transferNoteLineCtnSources).where(
+            inArray(
+              transferNoteLineCtnSources.transferNoteLineId,
+              lines.map((line) => line.id)
+            )
+          );
+        }
+
+        const insertedSources: Array<{ id: number; transferNoteLineId: number; ctnId: number }> = [];
+        for (const line of lines) {
+          const sources =
+            allocationByLineId.get(line.id) ??
+            (await pickFefoCtnSources(db, {
+              itemId: line.catalogueId,
+              warehouseId: note.fromWarehouseId,
+              quantity: Number(line.quantity),
+              todayIso: today,
+            }));
+
+          const rows = await db
+            .insert(transferNoteLineCtnSources)
+            .values(
+              sources.map((source, index) => ({
+                transferNoteLineId: line.id,
+                ctnId: source.ctnId,
+                quantity: source.quantity,
+                sourceOrder: index,
+              }))
+            )
+            .returning({
+              id: transferNoteLineCtnSources.id,
+              transferNoteLineId: transferNoteLineCtnSources.transferNoteLineId,
+              ctnId: transferNoteLineCtnSources.ctnId,
+            });
+          insertedSources.push(...rows);
+        }
+
+        const dispatchCtx = await loadTransferDispatchContext(db, note.id);
+        const overrideApprovals: TransferDispatchOverride[] = [];
+        for (const override of input.expiredOverrides ?? []) {
+          const source = insertedSources.find(
+            (row) => row.transferNoteLineId === override.lineId && row.ctnId === override.ctnId
+          );
+          if (!source) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `No CTN source found for line ${override.lineId} and CTN ${override.ctnId}.`,
+            });
+          }
+          overrideApprovals.push({
+            ctnSourceId: source.id,
+            overrideByUserId: ctx.user.id,
+            overrideReason: override.overrideReason,
+          });
+        }
+
+        try {
+          await validateTransferDispatch(db, dispatchCtx, overrideApprovals, today);
+        } catch (error) {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: "Transfer must be approved before dispatch.",
+            message: error instanceof Error ? error.message : "Transfer dispatch validation failed.",
           });
         }
-        const lines = Array.isArray(doc.items) ? (doc.items as z.infer<typeof documentItemSchema>[]) : [];
-        for (const line of lines) {
-          await ensureStockSettingsRecord(line.catalogueId, Number(doc.fromWarehouseId));
-          await ensureStockSettingsRecord(line.catalogueId, Number(doc.toWarehouseId));
-          const sourceOnHand = await itemWarehouseNet(line.catalogueId, Number(doc.fromWarehouseId));
-          const sourceStockCardId = await ensureCountStockCardForItemLocation({
-            itemId: line.catalogueId,
-            locationId: Number(doc.fromWarehouseId),
-            expectedBalance: Number(sourceOnHand),
-            createdBy: ctx.user.id,
-          });
-          const sourceBalance = await stockCardNet(sourceStockCardId);
-          if (sourceBalance < Number(line.quantity)) {
-            throw new TRPCError({ code: "BAD_REQUEST", message: `Insufficient stock for item ${line.catalogueId}.` });
-          }
-          await db.insert(stockMovements).values({
-            stockCardId: sourceStockCardId,
-            date: new Date().toISOString().slice(0, 10),
-            documentRef: doc.documentNumber,
-            fromTo: `transfer:${doc.toWarehouseId}`,
-            quantityIn: 0,
-            quantityOut: Math.abs(Number(line.quantity)),
-            balanceAfter: sourceBalance - Number(line.quantity),
-            remarks: "Transfer dispatch",
-            sourceType: "transfer_out",
-            createdBy: ctx.user.id,
-          });
+
+        const { catalogueIds } = await dispatchTransferLedger(db, dispatchCtx, {
+          createdBy: ctx.user.id,
+          overrideApprovals,
+        });
+        for (const catalogueId of catalogueIds) {
           await checkStockThreshold({
-            catalogueId: line.catalogueId,
-            warehouseId: Number(doc.fromWarehouseId),
-            relatedEntityId: doc.id,
+            catalogueId,
+            warehouseId: note.fromWarehouseId,
+            relatedEntityId: note.id,
           });
         }
-        await db.update(inventoryDocuments).set({ status: "dispatched" }).where(eq(inventoryDocuments.id, doc.id));
+        await logAuditEvent({
+          userId: ctx.user.id,
+          action: AUDIT_ACTIONS.INVENTORY_TRANSFER_DISPATCHED,
+          entityType: "transfer_note",
+          entityId: note.id,
+          changes: { source: "relational", tnNumber: note.tnNumber, lineCount: lines.length },
+          req: ctx.req,
+        });
         return { success: true as const };
       }),
 
     receive: protectedProcedure
-      .input(z.object({ documentId: z.number() }))
+      .input(transferRefSchema)
       .mutation(async ({ input, ctx }) => {
         requireRole(ctx, ["staff", "manager", "admin"]);
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
-        const [doc] = await db
-          .select()
-          .from(inventoryDocuments)
-          .where(and(eq(inventoryDocuments.id, input.documentId), eq(inventoryDocuments.documentType, "transfer_note")))
-          .limit(1);
-        if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "Transfer note not found." });
-        const lines = Array.isArray(doc.items) ? (doc.items as z.infer<typeof documentItemSchema>[]) : [];
-        for (const line of lines) {
-          await ensureStockSettingsRecord(line.catalogueId, Number(doc.toWarehouseId));
-          const destOnHand = await itemWarehouseNet(line.catalogueId, Number(doc.toWarehouseId));
-          const destinationStockCardId = await ensureCountStockCardForItemLocation({
-            itemId: line.catalogueId,
-            locationId: Number(doc.toWarehouseId),
-            expectedBalance: Number(destOnHand),
-            createdBy: ctx.user.id,
+
+        if (input.source === "legacy") {
+          const doc = await resolveLegacyTransfer(db, input.id);
+          if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "Transfer note not found." });
+          if (doc.status !== "dispatched") {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Transfer must be dispatched before receive." });
+          }
+          await legacyTransferReceive(db, doc, ctx.user.id);
+          await logAuditEvent({
+            userId: ctx.user.id,
+            action: AUDIT_ACTIONS.INVENTORY_TRANSFER_RECEIVED,
+            entityType: "transfer_note",
+            entityId: doc.id,
+            changes: { source: "legacy", documentNumber: doc.documentNumber },
+            req: ctx.req,
           });
-          const destBalance = await stockCardNet(destinationStockCardId);
-          await db.insert(stockMovements).values({
-            stockCardId: destinationStockCardId,
-            date: new Date().toISOString().slice(0, 10),
-            documentRef: doc.documentNumber,
-            fromTo: `transfer:${doc.fromWarehouseId}`,
-            quantityIn: Math.abs(Number(line.quantity)),
-            quantityOut: 0,
-            balanceAfter: destBalance + Number(line.quantity),
-            remarks: "Transfer receive",
-            sourceType: "transfer_in",
-            createdBy: ctx.user.id,
-          });
-          await checkStockThreshold({
-            catalogueId: line.catalogueId,
-            warehouseId: Number(doc.toWarehouseId),
-            relatedEntityId: doc.id,
+          return { success: true as const };
+        }
+
+        const note = await resolveRelationalTransfer(db, input.id);
+        if (!note) throw new TRPCError({ code: "NOT_FOUND", message: "Transfer note not found." });
+        const dispatchCtx = await loadTransferDispatchContext(db, note.id);
+        try {
+          await validateTransferReceive(dispatchCtx);
+        } catch (error) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: error instanceof Error ? error.message : "Transfer receive validation failed.",
           });
         }
-        await db
-          .update(inventoryDocuments)
-          .set({ status: "completed", completedAt: new Date() })
-          .where(eq(inventoryDocuments.id, doc.id));
+        const { catalogueIds } = await receiveTransferLedger(db, dispatchCtx, { createdBy: ctx.user.id });
+        for (const catalogueId of catalogueIds) {
+          await checkStockThreshold({
+            catalogueId,
+            warehouseId: note.toWarehouseId,
+            relatedEntityId: note.id,
+          });
+        }
+        await logAuditEvent({
+          userId: ctx.user.id,
+          action: AUDIT_ACTIONS.INVENTORY_TRANSFER_RECEIVED,
+          entityType: "transfer_note",
+          entityId: note.id,
+          changes: { source: "relational", tnNumber: note.tnNumber },
+          req: ctx.req,
+        });
         return { success: true as const };
       }),
 
@@ -2093,7 +2417,31 @@ export const inventoryV2Router = router({
       .query(async ({ input }) => {
         const db = await getDb();
         if (!db) return [];
-        return db
+
+        const statusFilter = input?.status as
+          | "pending_approval"
+          | "approved"
+          | "dispatched"
+          | "completed"
+          | undefined;
+
+        const relationalRows = await db
+          .select()
+          .from(transferNotes)
+          .where(
+            and(
+              input?.warehouseId
+                ? or(
+                    eq(transferNotes.fromWarehouseId, input.warehouseId),
+                    eq(transferNotes.toWarehouseId, input.warehouseId)
+                  )
+                : undefined,
+              statusFilter ? eq(transferNotes.status, statusFilter) : undefined
+            )
+          )
+          .orderBy(desc(transferNotes.createdAt));
+
+        const legacyRows = await db
           .select()
           .from(inventoryDocuments)
           .where(
@@ -2109,19 +2457,63 @@ export const inventoryV2Router = router({
             )
           )
           .orderBy(desc(inventoryDocuments.createdAt));
+
+        const relationalMapped = await Promise.all(
+          relationalRows.map(async (note) => {
+            const lines = await loadRelationalTransferLines(db, note.id);
+            return mapRelationalTransferToListRow(note, lines.length);
+          })
+        );
+        const legacyMapped = legacyRows.map(mapLegacyTransferToListRow);
+        return [...relationalMapped, ...legacyMapped].sort((a, b) => {
+          const aTime = a.createdAt?.getTime() ?? 0;
+          const bTime = b.createdAt?.getTime() ?? 0;
+          return bTime - aTime;
+        });
       }),
 
     get: protectedProcedure
-      .input(z.object({ documentId: z.number() }))
+      .input(transferRefSchema)
       .query(async ({ input }) => {
         const db = await getDb();
         if (!db) return null;
-        const [doc] = await db
-          .select()
-          .from(inventoryDocuments)
-          .where(and(eq(inventoryDocuments.id, input.documentId), eq(inventoryDocuments.documentType, "transfer_note")))
-          .limit(1);
-        return doc ?? null;
+
+        if (input.source === "legacy") {
+          const doc = await resolveLegacyTransfer(db, input.id);
+          if (!doc) return null;
+          const items = Array.isArray(doc.items) ? doc.items : [];
+          return {
+            id: doc.id,
+            source: "legacy" as const,
+            documentNumber: doc.documentNumber,
+            status: doc.status,
+            fromWarehouseId: doc.fromWarehouseId,
+            toWarehouseId: doc.toWarehouseId,
+            referenceDocument: doc.referenceDocument,
+            notes: doc.notes,
+            transportDetails: doc.transportDetails,
+            createdAt: doc.createdAt ?? null,
+            approvedAt: doc.approvedAt ?? null,
+            dispatchedAt: null,
+            completedAt: doc.completedAt ?? null,
+            lines: items.map((item: Record<string, unknown>, index: number) => ({
+              id: index,
+              catalogueId: Number(item.catalogueId),
+              quantity: Number(item.quantity),
+              lineOrder: index,
+              ctnSources: [],
+            })),
+          };
+        }
+
+        const note = await resolveRelationalTransfer(db, input.id);
+        if (!note) return null;
+        const lines = await loadRelationalTransferLines(db, note.id);
+        const sources = await loadRelationalTransferCtnSources(
+          db,
+          lines.map((line) => line.id)
+        );
+        return mapRelationalTransferToDetail(db, note, lines, sources);
       }),
   }),
 

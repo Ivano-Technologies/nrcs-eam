@@ -98,4 +98,45 @@ test.describe("Inventory Phase 4 workflow (live)", () => {
     await page.goto("/app/inventory/receipts/new");
     await expect(page.getByLabel("GRN number")).toBeVisible({ timeout: 15000 });
   });
+
+  test("Transfer list loads with create action", async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto("/app/inventory/transfers");
+    await expect(page.getByTestId("new-transfer-btn")).toBeVisible({ timeout: 15000 });
+  });
+
+  test("Create transfer, approve, dispatch dialog, receive", async ({ page }) => {
+    test.skip(test.info().project.name === "live-auth", "Skipped on live-auth to avoid mutating production transfer data.");
+    await loginAsAdmin(page);
+    await page.goto("/app/inventory/transfers");
+    await page.getByTestId("new-transfer-btn").click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByRole("combobox").nth(0).click();
+    await page.getByRole("option").first().click();
+    await dialog.getByRole("combobox").nth(1).click();
+    const warehouseOptions = page.getByRole("option");
+    if ((await warehouseOptions.count()) > 1) {
+      await warehouseOptions.nth(1).click();
+    } else {
+      await warehouseOptions.first().click();
+    }
+    await dialog.getByRole("combobox").nth(2).click();
+    await page.getByRole("option").first().click();
+    await dialog.getByLabel("Quantity").fill("1");
+    await dialog.getByRole("button", { name: "Submit" }).click();
+    const row = page.locator("[data-testid^='transfer-row-']").first();
+    await expect(row).toBeVisible({ timeout: 15000 });
+    const approve = page.getByRole("button", { name: "Approve" }).first();
+    if (await approve.count()) await approve.click();
+    const dispatch = page.getByRole("button", { name: "Dispatch" }).first();
+    if (await dispatch.count()) {
+      await dispatch.click();
+      const dispatchDialog = page.getByRole("dialog").filter({ hasText: /Dispatch transfer/i });
+      if (await dispatchDialog.count()) {
+        await dispatchDialog.getByRole("button", { name: "Confirm dispatch" }).click();
+      }
+    }
+    const receive = page.getByRole("button", { name: "Receive" }).first();
+    if (await receive.count()) await receive.click();
+  });
 });

@@ -50,7 +50,7 @@ test.describe("Inventory Phase 2 (live)", () => {
 
     await dialog.getByRole("combobox").nth(2).click();
     await page.getByRole("option").first().click();
-    await page.getByRole("dialog").getByLabel("Quantity").fill("1");
+    await dialog.getByLabel("Qty").fill("1");
     await page.getByRole("dialog").getByRole("button", { name: "Submit" }).click();
     const transferRows = page.locator("[data-testid^='transfer-row-']");
     if ((await transferRows.count()) > 0) {
