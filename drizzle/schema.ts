@@ -1128,7 +1128,7 @@ export const documentNumberSequences = pgTable(
 export const distributions = pgTable("distributions", {
   id: serial("id").primaryKey(),
   distributionNumber: varchar("distribution_number", { length: 100 }).notNull().unique(),
-  waybillId: integer("waybill_id").references(() => inventoryDocuments.id),
+  waybillId: integer("waybill_id").references(() => waybills.id, { onDelete: "set null" }),
   incidentReference: varchar("incident_reference", { length: 255 }),
   distributionDate: date("distribution_date").notNull(),
   location: varchar("location", { length: 500 }).notNull(),
