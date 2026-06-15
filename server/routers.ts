@@ -57,7 +57,7 @@ import {
   waybills,
 } from "../drizzle/schema";
 import { buildDistributionVelocity, buildStockReadiness, getPeriodWindow } from "./wms/dashboard";
-import { cacheGetJson, cacheSetJson } from "./_core/cache";
+import { cacheGetJson, cacheSetJson, withDashboardCache } from "./_core/cache";
 import { withTimeout } from "./_core/withTimeout";
 import { dashboardQueryQueue } from "./_core/dashboardQueryQueue";
 import {
@@ -264,6 +264,24 @@ async function countAdequatelyStockedActiveSites(
   return Number(row?.adequate ?? 0);
 }
 
+type DashboardDataScope =
+  | { mode: "all" }
+  | { mode: "site"; siteId: number }
+  | { mode: "empty" };
+
+/** Staff/Field see only their assigned facility; admin/manager see org-wide. */
+function dashboardDataScope(ctx: { user: { role: string; siteId: number | null } }): DashboardDataScope {
+  const r = ctx.user.role;
+  if (r === "admin" || r === "manager") return { mode: "all" };
+  if ((r === "staff" || r === "field") && ctx.user.siteId != null) return { mode: "site", siteId: ctx.user.siteId };
+  if (r === "staff" || r === "field") return { mode: "empty" };
+  return { mode: "all" };
+}
+
+function dashboardCacheScopeKey(scope: DashboardDataScope): string {
+  return scope.mode === "site" ? `${scope.mode}:${scope.siteId}` : `${scope.mode}:all`;
+}
+
 type FacilityStatusRow = {
   id: number;
   name: string;
@@ -276,6 +294,10 @@ type FacilityStatusRow = {
 async function queryFacilityStatus(ctx: { user: { role: string; siteId: number | null } }): Promise<FacilityStatusRow[]> {
   const scope = dashboardDataScope(ctx);
   if (scope.mode === "empty") return [];
+  return withDashboardCache(
+    `dashboard:facilityStatus:${dashboardCacheScopeKey(scope)}`,
+    300,
+    async () => {
   const siteId = scope.mode === "site" ? scope.siteId : undefined;
   const database = await db.getDb();
   if (!database) return [];
@@ -366,6 +388,8 @@ async function queryFacilityStatus(ctx: { user: { role: string; siteId: number |
       };
     })
   );
+    }
+  );
 }
 
 type StockMovementPoint = { w: string; inbound: number; outbound: number };
@@ -376,6 +400,10 @@ async function queryStockMovement(
 ): Promise<StockMovementPoint[]> {
   const scope = dashboardDataScope(ctx);
   if (scope.mode === "empty") return [];
+  return withDashboardCache(
+    `dashboard:stockMovement:${dashboardCacheScopeKey(scope)}:${weeks}`,
+    600,
+    async () => {
   const siteId = scope.mode === "site" ? scope.siteId : undefined;
   const database = await db.getDb();
   if (!database) return [];
@@ -405,6 +433,8 @@ async function queryStockMovement(
     inbound: Number(row.inbound ?? 0),
     outbound: Number(row.outbound ?? 0),
   }));
+    }
+  );
 }
 
 type RecentActivityRow = {
@@ -420,6 +450,10 @@ async function queryRecentActivity(
 ): Promise<RecentActivityRow[]> {
   const scope = dashboardDataScope(ctx);
   if (scope.mode === "empty") return [];
+  return withDashboardCache(
+    `dashboard:recentActivity:${dashboardCacheScopeKey(scope)}:${limit}`,
+    120,
+    async () => {
   const siteId = scope.mode === "site" ? scope.siteId : undefined;
   const database = await db.getDb();
   if (!database) return [];
@@ -501,11 +535,17 @@ async function queryRecentActivity(
       timestamp: new Date(row.timestamp).toISOString(),
       facilityName: row.facilityName ?? "Unknown facility",
     }));
+    }
+  );
 }
 
 async function queryPendingRequisitions(ctx: { user: { role: string; siteId: number | null } }) {
   const scope = dashboardDataScope(ctx);
   if (scope.mode === "empty") return { total: 0, urgent: 0, oldestDaysAgo: null as number | null };
+  return withDashboardCache(
+    `dashboard:pendingRequisitions:${dashboardCacheScopeKey(scope)}`,
+    120,
+    async () => {
   const siteId = scope.mode === "site" ? scope.siteId : undefined;
   const database = await db.getDb();
   if (!database) return { total: 0, urgent: 0, oldestDaysAgo: null as number | null };
@@ -518,7 +558,12 @@ async function queryPendingRequisitions(ctx: { user: { role: string; siteId: num
       oldest: sql<Date | null>`min(${requisitions.createdAt})`,
     })
     .from(requisitions)
-    .where(and(sql`${requisitions.status} in ('submitted', 'approved')`, siteReq));
+    .where(
+      and(
+        sql`${requisitions.status} in ('submitted', 'branch_approved', 'hq_approved')`,
+        siteReq
+      )
+    );
 
   const summary = rows[0];
   const total = Number(summary?.total ?? 0);
@@ -528,15 +573,8 @@ async function queryPendingRequisitions(ctx: { user: { role: string; siteId: num
     oldest === null ? null : Math.max(0, Math.floor((Date.now() - oldest.getTime()) / (1000 * 60 * 60 * 24)));
 
   return { total, urgent, oldestDaysAgo };
-}
-
-/** Staff/Field see only their assigned facility; admin/manager see org-wide. */
-function dashboardDataScope(ctx: { user: { role: string; siteId: number | null } }): { mode: "all" } | { mode: "site"; siteId: number } | { mode: "empty" } {
-  const r = ctx.user.role;
-  if (r === "admin" || r === "manager") return { mode: "all" };
-  if ((r === "staff" || r === "field") && ctx.user.siteId != null) return { mode: "site", siteId: ctx.user.siteId };
-  if (r === "staff" || r === "field") return { mode: "empty" };
-  return { mode: "all" };
+    }
+  );
 }
 
 function parseMoneyString(v: string | undefined | null): number | null {
@@ -736,7 +774,7 @@ export const appRouter = router({
       const cached = await cacheGetJson<Awaited<ReturnType<typeof db.getSitesMapNetworkData>>>(cacheKey);
       if (cached) return cached;
       const rows = await db.getSitesMapNetworkData();
-      await cacheSetJson(cacheKey, rows, 300);
+      await cacheSetJson(cacheKey, rows, 1800);
       return rows;
     }),
 
@@ -2625,7 +2663,7 @@ export const appRouter = router({
           stockReadiness,
           distributionVelocity,
         };
-        await cacheSetJson(metricsCacheKey, metricsPayload, metricsTimedOut ? 60 : 300);
+        await cacheSetJson(metricsCacheKey, metricsPayload, metricsTimedOut ? 60 : 900);
         return metricsPayload;
       }),
     /** Single round-trip for dashboard page — one pool, sequential sections. */
@@ -2730,7 +2768,7 @@ export const appRouter = router({
               scope.mode === "all"
                 ? await db.getDashboardTotalAssetValue({ mode: "all" })
                 : await db.getDashboardTotalAssetValue({ mode: "site", siteId: scope.siteId });
-            await cacheSetJson(cacheKey, result, 600);
+            await cacheSetJson(cacheKey, result, 1800);
             return result;
           })(),
           8000,
@@ -2777,7 +2815,7 @@ export const appRouter = router({
           adequateCards: 0,
           totalCards: 0,
         }));
-        await cacheSetJson(cacheKey, emptyScores, 600);
+        await cacheSetJson(cacheKey, emptyScores, 1800);
         return emptyScores;
       }
 
@@ -2854,7 +2892,7 @@ export const appRouter = router({
           totalCards: score?.total ?? 0,
         };
       });
-      await cacheSetJson(cacheKey, result, 600);
+      await cacheSetJson(cacheKey, result, 1800);
       return result;
     }),
 
@@ -2871,6 +2909,11 @@ export const appRouter = router({
         type AttentionItem = { icon: string; tone: string; label: string; meta: string; href: string | null };
         const scope = dashboardDataScope(ctx);
         if (scope.mode === "empty") return [allClear];
+
+        return withDashboardCache(
+          `dashboard:attentionItems:${dashboardCacheScopeKey(scope)}:${input.role}`,
+          300,
+          async () => {
         const siteId = scope.mode === "site" ? scope.siteId : undefined;
         const database = await db.getDb();
         if (!database) return [allClear];
@@ -3331,6 +3374,8 @@ export const appRouter = router({
           href: null,
         });
         return items.slice(0, 4);
+          }
+        );
       }),
   }),
 

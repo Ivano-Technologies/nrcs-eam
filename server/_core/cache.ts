@@ -70,3 +70,15 @@ export async function cacheGetJson<T>(key: string): Promise<T | null> {
 export async function cacheSetJson(key: string, value: unknown, ttlSeconds: number): Promise<void> {
   await cacheSet(key, JSON.stringify(value), ttlSeconds);
 }
+
+export async function withDashboardCache<T>(
+  key: string,
+  ttlSeconds: number,
+  compute: () => Promise<T>
+): Promise<T> {
+  const cached = await cacheGetJson<T>(key);
+  if (cached != null) return cached;
+  const result = await compute();
+  await cacheSetJson(key, result, ttlSeconds);
+  return result;
+}
