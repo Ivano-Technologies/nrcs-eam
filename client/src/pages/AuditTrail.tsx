@@ -7,14 +7,19 @@ import PageLoader from "@/components/ui/PageLoader";
 import { FileText, Search, Calendar } from "lucide-react";
 import { useState } from "react";
 import { format } from "date-fns";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 export default function AuditTrail() {
+  const { user } = useAuth();
   const [entityType, setEntityType] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
-  
-  const { data, isLoading } = trpc.auditLogs.list.useQuery({
-    entityType: entityType === "all" ? undefined : entityType,
-  });
+
+  const { data, isLoading } = trpc.auditLogs.list.useQuery(
+    {
+      entityType: entityType === "all" ? undefined : entityType,
+    },
+    { enabled: user?.role === "admin" }
+  );
   const logs = data?.rows ?? [];
 
   const filteredLogs = logs.filter((log) => {
@@ -26,6 +31,14 @@ export default function AuditTrail() {
       (log.details && log.details.toLowerCase().includes(searchLower))
     );
   });
+
+  if (user?.role !== "admin") {
+    return (
+      <div className="flex h-96 flex-col items-center justify-center">
+        <p className="text-xl text-muted-foreground">Admin access required</p>
+      </div>
+    );
+  }
 
   if (isLoading) return <PageLoader />;
 

@@ -30,6 +30,29 @@ function hitRateClass(rate: number): string {
   return "text-red-600 dark:text-red-400";
 }
 
+function redisStatusBadge(status: "connected" | "error" | "fallback" | undefined): {
+  label: string;
+  className: string;
+} {
+  switch (status) {
+    case "connected":
+      return {
+        label: "Redis: Connected",
+        className: "border-emerald-500/50 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200",
+      };
+    case "error":
+      return {
+        label: "Redis: Error",
+        className: "border-red-500/50 bg-red-500/10 text-red-800 dark:text-red-200",
+      };
+    default:
+      return {
+        label: "Redis: In-memory fallback",
+        className: "border-amber-500/50 bg-amber-500/10 text-amber-800 dark:text-amber-200",
+      };
+  }
+}
+
 export default function Observability() {
   const { user } = useAuth();
   const utils = trpc.useUtils();
@@ -66,6 +89,7 @@ export default function Observability() {
   const poolMax = pool.data?.maxConcurrent ?? 3;
   const poolPct = Math.round((poolRunning / poolMax) * 100);
   const hitRate = cache.data?.hitRatePct ?? 0;
+  const redisBadge = redisStatusBadge(pool.data?.redisStatus);
 
   const refreshAll = () => {
     void utils.admin.observability.poolStatus.invalidate();
@@ -116,6 +140,12 @@ export default function Observability() {
               <p className="mt-1 text-xs text-muted-foreground">
                 {pool.data?.queueQueued ?? 0} tasks waiting · {pool.data?.poolDescription}
               </p>
+            </div>
+
+            <div>
+              <Badge variant="outline" className={redisBadge.className}>
+                {redisBadge.label}
+              </Badge>
             </div>
 
             <div>

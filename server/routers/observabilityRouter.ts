@@ -9,6 +9,7 @@ import {
   getTierTimeoutCounts24h,
 } from "../_core/dashboardRequestBuffer";
 import { dashboardQueryQueue } from "../_core/dashboardQueryQueue";
+import { upstashFetch } from "../_core/upstashRedis";
 import { cacheGetJson, cacheSetJson } from "../_core/cache";
 import * as db from "../db";
 import { auditLogs } from "../../drizzle/schema";
@@ -17,14 +18,27 @@ const DB_METRICS_CACHE_KEY = "observability:db:topTables";
 const DB_METRICS_TTL = 3600;
 
 export const observabilityRouter = router({
-  poolStatus: adminProcedure.query(() => {
+  poolStatus: adminProcedure.query(async () => {
     const stats = dashboardQueryQueue.getStats();
+    const redisConfigured = !!(
+      process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
+    );
+    let redisStatus: "connected" | "error" | "fallback" = "fallback";
+    if (redisConfigured) {
+      try {
+        const ping = await upstashFetch("/ping");
+        redisStatus = ping?.ok ? "connected" : "error";
+      } catch {
+        redisStatus = "error";
+      }
+    }
     return {
       queueRunning: stats.running,
       queueQueued: stats.queued,
       maxConcurrent: stats.maxConcurrent,
       dbPoolMax: 3,
       poolDescription: "Supabase transaction pooler (postgres.js max: 3)",
+      redisStatus,
     };
   }),
 

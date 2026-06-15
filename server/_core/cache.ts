@@ -44,8 +44,10 @@ export async function cacheGet(key: string): Promise<string | null> {
 }
 
 export async function cacheSet(key: string, value: string, ttlSeconds: number): Promise<void> {
-  const res = await upstashFetch(`/set/${encodeURIComponent(key)}/${encodeURIComponent(value)}?EX=${ttlSeconds}`, {
+  const res = await upstashFetch("", {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(["SET", key, value, "EX", ttlSeconds]),
   });
   if (!res?.ok) memorySet(key, value, ttlSeconds);
 }

@@ -2625,9 +2625,7 @@ export const appRouter = router({
           stockReadiness,
           distributionVelocity,
         };
-        if (!metricsTimedOut) {
-          await cacheSetJson(metricsCacheKey, metricsPayload, 300);
-        }
+        await cacheSetJson(metricsCacheKey, metricsPayload, metricsTimedOut ? 60 : 300);
         return metricsPayload;
       }),
     /** Single round-trip for dashboard page — one pool, sequential sections. */
