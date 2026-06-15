@@ -7,6 +7,8 @@ import {
   donors,
   binCards,
   distributions,
+  goodsReceivedNoteLines,
+  goodsReceivedNotes,
   inventoryKits,
   kitAssemblies,
   kitCtnContributors,
@@ -52,8 +54,23 @@ import { generateExcelReport, generatePDFReport } from "../reportGenerator";
 import {
   assertCtnMatchesCatalogue,
   ensureStockCardForCtnAtLocation,
+  finalizeGrnLedger,
   insertGrnReceiptMovement,
+  loadGrnFinalizeContext,
+  validateGrnFinalize,
+  type GrnLedgerDb,
 } from "../wms/grnStockLedger";
+import {
+  grnHeaderValuesFromDraft,
+  insertGrnWithLines,
+  mapLegacyInventoryDocToListRow,
+  mapLegacyStatusFilter,
+  mapRelationalGrnToListRow,
+  replaceGrnLines,
+  resolveGrnById,
+  type GrnDraftHeaderInput,
+  type GrnSource,
+} from "../wms/grnRelational";
 import { pickFefoCtnSources } from "../wms/ctnAllocation";
 import {
   dispatchWaybillLedger,
@@ -228,7 +245,15 @@ const documentItemSchema = z.object({
 
 const grnDocumentItemSchema = documentItemSchema.extend({
   ctnId: z.number().int().positive(),
+  consignmentNumber: z.string().optional(),
+  description: z.string().optional(),
+  unitType: z.string().optional(),
+  weightKg: z.number().optional(),
+  receivedInGoodCondition: z.boolean().optional(),
+  claimNotes: z.string().optional(),
 });
+
+const grnSourceSchema = z.enum(["relational", "legacy"]).optional();
 
 const grnDraftInputSchema = z.object({
   grnNumber: z.string().min(1).max(100),
@@ -1149,12 +1174,17 @@ export const inventoryV2Router = router({
           : [{ code: null as string | null }];
         const facilityCode = (site?.code ?? "LOC").toUpperCase();
         const prefix = `NRCS-${facilityCode}-${year}-`;
-        const rows = await db
+        const relationalRows = await db
+          .select({ grnNumber: goodsReceivedNotes.grnNumber })
+          .from(goodsReceivedNotes)
+          .where(ilike(goodsReceivedNotes.grnNumber, `${prefix}%`));
+        const legacyRows = await db
           .select({ documentNumber: inventoryDocuments.documentNumber })
           .from(inventoryDocuments)
           .where(and(eq(inventoryDocuments.documentType, "grn"), ilike(inventoryDocuments.documentNumber, `${prefix}%`)));
-        const max = rows.reduce((acc, row) => {
-          const tail = Number(row.documentNumber.split("-").at(-1));
+        const max = [...relationalRows, ...legacyRows].reduce((acc, row) => {
+          const num = "grnNumber" in row ? row.grnNumber : row.documentNumber;
+          const tail = Number(num.split("-").at(-1));
           return Number.isFinite(tail) ? Math.max(acc, tail) : acc;
         }, 0);
         return {
@@ -1168,56 +1198,32 @@ export const inventoryV2Router = router({
       requireRole(ctx, ["staff", "manager", "admin"]);
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
-      const [dupe] = await db
+      const [dupeRel] = await db
+        .select({ id: goodsReceivedNotes.id })
+        .from(goodsReceivedNotes)
+        .where(eq(goodsReceivedNotes.grnNumber, input.grnNumber))
+        .limit(1);
+      const [dupeLegacy] = await db
         .select({ id: inventoryDocuments.id })
         .from(inventoryDocuments)
         .where(eq(inventoryDocuments.documentNumber, input.grnNumber))
         .limit(1);
-      if (dupe) {
+      if (dupeRel || dupeLegacy) {
         throw new TRPCError({ code: "CONFLICT", message: "GRN number already exists." });
       }
-      const [doc] = await db
-        .insert(inventoryDocuments)
-        .values({
-          documentType: "grn",
-          documentNumber: input.grnNumber,
-          status: "draft",
-          toWarehouseId: input.delegationLocationId,
-          items: input.items,
-          referenceDocument: input.receivedFrom,
-          transportDetails: {
-            countryCode: input.countryCode ?? "NG",
-            dateOfArrival: input.dateOfArrival,
-            documentWellReceived: input.documentWellReceived,
-            incompleteDocumentsNotes: input.incompleteDocumentsNotes ?? null,
-            meansOfTransport: input.meansOfTransport ?? null,
-            awbNumber: input.awbNumber ?? null,
-            waybillCmrNumber: input.waybillCmrNumber ?? null,
-            blNumber: input.blNumber ?? null,
-            flightNumber: input.flightNumber ?? null,
-            registrationNumber: input.registrationNumber ?? null,
-            vesselName: input.vesselName ?? null,
-            comments: input.comments ?? null,
-            deliveredByName: input.deliveredByName ?? null,
-            deliveredByFunction: input.deliveredByFunction ?? null,
-            deliveredByDate: input.deliveredByDate ?? null,
-            deliveredBySignature: input.deliveredBySignature ?? null,
-            receivedByName: input.receivedByName ?? null,
-            receivedByFunction: input.receivedByFunction ?? null,
-            receivedByDate: input.receivedByDate ?? null,
-            receivedBySignature: input.receivedBySignature ?? null,
-          },
-          notes: input.comments ?? null,
-          createdBy: ctx.user.id,
-        })
-        .returning();
-      return doc;
+      const grn = await insertGrnWithLines(
+        db,
+        grnHeaderValuesFromDraft(input as GrnDraftHeaderInput, ctx.user.id, "draft"),
+        input.items as GrnDraftHeaderInput["items"]
+      );
+      return { ...grn, id: grn.id, source: "relational" as const };
     }),
 
     updateDraft: protectedProcedure
       .input(
         z.object({
           documentId: z.number(),
+          source: grnSourceSchema,
           payload: grnDraftInputSchema,
         })
       )
@@ -1225,63 +1231,46 @@ export const inventoryV2Router = router({
         requireRole(ctx, ["staff", "manager", "admin"]);
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
-        const [doc] = await db
+        if (input.source === "legacy") {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Legacy GRNs cannot be edited. Migrate or recreate as relational." });
+        }
+        const [grn] = await db
           .select()
-          .from(inventoryDocuments)
-          .where(and(eq(inventoryDocuments.id, input.documentId), eq(inventoryDocuments.documentType, "grn")))
+          .from(goodsReceivedNotes)
+          .where(eq(goodsReceivedNotes.id, input.documentId))
           .limit(1);
-        if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "GRN not found." });
-        if (doc.status !== "draft" && doc.status !== "pending_approval") {
+        if (!grn) throw new TRPCError({ code: "NOT_FOUND", message: "GRN not found." });
+        if (grn.status !== "draft" && grn.status !== "pending_approval") {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Only draft GRNs can be edited." });
         }
-        const [dupe] = await db
-          .select({ id: inventoryDocuments.id })
-          .from(inventoryDocuments)
+        const [dupeRel] = await db
+          .select({ id: goodsReceivedNotes.id })
+          .from(goodsReceivedNotes)
           .where(
             and(
-              eq(inventoryDocuments.documentNumber, input.payload.grnNumber),
-              sql`${inventoryDocuments.id} <> ${input.documentId}`
+              eq(goodsReceivedNotes.grnNumber, input.payload.grnNumber),
+              sql`${goodsReceivedNotes.id} <> ${input.documentId}`
             )
           )
           .limit(1);
-        if (dupe) {
+        const [dupeLegacy] = await db
+          .select({ id: inventoryDocuments.id })
+          .from(inventoryDocuments)
+          .where(eq(inventoryDocuments.documentNumber, input.payload.grnNumber))
+          .limit(1);
+        if (dupeRel || dupeLegacy) {
           throw new TRPCError({ code: "CONFLICT", message: "GRN number already exists." });
         }
         const [updated] = await db
-          .update(inventoryDocuments)
+          .update(goodsReceivedNotes)
           .set({
-            documentNumber: input.payload.grnNumber,
-            toWarehouseId: input.payload.delegationLocationId,
-            referenceDocument: input.payload.receivedFrom,
-            items: input.payload.items,
-            transportDetails: {
-              countryCode: input.payload.countryCode ?? "NG",
-              dateOfArrival: input.payload.dateOfArrival,
-              documentWellReceived: input.payload.documentWellReceived,
-              incompleteDocumentsNotes: input.payload.incompleteDocumentsNotes ?? null,
-              meansOfTransport: input.payload.meansOfTransport ?? null,
-              awbNumber: input.payload.awbNumber ?? null,
-              waybillCmrNumber: input.payload.waybillCmrNumber ?? null,
-              blNumber: input.payload.blNumber ?? null,
-              flightNumber: input.payload.flightNumber ?? null,
-              registrationNumber: input.payload.registrationNumber ?? null,
-              vesselName: input.payload.vesselName ?? null,
-              comments: input.payload.comments ?? null,
-              deliveredByName: input.payload.deliveredByName ?? null,
-              deliveredByFunction: input.payload.deliveredByFunction ?? null,
-              deliveredByDate: input.payload.deliveredByDate ?? null,
-              deliveredBySignature: input.payload.deliveredBySignature ?? null,
-              receivedByName: input.payload.receivedByName ?? null,
-              receivedByFunction: input.payload.receivedByFunction ?? null,
-              receivedByDate: input.payload.receivedByDate ?? null,
-              receivedBySignature: input.payload.receivedBySignature ?? null,
-            },
-            notes: input.payload.comments ?? null,
+            ...grnHeaderValuesFromDraft(input.payload as GrnDraftHeaderInput, ctx.user.id, "draft"),
             status: "draft",
           })
-          .where(eq(inventoryDocuments.id, input.documentId))
+          .where(eq(goodsReceivedNotes.id, input.documentId))
           .returning();
-        return updated;
+        await replaceGrnLines(db, input.documentId, input.payload.items as GrnDraftHeaderInput["items"]);
+        return { ...updated!, source: "relational" as const };
       }),
 
     create: protectedProcedure
@@ -1308,96 +1297,154 @@ export const inventoryV2Router = router({
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
         const documentNumber = await nextDocumentNumber("GRN");
-        const [doc] = await db
-          .insert(inventoryDocuments)
-          .values({
-            documentType: "grn",
-            documentNumber,
+        const grn = await insertGrnWithLines(
+          db,
+          {
+            grnNumber: documentNumber,
+            countryCode: "NG",
+            delegationLocationId: input.warehouseId,
+            receivedFrom: input.supplierName || input.referenceDocument || "Supplier",
+            dateOfArrival: new Date().toISOString().slice(0, 10),
+            documentWellReceived: true,
+            comments: input.notes ?? null,
             status: "pending_approval",
-            toWarehouseId: input.warehouseId,
-            items: input.items,
-            referenceDocument: input.referenceDocument ?? null,
-            transportDetails: input.transportDetails ?? null,
-            notes: input.notes ?? null,
             createdBy: ctx.user.id,
-          })
-          .returning();
-        return doc;
+            updatedAt: new Date(),
+          },
+          input.items as GrnDraftHeaderInput["items"]
+        );
+        return { ...grn, id: grn.id, source: "relational" as const };
       }),
 
     approve: protectedProcedure
-      .input(z.object({ documentId: z.number() }))
+      .input(z.object({ documentId: z.number(), source: grnSourceSchema }))
       .mutation(async ({ input, ctx }) => {
         requireRole(ctx, ["manager", "admin"]);
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
-        const [doc] = await db
-          .select()
-          .from(inventoryDocuments)
-          .where(and(eq(inventoryDocuments.id, input.documentId), eq(inventoryDocuments.documentType, "grn")))
-          .limit(1);
-        if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "GRN not found." });
-        const lines = Array.isArray(doc.items) ? (doc.items as z.infer<typeof grnDocumentItemSchema>[]) : [];
-        for (const line of lines) {
-          if (line.ctnId == null) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message:
-                "GRN lines must specify a CTN. Create the CTN in the CTN Registry first, or use the GRN form's inline CTN creator.",
+
+        const useLegacy =
+          input.source === "legacy" ||
+          (input.source !== "relational" &&
+            !(await db.select({ id: goodsReceivedNotes.id }).from(goodsReceivedNotes).where(eq(goodsReceivedNotes.id, input.documentId)).limit(1))[0]);
+
+        if (useLegacy) {
+          const [doc] = await db
+            .select()
+            .from(inventoryDocuments)
+            .where(and(eq(inventoryDocuments.id, input.documentId), eq(inventoryDocuments.documentType, "grn")))
+            .limit(1);
+          if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "GRN not found." });
+          const lines = Array.isArray(doc.items) ? (doc.items as z.infer<typeof grnDocumentItemSchema>[]) : [];
+          for (const line of lines) {
+            if (line.ctnId == null) {
+              throw new TRPCError({
+                code: "BAD_REQUEST",
+                message:
+                  "GRN lines must specify a CTN. Create the CTN in the CTN Registry first, or use the GRN form's inline CTN creator.",
+              });
+            }
+            try {
+              await assertCtnMatchesCatalogue(db, line.ctnId, line.catalogueId);
+            } catch (e) {
+              throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: e instanceof Error ? e.message : String(e),
+              });
+            }
+            const stockCardId = await ensureStockCardForCtnAtLocation(db, {
+              ctnId: line.ctnId,
+              locationId: Number(doc.toWarehouseId),
+            });
+            await insertGrnReceiptMovement(db, {
+              stockCardId,
+              quantityIn: line.quantity,
+              documentNumber: doc.documentNumber,
+              fromTo: doc.referenceDocument ?? null,
+              remarks: line.notes ?? null,
+              createdBy: ctx.user.id,
             });
           }
-          try {
-            await assertCtnMatchesCatalogue(db, line.ctnId, line.catalogueId);
-          } catch (e) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: e instanceof Error ? e.message : String(e),
+          await db
+            .update(inventoryDocuments)
+            .set({ status: "completed", approvedBy: ctx.user.id, approvedAt: new Date(), completedAt: new Date() })
+            .where(eq(inventoryDocuments.id, doc.id));
+          await notifyManagers("GRN Approved", `GRN ${doc.documentNumber} completed.`, doc.id);
+          if (process.env.WMS_GRN_NOTIFY_TO) {
+            const emailService = createEmailService();
+            await emailService.send({
+              type: "grn_finalized",
+              to: process.env.WMS_GRN_NOTIFY_TO,
+              subject: `GRN ${doc.documentNumber} finalized - ${lines.length} items received`,
+              html: `<p>GRN <strong>${doc.documentNumber}</strong> has been finalized with ${lines.length} line item(s).</p>`,
             });
           }
-          const stockCardId = await ensureStockCardForCtnAtLocation(db, {
-            ctnId: line.ctnId,
-            locationId: Number(doc.toWarehouseId),
+          await logAuditEvent({
+            userId: ctx.user.id,
+            action: AUDIT_ACTIONS.INVENTORY_GOODS_RECEIVED,
+            entityType: "grn",
+            entityId: doc.id,
+            changes: {
+              documentNumber: doc.documentNumber,
+              warehouseId: doc.toWarehouseId,
+              lineCount: lines.length,
+              source: "legacy",
+              items: lines.map((line) => ({
+                catalogueId: line.catalogueId,
+                quantity: line.quantity,
+              })),
+            },
+            req: ctx.req,
           });
-          await insertGrnReceiptMovement(db, {
-            stockCardId,
-            quantityIn: line.quantity,
-            documentNumber: doc.documentNumber,
-            fromTo: doc.referenceDocument ?? null,
-            remarks: line.notes ?? null,
-            createdBy: ctx.user.id,
+          return { success: true as const, source: "legacy" as const };
+        }
+
+        const finalizeCtx = await loadGrnFinalizeContext(db, input.documentId);
+        try {
+          await validateGrnFinalize(db, finalizeCtx);
+        } catch (e) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: e instanceof Error ? e.message : String(e),
           });
         }
-        await db
-          .update(inventoryDocuments)
-          .set({ status: "completed", approvedBy: ctx.user.id, approvedAt: new Date(), completedAt: new Date() })
-          .where(eq(inventoryDocuments.id, doc.id));
-        await notifyManagers("GRN Approved", `GRN ${doc.documentNumber} completed.`, doc.id);
+        await db.transaction(async (tx) => {
+          await finalizeGrnLedger(tx as unknown as GrnLedgerDb, finalizeCtx, { userId: ctx.user.id });
+          await tx
+            .update(goodsReceivedNotes)
+            .set({
+              status: "finalized",
+              finalizedBy: ctx.user.id,
+              finalizedAt: new Date(),
+              updatedAt: new Date(),
+            })
+            .where(eq(goodsReceivedNotes.id, input.documentId));
+        });
+        const { grn, lines } = finalizeCtx;
+        await notifyManagers("GRN Approved", `GRN ${grn.grnNumber} finalized.`, grn.id);
         if (process.env.WMS_GRN_NOTIFY_TO) {
           const emailService = createEmailService();
           await emailService.send({
             type: "grn_finalized",
             to: process.env.WMS_GRN_NOTIFY_TO,
-            subject: `GRN ${doc.documentNumber} finalized - ${lines.length} items received`,
-            html: `<p>GRN <strong>${doc.documentNumber}</strong> has been finalized with ${lines.length} line item(s).</p>`,
+            subject: `GRN ${grn.grnNumber} finalized - ${lines.length} items received`,
+            html: `<p>GRN <strong>${grn.grnNumber}</strong> has been finalized with ${lines.length} line item(s).</p>`,
           });
         }
         await logAuditEvent({
           userId: ctx.user.id,
           action: AUDIT_ACTIONS.INVENTORY_GOODS_RECEIVED,
           entityType: "grn",
-          entityId: doc.id,
+          entityId: grn.id,
           changes: {
-            documentNumber: doc.documentNumber,
-            warehouseId: doc.toWarehouseId,
+            documentNumber: grn.grnNumber,
+            warehouseId: grn.delegationLocationId,
             lineCount: lines.length,
-            items: lines.map((line) => ({
-              catalogueId: line.catalogueId,
-              quantity: line.quantity,
-            })),
+            source: "relational",
           },
           req: ctx.req,
         });
-        return { success: true as const };
+        return { success: true as const, source: "relational" as const };
       }),
 
     list: protectedProcedure
@@ -1405,7 +1452,7 @@ export const inventoryV2Router = router({
         z
           .object({
             warehouseId: z.number().optional(),
-            status: z.enum(["draft", "finalized", "claim_raised"]).optional(),
+            status: z.enum(["draft", "pending_approval", "finalized", "claim_raised"]).optional(),
             search: z.string().optional(),
             receivedFrom: z.string().optional(),
             dateFrom: z.string().optional(),
@@ -1420,81 +1467,129 @@ export const inventoryV2Router = router({
 
         const db = await getDb();
         if (!db) return [];
-        const statusFilter =
-          input?.status === "draft"
-            ? "pending_approval"
-            : input?.status === "finalized"
-              ? "completed"
-              : input?.status === "claim_raised"
-                ? "claim_raised"
-                : undefined;
         const search = input?.search?.trim();
         const receivedFrom = input?.receivedFrom?.trim();
         const limit = resolveListLimit(input?.limit);
         const offset = resolveListOffset(input?.offset);
-        return db
+
+        const relationalFilters = [];
+        if (scopedWarehouseId != null && scopedWarehouseId > 0) {
+          relationalFilters.push(eq(goodsReceivedNotes.delegationLocationId, scopedWarehouseId));
+        }
+        if (input?.status) {
+          relationalFilters.push(eq(goodsReceivedNotes.status, input.status));
+        }
+        if (search) {
+          relationalFilters.push(
+            or(
+              ilike(goodsReceivedNotes.grnNumber, `%${search}%`),
+              ilike(goodsReceivedNotes.receivedFrom, `%${search}%`)
+            )!
+          );
+        }
+        if (receivedFrom) {
+          relationalFilters.push(ilike(goodsReceivedNotes.receivedFrom, `%${receivedFrom}%`));
+        }
+        if (input?.dateFrom) {
+          relationalFilters.push(gte(goodsReceivedNotes.createdAt, new Date(`${input.dateFrom}T00:00:00.000Z`)));
+        }
+        if (input?.dateTo) {
+          relationalFilters.push(lte(goodsReceivedNotes.createdAt, new Date(`${input.dateTo}T23:59:59.999Z`)));
+        }
+
+        const relationalRows = await db
+          .select()
+          .from(goodsReceivedNotes)
+          .where(relationalFilters.length ? and(...relationalFilters) : undefined)
+          .orderBy(desc(goodsReceivedNotes.createdAt));
+
+        const relationalIds = relationalRows.map((row) => row.id);
+        const lineCounts =
+          relationalIds.length > 0
+            ? await db
+                .select({
+                  grnId: goodsReceivedNoteLines.grnId,
+                  count: sql<number>`count(*)::int`.mapWith(Number),
+                })
+                .from(goodsReceivedNoteLines)
+                .where(inArray(goodsReceivedNoteLines.grnId, relationalIds))
+                .groupBy(goodsReceivedNoteLines.grnId)
+            : [];
+        const lineCountByGrnId = new Map(lineCounts.map((row) => [row.grnId, row.count]));
+
+        const legacyFilters = [eq(inventoryDocuments.documentType, "grn")];
+        if (scopedWarehouseId != null && scopedWarehouseId > 0) {
+          legacyFilters.push(eq(inventoryDocuments.toWarehouseId, scopedWarehouseId));
+        }
+        if (input?.status) {
+          legacyFilters.push(eq(inventoryDocuments.status, mapLegacyStatusFilter(input.status)));
+        }
+        if (search) {
+          legacyFilters.push(
+            or(
+              ilike(inventoryDocuments.documentNumber, `%${search}%`),
+              ilike(inventoryDocuments.referenceDocument, `%${search}%`)
+            )!
+          );
+        }
+        if (receivedFrom) {
+          legacyFilters.push(ilike(inventoryDocuments.referenceDocument, `%${receivedFrom}%`));
+        }
+        if (input?.dateFrom) {
+          legacyFilters.push(gte(inventoryDocuments.createdAt, new Date(`${input.dateFrom}T00:00:00.000Z`)));
+        }
+        if (input?.dateTo) {
+          legacyFilters.push(lte(inventoryDocuments.createdAt, new Date(`${input.dateTo}T23:59:59.999Z`)));
+        }
+
+        const legacyRows = await db
           .select()
           .from(inventoryDocuments)
-          .where(
-            and(
-              eq(inventoryDocuments.documentType, "grn"),
-              scopedWarehouseId != null && scopedWarehouseId > 0
-                ? eq(inventoryDocuments.toWarehouseId, scopedWarehouseId)
-                : undefined,
-              statusFilter ? eq(inventoryDocuments.status, statusFilter) : undefined,
-              search
-                ? or(
-                    ilike(inventoryDocuments.documentNumber, `%${search}%`),
-                    ilike(inventoryDocuments.referenceDocument, `%${search}%`)
-                  )
-                : undefined,
-              receivedFrom ? ilike(inventoryDocuments.referenceDocument, `%${receivedFrom}%`) : undefined,
-              input?.dateFrom ? gte(inventoryDocuments.createdAt, new Date(`${input.dateFrom}T00:00:00.000Z`)) : undefined,
-              input?.dateTo ? lte(inventoryDocuments.createdAt, new Date(`${input.dateTo}T23:59:59.999Z`)) : undefined
-            )
-          )
-          .orderBy(desc(inventoryDocuments.createdAt))
-          .limit(limit)
-          .offset(offset);
+          .where(and(...legacyFilters))
+          .orderBy(desc(inventoryDocuments.createdAt));
+
+        const merged = [
+          ...relationalRows.map((row) => mapRelationalGrnToListRow(row, lineCountByGrnId.get(row.id) ?? 0)),
+          ...legacyRows.map(mapLegacyInventoryDocToListRow),
+        ].sort((a, b) => {
+          const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return bTime - aTime;
+        });
+
+        return merged.slice(offset, offset + limit);
       }),
 
     get: protectedProcedure
-      .input(z.object({ documentId: z.number() }))
+      .input(z.object({ documentId: z.number(), source: grnSourceSchema }))
       .query(async ({ input, ctx }) => {
         const db = await getDb();
         if (!db) return null;
-        const [doc] = await db
-          .select()
-          .from(inventoryDocuments)
-          .where(and(eq(inventoryDocuments.id, input.documentId), eq(inventoryDocuments.documentType, "grn")))
-          .limit(1);
-        if (!doc) return null;
-        assertRecordFacilityAccess(ctx.user, doc.toWarehouseId);
-        return doc;
+        const detail = await resolveGrnById(db, input.documentId, input.source as GrnSource | undefined);
+        if (!detail) return null;
+        assertRecordFacilityAccess(ctx.user, detail.toWarehouseId);
+        return detail;
       }),
+
     downloadPdf: protectedProcedure
-      .input(z.object({ documentId: z.number() }))
+      .input(z.object({ documentId: z.number(), source: grnSourceSchema }))
       .mutation(async ({ input, ctx }) => {
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
-        const [doc] = await db
-          .select()
-          .from(inventoryDocuments)
-          .where(and(eq(inventoryDocuments.id, input.documentId), eq(inventoryDocuments.documentType, "grn")))
-          .limit(1);
-        if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "GRN not found." });
-        assertRecordFacilityAccess(ctx.user, doc.toWarehouseId);
+        const detail = await resolveGrnById(db, input.documentId, input.source as GrnSource | undefined);
+        if (!detail) throw new TRPCError({ code: "NOT_FOUND", message: "GRN not found." });
+        assertRecordFacilityAccess(ctx.user, detail.toWarehouseId);
         const rows = [
-          { label: "Document Number", value: doc.documentNumber },
-          { label: "Status", value: doc.status ?? "draft" },
-          { label: "Reference", value: doc.referenceDocument ?? "—" },
-          { label: "Created At", value: doc.createdAt ? new Date(doc.createdAt).toISOString() : "—" },
-          { label: "Notes", value: doc.notes ?? "—" },
+          { label: "Document Number", value: detail.documentNumber },
+          { label: "Status", value: detail.status ?? "draft" },
+          { label: "Reference", value: detail.referenceDocument ?? "—" },
+          { label: "Created At", value: detail.createdAt ? new Date(detail.createdAt).toISOString() : "—" },
+          { label: "Notes", value: detail.notes ?? "—" },
         ];
         const buffer = await generateGrnPdf({ rows });
         return {
           data: buffer.toString("base64"),
-          filename: `${doc.documentNumber}.pdf`,
+          filename: `${detail.documentNumber}.pdf`,
           mimeType: "application/pdf",
         };
       }),

@@ -43,6 +43,11 @@ export default function ReceiptDetail() {
   const [matchNew] = useRoute("/app/inventory/receipts/new");
   const [, params] = useRoute("/app/inventory/receipts/:id");
   const documentId = !matchNew && params?.id ? Number(params.id) : null;
+  const grnSource = useMemo(() => {
+    if (typeof window === "undefined") return undefined;
+    const source = new URLSearchParams(window.location.search).get("source");
+    return source === "legacy" ? ("legacy" as const) : source === "relational" ? ("relational" as const) : undefined;
+  }, [documentId]);
 
   const [form, setForm] = useState({
     grnNumber: "",
@@ -77,7 +82,7 @@ export default function ReceiptDetail() {
     { enabled: savedId == null }
   );
   const receiptQuery = trpc.inventoryV2.receipts.get.useQuery(
-    { documentId: documentId ?? 0 },
+    { documentId: documentId ?? 0, source: grnSource },
     { enabled: documentId != null }
   );
 
@@ -182,7 +187,9 @@ export default function ReceiptDetail() {
     if (lines.some((l) => !l.ctnId || Number(l.nbOfUnits) <= 0)) return false;
     return true;
   }, [deliveredBy.name, form.dateOfArrival, form.delegationLocationId, form.grnNumber, form.receivedFrom, lines, receivedBy.name]);
-  const isFinalized = receiptQuery.data?.status === "completed";
+  const isFinalized =
+    receiptQuery.data?.status === "completed" || receiptQuery.data?.status === "finalized";
+  const isLegacy = receiptQuery.data?.source === "legacy";
 
   const payload = useMemo(
     () => ({
@@ -236,7 +243,11 @@ export default function ReceiptDetail() {
       setLocation(`/app/inventory/receipts/${created.id}`);
       toast.success("GRN draft saved.");
     } else {
-      await updateDraft.mutateAsync({ documentId: savedId, payload: payload as any });
+      await updateDraft.mutateAsync({
+        documentId: savedId,
+        source: grnSource ?? "relational",
+        payload: payload as any,
+      });
       toast.success("GRN draft updated.");
     }
     setDirty(false);
@@ -254,10 +265,17 @@ export default function ReceiptDetail() {
       const created = await createDraft.mutateAsync(payload as any);
       setSavedId(created.id);
     } else {
-      await updateDraft.mutateAsync({ documentId: savedId, payload: payload as any });
+      await updateDraft.mutateAsync({
+        documentId: savedId,
+        source: grnSource ?? "relational",
+        payload: payload as any,
+      });
     }
     const id = savedId ?? (await createDraft.mutateAsync(payload as any)).id;
-    await approveMutation.mutateAsync({ documentId: id });
+    await approveMutation.mutateAsync({
+      documentId: id,
+      source: grnSource ?? (isLegacy ? "legacy" : "relational"),
+    });
     toast.success("GRN finalized.");
     setDirty(false);
     void receiptQuery.refetch();
@@ -381,7 +399,7 @@ export default function ReceiptDetail() {
 
             <div className="flex flex-wrap justify-end gap-2">
               <Button variant="outline" onClick={() => setLocation("/app/inventory/receipts")}>Cancel</Button>
-              <Button variant="outline" disabled={draftPending} onClick={() => void saveDraft()}>
+              <Button variant="outline" disabled={draftPending || isLegacy || isFinalized} onClick={() => void saveDraft()}>
                 {draftPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -391,7 +409,7 @@ export default function ReceiptDetail() {
                   "Save as Draft"
                 )}
               </Button>
-              <Button onClick={() => void finalize()} disabled={!isFinalizable || finalizePending}>
+              <Button onClick={() => void finalize()} disabled={!isFinalizable || finalizePending || isLegacy || isFinalized}>
                 {finalizePending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

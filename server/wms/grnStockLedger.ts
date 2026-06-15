@@ -2,15 +2,92 @@
  * Phase 2 — GRN receipt lines that reference a CTN write to `stock_movements`
  * (see docs/inventory-ledger-architecture.md Decision 1).
  */
-import { and, eq, sql } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import {
   commodityTrackingNumbers,
+  goodsReceivedNoteLines,
+  goodsReceivedNotes,
   inventoryCatalogue,
   stockCards,
   stockMovements,
+  type GoodsReceivedNote,
+  type GoodsReceivedNoteLine,
 } from "../../drizzle/schema";
 import { ensureOpenBinCardForStockCard } from "./binCard";
+
 type Db = NonNullable<Awaited<ReturnType<typeof import("../db").getDb>>>;
+export type GrnLedgerDb = Db;
+
+export type GrnFinalizeContext = {
+  grn: GoodsReceivedNote;
+  lines: GoodsReceivedNoteLine[];
+};
+
+export async function loadGrnFinalizeContext(db: Db, grnId: number): Promise<GrnFinalizeContext> {
+  const [grn] = await db.select().from(goodsReceivedNotes).where(eq(goodsReceivedNotes.id, grnId)).limit(1);
+  if (!grn) {
+    throw new Error("GRN not found.");
+  }
+  const lines = await db
+    .select()
+    .from(goodsReceivedNoteLines)
+    .where(eq(goodsReceivedNoteLines.grnId, grnId))
+    .orderBy(asc(goodsReceivedNoteLines.lineOrder));
+  return { grn, lines };
+}
+
+export async function validateGrnFinalize(db: Db, ctx: GrnFinalizeContext): Promise<void> {
+  const { grn, lines } = ctx;
+  if (grn.status !== "draft" && grn.status !== "pending_approval") {
+    throw new Error("GRN is not in a finalizable state.");
+  }
+  if (lines.length === 0) {
+    throw new Error("GRN has no line items.");
+  }
+  const errors: string[] = [];
+  for (const line of lines) {
+    if (line.ctnId == null) {
+      errors.push(
+        `Line ${line.lineOrder + 1}: CTN is required. Create the CTN in the CTN Registry first, or use the GRN form's inline CTN creator.`
+      );
+      continue;
+    }
+    const [ctn] = await db
+      .select({ id: commodityTrackingNumbers.id })
+      .from(commodityTrackingNumbers)
+      .where(eq(commodityTrackingNumbers.id, line.ctnId))
+      .limit(1);
+    if (!ctn) {
+      errors.push(`Line ${line.lineOrder + 1}: CTN not found.`);
+    }
+  }
+  if (errors.length > 0) {
+    throw new Error(errors.join(" "));
+  }
+}
+
+export async function finalizeGrnLedger(
+  db: Db,
+  ctx: GrnFinalizeContext,
+  params: { userId: number | null }
+): Promise<void> {
+  const { grn, lines } = ctx;
+  for (const line of lines) {
+    if (line.ctnId == null) continue;
+    const stockCardId = await ensureStockCardForCtnAtLocation(db, {
+      ctnId: line.ctnId,
+      locationId: grn.delegationLocationId,
+    });
+    await insertGrnReceiptMovement(db, {
+      stockCardId,
+      quantityIn: Number(line.nbOfUnits),
+      documentNumber: grn.grnNumber,
+      fromTo: grn.receivedFrom ?? null,
+      remarks: line.claimNotes ?? null,
+      createdBy: params.userId,
+    });
+  }
+}
 
 export async function assertCtnMatchesCatalogue(db: Db, ctnId: number, catalogueId: number): Promise<void> {
   const [row] = await db

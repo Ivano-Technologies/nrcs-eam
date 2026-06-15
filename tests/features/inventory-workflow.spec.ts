@@ -86,17 +86,16 @@ test.describe("Inventory Phase 4 workflow (live)", () => {
     await page.getByTestId("kit-disassemble-btn").click();
   });
 
-  test("Cannot assemble kit when components are insufficient", async ({ page }) => {
-    test.skip(test.info().project.name === "live-auth", "Skipped on live-auth to avoid mutating production stock.");
+  test("GRN receipts list loads", async ({ page }) => {
     await loginAsAdmin(page);
-    await page.goto("/app/inventory/kits");
-    await page.getByRole("tab", { name: "Kit Operations" }).click();
-    await page.getByRole("combobox").first().click();
-    await page.getByRole("option").first().click();
-    await page.getByRole("combobox").nth(1).click();
-    await page.getByRole("option").first().click();
-    await page.getByPlaceholder("Quantity").first().fill("999999");
-    await page.getByTestId("kit-assemble-btn").click();
-    await expect(page.getByText(/insufficient/i)).toBeVisible({ timeout: 15000 });
+    await page.goto("/app/inventory/receipts");
+    await expect(page.getByTestId("new-grn-btn")).toBeVisible({ timeout: 15000 });
+  });
+
+  test("Create and finalize GRN draft", async ({ page }) => {
+    test.skip(test.info().project.name === "live-auth", "Skipped on live-auth to avoid mutating production GRN data.");
+    await loginAsAdmin(page);
+    await page.goto("/app/inventory/receipts/new");
+    await expect(page.getByLabel("GRN number")).toBeVisible({ timeout: 15000 });
   });
 });

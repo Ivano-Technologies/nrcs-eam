@@ -167,7 +167,12 @@ export const wmsMeansOfTransportEnum = pgEnum("wms_means_of_transport", [
   "handcarried",
 ]);
 
-export const grnStatusEnum = pgEnum("grn_status", ["draft", "finalized", "claim_raised"]);
+export const grnStatusEnum = pgEnum("grn_status", [
+  "draft",
+  "pending_approval",
+  "finalized",
+  "claim_raised",
+]);
 
 export const waybillDocTypeEnum = pgEnum("waybill_doc_type", ["waybill", "delivery_note"]);
 
@@ -696,6 +701,7 @@ export const goodsReceivedNotes = pgTable(
   {
     id: serial("id").primaryKey(),
     grnNumber: varchar("grn_number", { length: 100 }).notNull().unique(),
+    countryCode: varchar("country_code", { length: 8 }).default("NG"),
     consignmentNumber: varchar("consignment_number", { length: 100 }),
     delegationLocationId: integer("delegation_location_id")
       .notNull()
@@ -722,6 +728,8 @@ export const goodsReceivedNotes = pgTable(
     comments: text("comments"),
     copiesPrinted: jsonb("copies_printed").$type<Record<string, string | null>>().notNull().default({}),
     status: grnStatusEnum("status").notNull().default("draft"),
+    finalizedBy: integer("finalized_by").references(() => users.id),
+    finalizedAt: timestamp("finalized_at", { mode: "date" }),
     createdBy: integer("created_by").references(() => users.id),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),

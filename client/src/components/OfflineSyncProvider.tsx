@@ -25,6 +25,7 @@ export function OfflineSyncProvider({ children }: { children: React.ReactNode })
           } else {
             await updateDraft.mutateAsync({
               documentId: item.documentId,
+              source: "relational",
               payload: item.payload as never,
             });
           }

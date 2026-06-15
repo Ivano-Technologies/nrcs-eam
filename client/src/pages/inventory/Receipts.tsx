@@ -20,7 +20,7 @@ type Line = { catalogueId: string; ctnId: string; quantity: string; batchNumber:
 export default function Receipts({ embedInShell = false }: { embedInShell?: boolean } = {}) {
   const [location, setLocation] = useLocation();
   const { isManagerOrAdmin, isStaffOrAbove } = usePermissions();
-  const [status, setStatus] = useState<"all" | "draft" | "finalized" | "claim_raised">("all");
+  const [status, setStatus] = useState<"all" | "draft" | "pending_approval" | "finalized" | "claim_raised">("all");
   const [warehouseId, setWarehouseId] = useState("all");
   const [search, setSearch] = useState("");
   const [receivedFrom, setReceivedFrom] = useState("");
@@ -36,7 +36,7 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
   useEffect(() => {
     if (typeof window === "undefined") return;
     const st = new URLSearchParams(window.location.search).get("status");
-    if (st === "all" || st === "draft" || st === "finalized" || st === "claim_raised") {
+    if (st === "all" || st === "draft" || st === "pending_approval" || st === "finalized" || st === "claim_raised") {
       setStatus(st);
     }
   }, [location]);
@@ -101,6 +101,7 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
               <SelectContent>
                 <SelectItem value="all">All status</SelectItem>
                 <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="pending_approval">Pending Approval</SelectItem>
                 <SelectItem value="finalized">Finalized</SelectItem>
                 <SelectItem value="claim_raised">Claim Raised</SelectItem>
               </SelectContent>
@@ -149,21 +150,35 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
           <tbody>
             {(receipts.data ?? []).map((row) => (
               <tr
-                key={row.id}
+                key={`${row.source}-${row.id}`}
                 data-testid={`grn-row-${row.documentNumber}`}
                 className="cursor-pointer border-b hover:bg-muted/30"
-                onClick={() => setLocation(`/app/inventory/receipts/${row.id}`)}
+                onClick={() =>
+                  setLocation(
+                    row.source === "legacy"
+                      ? `/app/inventory/receipts/${row.id}?source=legacy`
+                      : `/app/inventory/receipts/${row.id}`
+                  )
+                }
               >
                 <td className="px-2 py-2 font-mono">{row.documentNumber}</td>
-                <td className="px-2 py-2">{row.createdAt ? new Date(row.createdAt).toLocaleDateString() : "—"}</td>
-                <td className="px-2 py-2">{row.referenceDocument ?? "—"}</td>
-                <td className="px-2 py-2">{row.referenceDocument ?? "—"}</td>
-                <td className="px-2 py-2">{Array.isArray(row.items) ? row.items.length : 0}</td>
                 <td className="px-2 py-2">
-                  {row.status === "completed" ? (
+                  {row.dateOfArrival
+                    ? new Date(row.dateOfArrival).toLocaleDateString()
+                    : row.createdAt
+                      ? new Date(row.createdAt).toLocaleDateString()
+                      : "—"}
+                </td>
+                <td className="px-2 py-2">{row.referenceDocument ?? "—"}</td>
+                <td className="px-2 py-2">{row.referenceDocument ?? "—"}</td>
+                <td className="px-2 py-2">{row.lineCount}</td>
+                <td className="px-2 py-2">
+                  {row.status === "finalized" || row.status === "completed" ? (
                     <Badge className="bg-green-600">finalized</Badge>
                   ) : row.status === "claim_raised" ? (
                     <Badge variant="destructive">claim_raised</Badge>
+                  ) : row.status === "pending_approval" ? (
+                    <Badge variant="outline">pending approval</Badge>
                   ) : (
                     <Badge variant="secondary">draft</Badge>
                   )}
@@ -178,7 +193,10 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
                       e.stopPropagation();
                       void (async () => {
                         try {
-                          const file = await downloadPdfMutation.mutateAsync({ documentId: row.id });
+                          const file = await downloadPdfMutation.mutateAsync({
+                            documentId: row.id,
+                            source: row.source,
+                          });
                           downloadBase64File(file.data, file.filename || `${row.documentNumber}.pdf`, file.mimeType);
                           toast.success("PDF downloaded.");
                         } catch {
@@ -203,7 +221,7 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
                       disabled={approveMutation.isPending && approveMutation.variables?.documentId === row.id}
                       onClick={(e) => {
                         e.stopPropagation();
-                        approveMutation.mutate({ documentId: row.id });
+                        approveMutation.mutate({ documentId: row.id, source: row.source });
                       }}
                     >
                       {approveMutation.isPending && approveMutation.variables?.documentId === row.id ? (
