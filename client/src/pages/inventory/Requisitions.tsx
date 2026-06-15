@@ -62,6 +62,7 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
 
   const { data: facilities } = trpc.sites.list.useQuery();
   const { data: catalogue } = trpc.inventoryV2.catalogue.list.useQuery();
+  const utils = trpc.useUtils();
   const list = trpc.inventoryV2.requisitions.list.useQuery({
     status: status === "all" ? undefined : status,
     priority: priority === "all" ? undefined : priority,
@@ -79,13 +80,39 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
   const submitMutation = trpc.inventoryV2.requisitions.submit.useMutation({ onSuccess: () => void list.refetch() });
   const approveBranchMutation = trpc.inventoryV2.requisitions.approveBranch.useMutation({ onSuccess: () => void list.refetch() });
   const approveHqMutation = trpc.inventoryV2.requisitions.approveHq.useMutation({ onSuccess: () => void list.refetch() });
-  const fulfillMutation = trpc.inventoryV2.requisitions.fulfill.useMutation({ onSuccess: () => void list.refetch() });
+  const fulfillMutation = trpc.inventoryV2.requisitions.fulfill.useMutation({
+    onSuccess: (result) => {
+      void list.refetch();
+      toast.success(`Fulfilled. Waybill ${result.waybillNumber}`, {
+        action: {
+          label: "Open waybill",
+          onClick: () => setLocation(`/app/inventory/issues/${result.waybillId}`),
+        },
+      });
+    },
+    onError: (e) => toast.error(e.message),
+  });
   const rejectMutation = trpc.inventoryV2.requisitions.reject.useMutation({ onSuccess: () => void list.refetch() });
   const downloadPdfMutation = trpc.inventoryV2.requisitions.downloadPdf.useMutation({
     onError: (e) => toast.error(e.message),
   });
 
   const warehouses = useMemo(() => (facilities ?? []).filter((f) => f.facilityType === "warehouse"), [facilities]);
+
+  const handleFulfill = async (requisitionId: number) => {
+    try {
+      const suggested = await utils.inventoryV2.requisitions.suggestWarehouse.fetch({ requisitionId });
+      const fromWarehouseId = suggested?.id ?? warehouses[0]?.id;
+      if (!fromWarehouseId) {
+        toast.error("No warehouse available for fulfillment.");
+        return;
+      }
+      await fulfillMutation.mutateAsync({ requisitionId, fromWarehouseId });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Fulfillment failed.";
+      toast.error(message);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -256,7 +283,7 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
                       <Button
                         size="sm"
                         disabled={fulfillMutation.isPending && fulfillMutation.variables?.requisitionId === row.id}
-                        onClick={() => fulfillMutation.mutate({ requisitionId: row.id, fromWarehouseId: warehouses[0]?.id ?? 0 })}
+                        onClick={() => void handleFulfill(row.id)}
                       >
                         {fulfillMutation.isPending && fulfillMutation.variables?.requisitionId === row.id ? (
                           <>

@@ -16,6 +16,7 @@ export const AUDIT_ACTIONS = {
   REQUISITION_APPROVE_BRANCH: "requisition.approve_branch",
   REQUISITION_APPROVE_HQ: "requisition.approve_hq",
   REQUISITION_REJECT: "requisition.reject",
+  REQUISITION_FULFILL: "requisition.fulfill",
   USER_CREATE: "user.create",
   USER_UPDATE: "user.update",
   USER_DEACTIVATE: "user.deactivate",

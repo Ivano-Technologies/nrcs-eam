@@ -30,6 +30,8 @@ test.describe("Inventory Phase 4 workflow (live)", () => {
     const fulfill = page.getByRole("button", { name: "Fulfill" }).first();
     if (await fulfill.count()) await fulfill.click();
     await expect(page.locator("[data-testid^='req-row-']").first()).toBeVisible();
+    await page.goto("/app/inventory/issues");
+    await expect(page.locator("[data-testid^='waybill-row-']").first()).toBeVisible({ timeout: 15000 });
   });
 
   test("Create distribution from waybill", async ({ page }) => {

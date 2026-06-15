@@ -54,6 +54,12 @@ import {
   ensureStockCardForCtnAtLocation,
   insertGrnReceiptMovement,
 } from "../wms/grnStockLedger";
+import { pickFefoCtnSources } from "../wms/ctnAllocation";
+import {
+  dispatchWaybillLedger,
+  loadWaybillDispatchContext,
+  validateWaybillDispatch,
+} from "../wms/waybillStockLedger";
 import { expandKitDonorContribution } from "../wms/kitDonorContribution";
 import {
   buildRetroactiveStockCheckRemark,
@@ -1745,117 +1751,34 @@ export const inventoryV2Router = router({
         requireRole(ctx, ["staff", "manager", "admin"]);
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
-        const [wb] = await db.select().from(waybills).where(eq(waybills.id, input.id)).limit(1);
-        if (!wb) throw new TRPCError({ code: "NOT_FOUND", message: "Waybill not found." });
-        assertRecordFacilityAccess(ctx.user, wb.warehouseId);
-        if (wb.status !== "draft") throw new TRPCError({ code: "BAD_REQUEST", message: "Waybill is not in draft state." });
-        if (!wb.loadedByName || !wb.transportedByName) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Loaded by and transported by signatures are required." });
-        }
-
-        const lines = await db.select().from(waybillLines).where(eq(waybillLines.waybillId, wb.id));
-        const lineIds = lines.map((line) => line.id);
-        const sources =
-          lineIds.length > 0
-            ? await db.select().from(waybillLineCtnSources).where(inArray(waybillLineCtnSources.waybillLineId, lineIds))
-            : [];
-        const overrideBySourceId = new Map((input.overrideApprovals ?? []).map((entry) => [entry.ctnSourceId, entry]));
-        const errors: string[] = [];
-
-        for (const line of lines) {
-          const lineSources = sources.filter((source) => source.waybillLineId === line.id);
-          if (lineSources.length === 0) {
-            errors.push(`Line ${line.id}: at least one CTN source is required.`);
-            continue;
+        let dispatchCtx;
+        try {
+          dispatchCtx = await loadWaybillDispatchContext(db, input.id);
+        } catch (error) {
+          if (error instanceof Error && error.message === "Waybill not found.") {
+            throw new TRPCError({ code: "NOT_FOUND", message: "Waybill not found." });
           }
-          const lineQty = Number(line.nbOfUnits);
-          const sourceQty = lineSources.reduce((sum, source) => sum + Number(source.quantity), 0);
-          if (Math.abs(lineQty - sourceQty) > 0.0001) {
-            errors.push(`Line ${line.id}: CTN source quantities must equal line quantity.`);
-          }
-
-          for (const source of lineSources) {
-            const [ctn] = await db
-              .select({
-                itemId: commodityTrackingNumbers.itemId,
-                expiryDate: commodityTrackingNumbers.expiryDate,
-              })
-              .from(commodityTrackingNumbers)
-              .where(eq(commodityTrackingNumbers.id, source.ctnId))
-              .limit(1);
-            if (!ctn) {
-              errors.push(`Line ${line.id}: CTN ${source.ctnId} not found.`);
-              continue;
-            }
-            if (ctn.itemId !== line.itemId) {
-              errors.push(`Line ${line.id}: CTN ${source.ctnId} item does not match selected line item.`);
-            }
-            const stockCardId = await ensureStockCard(source.ctnId, wb.warehouseId);
-            const balance = await stockCardNet(stockCardId);
-            if (balance < Number(source.quantity)) {
-              errors.push(`Line ${line.id}: CTN ${source.ctnId} balance ${balance} is below requested ${source.quantity}.`);
-            }
-            const isExpired = ctn.expiryDate ? new Date(ctn.expiryDate).getTime() < Date.now() : false;
-            if (isExpired) {
-              const override = overrideBySourceId.get(source.id);
-              if (!override) {
-                errors.push(`Line ${line.id}: expired CTN ${source.ctnId} requires manager override.`);
-                continue;
-              }
-              const [manager] = await db
-                .select({ id: users.id, role: users.role })
-                .from(users)
-                .where(eq(users.id, override.overrideByUserId))
-                .limit(1);
-              if (!manager || !["manager", "admin"].includes(manager.role)) {
-                errors.push(`Line ${line.id}: override user must be manager or admin.`);
-                continue;
-              }
-            }
-          }
+          throw error;
         }
-
-        if (errors.length > 0) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: errors.join(" ") });
-        }
-
-        const today = new Date().toISOString().slice(0, 10);
-        for (const source of sources) {
-          const line = lines.find((l) => l.id === source.waybillLineId)!;
-          const stockCardId = await ensureStockCard(source.ctnId, wb.warehouseId);
-          const prev = await stockCardNet(stockCardId);
-          const next = prev - Number(source.quantity);
-          const override = overrideBySourceId.get(source.id);
-          await db.insert(stockMovements).values({
-            stockCardId,
-            date: today,
-            documentRef: wb.wbNumber,
-            fromTo: wb.destinationBeneficiary,
-            quantityIn: 0,
-            quantityOut: Number(source.quantity),
-            balanceAfter: next,
-            remarks: line.remarks ?? wb.comments ?? null,
-            sourceType: "waybill",
-            createdBy: ctx.user.id,
+        assertRecordFacilityAccess(ctx.user, dispatchCtx.waybill.warehouseId);
+        try {
+          await validateWaybillDispatch(db, dispatchCtx, input.overrideApprovals ?? []);
+        } catch (error) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: error instanceof Error ? error.message : "Waybill dispatch validation failed.",
           });
-          if (override) {
-            await db
-              .update(waybillLineCtnSources)
-              .set({
-                overrideByUserId: override.overrideByUserId,
-                overrideAt: new Date(),
-                overrideReason: override.overrideReason,
-              })
-              .where(eq(waybillLineCtnSources.id, source.id));
-          }
         }
-        await db.update(waybills).set({ status: "dispatched", updatedAt: new Date() }).where(eq(waybills.id, wb.id));
-        const notifiedCatalogue = new Set<number>();
-        for (const line of lines) {
-          if (notifiedCatalogue.has(line.itemId)) continue;
-          notifiedCatalogue.add(line.itemId);
+
+        const { lineItemIds } = await dispatchWaybillLedger(db, dispatchCtx, {
+          createdBy: ctx.user.id,
+          overrideApprovals: input.overrideApprovals,
+        });
+        const wb = dispatchCtx.waybill;
+        const lines = dispatchCtx.lines;
+        for (const itemId of lineItemIds) {
           await checkStockThreshold({
-            catalogueId: line.itemId,
+            catalogueId: itemId,
             warehouseId: wb.warehouseId,
             relatedEntityId: wb.id,
           });
@@ -2446,33 +2369,168 @@ export const inventoryV2Router = router({
         if (!req) throw new TRPCError({ code: "NOT_FOUND", message: "Requisition not found." });
         assertRecordFacilityAccess(ctx.user, req.requestingFacility);
         assertFacilityAccess(ctx.user, input.fromWarehouseId);
-        if (req.status !== "hq_approved") throw new TRPCError({ code: "BAD_REQUEST", message: "Requisition must be HQ approved." });
-        const items = Array.isArray(req.items) ? (req.items as Array<{ catalogueId: number; quantity: number; notes?: string }>) : [];
-        const documentNumber = await nextDocumentNumber("WB");
-        const [doc] = await db
-          .insert(inventoryDocuments)
+        if (req.status !== "hq_approved") {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Requisition must be HQ approved." });
+        }
+
+        const items = Array.isArray(req.items)
+          ? (req.items as Array<{ catalogueId: number; quantity: number; notes?: string }>)
+          : [];
+        if (items.length === 0) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Requisition has no line items." });
+        }
+
+        for (const item of items) {
+          const onHand = await itemWarehouseNet(item.catalogueId, input.fromWarehouseId);
+          if (Number(onHand) < Number(item.quantity)) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `Insufficient stock for catalogue item ${item.catalogueId}: need ${item.quantity}, have ${onHand}.`,
+            });
+          }
+        }
+
+        const [requestingSite] = await db
+          .select({ name: sites.name, facilityType: sites.facilityType })
+          .from(sites)
+          .where(eq(sites.id, req.requestingFacility))
+          .limit(1);
+        if (!requestingSite) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Requesting facility not found." });
+        }
+
+        const today = new Date().toISOString().slice(0, 10);
+        const fulfillerName = ctx.user.name || `User #${ctx.user.id}`;
+        const wbNumber = await nextWaybillNumber(input.fromWarehouseId);
+        const destinationType =
+          requestingSite.facilityType === "warehouse" ? ("branch_store" as const) : ("other" as const);
+
+        const [createdWaybill] = await db
+          .insert(waybills)
           .values({
-            documentType: "waybill",
-            documentNumber,
-            status: "dispatched",
-            fromWarehouseId: input.fromWarehouseId,
-            items: items.map((x) => ({ catalogueId: x.catalogueId, quantity: x.quantity, notes: x.notes })),
-            notes: `Fulfillment for ${req.reqNumber}`,
+            wbNumber,
+            docType: "waybill",
+            date: today,
+            warehouseId: input.fromWarehouseId,
+            destinationType,
+            destinationBeneficiary: requestingSite.name,
+            destinationLocation: `${req.reqNumber} — ${req.title}`,
+            requisitionId: req.id,
+            loadedByName: fulfillerName,
+            loadedByDate: today,
+            transportedByName: fulfillerName,
+            transportedByDate: today,
+            comments: `Fulfillment for ${req.reqNumber}`,
+            status: "draft",
             createdBy: ctx.user.id,
-            approvedBy: ctx.user.id,
-            completedAt: new Date(),
           })
           .returning();
+
+        for (let index = 0; index < items.length; index += 1) {
+          const item = items[index]!;
+          const [cat] = await db
+            .select({ name: inventoryCatalogue.name, unitOfMeasure: inventoryCatalogue.unitOfMeasure })
+            .from(inventoryCatalogue)
+            .where(eq(inventoryCatalogue.id, item.catalogueId))
+            .limit(1);
+          if (!cat) {
+            throw new TRPCError({ code: "NOT_FOUND", message: `Catalogue item ${item.catalogueId} not found.` });
+          }
+
+          let ctnSources: Array<{ ctnId: number; quantity: number }>;
+          try {
+            ctnSources = await pickFefoCtnSources(db, {
+              itemId: item.catalogueId,
+              warehouseId: input.fromWarehouseId,
+              quantity: Number(item.quantity),
+              todayIso: today,
+            });
+          } catch (error) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: error instanceof Error ? error.message : "FEFO allocation failed.",
+            });
+          }
+
+          const [createdLine] = await db
+            .insert(waybillLines)
+            .values({
+              waybillId: createdWaybill.id,
+              itemId: item.catalogueId,
+              itemDescription: cat.name,
+              ctnId: ctnSources[0]!.ctnId,
+              nbOfUnits: Number(item.quantity),
+              unitType: cat.unitOfMeasure || "pieces",
+              requisitionLineId: String(index),
+              remarks: item.notes ?? null,
+              lineOrder: index,
+            })
+            .returning();
+
+          await db.insert(waybillLineCtnSources).values(
+            ctnSources.map((source, sourceIndex) => ({
+              waybillLineId: createdLine.id,
+              ctnId: source.ctnId,
+              quantity: source.quantity,
+              sourceOrder: sourceIndex,
+            }))
+          );
+        }
+
+        const dispatchCtx = await loadWaybillDispatchContext(db, createdWaybill.id);
+        try {
+          await validateWaybillDispatch(db, dispatchCtx);
+        } catch (error) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: error instanceof Error ? error.message : "Waybill dispatch validation failed.",
+          });
+        }
+
+        const { lineItemIds } = await dispatchWaybillLedger(db, dispatchCtx, { createdBy: ctx.user.id });
+        for (const itemId of lineItemIds) {
+          await checkStockThreshold({
+            catalogueId: itemId,
+            warehouseId: input.fromWarehouseId,
+            relatedEntityId: createdWaybill.id,
+          });
+        }
+
         await db
           .update(requisitions)
-          .set({ status: "fulfilled", fulfilledAt: new Date(), linkedWaybills: [doc.documentNumber], updatedAt: new Date() })
+          .set({
+            status: "fulfilled",
+            fulfilledAt: new Date(),
+            linkedWaybills: [createdWaybill.wbNumber],
+            updatedAt: new Date(),
+          })
           .where(eq(requisitions.id, req.id));
+
+        await logAuditEvent({
+          userId: ctx.user.id,
+          action: AUDIT_ACTIONS.REQUISITION_FULFILL,
+          entityType: "requisition",
+          entityId: req.id,
+          changes: {
+            waybillId: createdWaybill.id,
+            wbNumber: createdWaybill.wbNumber,
+            fromWarehouseId: input.fromWarehouseId,
+            lineCount: items.length,
+          },
+          req: ctx.req,
+        });
+
         await sendRequisitionStatusEmailToSubmitter({
           requisitionId: req.id,
           statusRaw: "fulfilled",
           approver: { name: ctx.user.name, email: ctx.user.email },
         });
-        return { success: true as const, waybillNumber: doc.documentNumber };
+
+        return {
+          success: true as const,
+          waybillNumber: createdWaybill.wbNumber,
+          waybillId: createdWaybill.id,
+        };
       }),
 
     cancel: protectedProcedure.input(z.object({ requisitionId: z.number() })).mutation(async ({ input, ctx }) => {
