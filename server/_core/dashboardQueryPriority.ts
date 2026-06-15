@@ -69,9 +69,7 @@ export const METRICS_SUBQUERY_PRIORITY = {
   inactiveFacilities: 1,
   adequateSites: 2,
   previousAdequateSites: 2,
-  currentDistribution: 3,
-  previousDistribution: 3,
-  historicalDistribution: 3,
+  distributionVelocity: 3,
 } as const;
 
 export type MetricsSubqueryKey = keyof typeof METRICS_SUBQUERY_PRIORITY;

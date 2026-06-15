@@ -57,6 +57,7 @@ import {
   waybills,
 } from "../drizzle/schema";
 import { buildDistributionVelocity, buildStockReadiness, getPeriodWindow } from "./wms/dashboard";
+import { queryDistributionVelocityTotals } from "./wms/distributionVelocity";
 import { cacheGetJson, cacheSetJson, withDashboardCache } from "./_core/cache";
 import { withTimeout } from "./_core/withTimeout";
 import { dashboardQueryQueue } from "./_core/dashboardQueryQueue";
@@ -103,7 +104,6 @@ function normalizeAssetItemType(
   return value?.toLowerCase() === "inventory" ? "Inventory" : "Asset";
 }
 
-const WAYBILL_DISTRIBUTION_DESTINATIONS = ["beneficiary", "distribution_point"] as const;
 
 const DASHBOARD_EMPTY_METRICS = {
   lowStockItems: {
@@ -2509,7 +2509,6 @@ export const appRouter = router({
           const totalSiteWhere = siteId != null ? eq(sites.id, siteId) : undefined;
           const inactiveSiteWhere =
             siteId != null ? and(eq(sites.isActive, false), eq(sites.id, siteId)) : eq(sites.isActive, false);
-          const cardSiteFilter = siteId != null ? eq(stockCards.locationId, siteId) : undefined;
           const METRICS_TIMEOUT = 6_000;
           type MetricsBatch = [
             { id: number }[],
@@ -2517,12 +2516,9 @@ export const appRouter = router({
             { total: number }[],
             number,
             number,
-            { total: number }[],
-            { total: number }[],
-            { total: number }[],
+            { current: number; previous: number; historical: number },
           ];
           let metricsBatch: MetricsBatch;
-          const distributionDestFilter = inArray(waybills.destinationType, [...WAYBILL_DISTRIBUTION_DESTINATIONS]);
           try {
             const q = dashboardQueryQueue;
             metricsBatch = await Promise.race([
@@ -2550,51 +2546,14 @@ export const appRouter = router({
                 q.enqueue(priorityForMetricsSubquery("previousAdequateSites"), () =>
                   countAdequatelyStockedActiveSites(database, { siteId, asOfDate: window.previousEndIso })
                 ),
-                q.enqueue(priorityForMetricsSubquery("currentDistribution"), () =>
-                  database
-                    .select({ total: sql<number>`coalesce(sum(${stockMovements.quantityOut}),0)`.mapWith(Number) })
-                    .from(stockMovements)
-                    .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
-                    .innerJoin(waybills, eq(stockMovements.documentRef, waybills.wbNumber))
-                    .where(
-                      and(
-                        eq(stockMovements.sourceType, "waybill"),
-                        distributionDestFilter,
-                        gte(stockMovements.date, window.currentStartIso),
-                        lte(stockMovements.date, window.currentEndIso),
-                        cardSiteFilter ?? sql`true`
-                      )
-                    )
-                ),
-                q.enqueue(priorityForMetricsSubquery("previousDistribution"), () =>
-                  database
-                    .select({ total: sql<number>`coalesce(sum(${stockMovements.quantityOut}),0)`.mapWith(Number) })
-                    .from(stockMovements)
-                    .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
-                    .innerJoin(waybills, eq(stockMovements.documentRef, waybills.wbNumber))
-                    .where(
-                      and(
-                        eq(stockMovements.sourceType, "waybill"),
-                        distributionDestFilter,
-                        gte(stockMovements.date, window.previousStartIso),
-                        lte(stockMovements.date, window.previousEndIso),
-                        cardSiteFilter ?? sql`true`
-                      )
-                    )
-                ),
-                q.enqueue(priorityForMetricsSubquery("historicalDistribution"), () =>
-                  database
-                    .select({ total: sql<number>`coalesce(sum(${stockMovements.quantityOut}),0)`.mapWith(Number) })
-                    .from(stockMovements)
-                    .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
-                    .innerJoin(waybills, eq(stockMovements.documentRef, waybills.wbNumber))
-                    .where(
-                      and(
-                        eq(stockMovements.sourceType, "waybill"),
-                        distributionDestFilter,
-                        cardSiteFilter ?? sql`true`
-                      )
-                    )
+                q.enqueue(priorityForMetricsSubquery("distributionVelocity"), () =>
+                  queryDistributionVelocityTotals(database, {
+                    siteId,
+                    currentStartIso: window.currentStartIso,
+                    currentEndIso: window.currentEndIso,
+                    previousStartIso: window.previousStartIso,
+                    previousEndIso: window.previousEndIso,
+                  })
                 ),
               ]),
               new Promise<never>((_, reject) =>
@@ -2609,26 +2568,18 @@ export const appRouter = router({
               period: input.period,
               err: err instanceof Error ? err.message : String(err),
             });
-            metricsBatch = [[], [{ total: 0 }], [{ total: 0 }], 0, 0, [{ total: 0 }], [{ total: 0 }], [{ total: 0 }]];
+            metricsBatch = [[], [{ total: 0 }], [{ total: 0 }], 0, 0, { current: 0, previous: 0, historical: 0 }];
           }
 
-          const [
-            activeFacilities,
-            totalFacilities,
-            inactiveFacilities,
-            adequate,
-            previousAdequate,
-            currentDist,
-            previousDist,
-            historicalDist,
-          ] = metricsBatch;
+          const [activeFacilities, totalFacilities, inactiveFacilities, adequate, previousAdequate, distTotals] =
+            metricsBatch;
 
           const total = activeFacilities.length;
           stockReadiness = buildStockReadiness({ adequate, total, previousAdequate });
 
-          const currentValue = Number(currentDist[0]?.total ?? 0);
-          const previousValue = Number(previousDist[0]?.total ?? 0);
-          const historicalValue = Number(historicalDist[0]?.total ?? 0);
+          const currentValue = distTotals.current;
+          const previousValue = distTotals.previous;
+          const historicalValue = distTotals.historical;
           distributionVelocity =
             siteId != null && currentValue === 0 && previousValue === 0 && historicalValue === 0
               ? {

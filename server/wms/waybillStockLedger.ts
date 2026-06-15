@@ -182,5 +182,22 @@ export async function dispatchWaybillLedger(
   await db.update(waybills).set({ status: "dispatched", updatedAt: new Date() }).where(eq(waybills.id, wb.id));
 
   const lineItemIds = Array.from(new Set(lines.map((line) => line.itemId)));
+
+  void (async () => {
+    try {
+      const { isDistributionVelocityMvAvailable, refreshDistributionOutboundDaily } = await import(
+        "../_core/distributionVelocityMv"
+      );
+      if (await isDistributionVelocityMvAvailable(db)) {
+        await refreshDistributionOutboundDaily(db, { concurrent: true });
+      }
+    } catch (err) {
+      console.warn("[waybill.dispatch] distribution_outbound_daily refresh failed", {
+        waybillId: wb.id,
+        err: err instanceof Error ? err.message : String(err),
+      });
+    }
+  })();
+
   return { lineItemIds };
 }
