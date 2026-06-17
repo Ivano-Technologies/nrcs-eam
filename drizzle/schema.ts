@@ -77,23 +77,6 @@ export const inventoryTxTypeEnum = pgEnum("inventory_tx_type", [
   "transfer",
 ]);
 
-export const financialTxTypeEnum = pgEnum("financial_tx_type", [
-  "acquisition",
-  "maintenance",
-  "repair",
-  "disposal",
-  "depreciation",
-  "revenue",
-  "other",
-]);
-
-export const complianceStatusEnum = pgEnum("compliance_status", [
-  "compliant",
-  "non_compliant",
-  "pending",
-  "expired",
-]);
-
 export const notificationTypeEnum = pgEnum("notification_type", [
   "maintenance_due",
   "low_stock",
@@ -112,8 +95,6 @@ export const scheduledReportTypeEnum = pgEnum("scheduled_report_type", [
   "assetInventory",
   "maintenanceSchedule",
   "workOrders",
-  "financial",
-  "compliance",
 ]);
 
 export const reportFormatEnum = pgEnum("report_format", ["pdf", "excel"]);
@@ -480,7 +461,6 @@ export const inventoryItems = pgTable("inventoryItems", {
   maxStockLevel: integer("maxStockLevel"),
   unitOfMeasure: varchar("unitOfMeasure", { length: 50 }),
   unitCost: decimal("unitCost", { precision: 15, scale: 2 }),
-  vendorId: integer("vendorId"),
   location: varchar("location", { length: 255 }),
   createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
   updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
@@ -1183,67 +1163,6 @@ export const kitAssemblies = pgTable("kit_assemblies", {
 });
 
 /**
- * Vendors
- */
-export const vendors = pgTable("vendors", {
-  id: serial("id").primaryKey(),
-  name: varchar("name", { length: 255 }).notNull(),
-  vendorCode: varchar("vendorCode", { length: 100 }).unique(),
-  contactPerson: varchar("contactPerson", { length: 255 }),
-  email: varchar("email", { length: 320 }),
-  phone: varchar("phone", { length: 50 }),
-  address: text("address"),
-  city: varchar("city", { length: 100 }),
-  state: varchar("state", { length: 100 }),
-  country: varchar("country", { length: 100 }),
-  website: varchar("website", { length: 255 }),
-  notes: text("notes"),
-  isActive: boolean("isActive").default(true).notNull(),
-  createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
-});
-
-/**
- * Financial Transactions
- */
-export const financialTransactions = pgTable("financialTransactions", {
-  id: serial("id").primaryKey(),
-  transactionType: financialTxTypeEnum("transactionType").notNull(),
-  assetId: integer("assetId"),
-  workOrderId: integer("workOrderId"),
-  amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
-  currency: varchar("currency", { length: 10 }).default("NGN").notNull(),
-  description: text("description"),
-  transactionDate: timestamp("transactionDate", { mode: "date" }).notNull(),
-  vendorId: integer("vendorId"),
-  receiptNumber: varchar("receiptNumber", { length: 100 }),
-  approvedBy: integer("approvedBy"),
-  createdBy: integer("createdBy").notNull(),
-  createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
-});
-
-/**
- * Compliance Records
- */
-export const complianceRecords = pgTable("complianceRecords", {
-  id: serial("id").primaryKey(),
-  assetId: integer("assetId"),
-  title: varchar("title", { length: 255 }).notNull(),
-  regulatoryBody: varchar("regulatoryBody", { length: 255 }),
-  requirementType: varchar("requirementType", { length: 100 }),
-  description: text("description"),
-  status: complianceStatusEnum("status").default("pending").notNull(),
-  dueDate: timestamp("dueDate", { mode: "date" }),
-  completionDate: timestamp("completionDate", { mode: "date" }),
-  nextReviewDate: timestamp("nextReviewDate", { mode: "date" }),
-  assignedTo: integer("assignedTo"),
-  documentUrl: text("documentUrl"),
-  notes: text("notes"),
-  createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
-});
-
-/**
  * Audit Trail for compliance and tracking
  */
 export const auditLogs = pgTable("auditLogs", {
@@ -1337,10 +1256,6 @@ export type InventoryKit = typeof inventoryKits.$inferSelect;
 export type InsertInventoryKit = typeof inventoryKits.$inferInsert;
 export type KitAssembly = typeof kitAssemblies.$inferSelect;
 export type InsertKitAssembly = typeof kitAssemblies.$inferInsert;
-export type Vendor = typeof vendors.$inferSelect;
-export type InsertVendor = typeof vendors.$inferInsert;
-export type FinancialTransaction = typeof financialTransactions.$inferSelect;
-export type ComplianceRecord = typeof complianceRecords.$inferSelect;
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type Document = typeof documents.$inferSelect;
 
@@ -1472,28 +1387,6 @@ export type WorkOrderTemplate = typeof workOrderTemplates.$inferSelect;
 export type InsertWorkOrderTemplate = typeof workOrderTemplates.$inferInsert;
 
 /**
- * QuickBooks Integration Configuration
- */
-export const quickbooksConfig = pgTable("quickbooksConfig", {
-  id: serial("id").primaryKey(),
-  clientId: varchar("clientId", { length: 255 }).notNull(),
-  clientSecret: varchar("clientSecret", { length: 255 }).notNull(),
-  redirectUri: varchar("redirectUri", { length: 500 }).notNull(),
-  realmId: varchar("realmId", { length: 255 }).notNull(),
-  accessToken: text("accessToken"),
-  refreshToken: text("refreshToken"),
-  tokenExpiresAt: timestamp("tokenExpiresAt", { mode: "date" }),
-  isActive: integer("isActive").default(1).notNull(),
-  lastSyncAt: timestamp("lastSyncAt", { mode: "date" }),
-  autoSync: integer("autoSync").default(1).notNull(),
-  createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
-});
-
-export type QuickBooksConfig = typeof quickbooksConfig.$inferSelect;
-export type InsertQuickBooksConfig = typeof quickbooksConfig.$inferInsert;
-
-/**
  * User Preferences for UI state
  */
 export const userPreferences = pgTable("userPreferences", {
@@ -1585,46 +1478,6 @@ export type EmailNotification = typeof emailNotifications.$inferSelect;
 export type InsertEmailNotification = typeof emailNotifications.$inferInsert;
 export type NotificationLog = typeof notificationsLog.$inferSelect;
 export type FacilityNotificationSetting = typeof facilityNotificationSettings.$inferSelect;
-
-/** Branch / category annual budgets (calendar year in `period`). */
-export const budgets = pgTable(
-  "budgets",
-  {
-    id: serial("id").primaryKey(),
-    siteId: integer("siteId").references(() => sites.id, { onDelete: "cascade" }),
-    categoryId: integer("categoryId").references(() => assetCategories.id, { onDelete: "cascade" }),
-    period: integer("period").notNull(),
-    amount: decimal("amount", { precision: 18, scale: 2 }).notNull(),
-    createdBy: integer("createdBy").references(() => users.id),
-    createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
-    updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
-  },
-  (t) => [
-    index("budgets_siteId_idx").on(t.siteId),
-    index("budgets_period_idx").on(t.period),
-  ]
-);
-
-export const maintenanceCosts = pgTable(
-  "maintenance_costs",
-  {
-    id: serial("id").primaryKey(),
-    assetId: integer("assetId")
-      .notNull()
-      .references(() => assets.id, { onDelete: "cascade" }),
-    maintenanceType: varchar("maintenanceType", { length: 64 }).notNull(),
-    date: date("date", { mode: "date" }).notNull(),
-    costNgn: decimal("costNgn", { precision: 18, scale: 2 }).notNull(),
-    description: text("description"),
-    referenceNumber: varchar("referenceNumber", { length: 128 }),
-    loggedBy: integer("loggedBy").references(() => users.id),
-    createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
-  },
-  (t) => [
-    index("maintenance_costs_assetId_idx").on(t.assetId),
-    index("maintenance_costs_date_idx").on(t.date),
-  ]
-);
 
 export const insuranceRecords = pgTable(
   "insurance_records",
@@ -1730,10 +1583,6 @@ export const donorReporting = pgTable(
   (t) => [index("donor_reporting_dueDate_idx").on(t.dueDate)]
 );
 
-export type Budget = typeof budgets.$inferSelect;
-export type InsertBudget = typeof budgets.$inferInsert;
-export type MaintenanceCost = typeof maintenanceCosts.$inferSelect;
-export type InsertMaintenanceCost = typeof maintenanceCosts.$inferInsert;
 export type InsuranceRecord = typeof insuranceRecords.$inferSelect;
 export type InsertInsuranceRecord = typeof insuranceRecords.$inferInsert;
 export type VehicleCompliance = typeof vehicleCompliance.$inferSelect;
