@@ -268,6 +268,22 @@ function ProtectedAppSectionRoutes() {
             <Route path="/app/inventory/incoming">
               <Redirect to="/app/inventory/receipts" />
             </Route>
+            <Route path="/app/inventory/grn/new">
+              <Redirect to="/app/inventory/receipts/new" />
+            </Route>
+            <Route path="/app/inventory/grn/:id/print/:copyType">
+              {(params) => (
+                <Redirect
+                  to={`/app/inventory/receipts/${params.id}/print/${params.copyType}`}
+                />
+              )}
+            </Route>
+            <Route path="/app/inventory/grn/:id">
+              {(params) => <Redirect to={`/app/inventory/receipts/${params.id}`} />}
+            </Route>
+            <Route path="/app/inventory/grn">
+              <Redirect to="/app/inventory/receipts" />
+            </Route>
             <Route path="/app/inventory/outgoing">
               <Redirect to="/app/inventory/issues" />
             </Route>
