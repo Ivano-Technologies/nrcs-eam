@@ -1,22 +1,25 @@
--- Clear all sample data (preserving user accounts)
-SET FOREIGN_KEY_CHECKS = 0;
+-- Reference SQL: clear operational sample data (PostgreSQL).
+-- Preserves users and __drizzle_migrations. Run manually with care.
+-- Tier 2B-retired tables (vendors, financialTransactions, complianceRecords,
+-- quickbooksConfig, budgets, maintenance_costs) omitted — dropped in migration 0056.
 
-DELETE FROM asset_transfers;
-DELETE FROM asset_lifecycle_costs;
-DELETE FROM predictive_maintenance;
+BEGIN;
+
+DELETE FROM "assetTransfers";
+DELETE FROM "inventoryTransactions";
 DELETE FROM notifications;
-DELETE FROM notification_preferences;
-DELETE FROM compliance_reports;
-DELETE FROM financial_transactions;
-DELETE FROM quickbooks_config;
-DELETE FROM report_schedules;
-DELETE FROM work_order_photos;
-DELETE FROM work_orders;
-DELETE FROM maintenance_schedules;
-DELETE FROM inventory_items;
-DELETE FROM vendors;
+DELETE FROM "notificationPreferences";
+DELETE FROM "auditLogs";
+DELETE FROM documents;
+DELETE FROM "assetPhotos";
+DELETE FROM "scheduledReports";
+DELETE FROM email_notifications;
+DELETE FROM "workOrderTemplates";
+DELETE FROM "workOrders";
+DELETE FROM "maintenanceSchedules";
+DELETE FROM "inventoryItems";
 DELETE FROM assets;
-DELETE FROM asset_categories;
+DELETE FROM "assetCategories";
 DELETE FROM sites;
 
-SET FOREIGN_KEY_CHECKS = 1;
+COMMIT;

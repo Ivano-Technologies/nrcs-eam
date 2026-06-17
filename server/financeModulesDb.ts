@@ -1,14 +1,5 @@
-import { and, asc, desc, eq, gte, lte, sql, type SQL } from "drizzle-orm";
-import {
-  assetCategories,
-  assets,
-  budgets,
-  financialTransactions,
-  insuranceRecords,
-  maintenanceCosts,
-  sites,
-  users,
-} from "../drizzle/schema";
+import { and, asc, eq, sql, type SQL } from "drizzle-orm";
+import { assets, insuranceRecords, sites } from "../drizzle/schema";
 import { calculateDepreciatedValue } from "./lib/depreciation";
 import * as db from "./db";
 
@@ -21,10 +12,6 @@ function num(v: string | number | null | undefined): number {
 function parseIsoDate(iso: string): Date {
   const [y, m, d] = iso.split("-").map(Number);
   return new Date(y, m - 1, d);
-}
-
-function yearDateRange(year: number): { start: Date; end: Date } {
-  return { start: new Date(year, 0, 1), end: new Date(year, 11, 31) };
 }
 
 function assetGross(a: {
@@ -46,334 +33,6 @@ function assetNetBook(a: {
   }
   if (a.currentDepreciatedValue != null) return a.currentDepreciatedValue;
   return assetGross(a);
-}
-
-export type BudgetRow = {
-  id: number;
-  siteId: number | null;
-  categoryId: number | null;
-  siteName: string | null;
-  categoryName: string | null;
-  period: number;
-  amount: number;
-};
-
-export async function listBudgets(period: number): Promise<BudgetRow[]> {
-  const database = await db.getDb();
-  if (!database) return [];
-  const rows = await database
-    .select({
-      id: budgets.id,
-      siteId: budgets.siteId,
-      categoryId: budgets.categoryId,
-      period: budgets.period,
-      amount: budgets.amount,
-      siteName: sites.name,
-      categoryName: assetCategories.name,
-    })
-    .from(budgets)
-    .leftJoin(sites, eq(budgets.siteId, sites.id))
-    .leftJoin(assetCategories, eq(budgets.categoryId, assetCategories.id))
-    .where(eq(budgets.period, period))
-    .orderBy(asc(sites.name), asc(assetCategories.name));
-  return rows.map((r) => ({
-    id: r.id,
-    siteId: r.siteId,
-    categoryId: r.categoryId,
-    siteName: r.siteName,
-    categoryName: r.categoryName,
-    period: r.period,
-    amount: num(r.amount),
-  }));
-}
-
-export async function upsertBudget(input: {
-  id?: number;
-  siteId: number | null;
-  categoryId: number | null;
-  period: number;
-  amount: number;
-  createdBy: number;
-}) {
-  const database = await db.getDb();
-  if (!database) throw new Error("Database unavailable");
-  const now = new Date();
-  if (input.id) {
-    await database
-      .update(budgets)
-      .set({ amount: String(input.amount), updatedAt: now })
-      .where(eq(budgets.id, input.id));
-    return input.id;
-  }
-  const [row] = await database
-    .insert(budgets)
-    .values({
-      siteId: input.siteId,
-      categoryId: input.categoryId,
-      period: input.period,
-      amount: String(input.amount),
-      createdBy: input.createdBy,
-      createdAt: now,
-      updatedAt: now,
-    })
-    .returning({ id: budgets.id });
-  return row!.id;
-}
-
-async function ytdSpendForSite(siteId: number, year: number): Promise<number> {
-  const database = await db.getDb();
-  if (!database) return 0;
-  const { start, end } = yearDateRange(year);
-  const mc = await database
-    .select({ total: sql<number>`coalesce(sum(${maintenanceCosts.costNgn}::numeric), 0)`.mapWith(Number) })
-    .from(maintenanceCosts)
-    .innerJoin(assets, eq(maintenanceCosts.assetId, assets.id))
-    .where(and(eq(assets.siteId, siteId), gte(maintenanceCosts.date, start), lte(maintenanceCosts.date, end)));
-  const mcTotal = Number(mc[0]?.total ?? 0);
-
-  const yearStart = new Date(year, 0, 1);
-  const yearEnd = new Date(year, 11, 31, 23, 59, 59);
-  const ft = await database
-    .select({ total: sql<number>`coalesce(sum(${financialTransactions.amount}::numeric), 0)`.mapWith(Number) })
-    .from(financialTransactions)
-    .innerJoin(assets, eq(financialTransactions.assetId, assets.id))
-    .where(
-      and(
-        eq(assets.siteId, siteId),
-        gte(financialTransactions.transactionDate, yearStart),
-        lte(financialTransactions.transactionDate, yearEnd)
-      )
-    );
-  return mcTotal + Number(ft[0]?.total ?? 0);
-}
-
-export type BudgetVsActualBranch = {
-  siteId: number;
-  siteName: string;
-  budget: number;
-  spend: number;
-  percentUsed: number;
-  status: "green" | "amber" | "red";
-};
-
-export async function getBudgetVsActualByBranch(year: number): Promise<BudgetVsActualBranch[]> {
-  const database = await db.getDb();
-  if (!database) return [];
-  const branchSites = await database
-    .select({ id: sites.id, name: sites.name })
-    .from(sites)
-    .where(and(eq(sites.facilityType, "branch"), eq(sites.isActive, true)))
-    .orderBy(asc(sites.name));
-
-  const budgetRows = await listBudgets(year);
-  const branchBudget = new Map<number, number>();
-  for (const b of budgetRows) {
-    if (b.siteId == null) continue;
-    if (b.categoryId != null) continue;
-    branchBudget.set(b.siteId, (branchBudget.get(b.siteId) ?? 0) + b.amount);
-  }
-
-  const { start, end } = yearDateRange(year);
-  const yearStart = new Date(year, 0, 1);
-  const yearEnd = new Date(year, 11, 31, 23, 59, 59);
-
-  const [maintenanceBySite, financialBySite] = await Promise.all([
-    database
-      .select({
-        siteId: assets.siteId,
-        total: sql<number>`coalesce(sum(${maintenanceCosts.costNgn}::numeric), 0)`.mapWith(Number),
-      })
-      .from(maintenanceCosts)
-      .innerJoin(assets, eq(maintenanceCosts.assetId, assets.id))
-      .where(and(gte(maintenanceCosts.date, start), lte(maintenanceCosts.date, end)))
-      .groupBy(assets.siteId),
-    database
-      .select({
-        siteId: assets.siteId,
-        total: sql<number>`coalesce(sum(${financialTransactions.amount}::numeric), 0)`.mapWith(Number),
-      })
-      .from(financialTransactions)
-      .innerJoin(assets, eq(financialTransactions.assetId, assets.id))
-      .where(
-        and(
-          gte(financialTransactions.transactionDate, yearStart),
-          lte(financialTransactions.transactionDate, yearEnd)
-        )
-      )
-      .groupBy(assets.siteId),
-  ]);
-
-  const maintenanceSpend = new Map(maintenanceBySite.map((r) => [r.siteId, Number(r.total ?? 0)]));
-  const financialSpend = new Map(financialBySite.map((r) => [r.siteId, Number(r.total ?? 0)]));
-
-  return branchSites.map((site) => {
-    const budget = branchBudget.get(site.id) ?? 0;
-    const spend =
-      (maintenanceSpend.get(site.id) ?? 0) + (financialSpend.get(site.id) ?? 0);
-    const percentUsed = budget > 0 ? Math.round((spend / budget) * 1000) / 10 : spend > 0 ? 100 : 0;
-    let status: BudgetVsActualBranch["status"] = "green";
-    if (percentUsed >= 100) status = "red";
-    else if (percentUsed >= 75) status = "amber";
-    return { siteId: site.id, siteName: site.name, budget, spend, percentUsed, status };
-  });
-}
-
-export type MaintenanceCostListRow = {
-  id: number;
-  assetId: number;
-  assetCode: string | null;
-  assetName: string;
-  facilityName: string;
-  maintenanceType: string;
-  date: string;
-  costNgn: number;
-  loggedByName: string | null;
-  description: string | null;
-  referenceNumber: string | null;
-};
-
-export async function listMaintenanceCosts(filters: {
-  siteId?: number;
-  categoryId?: number;
-  dateFrom?: string;
-  dateTo?: string;
-  minCost?: number;
-  maxCost?: number;
-}): Promise<MaintenanceCostListRow[]> {
-  const database = await db.getDb();
-  if (!database) return [];
-  const conditions: SQL[] = [];
-  if (filters.siteId) conditions.push(eq(assets.siteId, filters.siteId));
-  if (filters.categoryId) conditions.push(eq(assets.categoryId, filters.categoryId));
-  if (filters.dateFrom) conditions.push(gte(maintenanceCosts.date, parseIsoDate(filters.dateFrom)));
-  if (filters.dateTo) conditions.push(lte(maintenanceCosts.date, parseIsoDate(filters.dateTo)));
-  if (filters.minCost != null) conditions.push(sql`${maintenanceCosts.costNgn}::numeric >= ${filters.minCost}`);
-  if (filters.maxCost != null) conditions.push(sql`${maintenanceCosts.costNgn}::numeric <= ${filters.maxCost}`);
-
-  const rows = await database
-    .select({
-      id: maintenanceCosts.id,
-      assetId: maintenanceCosts.assetId,
-      assetCode: assets.assetCode,
-      assetName: assets.name,
-      facilityName: sites.name,
-      maintenanceType: maintenanceCosts.maintenanceType,
-      date: maintenanceCosts.date,
-      costNgn: maintenanceCosts.costNgn,
-      description: maintenanceCosts.description,
-      referenceNumber: maintenanceCosts.referenceNumber,
-      loggedByName: users.name,
-    })
-    .from(maintenanceCosts)
-    .innerJoin(assets, eq(maintenanceCosts.assetId, assets.id))
-    .innerJoin(sites, eq(assets.siteId, sites.id))
-    .leftJoin(users, eq(maintenanceCosts.loggedBy, users.id))
-    .where(conditions.length ? and(...conditions) : undefined)
-    .orderBy(desc(maintenanceCosts.date))
-    .limit(5000);
-
-  return rows.map((r) => ({
-    id: r.id,
-    assetId: r.assetId,
-    assetCode: r.assetCode,
-    assetName: r.assetName,
-    facilityName: r.facilityName,
-    maintenanceType: r.maintenanceType,
-    date: r.date ? String(r.date).slice(0, 10) : "",
-    costNgn: num(r.costNgn),
-    loggedByName: r.loggedByName,
-    description: r.description,
-    referenceNumber: r.referenceNumber,
-  }));
-}
-
-export async function createMaintenanceCost(input: {
-  assetId: number;
-  maintenanceType: string;
-  date: string;
-  costNgn: number;
-  description?: string;
-  referenceNumber?: string;
-  loggedBy: number;
-}) {
-  const database = await db.getDb();
-  if (!database) throw new Error("Database unavailable");
-  const [row] = await database
-    .insert(maintenanceCosts)
-    .values({
-      assetId: input.assetId,
-      maintenanceType: input.maintenanceType,
-      date: parseIsoDate(input.date),
-      costNgn: String(input.costNgn),
-      description: input.description ?? null,
-      referenceNumber: input.referenceNumber ?? null,
-      loggedBy: input.loggedBy,
-    })
-    .returning({ id: maintenanceCosts.id });
-  return row!.id;
-}
-
-export async function getMaintenanceCostSummary(year: number) {
-  const database = await db.getDb();
-  if (!database) {
-    return {
-      totalSpend: 0,
-      topAsset: null as { assetCode: string | null; assetName: string; total: number } | null,
-      topFacility: null as { facilityName: string; total: number } | null,
-      avgPerEntry: 0,
-      entryCount: 0,
-    };
-  }
-  const { start, end } = yearDateRange(year);
-
-  const totalRow = await database
-    .select({
-      total: sql<number>`coalesce(sum(${maintenanceCosts.costNgn}::numeric), 0)`.mapWith(Number),
-      count: sql<number>`count(*)::int`.mapWith(Number),
-    })
-    .from(maintenanceCosts)
-    .where(and(gte(maintenanceCosts.date, start), lte(maintenanceCosts.date, end)));
-
-  const topAssetRows = await database
-    .select({
-      assetCode: assets.assetCode,
-      assetName: assets.name,
-      total: sql<number>`sum(${maintenanceCosts.costNgn}::numeric)`.mapWith(Number),
-    })
-    .from(maintenanceCosts)
-    .innerJoin(assets, eq(maintenanceCosts.assetId, assets.id))
-    .where(and(gte(maintenanceCosts.date, start), lte(maintenanceCosts.date, end)))
-    .groupBy(assets.id, assets.assetCode, assets.name)
-    .orderBy(desc(sql`sum(${maintenanceCosts.costNgn}::numeric)`))
-    .limit(1);
-
-  const topFacilityRows = await database
-    .select({
-      facilityName: sites.name,
-      total: sql<number>`sum(${maintenanceCosts.costNgn}::numeric)`.mapWith(Number),
-    })
-    .from(maintenanceCosts)
-    .innerJoin(assets, eq(maintenanceCosts.assetId, assets.id))
-    .innerJoin(sites, eq(assets.siteId, sites.id))
-    .where(and(gte(maintenanceCosts.date, start), lte(maintenanceCosts.date, end)))
-    .groupBy(sites.id, sites.name)
-    .orderBy(desc(sql`sum(${maintenanceCosts.costNgn}::numeric)`))
-    .limit(1);
-
-  const totalSpend = Number(totalRow[0]?.total ?? 0);
-  const entryCount = Number(totalRow[0]?.count ?? 0);
-  const topA = topAssetRows[0];
-  const topF = topFacilityRows[0];
-
-  return {
-    totalSpend,
-    topAsset: topA
-      ? { assetCode: topA.assetCode, assetName: topA.assetName, total: Number(topA.total) }
-      : null,
-    topFacility: topF ? { facilityName: topF.facilityName, total: Number(topF.total) } : null,
-    avgPerEntry: entryCount > 0 ? totalSpend / entryCount : 0,
-    entryCount,
-  };
 }
 
 export type DepreciationScheduleRow = {
@@ -400,12 +59,14 @@ export async function getDepreciationSchedule(filters: {
 }): Promise<DepreciationScheduleRow[]> {
   const all = await db.getAllAssets();
   const categories = new Map(
-    (await Promise.all(
-      Array.from(new Set(all.map((a) => a.categoryId))).map(async (id) => {
-        const c = await db.getAssetCategoryById(id);
-        return [id, c?.name ?? "Unknown"] as const;
-      })
-    ))
+    (
+      await Promise.all(
+        Array.from(new Set(all.map((a) => a.categoryId))).map(async (id) => {
+          const c = await db.getAssetCategoryById(id);
+          return [id, c?.name ?? "Unknown"] as const;
+        })
+      )
+    )
   );
   const siteNames = new Map<number, string>();
   const rows: DepreciationScheduleRow[] = [];
@@ -413,7 +74,8 @@ export async function getDepreciationSchedule(filters: {
   for (const a of all) {
     if (filters.siteId && a.siteId !== filters.siteId) continue;
     if (filters.categoryId && a.categoryId !== filters.categoryId) continue;
-    const year = a.yearAcquiredRegister ?? (a.acquisitionDate ? new Date(a.acquisitionDate).getFullYear() : null);
+    const year =
+      a.yearAcquiredRegister ?? (a.acquisitionDate ? new Date(a.acquisitionDate).getFullYear() : null);
     if (filters.yearAcquired != null && year !== filters.yearAcquired) continue;
 
     const gross = assetGross(a);
@@ -477,7 +139,11 @@ export async function recalculateAllRegisterDepreciation() {
   const rows = await db.listAssetsEligibleForAutoDepreciation();
   let updated = 0;
   for (const row of rows) {
-    const dv = calculateDepreciatedValue(Number(row.actualUnitValue), row.itemCategory!, row.yearAcquiredRegister!);
+    const dv = calculateDepreciatedValue(
+      Number(row.actualUnitValue),
+      row.itemCategory!,
+      row.yearAcquiredRegister!
+    );
     await db.updateAsset(row.id, {
       depreciatedValue: String(dv),
       currentDepreciatedValue: dv,
@@ -663,57 +329,4 @@ export async function deleteInsuranceRecord(id: number) {
   const database = await db.getDb();
   if (!database) throw new Error("Database unavailable");
   await database.delete(insuranceRecords).where(eq(insuranceRecords.id, id));
-}
-
-export async function getAnnualFinanceReportData(year: number, siteId?: number) {
-  const valuation = await db.getAssetValuationReport();
-  const depreciation = await getDepreciationReportSummary();
-  const budgetRows = await getBudgetVsActualByBranch(year);
-  const filteredBudget =
-    siteId != null ? budgetRows.filter((b) => b.siteId === siteId) : budgetRows;
-
-  const maintSummary = await getMaintenanceCostSummary(year);
-  const maintList = await listMaintenanceCosts({
-    dateFrom: `${year}-01-01`,
-    dateTo: `${year}-12-31`,
-    ...(siteId != null ? { siteId } : {}),
-  });
-  const topAssets = new Map<string, { assetCode: string | null; assetName: string; total: number }>();
-  for (const m of maintList) {
-    const key = String(m.assetId);
-    const cur = topAssets.get(key) ?? { assetCode: m.assetCode, assetName: m.assetName, total: 0 };
-    cur.total += m.costNgn;
-    topAssets.set(key, cur);
-  }
-  const topMaintenanceAssets = Array.from(topAssets.values())
-    .sort((a, b) => b.total - a.total)
-    .slice(0, 5);
-
-  const insurance = await listInsuranceRecords(siteId != null ? { siteId } : undefined);
-  const expiringThisYear = insurance.filter((r) => {
-    const endYear = new Date(r.policyEnd).getFullYear();
-    return endYear === year;
-  }).length;
-
-  return {
-    year,
-    siteId: siteId ?? null,
-    valuation: {
-      totalCertifiedPropertyNgn: valuation.totalCertifiedPropertyNgn,
-      totalMovableAcquisitionNgn: valuation.totalMovableAcquisitionNgn,
-      combinedTotalNgn: valuation.combinedTotalNgn,
-    },
-    depreciation,
-    budgetVsActual: filteredBudget,
-    maintenance: {
-      totalSpend: maintList.reduce((s, r) => s + r.costNgn, 0) || maintSummary.totalSpend,
-      topAssets: topMaintenanceAssets,
-    },
-    insurance: {
-      totalInsuredValue: insurance.reduce((s, r) => s + r.insuredValueNgn, 0),
-      totalAnnualPremiums: insurance.reduce((s, r) => s + r.annualPremiumNgn, 0),
-      policiesExpiringInYear: expiringThisYear,
-      activeCount: insurance.filter((r) => r.status === "active").length,
-    },
-  };
 }

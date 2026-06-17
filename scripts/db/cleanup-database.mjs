@@ -15,21 +15,18 @@ try {
   db.exec('BEGIN TRANSACTION');
 
   // Delete all data from tables (in correct order to respect foreign keys)
+  // Legacy SQLite schema — retired finance/vendor tables removed (Tier 2B).
   const tables = [
     'asset_transfers',
     'asset_lifecycle_costs',
     'predictive_maintenance',
     'notifications',
     'notification_preferences',
-    'compliance_reports',
-    'financial_transactions',
-    'quickbooks_config',
     'report_schedules',
     'work_order_photos',
     'work_orders',
     'maintenance_schedules',
     'inventory_items',
-    'vendors',
     'assets',
     'asset_categories',
     'sites',

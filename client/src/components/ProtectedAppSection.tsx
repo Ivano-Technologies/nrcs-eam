@@ -7,14 +7,14 @@ import { lazy, Suspense } from "react";
 import { Redirect, Route, Switch, useRoute } from "wouter";
 
 const ActivityLog = lazy(() => import("@/pages/ActivityLog"));
+const ComplianceRegister = lazy(() => import("@/pages/Administration/ComplianceRegister"));
+const DepreciationSchedule = lazy(() => import("@/pages/reports/DepreciationSchedule"));
 const Observability = lazy(() => import("@/pages/Administration/Observability"));
 const AssetDetail = lazy(() => import("@/pages/AssetDetail"));
 const AssetMap = lazy(() => import("@/pages/AssetMap"));
 const AssetScanner = lazy(() => import("@/pages/AssetScanner"));
 const Assets = lazy(() => import("@/pages/Assets"));
 const DonorAssets = lazy(() => import("@/pages/assets/DonorAssets"));
-const AuditTrail = lazy(() => import("@/pages/AuditTrail"));
-const Compliance = lazy(() => import("@/pages/Compliance"));
 /** Dev-only — lazy import gated so production builds exclude showcase (and streamdown/mermaid). */
 const DevShowcaseRoute = import.meta.env.DEV
   ? lazy(() =>
@@ -33,20 +33,9 @@ const DevShowcaseRoute = import.meta.env.DEV
       })
     )
   : null;
-const AssetValuation = lazy(() => import("@/pages/AssetValuation"));
-const CostManagement = lazy(() => import("@/pages/finance/CostManagement"));
-const CostAnalyticsRedirect = lazy(() =>
-  import("@/pages/finance/CostManagement").then((m) => ({
-    default: m.CostAnalyticsRedirect,
-  }))
-);
-const DepreciationReporting = lazy(() => import("@/pages/finance/DepreciationReporting"));
-const InsuranceRegister = lazy(() => import("@/pages/compliance/InsuranceRegister"));
-const AnnualFinanceReport = lazy(() => import("@/pages/reports/AnnualFinanceReport"));
 const DashboardSettings = lazy(() => import("@/pages/DashboardSettings"));
 const EmailNotifications = lazy(() => import("@/pages/EmailNotifications"));
 const FacilityDetail = lazy(() => import("@/pages/FacilityDetail"));
-const Financial = lazy(() => import("@/pages/Financial"));
 const Home = lazy(() => import("@/pages/Home"));
 const CtnRegistryPage = lazy(() => import("@/pages/inventory/CtnRegistryPage"));
 const InventoryStockOverviewPage = lazy(() =>
@@ -128,7 +117,6 @@ const MobileWorkOrders = lazy(() => import("@/pages/MobileWorkOrders"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const NotificationPreferences = lazy(() => import("@/pages/NotificationPreferences"));
 const PendingUsers = lazy(() => import("@/pages/PendingUsers"));
-const QuickBooksSettings = lazy(() => import("@/pages/QuickBooksSettings"));
 const ReportScheduling = lazy(() => import("@/pages/ReportScheduling"));
 const Reports = lazy(() => import("@/pages/Reports"));
 const MonthlyWarehouseReport = lazy(() =>
@@ -155,7 +143,6 @@ const FacilitiesTabRoute = lazy(() =>
   }))
 );
 const Users = lazy(() => import("@/pages/Users"));
-const Vendors = lazy(() => import("@/pages/Vendors"));
 const WarrantyAlerts = lazy(() => import("@/pages/WarrantyAlerts"));
 const Welcome = lazy(() => import("@/pages/Welcome"));
 const WorkOrderDetail = lazy(() => import("@/pages/WorkOrderDetail"));
@@ -244,14 +231,10 @@ function ProtectedAppSectionRoutes() {
             <Route path="/app/scanner" component={AssetScanner} />
             <Route path="/app/asset-map" component={AssetMap} />
             <Route path="/app/warranty-alerts" component={WarrantyAlerts} />
-            <Route path="/app/cost-analytics" component={CostAnalyticsRedirect} />
-            <Route path="/app/finance/cost-management" component={CostManagement} />
-            <Route path="/app/finance/depreciation" component={DepreciationReporting} />
-            <Route path="/app/finance/asset-valuation" component={AssetValuation} />
-            <Route path="/app/audit-trail" component={AuditTrail} />
-            <Route path="/app/activity-log" component={ActivityLog} />
+            <Route path="/app/administration/compliance-register" component={ComplianceRegister} />
             <Route path="/app/administration/activity-log" component={ActivityLog} />
             <Route path="/app/administration/observability" component={Observability} />
+            <Route path="/app/reports/depreciation-schedule" component={DepreciationSchedule} />
             <Route path="/app/work-orders/:id" component={WorkOrderDetail} />
             <Route path="/app/work-orders" component={WorkOrders} />
             <Route path="/app/mobile-work-orders" component={MobileWorkOrders} />
@@ -297,10 +280,6 @@ function ProtectedAppSectionRoutes() {
             <Route path="/app/inventory">
               <Redirect to="/app/inventory/stock-overview" />
             </Route>
-            <Route path="/app/vendors" component={Vendors} />
-            <Route path="/app/financial" component={Financial} />
-            <Route path="/app/compliance" component={Compliance} />
-            <Route path="/app/compliance/insurance" component={InsuranceRegister} />
             <Route path="/app/sites/:id">
               {(params) => <Redirect to={`/app/facilities/${params.id}`} />}
             </Route>
@@ -337,11 +316,9 @@ function ProtectedAppSectionRoutes() {
             <Route path="/app/users/pending" component={PendingUsers} />
             <Route path="/app/settings/pending-users" component={PendingUsers} />
             <Route path="/app/pending-users" component={PendingUsers} />
-            <Route path="/app/settings/vendors" component={Vendors} />
             <Route path="/app/settings/notifications" component={NotificationPreferences} />
             <Route path="/app/notification-preferences" component={NotificationPreferences} />
             <Route path="/app/reports" component={Reports} />
-            <Route path="/app/reports/annual-finance" component={AnnualFinanceReport} />
             <Route path="/app/reports/wms" component={WmsReportSuite} />
             <Route path="/app/reports/wms/monthly-warehouse-report" component={MonthlyWarehouseReport} />
             <Route path="/app/reports/wms/stock-movements" component={WmsStockMovementsReport} />
@@ -351,7 +328,6 @@ function ProtectedAppSectionRoutes() {
             <Route path="/app/reports/wms/kit-assembly" component={WmsKitAssemblyReport} />
             <Route path="/app/reports/wms/expiry" component={WmsExpiryReport} />
             <Route path="/app/report-scheduling" component={ReportScheduling} />
-            <Route path="/app/quickbooks" component={QuickBooksSettings} />
             <Route path="/app/email-notifications" component={EmailNotifications} />
             <Route path="/app/dashboard-settings" component={DashboardSettings} />
             <Route component={NotFound} />

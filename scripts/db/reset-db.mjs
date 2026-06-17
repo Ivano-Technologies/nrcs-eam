@@ -23,34 +23,64 @@ if (!url) {
 const client = postgres(url, { prepare: false, max: 5 });
 const db = drizzle(client);
 
+/** Tier 2B (migration 0056) — truncated only when still present (pre-migration DBs). */
+const TIER_2B_RETIRED_TABLES = [
+  "complianceRecords",
+  "financialTransactions",
+  "quickbooksConfig",
+  "vendors",
+  "budgets",
+  "maintenance_costs",
+];
+
+const CORE_TABLES = [
+  "assetPhotos",
+  "scheduledReports",
+  "notificationPreferences",
+  "notifications",
+  "documents",
+  "auditLogs",
+  "inventoryTransactions",
+  "inventoryItems",
+  "maintenanceSchedules",
+  "workOrders",
+  "assets",
+  "assetCategories",
+  "sites",
+];
+
+async function tableExists(tableName) {
+  const rows = await client`
+    SELECT 1 AS ok FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = ${tableName}
+    LIMIT 1
+  `;
+  return rows.length > 0;
+}
+
+async function resolveTruncateTables() {
+  const tables = [...CORE_TABLES];
+  for (const name of TIER_2B_RETIRED_TABLES) {
+    if (await tableExists(name)) {
+      tables.push(name);
+    }
+  }
+  return tables;
+}
+
 async function resetDatabase() {
   console.log("🔄 Starting database reset...");
 
   try {
-    const tables = [
-      "assetPhotos",
-      "scheduledReports",
-      "notificationPreferences",
-      "notifications",
-      "documents",
-      "auditLogs",
-      "complianceRecords",
-      "financialTransactions",
-      "inventoryTransactions",
-      "inventoryItems",
-      "vendors",
-      "maintenanceSchedules",
-      "workOrders",
-      "assets",
-      "assetCategories",
-      "sites",
-    ];
+    const tables = await resolveTruncateTables();
+    const skipped = TIER_2B_RETIRED_TABLES.filter((t) => !tables.includes(t));
+    if (skipped.length > 0) {
+      console.log(`  Skipping Tier 2B-retired tables (not present): ${skipped.join(", ")}`);
+    }
 
     const quoted = tables.map((t) => `"${t}"`).join(", ");
     console.log("  Truncating tables (CASCADE)...");
-    await db.execute(
-      sql.raw(`TRUNCATE TABLE ${quoted} RESTART IDENTITY CASCADE`)
-    );
+    await db.execute(sql.raw(`TRUNCATE TABLE ${quoted} RESTART IDENTITY CASCADE`));
 
     console.log("✅ Database reset complete!");
     console.log("📝 All sample data has been removed.");

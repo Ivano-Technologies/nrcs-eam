@@ -31,7 +31,7 @@ export default function ReportScheduling() {
   
   const [formData, setFormData] = useState({
     name: "",
-    reportType: "assetInventory" as "assetInventory" | "maintenanceSchedule" | "workOrders" | "financial" | "compliance",
+    reportType: "assetInventory" as "assetInventory" | "maintenanceSchedule" | "workOrders",
     format: "excel" as "pdf" | "excel",
     schedule: "weekly" as "daily" | "weekly" | "monthly",
     dayOfWeek: "",
@@ -154,8 +154,6 @@ export default function ReportScheduling() {
       assetInventory: "Asset Inventory",
       maintenanceSchedule: "Maintenance Schedule",
       workOrders: "Work Orders",
-      financial: "Financial",
-      compliance: "Compliance",
     };
     return labels[type] || type;
   };
@@ -276,8 +274,6 @@ export default function ReportScheduling() {
                     <SelectItem value="assetInventory">Asset Inventory</SelectItem>
                     <SelectItem value="maintenanceSchedule">Maintenance Schedule</SelectItem>
                     <SelectItem value="workOrders">Work Orders</SelectItem>
-                    <SelectItem value="financial">Financial</SelectItem>
-                    <SelectItem value="compliance">Compliance</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

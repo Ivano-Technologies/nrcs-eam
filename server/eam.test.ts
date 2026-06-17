@@ -249,17 +249,6 @@ describe("Inventory Management", () => {
   }, 20000);
 });
 
-describe("Vendors Management", () => {
-  it("should list vendors", async () => {
-    const ctx = createTestContext("admin");
-    const caller = appRouter.createCaller(ctx);
-
-    const vendors = await caller.vendors.list();
-
-    expect(Array.isArray(vendors)).toBe(true);
-  });
-});
-
 describe("Maintenance Schedules", () => {
   it("should list maintenance schedules", async () => {
     const ctx = createTestContext("admin");
@@ -280,24 +269,13 @@ describe("Maintenance Schedules", () => {
   });
 });
 
-describe("Financial Tracking", () => {
-  it("should list financial transactions", async () => {
-    const ctx = createTestContext("admin");
-    const caller = appRouter.createCaller(ctx);
-
-    const transactions = await caller.financial.list();
-
-    expect(Array.isArray(transactions)).toBe(true);
-  });
-});
-
 describe("Compliance Tracking", () => {
-  it("should list compliance records", async () => {
+  it("should list vehicle compliance via complianceTracking", async () => {
     const ctx = createTestContext("admin");
     const caller = appRouter.createCaller(ctx);
 
-    const records = await caller.compliance.list();
+    const vehicles = await caller.complianceTracking.vehicles.list();
 
-    expect(Array.isArray(records)).toBe(true);
+    expect(Array.isArray(vehicles)).toBe(true);
   });
 });

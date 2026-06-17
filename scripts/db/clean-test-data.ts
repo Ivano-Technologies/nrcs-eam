@@ -18,6 +18,18 @@ import { getDb, resetDbConnection } from "../../server/db";
 const ADMIN_EMAIL = "ivanonigeria@gmail.com";
 const PROTECTED_SITE_IDS = [1, 2, 3] as const;
 
+type Db = NonNullable<Awaited<ReturnType<typeof getDb>>>;
+
+async function tableExists(db: Db, tableName: string): Promise<boolean> {
+  const r = await db.execute(sql`
+    SELECT 1 AS ok FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = ${tableName}
+    LIMIT 1
+  `);
+  const rows = r as unknown as { ok: number }[];
+  return rows.length > 0;
+}
+
 function assertCanRun(): void {
   const force = process.argv.includes("--force");
   const isProd = process.env.NODE_ENV === "production";
@@ -134,11 +146,17 @@ async function main(): Promise<void> {
     await tx.execute(
       sql`UPDATE "inventoryTransactions" SET "performedBy" = ${adminId} WHERE "performedBy" IN ${nonAdminIds}`
     );
-    await tx.execute(sql`UPDATE "complianceRecords" SET "assignedTo" = NULL WHERE "assignedTo" IN ${nonAdminIds}`);
-    await tx.execute(
-      sql`UPDATE "financialTransactions" SET "createdBy" = ${adminId} WHERE "createdBy" IN ${nonAdminIds}`
-    );
-    await tx.execute(sql`UPDATE "financialTransactions" SET "approvedBy" = NULL WHERE "approvedBy" IN ${nonAdminIds}`);
+    if (await tableExists(tx as unknown as Db, "complianceRecords")) {
+      await tx.execute(sql`UPDATE "complianceRecords" SET "assignedTo" = NULL WHERE "assignedTo" IN ${nonAdminIds}`);
+    }
+    if (await tableExists(tx as unknown as Db, "financialTransactions")) {
+      await tx.execute(
+        sql`UPDATE "financialTransactions" SET "createdBy" = ${adminId} WHERE "createdBy" IN ${nonAdminIds}`
+      );
+      await tx.execute(
+        sql`UPDATE "financialTransactions" SET "approvedBy" = NULL WHERE "approvedBy" IN ${nonAdminIds}`
+      );
+    }
     await tx.execute(sql`UPDATE documents SET "uploadedBy" = ${adminId} WHERE "uploadedBy" IN ${nonAdminIds}`);
     await tx.execute(sql`UPDATE "assetPhotos" SET "uploadedBy" = ${adminId} WHERE "uploadedBy" IN ${nonAdminIds}`);
     await tx.execute(sql`UPDATE "scheduledReports" SET "createdBy" = ${adminId} WHERE "createdBy" IN ${nonAdminIds}`);

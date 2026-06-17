@@ -23,8 +23,6 @@ import {
 import { inventoryV2Router } from "./routers/inventoryRouter";
 import { wmsRouter } from "./routers/wmsRouter";
 import {
-  annualFinanceReportRouter,
-  costManagementRouter,
   depreciationReportRouter,
   insuranceRecordsRouter,
 } from "./financeRouters";
@@ -1873,7 +1871,6 @@ export const appRouter = router({
         maxStockLevel: z.number().optional(),
         unitOfMeasure: z.string().optional(),
         unitCost: z.string().optional(),
-        vendorId: z.number().optional(),
         location: z.string().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
@@ -1893,7 +1890,6 @@ export const appRouter = router({
         maxStockLevel: z.number().optional(),
         unitOfMeasure: z.string().optional(),
         unitCost: z.string().optional(),
-        vendorId: z.number().optional(),
         location: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
@@ -2107,225 +2103,10 @@ export const appRouter = router({
   inventoryV2: inventoryV2Router,
   wms: wmsRouter,
 
-  // ============= VENDORS =============
-  vendors: router({
-    list: protectedProcedure.query(async () => {
-      return await db.getAllVendors();
-    }),
-    
-    create: managerOrAdminProcedure
-      .input(z.object({
-        name: z.string().min(1),
-        vendorCode: z.string().optional(),
-        contactPerson: z.string().optional(),
-        email: z.string().email().optional(),
-        phone: z.string().optional(),
-        address: z.string().optional(),
-        city: z.string().optional(),
-        state: z.string().optional(),
-        country: z.string().optional(),
-        website: z.string().optional(),
-        notes: z.string().optional(),
-      }))
-      .mutation(async ({ input }) => {
-        return await db.createVendor(input);
-      }),
-    
-    update: managerOrAdminProcedure
-      .input(z.object({
-        id: z.number(),
-        name: z.string().optional(),
-        contactPerson: z.string().optional(),
-        email: z.string().email().optional(),
-        phone: z.string().optional(),
-        address: z.string().optional(),
-        city: z.string().optional(),
-        state: z.string().optional(),
-        country: z.string().optional(),
-        website: z.string().optional(),
-        notes: z.string().optional(),
-        isActive: z.boolean().optional(),
-      }))
-      .mutation(async ({ input }) => {
-        const { id, ...data } = input;
-        return await db.updateVendor(id, data);
-      }),
-  }),
-
-  // ============= FINANCIAL TRANSACTIONS =============
-  financial: router({
-    list: protectedProcedure
-      .input(z.object({
-        assetId: z.number().optional(),
-        workOrderId: z.number().optional(),
-        startDate: z.date().optional(),
-        endDate: z.date().optional(),
-      }).optional())
-      .query(async ({ input }) => {
-        return await db.getFinancialTransactions(input);
-      }),
-    
-    create: managerOrAdminProcedure
-      .input(z.object({
-        transactionType: z.enum(["acquisition", "maintenance", "repair", "disposal", "depreciation", "revenue", "other"]),
-        assetId: z.number().optional(),
-        workOrderId: z.number().optional(),
-        amount: z.string(),
-        currency: z.string().default("NGN"),
-        description: z.string().optional(),
-        transactionDate: z.string(),
-        vendorId: z.number().optional(),
-        receiptNumber: z.string().optional(),
-        approvedBy: z.number().optional(),
-      }))
-      .mutation(async ({ input, ctx }) => {
-        return await db.createFinancialTransaction({
-          ...input,
-          transactionDate: new Date(input.transactionDate),
-          createdBy: ctx.user.id,
-        });
-      }),
-
-    update: managerOrAdminProcedure
-      .input(z.object({
-        id: z.number(),
-        transactionType: z.enum(["acquisition", "maintenance", "repair", "disposal", "depreciation", "revenue", "other"]).optional(),
-        amount: z.string().optional(),
-        description: z.string().optional(),
-        transactionDate: z.string().optional(),
-        receiptNumber: z.string().optional(),
-      }))
-      .mutation(async ({ input }) => {
-        const { id, ...data } = input;
-        const updateData: any = { ...data };
-        if (data.transactionDate) {
-          updateData.transactionDate = new Date(data.transactionDate);
-        }
-        return await db.updateFinancialTransaction(id, updateData);
-      }),
-
-    // Lifecycle Cost Analysis
-    getAssetLifecycleCost: protectedProcedure
-      .input(z.object({ assetId: z.number() }))
-      .query(async ({ input }) => {
-        const { calculateAssetLifecycleCost } = await import('./lifecycleCost');
-        return await calculateAssetLifecycleCost(input.assetId);
-      }),
-
-    getCategoryCostSummary: protectedProcedure
-      .query(async () => {
-        const { getCategoryCostSummary } = await import('./lifecycleCost');
-        return await getCategoryCostSummary();
-      }),
-
-    getCostOptimizationRecommendations: protectedProcedure
-      .query(async () => {
-        const { getCostOptimizationRecommendations } = await import('./lifecycleCost');
-        return await getCostOptimizationRecommendations();
-      }),
-
-    getCostAnalytics: protectedProcedure
-      .input(z.object({ days: z.number().default(30) }))
-      .query(async ({ input }) => {
-        return await db.getCostAnalytics(input.days);
-      }),
-  }),
-
-  costManagement: costManagementRouter,
   depreciationReport: depreciationReportRouter,
   insuranceRecords: insuranceRecordsRouter,
-  annualFinanceReport: annualFinanceReportRouter,
   complianceTracking: complianceTrackingRouter,
   donorAssets: donorAssetsRouter,
-
-  assetValuation: router({
-    report: managerOrAdminProcedure.query(async () => {
-      return await db.getAssetValuationReport();
-    }),
-    exportExecutivePdf: managerOrAdminProcedure.mutation(async () => {
-      try {
-        const report = await db.getAssetValuationReport();
-        const { buildAssetValuationExecutivePdf } = await import("./assetValuationPdf");
-        const buffer = await buildAssetValuationExecutivePdf(report);
-        if (!buffer.length) {
-          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "PDF generation produced empty output" });
-        }
-        return {
-          filename: "nrcs-asset-valuation-2026.pdf",
-          mimeType: "application/pdf",
-          base64: buffer.toString("base64"),
-        };
-      } catch (error) {
-        if (error instanceof TRPCError) throw error;
-        console.error("[assetValuation.exportExecutivePdf]", error);
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: error instanceof Error ? error.message : "PDF export failed",
-        });
-      }
-    }),
-    exportRegisterExcel: managerOrAdminProcedure.mutation(async () => {
-      const report = await db.getAssetValuationReport();
-      const { buildAssetValuationRegisterWorkbook } = await import("./assetValuationExcel");
-      const { buffer, filename } = await buildAssetValuationRegisterWorkbook(report);
-      return {
-        filename,
-        mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        base64: buffer.toString("base64"),
-      };
-    }),
-  }),
-
-  // ============= COMPLIANCE =============
-  compliance: router({
-    list: protectedProcedure
-      .input(z.object({
-        assetId: z.number().optional(),
-        status: z.string().optional(),
-      }).optional())
-      .query(async ({ input }) => {
-        return await db.getAllComplianceRecords(input);
-      }),
-    
-    create: managerOrAdminProcedure
-      .input(z.object({
-        assetId: z.number().optional(),
-        title: z.string().min(1),
-        regulatoryBody: z.string().optional(),
-        requirementType: z.string().optional(),
-        description: z.string().optional(),
-        status: z.enum(["compliant", "non_compliant", "pending", "expired"]).default("pending"),
-        dueDate: z.date().optional(),
-        completionDate: z.date().optional(),
-        nextReviewDate: z.date().optional(),
-        assignedTo: z.number().optional(),
-        documentUrl: z.string().optional(),
-        notes: z.string().optional(),
-      }))
-      .mutation(async ({ input }) => {
-        return await db.createComplianceRecord(input);
-      }),
-    
-    update: managerOrAdminProcedure
-      .input(z.object({
-        id: z.number(),
-        title: z.string().optional(),
-        regulatoryBody: z.string().optional(),
-        requirementType: z.string().optional(),
-        description: z.string().optional(),
-        status: z.enum(["compliant", "non_compliant", "pending", "expired"]).optional(),
-        dueDate: z.date().optional(),
-        completionDate: z.date().optional(),
-        nextReviewDate: z.date().optional(),
-        assignedTo: z.number().optional(),
-        documentUrl: z.string().optional(),
-        notes: z.string().optional(),
-      }))
-      .mutation(async ({ input }) => {
-        const { id, ...data } = input;
-        return await db.updateComplianceRecord(id, data);
-      }),
-  }),
 
   // ============= DASHBOARD =============
   dashboard: router({
@@ -3943,84 +3724,6 @@ export const appRouter = router({
         }
       }),
 
-    // Financial Reports
-    financial: protectedProcedure
-      .input(z.object({
-        format: z.enum(['pdf', 'excel']),
-        startDate: z.string().optional(),
-        endDate: z.string().optional(),
-      }))
-      .mutation(async ({ input }) => {
-        const transactions = await db.getFinancialTransactions();
-
-        const columns = [
-          { header: 'Date', key: 'transactionDate', width: 15 },
-          { header: 'Asset', key: 'assetName', width: 20 },
-          { header: 'Type', key: 'transactionType', width: 15 },
-          { header: 'Category', key: 'category', width: 15 },
-          { header: 'Amount', key: 'amount', width: 12 },
-          { header: 'Description', key: 'description', width: 30 },
-        ];
-
-        const title = 'Financial Summary Report';
-        const subtitle = `Period: ${input.startDate || 'All'} to ${input.endDate || 'All'}`;
-
-        if (input.format === 'pdf') {
-          const buffer = await generatePDFReport(title, transactions, columns, { subtitle });
-          return {
-            data: buffer.toString('base64'),
-            filename: `financial-report-${Date.now()}.pdf`,
-            mimeType: 'application/pdf',
-          };
-        } else {
-          const buffer = await generateExcelReport(title, transactions, columns, { sheetName: 'Financial' });
-          return {
-            data: buffer.toString('base64'),
-            filename: `financial-report-${Date.now()}.xlsx`,
-            mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-          };
-        }
-      }),
-
-    // Compliance Reports
-    compliance: protectedProcedure
-      .input(z.object({
-        format: z.enum(['pdf', 'excel']),
-        siteId: z.number().optional(),
-        status: z.enum(['compliant', 'non_compliant', 'pending']).optional(),
-      }))
-      .mutation(async ({ input }) => {
-        const records = await db.getAllComplianceRecords();
-
-        const columns = [
-          { header: 'Asset', key: 'assetName', width: 20 },
-          { header: 'Requirement', key: 'requirementName', width: 25 },
-          { header: 'Status', key: 'status', width: 12 },
-          { header: 'Last Inspection', key: 'lastInspectionDate', width: 15 },
-          { header: 'Next Due', key: 'nextDueDate', width: 15 },
-          { header: 'Inspector', key: 'inspectorName', width: 15 },
-        ];
-
-        const title = 'Compliance Audit Report';
-        const subtitle = `Status: ${input.status || 'All'}`;
-
-        if (input.format === 'pdf') {
-          const buffer = await generatePDFReport(title, records, columns, { subtitle });
-          return {
-            data: buffer.toString('base64'),
-            filename: `compliance-report-${Date.now()}.pdf`,
-            mimeType: 'application/pdf',
-          };
-        } else {
-          const buffer = await generateExcelReport(title, records, columns, { sheetName: 'Compliance' });
-          return {
-            data: buffer.toString('base64'),
-            filename: `compliance-report-${Date.now()}.xlsx`,
-            mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-          };
-        }
-      }),
-
     branchSummary: managerOrAdminProcedure
       .input(z.object({ siteId: z.number(), consolidated: z.boolean().optional() }))
       .query(async ({ input, ctx }) => {
@@ -4099,7 +3802,7 @@ export const appRouter = router({
     create: managerOrAdminProcedure
       .input(z.object({
         name: z.string(),
-        reportType: z.enum(['assetInventory', 'maintenanceSchedule', 'workOrders', 'financial', 'compliance']),
+        reportType: z.enum(['assetInventory', 'maintenanceSchedule', 'workOrders']),
         format: z.enum(['pdf', 'excel']),
         schedule: z.enum(['daily', 'weekly', 'monthly']),
         dayOfWeek: z.number().optional(),
@@ -4120,7 +3823,7 @@ export const appRouter = router({
       .input(z.object({
         id: z.number(),
         name: z.string().optional(),
-        reportType: z.enum(['assetInventory', 'maintenanceSchedule', 'workOrders', 'financial', 'compliance']).optional(),
+        reportType: z.enum(['assetInventory', 'maintenanceSchedule', 'workOrders']).optional(),
         format: z.enum(['pdf', 'excel']).optional(),
         schedule: z.enum(['daily', 'weekly', 'monthly']).optional(),
         dayOfWeek: z.number().optional(),
@@ -4441,112 +4144,6 @@ export const appRouter = router({
       .query(async () => {
         return await db.getPendingTransferRequests();
       }),
-  }),
-
-  // ============= QUICKBOOKS INTEGRATION =============
-  quickbooks: router({
-    getConfig: protectedProcedure.query(async () => {
-      return await db.getQuickBooksConfig();
-    }),
-    
-    saveConfig: protectedProcedure
-      .input(z.object({
-        clientId: z.string(),
-        clientSecret: z.string(),
-        redirectUri: z.string(),
-        realmId: z.string(),
-      }))
-      .mutation(async ({ input }) => {
-        return await db.saveQuickBooksConfig({
-          ...input,
-          isActive: 1,
-          autoSync: 1,
-        });
-      }),
-    
-    getAuthUrl: protectedProcedure
-      .input(z.object({
-        clientId: z.string(),
-        redirectUri: z.string(),
-      }))
-      .query(({ input }) => {
-        const { getQuickBooksAuthUrl } = require('./quickbooksIntegration');
-        return { url: getQuickBooksAuthUrl(input) };
-      }),
-    
-    exchangeCode: protectedProcedure
-      .input(z.object({
-        code: z.string(),
-        realmId: z.string(),
-      }))
-      .mutation(async ({ input }) => {
-        const config = await db.getQuickBooksConfig();
-        if (!config) throw new Error('QuickBooks not configured');
-        
-        const { exchangeCodeForToken } = require('./quickbooksIntegration');
-        const tokens = await exchangeCodeForToken(input.code, {
-          clientId: config.clientId,
-          clientSecret: config.clientSecret,
-          redirectUri: config.redirectUri,
-        });
-        
-        // Update config with tokens
-        const expiresAt = new Date(Date.now() + tokens.expiresIn * 1000);
-        await db.updateQuickBooksTokens(config.id, tokens.accessToken, tokens.refreshToken, expiresAt);
-        
-        // Update realm ID if provided
-        if (input.realmId) {
-          await db.saveQuickBooksConfig({
-            ...config,
-            realmId: input.realmId,
-            accessToken: tokens.accessToken,
-            refreshToken: tokens.refreshToken,
-            tokenExpiresAt: expiresAt,
-          });
-        }
-        
-        return { success: true };
-      }),
-    
-    syncTransactions: protectedProcedure.mutation(async () => {
-      const config = await db.getQuickBooksConfig();
-      if (!config || !config.accessToken) {
-        throw new Error('QuickBooks not authenticated');
-      }
-      
-      const { syncAllTransactions } = require('./quickbooksIntegration');
-      const result = await syncAllTransactions({
-        clientId: config.clientId,
-        clientSecret: config.clientSecret,
-        redirectUri: config.redirectUri,
-        realmId: config.realmId,
-        accessToken: config.accessToken,
-        refreshToken: config.refreshToken || undefined,
-      });
-      
-      await db.updateQuickBooksLastSync(config.id);
-      
-      return result;
-    }),
-    
-    testConnection: protectedProcedure.query(async () => {
-      const config = await db.getQuickBooksConfig();
-      if (!config || !config.accessToken) {
-        return { connected: false, error: 'Not authenticated' };
-      }
-      
-      const { testConnection } = require('./quickbooksIntegration');
-      const connected = await testConnection({
-        clientId: config.clientId,
-        clientSecret: config.clientSecret,
-        redirectUri: config.redirectUri,
-        realmId: config.realmId,
-        accessToken: config.accessToken,
-        refreshToken: config.refreshToken || undefined,
-      });
-      
-      return { connected };
-    }),
   }),
 
   // ============= USER PREFERENCES =============

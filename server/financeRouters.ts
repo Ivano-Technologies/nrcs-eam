@@ -1,110 +1,9 @@
-import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { router } from "./_core/trpc";
 import { managerOrAdminProcedure, adminProcedure } from "./routers/roleProcedures";
 import * as financeDb from "./financeModulesDb";
-const maintenanceTypeZod = z.enum(["Routine", "Repair", "Emergency", "Inspection"]);
+
 const insuranceTypeZod = z.enum(["Property", "Vehicle", "Equipment", "Liability"]);
-
-export const costManagementRouter = router({
-  listBudgets: managerOrAdminProcedure
-    .input(z.object({ period: z.number().int() }))
-    .query(({ input }) => financeDb.listBudgets(input.period)),
-
-  upsertBudget: managerOrAdminProcedure
-    .input(
-      z.object({
-        id: z.number().optional(),
-        siteId: z.number().nullable(),
-        categoryId: z.number().nullable(),
-        period: z.number().int(),
-        amount: z.number().min(0),
-      })
-    )
-    .mutation(async ({ input, ctx }) => {
-      const id = await financeDb.upsertBudget({
-        ...input,
-        createdBy: ctx.user.id,
-      });
-      return { id };
-    }),
-
-  budgetVsActual: managerOrAdminProcedure
-    .input(z.object({ year: z.number().int() }))
-    .query(({ input }) => financeDb.getBudgetVsActualByBranch(input.year)),
-
-  listMaintenanceCosts: managerOrAdminProcedure
-    .input(
-      z
-        .object({
-          siteId: z.number().optional(),
-          categoryId: z.number().optional(),
-          dateFrom: z.string().optional(),
-          dateTo: z.string().optional(),
-          minCost: z.number().optional(),
-          maxCost: z.number().optional(),
-        })
-        .optional()
-    )
-    .query(({ input }) => financeDb.listMaintenanceCosts(input ?? {})),
-
-  maintenanceSummary: managerOrAdminProcedure
-    .input(z.object({ year: z.number().int() }))
-    .query(({ input }) => financeDb.getMaintenanceCostSummary(input.year)),
-
-  createMaintenanceCost: managerOrAdminProcedure
-    .input(
-      z.object({
-        assetId: z.number(),
-        maintenanceType: maintenanceTypeZod,
-        date: z.string(),
-        costNgn: z.number().min(0),
-        description: z.string().optional(),
-        referenceNumber: z.string().optional(),
-      })
-    )
-    .mutation(async ({ input, ctx }) => {
-      const id = await financeDb.createMaintenanceCost({
-        ...input,
-        loggedBy: ctx.user.id,
-      });
-      return { id };
-    }),
-
-  exportMaintenanceCostsExcel: managerOrAdminProcedure
-    .input(
-      z
-        .object({
-          siteId: z.number().optional(),
-          dateFrom: z.string().optional(),
-          dateTo: z.string().optional(),
-        })
-        .optional()
-    )
-    .mutation(async ({ input }) => {
-      const rows = await financeDb.listMaintenanceCosts(input ?? {});
-      const { buildMaintenanceCostsWorkbook } = await import("./financeExcelExports");
-      const { buffer, filename } = await buildMaintenanceCostsWorkbook(rows);
-      return {
-        filename,
-        mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        base64: buffer.toString("base64"),
-      };
-    }),
-
-  exportBudgetSummaryExcel: managerOrAdminProcedure
-    .input(z.object({ year: z.number().int() }))
-    .mutation(async ({ input }) => {
-      const rows = await financeDb.getBudgetVsActualByBranch(input.year);
-      const { buildBudgetSummaryWorkbook } = await import("./financeExcelExports");
-      const { buffer, filename } = await buildBudgetSummaryWorkbook(rows, input.year);
-      return {
-        filename,
-        mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        base64: buffer.toString("base64"),
-      };
-    }),
-});
 
 export const depreciationReportRouter = router({
   summary: managerOrAdminProcedure.query(() => financeDb.getDepreciationReportSummary()),
@@ -234,56 +133,6 @@ export const insuranceRecordsRouter = router({
       const rows = await financeDb.listInsuranceRecords(input);
       const { buildInsuranceRegisterWorkbook } = await import("./financeExcelExports");
       const { buffer, filename } = await buildInsuranceRegisterWorkbook(rows);
-      return {
-        filename,
-        mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        base64: buffer.toString("base64"),
-      };
-    }),
-});
-
-export const annualFinanceReportRouter = router({
-  getData: managerOrAdminProcedure
-    .input(
-      z.object({
-        year: z.number().int(),
-        siteId: z.number().optional(),
-      })
-    )
-    .query(({ input }) => financeDb.getAnnualFinanceReportData(input.year, input.siteId)),
-
-  exportPdf: managerOrAdminProcedure
-    .input(
-      z.object({
-        year: z.number().int(),
-        siteId: z.number().optional(),
-      })
-    )
-    .mutation(async ({ input }) => {
-      const data = await financeDb.getAnnualFinanceReportData(input.year, input.siteId);
-      const { buildAnnualFinanceReportPdf } = await import("./annualFinanceReportPdf");
-      const buffer = await buildAnnualFinanceReportPdf(data);
-      if (!buffer.length) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "PDF generation failed" });
-      }
-      return {
-        filename: `nrcs-annual-finance-report-${input.year}.pdf`,
-        mimeType: "application/pdf",
-        base64: buffer.toString("base64"),
-      };
-    }),
-
-  exportExcel: managerOrAdminProcedure
-    .input(
-      z.object({
-        year: z.number().int(),
-        siteId: z.number().optional(),
-      })
-    )
-    .mutation(async ({ input }) => {
-      const data = await financeDb.getAnnualFinanceReportData(input.year, input.siteId);
-      const { buildAnnualFinanceReportWorkbook } = await import("./financeExcelExports");
-      const { buffer, filename } = await buildAnnualFinanceReportWorkbook(data);
       return {
         filename,
         mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

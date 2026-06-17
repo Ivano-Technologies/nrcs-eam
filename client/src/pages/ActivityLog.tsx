@@ -12,6 +12,8 @@ import { useAuth } from "@/_core/hooks/useAuth";
 export default function ActivityLog() {
   const { user } = useAuth();
   const [userQuery, setUserQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [entityType, setEntityType] = useState<string>("all");
   const [actionFilter, setActionFilter] = useState<string>("all");
   const [facilityFilter, setFacilityFilter] = useState<string>("all");
   const [startDate, setStartDate] = useState("");
@@ -19,6 +21,7 @@ export default function ActivityLog() {
   const [page, setPage] = useState(1);
 
   const { data, isLoading } = trpc.auditLogs.list.useQuery({
+    entityType: entityType === "all" ? undefined : entityType,
     actionType: actionFilter !== "all" ? actionFilter : undefined,
     userQuery: userQuery.trim() ? userQuery.trim() : undefined,
     facilityId: facilityFilter !== "all" ? Number(facilityFilter) : undefined,
@@ -36,27 +39,45 @@ export default function ActivityLog() {
     );
   }
 
-  const rows = data?.rows ?? [];
-  const facilities = data?.facilities ?? [];
   const actionTypes = data?.actionTypes ?? [];
+  const facilities = data?.facilities ?? [];
   const totalPages = Math.max(1, Math.ceil((data?.total ?? 0) / 25));
+
+  const rows = (data?.rows ?? []).filter((log) => {
+    if (!searchQuery.trim()) return true;
+    const searchLower = searchQuery.toLowerCase();
+    return (
+      log.action.toLowerCase().includes(searchLower) ||
+      (log.resource?.toLowerCase().includes(searchLower) ?? false) ||
+      (log.details?.toLowerCase().includes(searchLower) ?? false) ||
+      log.userLabel.toLowerCase().includes(searchLower)
+    );
+  });
 
   return (
     <div className="space-y-6">
       <PageHeader
         icon={Activity}
         title="Activity Log"
-        subtitle="Track all user actions and system changes"
+        subtitle="Audit trail of user actions and system changes"
       />
 
-      {/* Filters */}
       <Card>
         <CardHeader>
           <CardTitle>Filters</CardTitle>
-          <CardDescription>Filter by date range, user, action type, and facility</CardDescription>
+          <CardDescription>Filter by date range, user, action, entity type, and facility</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-5">
+          <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4">
+            <div className="relative md:col-span-2">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search action, resource, details, or user..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
@@ -69,6 +90,25 @@ export default function ActivityLog() {
                 className="pl-10"
               />
             </div>
+            <Select
+              value={entityType}
+              onValueChange={(value) => {
+                setEntityType(value);
+                setPage(1);
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Entity type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All entity types</SelectItem>
+                <SelectItem value="asset">Assets</SelectItem>
+                <SelectItem value="work_order">Work Orders</SelectItem>
+                <SelectItem value="site">Facilities</SelectItem>
+                <SelectItem value="user">Users</SelectItem>
+                <SelectItem value="financial">Financial</SelectItem>
+              </SelectContent>
+            </Select>
             <Select
               value={actionFilter}
               onValueChange={(value) => {
@@ -127,7 +167,6 @@ export default function ActivityLog() {
         </CardContent>
       </Card>
 
-      {/* Activity Table */}
       {isLoading ? (
         <TableLoader className="py-8" />
       ) : rows.length > 0 ? (
@@ -142,31 +181,31 @@ export default function ActivityLog() {
                 } as Record<string, string>
               }
             >
-              <Table
-                className="min-w-[1100px]"
-              >
-              <TableHeader className="bg-background">
-                <TableRow>
-                  <TableHead className="bg-background">Timestamp</TableHead>
-                  <TableHead className="bg-background">User</TableHead>
-                  <TableHead className="bg-background">Action</TableHead>
-                  <TableHead>Resource</TableHead>
-                  <TableHead>Details</TableHead>
-                  <TableHead>Facility</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((log) => (
-                  <TableRow key={log.id}>
-                    <TableCell className="bg-background">{new Date(log.timestamp).toLocaleString()}</TableCell>
-                    <TableCell className="bg-background">{log.userLabel}</TableCell>
-                    <TableCell className="bg-background">{log.action}</TableCell>
-                    <TableCell>{log.resource}</TableCell>
-                    <TableCell>{log.details ?? "-"}</TableCell>
-                    <TableCell>{log.facilityName ?? "-"}</TableCell>
+              <Table className="min-w-[1100px]">
+                <TableHeader className="bg-background">
+                  <TableRow>
+                    <TableHead className="bg-background">Timestamp</TableHead>
+                    <TableHead className="bg-background">User</TableHead>
+                    <TableHead className="bg-background">Action</TableHead>
+                    <TableHead>Resource</TableHead>
+                    <TableHead>Details</TableHead>
+                    <TableHead>Facility</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
+                </TableHeader>
+                <TableBody>
+                  {rows.map((log) => (
+                    <TableRow key={log.id}>
+                      <TableCell className="bg-background">
+                        {new Date(log.timestamp).toLocaleString()}
+                      </TableCell>
+                      <TableCell className="bg-background">{log.userLabel}</TableCell>
+                      <TableCell className="bg-background">{log.action}</TableCell>
+                      <TableCell>{log.resource}</TableCell>
+                      <TableCell>{log.details ?? "-"}</TableCell>
+                      <TableCell>{log.facilityName ?? "-"}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
               </Table>
             </div>
             <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">

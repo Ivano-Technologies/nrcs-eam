@@ -362,8 +362,3 @@ export function InsuranceRegisterContent({ embedded = false }: { embedded?: bool
   if (embedded) return content;
   return <ManagerFinanceGate>{content}</ManagerFinanceGate>;
 }
-
-export default function InsuranceRegister() {
-  return <InsuranceRegisterContent />;
-}
-

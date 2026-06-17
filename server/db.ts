@@ -1,4 +1,4 @@
-import {
+﻿import {
   eq,
   and,
   desc,
@@ -23,13 +23,13 @@ import {
   appSettings,
   InsertUser, users, sites, InsertSite, type Site, siteValuations, assetCategories, assets, InsertAsset,
   workOrders, InsertWorkOrder, maintenanceSchedules, InsertMaintenanceSchedule,
-  inventoryItems, InsertInventoryItem, inventoryTransactions, vendors, InsertVendor,
-  financialTransactions, complianceRecords, auditLogs, documents,
+  inventoryItems, InsertInventoryItem, inventoryTransactions,
+  auditLogs, documents,
   notifications, notificationPreferences, assetPhotos, InsertAssetPhoto,
   facilityPhotos,
   type FacilityPhoto,
   type NewFacilityPhoto,
-  scheduledReports, InsertScheduledReport, assetTransfers, quickbooksConfig, InsertQuickBooksConfig,
+  scheduledReports, InsertScheduledReport, assetTransfers,
   userPreferences, InsertUserPreferences, emailNotifications, InsertEmailNotification,
   workOrderTemplates, InsertWorkOrderTemplate,
   pendingUsers,
@@ -60,7 +60,7 @@ export async function getDb() {
   const fingerprint = databaseUrlFingerprint();
   if (_db && _dbUrlFingerprint && _dbUrlFingerprint !== fingerprint) {
     console.warn(
-      "[Database] DATABASE_URL changed — resetting pooled connection"
+      "[Database] DATABASE_URL changed â€” resetting pooled connection"
     );
     await resetDbConnection();
   }
@@ -481,7 +481,7 @@ export type SiteMapNetworkDataRow = {
   lastMovementDate: string | null;
 };
 
-/** Facilities for network map — coordinates + stock readiness per site. */
+/** Facilities for network map â€” coordinates + stock readiness per site. */
 export async function getSitesMapNetworkData(): Promise<SiteMapNetworkDataRow[]> {
   const database = await getDb();
   if (!database) return [];
@@ -1487,96 +1487,6 @@ export async function getInventoryMovements(filters: {
   return rows;
 }
 
-// ============= VENDORS =============
-
-export async function createVendor(vendor: InsertVendor) {
-  const db = await getDb();
-  if (!db) return null;
-  const [inserted] = await db.insert(vendors).values(vendor).returning({ id: vendors.id });
-  const insertId = inserted?.id;
-  if (!insertId || isNaN(insertId)) throw new Error("Failed to get insert ID");
-  return await db.select().from(vendors).where(eq(vendors.id, insertId)).limit(1).then(r => r[0]);
-}
-
-export async function getAllVendors() {
-  const db = await getDb();
-  if (!db) return [];
-  return await db.select().from(vendors).orderBy(asc(vendors.name));
-}
-
-export async function updateVendor(id: number, data: Partial<InsertVendor>) {
-  const db = await getDb();
-  if (!db) return null;
-  await db.update(vendors).set(data).where(eq(vendors.id, id));
-  return await db.select().from(vendors).where(eq(vendors.id, id)).limit(1).then(r => r[0] || null);
-}
-
-// ============= FINANCIAL TRANSACTIONS =============
-
-export async function createFinancialTransaction(transaction: typeof financialTransactions.$inferInsert) {
-  const db = await getDb();
-  if (!db) return null;
-  const [inserted] = await db.insert(financialTransactions).values(transaction).returning({ id: financialTransactions.id });
-  const insertId = inserted?.id;
-  if (!insertId) return null;
-  return await db.select().from(financialTransactions).where(eq(financialTransactions.id, insertId)).limit(1).then(r => r[0]);
-}
-
-export async function getFinancialTransactions(filters?: { assetId?: number; workOrderId?: number; startDate?: Date; endDate?: Date }) {
-  const db = await getDb();
-  if (!db) return [];
-  
-  let query = db.select().from(financialTransactions);
-  const conditions = [];
-  
-  if (filters?.assetId) conditions.push(eq(financialTransactions.assetId, filters.assetId));
-  if (filters?.workOrderId) conditions.push(eq(financialTransactions.workOrderId, filters.workOrderId));
-  if (filters?.startDate) conditions.push(gte(financialTransactions.transactionDate, filters.startDate));
-  if (filters?.endDate) conditions.push(lte(financialTransactions.transactionDate, filters.endDate));
-  
-  if (conditions.length > 0) {
-    query = query.where(and(...conditions)) as any;
-  }
-
-  // Capped at 500 — server-side filters should be applied for large date ranges
-  return await query.orderBy(desc(financialTransactions.transactionDate)).limit(500);
-}
-
-// ============= COMPLIANCE =============
-
-export async function createComplianceRecord(record: typeof complianceRecords.$inferInsert) {
-  const db = await getDb();
-  if (!db) return null;
-  const [inserted] = await db.insert(complianceRecords).values(record).returning({ id: complianceRecords.id });
-  const insertId = inserted?.id;
-  if (!insertId) return null;
-  return await db.select().from(complianceRecords).where(eq(complianceRecords.id, insertId)).limit(1).then(r => r[0]);
-}
-
-export async function getAllComplianceRecords(filters?: { assetId?: number; status?: string }) {
-  const db = await getDb();
-  if (!db) return [];
-  
-  let query = db.select().from(complianceRecords);
-  const conditions = [];
-  
-  if (filters?.assetId) conditions.push(eq(complianceRecords.assetId, filters.assetId));
-  if (filters?.status) conditions.push(eq(complianceRecords.status, filters.status as any));
-  
-  if (conditions.length > 0) {
-    query = query.where(and(...conditions)) as any;
-  }
-  
-  return await query.orderBy(desc(complianceRecords.createdAt)).limit(2000);
-}
-
-export async function updateComplianceRecord(id: number, data: Partial<typeof complianceRecords.$inferInsert>) {
-  const db = await getDb();
-  if (!db) return null;
-  await db.update(complianceRecords).set(data).where(eq(complianceRecords.id, id));
-  return await db.select().from(complianceRecords).where(eq(complianceRecords.id, id)).limit(1).then(r => r[0] || null);
-}
-
 // ============= AUDIT LOGS =============
 
 export async function createAuditLog(log: typeof auditLogs.$inferInsert) {
@@ -1764,7 +1674,7 @@ export async function getDashboardStats(opts?: { siteId?: number }) {
   };
 }
 
-/** Counts for Reports “Weekly insights” widget (30-day windows where applicable). */
+/** Counts for Reports â€œWeekly insightsâ€ widget (30-day windows where applicable). */
 export async function getWeeklyInsights(opts?: { siteId?: number }) {
   const database = await getDb();
   if (!database) {
@@ -2293,72 +2203,6 @@ export async function getAssetByBranchCategoryNum(
 }
 
 
-export async function getFinancialTransactionById(id: number) {
-  const db = await getDb();
-  if (!db) return undefined;
-  
-  const result = await db.select().from(financialTransactions).where(eq(financialTransactions.id, id)).limit(1);
-  return result.length > 0 ? result[0] : undefined;
-}
-
-export async function updateFinancialTransaction(id: number, data: Partial<typeof financialTransactions.$inferInsert>) {
-  const db = await getDb();
-  if (!db) return null;
-  await db.update(financialTransactions).set(data).where(eq(financialTransactions.id, id));
-  return await getFinancialTransactionById(id);
-}
-
-
-// ============= QuickBooks Configuration =============
-export async function getQuickBooksConfig() {
-  const db = await getDb();
-  if (!db) return null;
-  
-  const result = await db.select().from(quickbooksConfig).where(eq(quickbooksConfig.isActive, 1)).limit(1);
-  return result.length > 0 ? result[0] : null;
-}
-
-export async function saveQuickBooksConfig(config: InsertQuickBooksConfig) {
-  const db = await getDb();
-  if (!db) return undefined;
-  
-  // Deactivate all existing configs
-  await db.update(quickbooksConfig).set({ isActive: 0 });
-  
-  // Insert new config
-  const [inserted] = await db.insert(quickbooksConfig).values(config).returning({ id: quickbooksConfig.id });
-  const insertId = inserted?.id;
-  if (!insertId) return undefined;
-  return await db.select().from(quickbooksConfig).where(eq(quickbooksConfig.id, insertId)).limit(1).then(r => r[0]);
-}
-
-export async function updateQuickBooksTokens(id: number, accessToken: string, refreshToken: string, expiresAt: Date) {
-  const db = await getDb();
-  if (!db) return false;
-  
-  await db.update(quickbooksConfig)
-    .set({ 
-      accessToken, 
-      refreshToken, 
-      tokenExpiresAt: expiresAt 
-    })
-    .where(eq(quickbooksConfig.id, id));
-  
-  return true;
-}
-
-export async function updateQuickBooksLastSync(id: number) {
-  const db = await getDb();
-  if (!db) return false;
-  
-  await db.update(quickbooksConfig)
-    .set({ lastSyncAt: new Date() })
-    .where(eq(quickbooksConfig.id, id));
-  
-  return true;
-}
-
-
 // ============= User Preferences =============
 export async function getUserPreferences(userId: number) {
   const db = await getDb();
@@ -2683,129 +2527,6 @@ export async function getAssetAuditHistory(assetId: number) {
 }
 
 
-// ============= COST ANALYTICS =============
-
-export async function getCostAnalytics(days: number) {
-  const db = await getDb();
-  if (!db) return null;
-  
-  const startDate = new Date();
-  startDate.setDate(startDate.getDate() - days);
-  
-  const transactions = await db
-    .select()
-    .from(financialTransactions)
-    .where(gte(financialTransactions.transactionDate, startDate))
-    .limit(1000);
-  
-  // Calculate totals
-  const totalCost = transactions.reduce((sum, t) => sum + parseFloat(t.amount), 0);
-  const maintenanceCost = transactions
-    .filter(t => t.transactionType === 'maintenance')
-    .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-  const repairCost = transactions
-    .filter(t => t.transactionType === 'repair')
-    .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-  
-  const uniqueAssetIds = Array.from(
-    new Set(transactions.map((t) => t.assetId).filter((id): id is number => id != null))
-  );
-  const assetRows =
-    uniqueAssetIds.length > 0
-      ? await db.select().from(assets).where(inArray(assets.id, uniqueAssetIds))
-      : [];
-  const assetMap = new Map(assetRows.map((a) => [a.id, a]));
-
-  const uniqueCategoryIds = Array.from(
-    new Set(assetRows.map((a) => a.categoryId).filter((id): id is number => id != null))
-  );
-  const categoryRows =
-    uniqueCategoryIds.length > 0
-      ? await db.select().from(assetCategories).where(inArray(assetCategories.id, uniqueCategoryIds))
-      : [];
-  const categoryMap = new Map(categoryRows.map((c) => [c.id, c]));
-
-  const uniqueSiteIds = Array.from(
-    new Set(assetRows.map((a) => a.siteId).filter((id): id is number => id != null))
-  );
-  const siteRows =
-    uniqueSiteIds.length > 0
-      ? await db.select().from(sites).where(inArray(sites.id, uniqueSiteIds))
-      : [];
-  const siteMap = new Map(siteRows.map((s) => [s.id, s]));
-
-  const uniqueVendorIds = Array.from(
-    new Set(transactions.map((t) => t.vendorId).filter((id): id is number => id != null))
-  );
-  const vendorRows =
-    uniqueVendorIds.length > 0
-      ? await db.select().from(vendors).where(inArray(vendors.id, uniqueVendorIds))
-      : [];
-  const vendorMap = new Map(vendorRows.map((v) => [v.id, v]));
-
-  const byCategory: Record<number, { categoryId: number; categoryName: string; total: number }> = {};
-  for (const transaction of transactions) {
-    if (transaction.assetId) {
-      const asset = assetMap.get(transaction.assetId);
-      if (asset?.categoryId) {
-        if (!byCategory[asset.categoryId]) {
-          const category = categoryMap.get(asset.categoryId);
-          byCategory[asset.categoryId] = {
-            categoryId: asset.categoryId,
-            categoryName: category?.name ?? "Unknown",
-            total: 0,
-          };
-        }
-        byCategory[asset.categoryId].total += parseFloat(transaction.amount);
-      }
-    }
-  }
-
-  const bySite: Record<number, { siteId: number; siteName: string; total: number }> = {};
-  for (const transaction of transactions) {
-    if (transaction.assetId) {
-      const asset = assetMap.get(transaction.assetId);
-      if (asset?.siteId) {
-        if (!bySite[asset.siteId]) {
-          const site = siteMap.get(asset.siteId);
-          bySite[asset.siteId] = {
-            siteId: asset.siteId,
-            siteName: site?.name ?? "Unknown",
-            total: 0,
-          };
-        }
-        bySite[asset.siteId].total += parseFloat(transaction.amount);
-      }
-    }
-  }
-
-  const byVendor: Record<number, { vendorId: number; vendorName: string; total: number; transactionCount: number }> = {};
-  for (const transaction of transactions) {
-    if (transaction.vendorId) {
-      if (!byVendor[transaction.vendorId]) {
-        const vendor = vendorMap.get(transaction.vendorId);
-        byVendor[transaction.vendorId] = {
-          vendorId: transaction.vendorId,
-          vendorName: vendor?.name ?? "Unknown",
-          total: 0,
-          transactionCount: 0,
-        };
-      }
-      byVendor[transaction.vendorId].total += parseFloat(transaction.amount);
-      byVendor[transaction.vendorId].transactionCount += 1;
-    }
-  }
-  
-  return {
-    totalCost,
-    maintenanceCost,
-    repairCost,
-    byCategory: Object.values(byCategory),
-    bySite: Object.values(bySite),
-    byVendor: Object.values(byVendor).sort((a, b) => b.total - a.total).slice(0, 10),
-  };
-}
-
 export async function getAssetCategoryById(id: number) {
   const db = await getDb();
   if (!db) return undefined;
@@ -2814,19 +2535,10 @@ export async function getAssetCategoryById(id: number) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-export async function getVendorById(id: number) {
-  const db = await getDb();
-  if (!db) return undefined;
-  
-  const result = await db.select().from(vendors).where(eq(vendors.id, id)).limit(1);
-  return result.length > 0 ? result[0] : undefined;
-}
-
 const movableNonLandSql = sql`coalesce(upper(trim(${assets.itemCategoryCode})), '') not in ('LA', 'LB')`;
 /** Prefer NRCS register `actual_unit_value`, fall back to legacy `acquisitionCost`. */
 const movableUnitValueSql = sql`coalesce(${assets.actualUnitValue}::numeric, ${assets.acquisitionCost}::numeric, 0)`;
 const movableHasValueSql = sql`(${assets.actualUnitValue} is not null or ${assets.acquisitionCost} is not null)`;
-const movableDepreciatedSql = sql`coalesce(${assets.depreciatedValue}::numeric, ${assets.currentDepreciatedValue}::numeric, 0)`;
 
 export type DashboardAssetValueBreakdown = {
   propertyNgn: number;
@@ -2862,227 +2574,4 @@ export async function getDashboardTotalAssetValue(
   const propertyNgn = Number(propRow?.propertyNgn ?? 0);
   const movableNgn = Number(movRow?.movableNgn ?? 0);
   return { propertyNgn, movableNgn, totalNgn: propertyNgn + movableNgn };
-}
-
-export type AssetValuationPropertyRow = {
-  valuationId: number;
-  siteId: number;
-  facilityCode: string | null;
-  facilityName: string;
-  state: string | null;
-  landAreaSqm: string | null;
-  marketValueNgn: number;
-  certifiedValueNgn: number;
-  valuationDate: string;
-  valuationReference: string | null;
-  notes: string | null;
-};
-
-export type AssetValuationPendingRow = {
-  siteId: number;
-  facilityCode: string | null;
-  facilityName: string;
-  state: string | null;
-  facilityType: string;
-};
-
-export type AssetValuationMovableCategoryRow = {
-  categoryName: string;
-  count: number;
-  totalAcquisitionNgn: number;
-  totalDepreciatedNgn: number;
-};
-
-export type AssetValuationReport = {
-  totalCertifiedPropertyNgn: number;
-  totalMovableAcquisitionNgn: number;
-  combinedTotalNgn: number;
-  valuationRowCount: number;
-  distinctSitesWithValuation: number;
-  totalFacilityCount: number;
-  propertyRegister: AssetValuationPropertyRow[];
-  pendingValuation: AssetValuationPendingRow[];
-  /** Active branch offices with no property valuation row. */
-  pendingBranchValuation: AssetValuationPendingRow[];
-  /** Count of active `branch` facilities in `sites`. */
-  activeBranchCount: number;
-  movableByCategory: AssetValuationMovableCategoryRow[];
-};
-
-function numFromDb(v: string | number | null | undefined): number {
-  if (v == null) return 0;
-  const n = typeof v === "number" ? v : Number(String(v).replace(/,/g, ""));
-  return Number.isFinite(n) ? n : 0;
-}
-
-function formatIsoDate(d: Date | string | null | undefined): string {
-  if (d == null) return "";
-  if (typeof d === "string") return d.slice(0, 10);
-  return d.toISOString().slice(0, 10);
-}
-
-/** Full Asset Valuation register + summaries (manager/admin Finance page). */
-export async function getAssetValuationReport(): Promise<AssetValuationReport> {
-  const empty: AssetValuationReport = {
-    totalCertifiedPropertyNgn: 0,
-    totalMovableAcquisitionNgn: 0,
-    combinedTotalNgn: 0,
-    valuationRowCount: 0,
-    distinctSitesWithValuation: 0,
-    totalFacilityCount: 0,
-    propertyRegister: [],
-    pendingValuation: [],
-    pendingBranchValuation: [],
-    activeBranchCount: 0,
-    movableByCategory: [],
-  };
-
-  const database = await getDb();
-  if (!database) return empty;
-
-  const [sumCert] = await database
-    .select({
-      total: sql<number>`coalesce(sum(${siteValuations.certifiedValue}::numeric), 0)`.mapWith(Number),
-      rows: sql<number>`count(*)::int`.mapWith(Number),
-      distinctSites: sql<number>`count(distinct ${siteValuations.siteId})::int`.mapWith(Number),
-    })
-    .from(siteValuations);
-
-  const [movSum] = await database
-    .select({
-      total: sql<number>`coalesce(sum(${movableUnitValueSql}), 0)`.mapWith(Number),
-    })
-    .from(assets)
-    .where(and(movableNonLandSql, movableHasValueSql));
-
-  const [facCount] = await database
-    .select({ n: sql<number>`count(*)::int`.mapWith(Number) })
-    .from(sites);
-
-  const [activeBranchRow] = await database
-    .select({ n: sql<number>`count(*)::int`.mapWith(Number) })
-    .from(sites)
-    .where(and(eq(sites.facilityType, "branch"), eq(sites.isActive, true)));
-
-  const valuedSiteIds = await database.selectDistinct({ siteId: siteValuations.siteId }).from(siteValuations);
-  const ids = valuedSiteIds.map((r) => r.siteId).filter((id): id is number => id != null);
-  const pendingBranchBase = and(eq(sites.facilityType, "branch"), eq(sites.isActive, true));
-
-  const pending =
-    ids.length === 0
-      ? await database
-          .select({
-            siteId: sites.id,
-            facilityCode: sites.code,
-            facilityName: sites.name,
-            state: sites.state,
-            facilityType: sites.facilityType,
-          })
-          .from(sites)
-          .orderBy(asc(sites.state), asc(sites.name))
-      : await database
-          .select({
-            siteId: sites.id,
-            facilityCode: sites.code,
-            facilityName: sites.name,
-            state: sites.state,
-            facilityType: sites.facilityType,
-          })
-          .from(sites)
-          .where(notInArray(sites.id, ids))
-          .orderBy(asc(sites.state), asc(sites.name));
-
-  const branchWithoutValuationSql = and(
-    pendingBranchBase,
-    sql`not exists (select 1 from ${siteValuations} where ${siteValuations.siteId} = ${sites.id})`
-  );
-
-  const pendingBranches = await database
-    .select({
-      siteId: sites.id,
-      facilityCode: sites.code,
-      facilityName: sites.name,
-      state: sites.state,
-      facilityType: sites.facilityType,
-    })
-    .from(sites)
-    .where(branchWithoutValuationSql)
-    .orderBy(asc(sites.state), asc(sites.name));
-
-  const propRows = await database
-    .select({
-      valuationId: siteValuations.id,
-      siteId: siteValuations.siteId,
-      facilityCode: sites.code,
-      facilityName: sites.name,
-      state: sites.state,
-      landAreaSqm: siteValuations.landAreaSqm,
-      marketValue: siteValuations.marketValue,
-      certifiedValue: siteValuations.certifiedValue,
-      valuationDate: siteValuations.valuationDate,
-      valuationReference: siteValuations.valuationReference,
-      notes: siteValuations.notes,
-    })
-    .from(siteValuations)
-    .innerJoin(sites, eq(siteValuations.siteId, sites.id))
-    .orderBy(asc(sites.state), asc(sites.code), asc(siteValuations.id));
-
-  const movableRows = await database
-    .select({
-      categoryName: sql<string>`coalesce(${assetCategories.name}, 'Uncategorized')`,
-      count: sql<number>`count(*)::int`.mapWith(Number),
-      totalAcquisition: sql<number>`coalesce(sum(${movableUnitValueSql}), 0)`.mapWith(Number),
-      totalDep: sql<number>`coalesce(sum(${movableDepreciatedSql}), 0)`.mapWith(Number),
-    })
-    .from(assets)
-    .innerJoin(assetCategories, eq(assets.categoryId, assetCategories.id))
-    .where(and(movableNonLandSql, movableHasValueSql))
-    .groupBy(assetCategories.id, assetCategories.name)
-    .orderBy(asc(assetCategories.name));
-
-  const totalCertifiedPropertyNgn = Number(sumCert?.total ?? 0);
-  const totalMovableAcquisitionNgn = Number(movSum?.total ?? 0);
-
-  return {
-    totalCertifiedPropertyNgn,
-    totalMovableAcquisitionNgn,
-    combinedTotalNgn: totalCertifiedPropertyNgn + totalMovableAcquisitionNgn,
-    valuationRowCount: Number(sumCert?.rows ?? 0),
-    distinctSitesWithValuation: Number(sumCert?.distinctSites ?? 0),
-    totalFacilityCount: Number(facCount?.n ?? 0),
-    propertyRegister: propRows.map((r) => ({
-      valuationId: r.valuationId,
-      siteId: r.siteId,
-      facilityCode: r.facilityCode,
-      facilityName: r.facilityName,
-      state: r.state,
-      landAreaSqm: r.landAreaSqm != null ? String(r.landAreaSqm) : null,
-      marketValueNgn: numFromDb(r.marketValue),
-      certifiedValueNgn: numFromDb(r.certifiedValue),
-      valuationDate: formatIsoDate(r.valuationDate),
-      valuationReference: r.valuationReference,
-      notes: r.notes,
-    })),
-    pendingValuation: pending.map((r) => ({
-      siteId: r.siteId,
-      facilityCode: r.facilityCode,
-      facilityName: r.facilityName,
-      state: r.state,
-      facilityType: String(r.facilityType),
-    })),
-    pendingBranchValuation: pendingBranches.map((r) => ({
-      siteId: r.siteId,
-      facilityCode: r.facilityCode,
-      facilityName: r.facilityName,
-      state: r.state,
-      facilityType: String(r.facilityType),
-    })),
-    activeBranchCount: Number(activeBranchRow?.n ?? 0),
-    movableByCategory: movableRows.map((r) => ({
-      categoryName: r.categoryName,
-      count: Number(r.count ?? 0),
-      totalAcquisitionNgn: Number(r.totalAcquisition ?? 0),
-      totalDepreciatedNgn: Number(r.totalDep ?? 0),
-    })),
-  };
 }

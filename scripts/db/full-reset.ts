@@ -50,12 +50,14 @@ Admin preserved: ${ADMIN_EMAIL}
 
 All rows will be removed from operational tables, including:
   auditLogs, notifications, documents, assetPhotos,
-  inventoryTransactions, financialTransactions, complianceRecords,
-  maintenanceSchedules, workOrders, assetTransfers, scheduledReports,
-  email_notifications, workOrderTemplates, assets, inventoryItems,
-  email_templates, quickbooksConfig, pending_users,
+  inventoryTransactions, maintenanceSchedules, workOrders, assetTransfers,
+  scheduledReports, email_notifications, workOrderTemplates, assets,
+  inventoryItems, email_templates, pending_users,
   notificationPreferences & userPreferences (non-admin only),
-  all users except admin, vendors, sites, assetCategories
+  all users except admin, sites, assetCategories
+
+Tier 2B-retired tables (vendors, financialTransactions, complianceRecords,
+quickbooksConfig, budgets, maintenance_costs) are cleared only if still present.
 
 Optional: activity_log (if the table exists).
 
@@ -77,11 +79,35 @@ async function rawCount(db: Db, fromClause: string): Promise<number> {
   return rows[0]?.c ?? 0;
 }
 
+async function tableExists(db: Db, tableName: string): Promise<boolean> {
+  const r = await db.execute(sql`
+    SELECT 1 AS ok FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = ${tableName}
+    LIMIT 1
+  `);
+  const rows = r as unknown as { ok: number }[];
+  return rows.length > 0;
+}
+
 async function deleteAll(db: Db, label: string, fromClause: string): Promise<number> {
   const before = await rawCount(db, fromClause);
   await db.execute(sql.raw(`DELETE FROM ${fromClause}`));
   console.log(`  [delete] ${label}: ${before} row(s)`);
   return before;
+}
+
+/** Skip quietly when a table was dropped (e.g. Tier 2B migration 0056). */
+async function deleteAllIfExists(
+  db: Db,
+  label: string,
+  fromClause: string,
+  tableName: string
+): Promise<void> {
+  if (!(await tableExists(db, tableName))) {
+    console.log(`  [skip] ${label}: table not present (${tableName})`);
+    return;
+  }
+  await deleteAll(db, label, fromClause);
 }
 
 /** Postgres: pg_get_serial_sequence first arg is text, e.g. public."workOrders" */
@@ -150,8 +176,10 @@ async function main(): Promise<void> {
     await deleteAll(t, "documents", `"documents"`);
     await deleteAll(t, "assetPhotos", `"assetPhotos"`);
     await deleteAll(t, "inventoryTransactions", `"inventoryTransactions"`);
-    await deleteAll(t, "financialTransactions", `"financialTransactions"`);
-    await deleteAll(t, "complianceRecords", `"complianceRecords"`);
+    await deleteAllIfExists(t, "financialTransactions", `"financialTransactions"`, "financialTransactions");
+    await deleteAllIfExists(t, "complianceRecords", `"complianceRecords"`, "complianceRecords");
+    await deleteAllIfExists(t, "maintenance_costs", `maintenance_costs`, "maintenance_costs");
+    await deleteAllIfExists(t, "budgets", `budgets`, "budgets");
     await deleteAll(t, "maintenanceSchedules", `"maintenanceSchedules"`);
     await deleteAll(t, "workOrders", `"workOrders"`);
     await deleteAll(t, "assetTransfers", `"assetTransfers"`);
@@ -162,7 +190,7 @@ async function main(): Promise<void> {
     await deleteAll(t, "assets", `"assets"`);
     await deleteAll(t, "inventoryItems", `"inventoryItems"`);
     await deleteAll(t, "email_templates", `email_templates`);
-    await deleteAll(t, "quickbooksConfig", `"quickbooksConfig"`);
+    await deleteAllIfExists(t, "quickbooksConfig", `"quickbooksConfig"`, "quickbooksConfig");
 
     await tx.execute(sql`UPDATE pending_users SET approved_by = NULL WHERE approved_by IS NOT NULL`);
     await deleteAll(t, "pending_users", `pending_users`);
@@ -176,7 +204,7 @@ async function main(): Promise<void> {
     console.log(`  [delete] users (non-admin): done`);
 
     await tx.execute(sql`UPDATE users SET "siteId" = NULL WHERE email = ${ADMIN_EMAIL}`);
-    await deleteAll(t, "vendors", `"vendors"`);
+    await deleteAllIfExists(t, "vendors", `"vendors"`, "vendors");
     await deleteAll(t, "sites", `sites`);
     await deleteAll(t, "assetCategories", `"assetCategories"`);
   });
@@ -188,12 +216,9 @@ async function main(): Promise<void> {
     "public.sites",
     "public.\"assets\"",
     "public.\"assetCategories\"",
-    "public.\"vendors\"",
     "public.\"inventoryItems\"",
     "public.\"workOrders\"",
     "public.\"maintenanceSchedules\"",
-    "public.\"financialTransactions\"",
-    "public.\"complianceRecords\"",
     "public.\"inventoryTransactions\"",
     "public.\"assetTransfers\"",
     "public.\"notifications\"",
@@ -204,7 +229,15 @@ async function main(): Promise<void> {
     "public.\"workOrderTemplates\"",
     "public.email_templates",
     "public.pending_users",
-    "public.\"quickbooksConfig\"",
+  ];
+
+  const optionalEmptyTables = [
+    { regclass: "public.\"vendors\"", name: "vendors" },
+    { regclass: "public.\"financialTransactions\"", name: "financialTransactions" },
+    { regclass: "public.\"complianceRecords\"", name: "complianceRecords" },
+    { regclass: "public.\"quickbooksConfig\"", name: "quickbooksConfig" },
+    { regclass: "public.maintenance_costs", name: "maintenance_costs" },
+    { regclass: "public.budgets", name: "budgets" },
   ];
 
   for (const tbl of emptyTables) {
@@ -213,6 +246,16 @@ async function main(): Promise<void> {
       console.log(`  [seq] reset: ${tbl}`);
     } catch (e) {
       console.warn(`  [seq] skip ${tbl}:`, e instanceof Error ? e.message : e);
+    }
+  }
+
+  for (const { regclass, name } of optionalEmptyTables) {
+    if (!(await tableExists(db, name))) continue;
+    try {
+      await setvalEmpty(db, regclass);
+      console.log(`  [seq] reset: ${regclass}`);
+    } catch (e) {
+      console.warn(`  [seq] skip ${regclass}:`, e instanceof Error ? e.message : e);
     }
   }
 
@@ -298,11 +341,9 @@ async function main(): Promise<void> {
     UNION ALL SELECT 'inventory_items', COUNT(*)::int FROM "inventoryItems"
     UNION ALL SELECT 'work_orders', COUNT(*)::int FROM "workOrders"
     UNION ALL SELECT 'maintenance_schedules', COUNT(*)::int FROM "maintenanceSchedules"
-    UNION ALL SELECT 'compliance_records', COUNT(*)::int FROM "complianceRecords"
     UNION ALL SELECT 'audit_logs', COUNT(*)::int FROM "auditLogs"
     UNION ALL SELECT 'notifications', COUNT(*)::int FROM "notifications"
     UNION ALL SELECT 'pending_users', COUNT(*)::int FROM pending_users
-    UNION ALL SELECT 'vendors', COUNT(*)::int FROM vendors
   `);
 
   const vrows = verify as unknown as { t: string; c: number }[];

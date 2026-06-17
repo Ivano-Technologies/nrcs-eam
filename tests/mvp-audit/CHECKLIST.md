@@ -34,9 +34,9 @@ Legend: `[x]` covered by automated MVP audit (Playwright) · Stack: Vite + React
 | [x] | `/app/scanner` |
 | [x] | `/app/asset-map` |
 | [x] | `/app/warranty-alerts` |
-| [x] | `/app/cost-analytics` |
-| [x] | `/app/audit-trail` |
-| [x] | `/app/activity-log` |
+| [x] | `/app/administration/activity-log` |
+| [x] | `/app/administration/compliance-register` |
+| [x] | `/app/reports/depreciation-schedule` |
 | [x] | `/app/work-orders` |
 | [x] | `/app/work-orders/:id` (detail routes exercised via app usage) |
 | [x] | `/app/mobile-work-orders` |
@@ -44,16 +44,12 @@ Legend: `[x]` covered by automated MVP audit (Playwright) · Stack: Vite + React
 | [x] | `/app/work-order-templates` |
 | [x] | `/app/maintenance` |
 | [x] | `/app/inventory` |
-| [x] | `/app/vendors` |
-| [x] | `/app/financial` |
-| [x] | `/app/compliance` |
 | [x] | `/app/facilities` |
 | [x] | `/app/users` |
 | [x] | `/app/pending-users` |
 | [x] | `/app/notification-preferences` |
 | [x] | `/app/reports` |
 | [x] | `/app/report-scheduling` |
-| [x] | `/app/quickbooks` |
 | [x] | `/app/email-notifications` |
 | [x] | `/app/dashboard-settings` |
 
@@ -85,18 +81,17 @@ Legend: `[x]` covered by automated MVP audit (Playwright) · Stack: Vite + React
 | [x] | `workOrders.*` | CRUD |
 | [x] | `maintenance.*` | schedules, upcoming, predictions, auto WO |
 | [x] | `inventory.*` | list, lowStock, transactions |
-| [x] | `vendors.*` | CRUD |
-| [x] | `financial.*` | transactions, cost analytics |
-| [x] | `compliance.*` | CRUD |
+| [x] | `complianceTracking.*` | vehicles, generators, buildings, donors |
+| [x] | `depreciationReport.*` | schedule, summary, export |
+| [x] | `insuranceRecords.*` | CRUD, export |
 | [x] | `dashboard.stats` | |
 | [x] | `users.*` | admin user CRUD, roles, onboarding |
 | [x] | `notifications.*` | |
-| [x] | `reports.*` | assetInventory, maintenanceSchedule, workOrders, financial, compliance (PDF/Excel) |
+| [x] | `reports.*` | assetInventory, maintenanceSchedule, workOrders (PDF/Excel) |
 | [x] | `photos.*` | |
 | [x] | `scheduledReports.*` | |
 | [x] | `bulkOperations.*` | import/export, templates |
 | [x] | `transfers.*` | approve, start, complete, pending |
-| [x] | `quickbooks.*` | config, OAuth, sync |
 | [x] | `userPreferences.*` | sidebar, dashboard widgets |
 | [x] | `emailNotifications.*` | send (bulk), history |
 | [x] | `depreciation.*` | calculate, summary |
@@ -110,7 +105,7 @@ Legend: `[x]` covered by automated MVP audit (Playwright) · Stack: Vite + React
 
 | Status | Source |
 |--------|--------|
-| [x] | `reports.*` PDF mutations (asset, maintenance, WO, financial, compliance) |
+| [x] | `reports.*` PDF mutations (asset, maintenance, WO) |
 | [x] | `assets.generateBulkQRCodeLabels` (PDF) |
 | [x] | Bulk export XLSX (assets, WO, inventory, sites) |
 | [x] | Site import template download |

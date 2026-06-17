@@ -63,27 +63,6 @@ for (const site of sites) {
   console.log(`✓ Created site: ${site.name}`);
 }
 
-const vendors = [
-  { name: "Global Medical Supplies Ltd", contactPerson: "Mr. John Adeyemi", email: "john@globalmedical.ng", phone: "+234-1-7654321", address: "45 Broad Street, Lagos" },
-  { name: "TechFix Solutions", contactPerson: "Eng. Sarah Okonkwo", email: "sarah@techfix.ng", phone: "+234-1-8765432", address: "12 Allen Avenue, Ikeja" },
-  { name: "AutoCare Nigeria", contactPerson: "Mr. Ahmed Bello", email: "ahmed@autocare.ng", phone: "+234-9-2345678", address: "78 Wuse Zone 5, Abuja" },
-  { name: "PowerGen Systems", contactPerson: "Mrs. Blessing Obi", email: "blessing@powergen.ng", phone: "+234-1-9876543", address: "23 Apapa Road, Lagos" },
-  { name: "OfficeMax Supplies", contactPerson: "Mr. Tunde Bakare", email: "tunde@officemax.ng", phone: "+234-1-3456789", address: "56 Ikorodu Road, Lagos" },
-  { name: "SecureNet Technologies", contactPerson: "Dr. Amina Hassan", email: "amina@securenet.ng", phone: "+234-9-8765432", address: "34 Garki II, Abuja" },
-  { name: "CleanPro Services", contactPerson: "Mr. Chukwuma Eze", email: "chukwuma@cleanpro.ng", phone: "+234-1-2345678", address: "90 Herbert Macaulay Way, Yaba" },
-];
-
-console.log("\nInserting vendors...");
-const vendorIds = [];
-for (const v of vendors) {
-  const [inserted] = await db
-    .insert(schema.vendors)
-    .values({ name: v.name, contactPerson: v.contactPerson, email: v.email, phone: v.phone, address: v.address })
-    .returning({ id: schema.vendors.id });
-  vendorIds.push(inserted.id);
-  console.log(`✓ Created vendor: ${v.name}`);
-}
-
 const assetCategoryNames = [
   "Computer",
   "Furniture & Fixtures",
@@ -196,32 +175,12 @@ for (let i = 0; i < 25; i++) {
 }
 console.log("✓ Created 25 work orders");
 
-console.log("\nInserting financial transactions...");
-for (let i = 0; i < 30; i++) {
-  const isExpense = Math.random() > 0.5;
-  const amount = 10000 + Math.floor(Math.random() * 490000);
-  const date = new Date(2025, Math.floor(Math.random() * 12), Math.floor(Math.random() * 28) + 1);
-
-  await db.insert(schema.financialTransactions).values({
-    transactionType: isExpense ? "maintenance" : "revenue",
-    amount: String(amount),
-    transactionDate: date,
-    createdBy: 1,
-    description: isExpense ? "Equipment maintenance and repairs" : "Donor contribution",
-    vendorId: isExpense ? vendorIds[Math.floor(Math.random() * vendorIds.length)] : null,
-    assetId: isExpense ? assets[Math.floor(Math.random() * assets.length)].id : null,
-  });
-}
-console.log("✓ Created 30 financial transactions");
-
 console.log("\n✅ Sample data population completed successfully!");
 console.log(`\nSummary:`);
 console.log(`- Asset Categories: ${assetCategoryData.length}`);
 console.log(`- Sites: ${sites.length}`);
-console.log(`- Vendors: ${vendors.length}`);
 console.log(`- Assets: ${assetCount}`);
 console.log(`- Work Orders: 25`);
-console.log(`- Financial Transactions: 30`);
 
 await sql.end({ timeout: 10 });
 process.exit(0);
