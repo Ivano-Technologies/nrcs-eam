@@ -84,7 +84,7 @@
     "@trpc/server": "^11.17.0",
     "@types/jsbarcode": "^3.11.4",
     "@types/qrcode": "^1.5.6",
-    "axios": "^1.15.1",
+    "axios": "^1.18.1",
     "bcrypt": "^5.1.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
