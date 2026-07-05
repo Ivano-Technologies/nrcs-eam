@@ -16,6 +16,7 @@ import {
   unique,
   date,
   index,
+  uniqueIndex,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
@@ -95,6 +96,9 @@ export const scheduledReportTypeEnum = pgEnum("scheduled_report_type", [
   "assetInventory",
   "maintenanceSchedule",
   "workOrders",
+  "fleetHealth",
+  "donorStatement",
+  "branchScorecards",
 ]);
 
 export const reportFormatEnum = pgEnum("report_format", ["pdf", "excel"]);
@@ -103,7 +107,16 @@ export const reportScheduleEnum = pgEnum("report_schedule", [
   "daily",
   "weekly",
   "monthly",
+  "quarterly",
 ]);
+
+export const verificationCampaignStatusEnum = pgEnum("verification_campaign_status", [
+  "draft",
+  "active",
+  "closed",
+]);
+
+export const verificationMethodEnum = pgEnum("verification_method", ["scan", "manual"]);
 
 export const assetTransferStatusEnum = pgEnum("asset_transfer_status", [
   "pending",
@@ -359,6 +372,8 @@ export const assets = pgTable("assets", {
   conditionRegister: varchar("condition", { length: 64 }),
   lastPhysicalCheck: date("last_physical_check"),
   checkConductedBy: varchar("check_conducted_by", { length: 255 }),
+  lastVerificationCampaignId: integer("lastVerificationCampaignId"),
+  notVerifiedCampaignName: varchar("notVerifiedCampaignName", { length: 255 }),
   remarksRegister: text("remarks"),
   actualUnitValue: decimal("actual_unit_value", { precision: 15, scale: 2 }),
   depreciatedValue: decimal("depreciated_value", { precision: 15, scale: 2 }),
@@ -1288,6 +1303,7 @@ export const notificationPreferences = pgTable("notificationPreferences", {
   assetStatusChange: boolean("assetStatusChange").default(true).notNull(),
   complianceDue: boolean("complianceDue").default(true).notNull(),
   systemAlert: boolean("systemAlert").default(true).notNull(),
+  expiryDigest: boolean("expiryDigest").default(true).notNull(),
   createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
   updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
 });
@@ -1338,6 +1354,69 @@ export type AssetPhoto = typeof assetPhotos.$inferSelect;
 export type InsertAssetPhoto = typeof assetPhotos.$inferInsert;
 export type ScheduledReport = typeof scheduledReports.$inferSelect;
 export type InsertScheduledReport = typeof scheduledReports.$inferInsert;
+
+/**
+ * Verification campaigns — periodic scan-based asset audits
+ */
+export const verificationCampaigns = pgTable("verificationCampaigns", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  startsAt: timestamp("startsAt", { mode: "date" }).notNull(),
+  endsAt: timestamp("endsAt", { mode: "date" }).notNull(),
+  status: verificationCampaignStatusEnum("status").default("draft").notNull(),
+  createdBy: integer("createdBy").notNull(),
+  scopeType: varchar("scopeType", { length: 32 }).default("all_sites").notNull(),
+  siteIds: jsonb("siteIds").$type<number[] | null>(),
+  closedSummary: jsonb("closedSummary").$type<Record<string, unknown> | null>(),
+  createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
+});
+
+export const assetVerifications = pgTable(
+  "assetVerifications",
+  {
+    id: serial("id").primaryKey(),
+    campaignId: integer("campaignId").notNull(),
+    assetId: integer("assetId").notNull(),
+    verifiedBy: integer("verifiedBy").notNull(),
+    verifiedAt: timestamp("verifiedAt", { mode: "date" }).defaultNow().notNull(),
+    method: verificationMethodEnum("method").notNull(),
+    condition: varchar("condition", { length: 64 }),
+    locationSiteId: integer("locationSiteId").notNull(),
+    notes: text("notes"),
+    photoDocumentId: integer("photoDocumentId"),
+    manualReason: text("manualReason"),
+  },
+  (t) => [
+    uniqueIndex("asset_verifications_campaign_asset").on(t.campaignId, t.assetId),
+    index("idx_asset_verifications_campaign").on(t.campaignId),
+    index("idx_asset_verifications_asset").on(t.assetId),
+  ]
+);
+
+export type VerificationCampaign = typeof verificationCampaigns.$inferSelect;
+export type AssetVerification = typeof assetVerifications.$inferSelect;
+
+/**
+ * Monthly branch scorecard snapshots for trend comparison
+ */
+export const branchScorecardSnapshots = pgTable(
+  "branchScorecardSnapshots",
+  {
+    id: serial("id").primaryKey(),
+    branchId: integer("branchId").notNull(),
+    month: varchar("month", { length: 7 }).notNull(),
+    metrics: jsonb("metrics").$type<Record<string, unknown>>().notNull(),
+    compositeScore: decimal("compositeScore", { precision: 5, scale: 2 }).notNull(),
+    createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
+  },
+  (t) => [
+    uniqueIndex("branch_scorecard_snapshots_branch_month").on(t.branchId, t.month),
+    index("idx_branch_scorecard_snapshots_month").on(t.month),
+  ]
+);
+
+export type BranchScorecardSnapshot = typeof branchScorecardSnapshots.$inferSelect;
 
 /**
  * Asset Transfer Requests

@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Camera, Search, Package, MapPin, CheckCircle, XCircle, Loader2, QrCode } from "lucide-react";
 import { appPath } from "@/lib/routes";
+import { CONDITION_OPTIONS } from "@/lib/assetRegisterOptions";
 
 export default function AssetScanner() {
   const [, setLocation] = useLocation();
@@ -23,6 +24,12 @@ export default function AssetScanner() {
     location: "",
     notes: "",
   });
+  const [verifyForm, setVerifyForm] = useState({
+    condition: "Good",
+    locationSiteId: "",
+    notes: "",
+    manualReason: "",
+  });
   const [isScanning, setIsScanning] = useState(false);
   const html5QrcodeRef = useRef<Html5Qrcode | null>(null);
 
@@ -30,6 +37,18 @@ export default function AssetScanner() {
     { assetTag },
     { enabled: false }
   );
+  const { data: activeCampaign } = trpc.verification.activeCampaign.useQuery();
+  const { data: sites } = trpc.sites.list.useQuery();
+
+  const submitVerification = trpc.verification.submitVerification.useMutation({
+    onSuccess: () => {
+      toast.success("Verification recorded");
+      setScannedAsset(null);
+      setAssetTag("");
+      setVerifyForm({ condition: "Good", locationSiteId: "", notes: "", manualReason: "" });
+    },
+    onError: (e: { message: string }) => toast.error(e.message),
+  });
 
   const updateAssetMutation = trpc.assets.update.useMutation({
     onSuccess: () => {
@@ -58,6 +77,10 @@ export default function AssetScanner() {
           location: result.data.location || "",
           notes: "",
         });
+        setVerifyForm((prev) => ({
+          ...prev,
+          locationSiteId: result.data?.siteId ? String(result.data.siteId) : prev.locationSiteId,
+        }));
         toast.success("Asset found!");
       } else {
         toast.error("Asset not found");
@@ -278,6 +301,78 @@ ${updateForm.notes}`
                 </Button>
               </CardContent>
             </Card>
+
+            {/* Campaign verification */}
+            {activeCampaign && scannedAsset ? (
+              <Card className="border-primary">
+                <CardHeader>
+                  <CardTitle>Verify for {activeCampaign.name}</CardTitle>
+                  <CardDescription>Record physical verification during the active campaign.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label>Condition</Label>
+                    <Select
+                      value={verifyForm.condition}
+                      onValueChange={(value) => setVerifyForm((p) => ({ ...p, condition: value }))}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {CONDITION_OPTIONS.map((opt) => (
+                          <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Verified at site</Label>
+                    <Select
+                      value={verifyForm.locationSiteId || undefined}
+                      onValueChange={(value) => setVerifyForm((p) => ({ ...p, locationSiteId: value }))}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Select site" /></SelectTrigger>
+                      <SelectContent>
+                        {(sites ?? []).map((s) => (
+                          <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Notes</Label>
+                    <Textarea
+                      value={verifyForm.notes}
+                      onChange={(e) => setVerifyForm((p) => ({ ...p, notes: e.target.value }))}
+                      rows={2}
+                    />
+                  </div>
+                  <Button
+                    className="w-full"
+                    disabled={!verifyForm.locationSiteId || submitVerification.isPending}
+                    data-testid="asset-scanner-submit-verification"
+                    onClick={() =>
+                      submitVerification.mutate({
+                        campaignId: activeCampaign.id,
+                        assetId: scannedAsset.id,
+                        method: "scan",
+                        condition: verifyForm.condition as "Good" | "Fair" | "Damaged" | "Beyond Repair (For Disposal)" | "Out of Order (To be repaired)",
+                        locationSiteId: Number(verifyForm.locationSiteId),
+                        notes: verifyForm.notes || undefined,
+                      })
+                    }
+                  >
+                    {submitVerification.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Submitting…
+                      </>
+                    ) : (
+                      "Submit verification"
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : null}
 
             {/* Quick Update Form */}
             <Card>

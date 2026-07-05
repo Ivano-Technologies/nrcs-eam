@@ -31,9 +31,15 @@ export default function ReportScheduling() {
   
   const [formData, setFormData] = useState({
     name: "",
-    reportType: "assetInventory" as "assetInventory" | "maintenanceSchedule" | "workOrders",
+    reportType: "assetInventory" as
+      | "assetInventory"
+      | "maintenanceSchedule"
+      | "workOrders"
+      | "fleetHealth"
+      | "donorStatement"
+      | "branchScorecards",
     format: "excel" as "pdf" | "excel",
-    schedule: "weekly" as "daily" | "weekly" | "monthly",
+    schedule: "weekly" as "daily" | "weekly" | "monthly" | "quarterly",
     dayOfWeek: "",
     dayOfMonth: "",
     time: "09:00",
@@ -144,6 +150,8 @@ export default function ReportScheduling() {
     } else if (schedule.schedule === "weekly") {
       const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
       return `Weekly on ${days[schedule.dayOfWeek || 0]} at ${schedule.time}`;
+    } else if (schedule.schedule === "quarterly") {
+      return `Quarterly on day ${schedule.dayOfMonth} at ${schedule.time}`;
     } else {
       return `Monthly on day ${schedule.dayOfMonth} at ${schedule.time}`;
     }
@@ -154,6 +162,9 @@ export default function ReportScheduling() {
       assetInventory: "Asset Inventory",
       maintenanceSchedule: "Maintenance Schedule",
       workOrders: "Work Orders",
+      fleetHealth: "Fleet Health",
+      donorStatement: "Donor Statement",
+      branchScorecards: "Branch Scorecards",
     };
     return labels[type] || type;
   };
@@ -274,6 +285,9 @@ export default function ReportScheduling() {
                     <SelectItem value="assetInventory">Asset Inventory</SelectItem>
                     <SelectItem value="maintenanceSchedule">Maintenance Schedule</SelectItem>
                     <SelectItem value="workOrders">Work Orders</SelectItem>
+                    <SelectItem value="fleetHealth">Fleet Health</SelectItem>
+                    <SelectItem value="donorStatement">Donor Statement</SelectItem>
+                    <SelectItem value="branchScorecards">Branch Scorecards</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -302,6 +316,7 @@ export default function ReportScheduling() {
                   <SelectItem value="daily">Daily</SelectItem>
                   <SelectItem value="weekly">Weekly</SelectItem>
                   <SelectItem value="monthly">Monthly</SelectItem>
+                  <SelectItem value="quarterly">Quarterly</SelectItem>
                 </SelectContent>
               </Select>
             </div>

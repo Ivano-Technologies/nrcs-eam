@@ -13,7 +13,7 @@ import { CtnInlineCreator } from "@/components/wms/CtnInlineCreator";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
 import { formatNaira } from "@/lib/format";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertTriangle } from "lucide-react";
 
 type WaybillSource = {
   ctnId: string;
@@ -76,6 +76,8 @@ export default function WaybillDetail() {
   const [lines, setLines] = useState<WaybillLine[]>([emptyLine()]);
   const [inlineCreatorOpen, setInlineCreatorOpen] = useState(false);
   const [inlineSource, setInlineSource] = useState<{ lineIdx: number; sourceIdx: number } | null>(null);
+  const [fefoWarnings, setFefoWarnings] = useState<Record<number, Array<{ message: string; skippedCtnCode: string }>>>({});
+  const utils = trpc.useUtils();
 
   const { data: sites } = trpc.sites.list.useQuery();
   const { data: catalogue } = trpc.inventoryV2.catalogue.list.useQuery();
@@ -170,6 +172,75 @@ export default function WaybillDetail() {
     const row = ctnOptions.find((ctn) => String(ctn.id) === source.ctnId);
     if (!row?.expiryDate) return false;
     return new Date(row.expiryDate).getTime() < Date.now();
+  };
+
+  const applyFefoForLine = async (lineIdx: number) => {
+    const line = lines[lineIdx];
+    if (!line?.itemId || !header.warehouseId || !line.nbOfUnits) {
+      toast.error("Select item, warehouse, and quantity first.");
+      return;
+    }
+    try {
+      const suggested = await utils.inventoryV2.waybills.suggestFefo.fetch({
+        warehouseId: Number(header.warehouseId),
+        itemId: Number(line.itemId),
+        quantity: Number(line.nbOfUnits),
+      });
+      if (suggested.length === 0) {
+        toast.error("No FEFO allocation available for this line.");
+        return;
+      }
+      setLines((prev) =>
+        prev.map((row, idx) =>
+          idx === lineIdx
+            ? {
+                ...row,
+                ctnSources: suggested.map((src) => ({
+                  ctnId: String(src.ctnId),
+                  quantity: String(src.quantity),
+                  overrideReason: "",
+                })),
+              }
+            : row
+        )
+      );
+      void refreshFefoWarnings(lineIdx, suggested.map((s) => ({ ctnId: s.ctnId, quantity: s.quantity })));
+      toast.success("FEFO allocation applied.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "FEFO suggestion failed");
+    }
+  };
+
+  const refreshFefoWarnings = async (
+    lineIdx: number,
+    allocations: Array<{ ctnId: number; quantity: number }>
+  ) => {
+    const line = lines[lineIdx];
+    if (!line?.itemId || !header.warehouseId || allocations.length === 0) {
+      setFefoWarnings((prev) => {
+        const next = { ...prev };
+        delete next[lineIdx];
+        return next;
+      });
+      return;
+    }
+    try {
+      const warnings = await utils.inventoryV2.waybills.checkFefoOverride.fetch({
+        warehouseId: Number(header.warehouseId),
+        itemId: Number(line.itemId),
+        allocations,
+      });
+      setFefoWarnings((prev) => ({
+        ...prev,
+        [lineIdx]: warnings.map((w) => ({ message: w.message, skippedCtnCode: w.skippedCtnCode })),
+      }));
+    } catch {
+      setFefoWarnings((prev) => {
+        const next = { ...prev };
+        delete next[lineIdx];
+        return next;
+      });
+    }
   };
 
   const payload = () => ({
@@ -391,7 +462,32 @@ export default function WaybillDetail() {
                   </div>
 
                   <div className="space-y-2 rounded border p-2">
-                    <div className="text-sm font-medium">CTN sources</div>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="text-sm font-medium">CTN sources</div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        data-testid={`waybill-line-${lineIdx}-fefo-suggest`}
+                        disabled={!line.itemId || !header.warehouseId || !line.nbOfUnits}
+                        onClick={() => void applyFefoForLine(lineIdx)}
+                      >
+                        Suggest FEFO
+                      </Button>
+                    </div>
+                    {(fefoWarnings[lineIdx] ?? []).length > 0 ? (
+                      <div className="rounded border border-amber-500 bg-amber-50 p-2 text-xs text-amber-900 dark:bg-amber-950 dark:text-amber-100">
+                        <div className="mb-1 flex items-center gap-1 font-medium">
+                          <AlertTriangle className="h-3.5 w-3.5" />
+                          FEFO override — older stock skipped
+                        </div>
+                        <ul className="list-disc pl-4">
+                          {(fefoWarnings[lineIdx] ?? []).map((w, i) => (
+                            <li key={i}>{w.skippedCtnCode}: {w.message}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
                     {line.ctnSources.map((source, sourceIdx) => {
                       const ctn = ctnOptions.find((entry) => String(entry.id) === source.ctnId);
                       const expired = hasExpiredSource(source);
@@ -399,7 +495,7 @@ export default function WaybillDetail() {
                         <div key={sourceIdx} className="grid gap-2 md:grid-cols-6">
                           <Select
                             value={source.ctnId || undefined}
-                            onValueChange={(value) =>
+                            onValueChange={(value) => {
                               setLines((prev) =>
                                 prev.map((row, idx) =>
                                   idx === lineIdx
@@ -409,8 +505,20 @@ export default function WaybillDetail() {
                                       }
                                     : row
                                 )
-                              )
-                            }
+                              );
+                              const line = lines[lineIdx];
+                              const qty = Number(line?.ctnSources[sourceIdx]?.quantity || 0);
+                              if (line?.itemId && header.warehouseId && value && qty > 0) {
+                                const allocations = line.ctnSources.map((s, sIdx) =>
+                                  sIdx === sourceIdx
+                                    ? { ctnId: Number(value), quantity: qty }
+                                    : s.ctnId && s.quantity
+                                      ? { ctnId: Number(s.ctnId), quantity: Number(s.quantity) }
+                                      : null
+                                ).filter((a): a is { ctnId: number; quantity: number } => a != null);
+                                void refreshFefoWarnings(lineIdx, allocations);
+                              }
+                            }}
                           >
                             <SelectTrigger
                               className="h-9 md:col-span-2"

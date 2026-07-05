@@ -469,6 +469,11 @@ export default function AssetDetail() {
             <p className="text-muted-foreground mt-1">{asset.assetTag}</p>
           </div>
           <Badge className={getStatusColor(asset.status)}>{asset.status}</Badge>
+          {(asset as { notVerifiedCampaignName?: string | null }).notVerifiedCampaignName ? (
+            <Badge variant="destructive" data-testid="asset-not-verified-badge">
+              Not verified in {(asset as { notVerifiedCampaignName?: string }).notVerifiedCampaignName}
+            </Badge>
+          ) : null}
         </div>
         {canEdit && (
           <Button data-testid="asset-detail-edit-btn" onClick={handleEdit}>

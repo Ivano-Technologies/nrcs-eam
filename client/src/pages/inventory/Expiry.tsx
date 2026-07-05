@@ -19,6 +19,7 @@ export default function Expiry({ embedInShell = false }: { embedInShell?: boolea
   const { isManagerOrAdmin } = usePermissions();
   const [selectedExpired, setSelectedExpired] = useState<number[]>([]);
   const soon = trpc.inventoryV2.expiry.upcoming.useQuery({ days: 90 });
+  const horizon = trpc.inventoryV2.expiry.horizon.useQuery();
   const expired = trpc.inventoryV2.expiry.expired.useQuery();
   const markExpired = trpc.inventoryV2.expiry.markExpired.useMutation({
     onSuccess: () => {
@@ -38,6 +39,27 @@ export default function Expiry({ embedInShell = false }: { embedInShell?: boolea
 
   const disposed = useMemo(() => (expired.data ?? []).filter((x) => x.status === "disposed"), [expired.data]);
   const expiredOnly = useMemo(() => (expired.data ?? []).filter((x) => x.status === "expired"), [expired.data]);
+  const horizonBuckets = useMemo(() => {
+    const rows = horizon.data?.buckets ?? [];
+    const grouped = new Map<string, { bucket: string; warehouseName: string; category: string; quantity: number; estimatedValue: number }>();
+    for (const row of rows) {
+      const key = `${row.bucket}-${row.warehouseId}-${row.category}`;
+      const existing = grouped.get(key);
+      if (existing) {
+        existing.quantity += row.quantity;
+        existing.estimatedValue += row.estimatedValue;
+      } else {
+        grouped.set(key, {
+          bucket: row.bucket,
+          warehouseName: row.warehouseName,
+          category: row.category,
+          quantity: row.quantity,
+          estimatedValue: row.estimatedValue,
+        });
+      }
+    }
+    return Array.from(grouped.values()).sort((a, b) => Number(a.bucket) - Number(b.bucket));
+  }, [horizon.data?.buckets]);
 
   return (
     <div className="space-y-4">
@@ -50,6 +72,7 @@ export default function Expiry({ embedInShell = false }: { embedInShell?: boolea
       <Tabs defaultValue="soon">
         <TabsList>
           <TabsTrigger value="soon" data-testid="expiry-tab-soon">Expiring Soon (&lt;90d)</TabsTrigger>
+          <TabsTrigger value="horizon" data-testid="expiry-tab-horizon">CTN horizon (30/60/90)</TabsTrigger>
           <TabsTrigger value="expired" data-testid="expiry-tab-expired">Expired</TabsTrigger>
           <TabsTrigger value="disposed" data-testid="expiry-tab-disposed">Disposed</TabsTrigger>
         </TabsList>
@@ -103,6 +126,74 @@ export default function Expiry({ embedInShell = false }: { embedInShell?: boolea
               </tbody>
             </table>
           </div>
+        </TabsContent>
+        <TabsContent value="horizon">
+          {horizon.isLoading ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading CTN expiry horizon…
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="frozen-table-wrap rounded-md border">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/50">
+                    <tr className="border-b">
+                      <th className="px-2 py-2 text-left">Bucket (days)</th>
+                      <th className="px-2 py-2 text-left">Warehouse</th>
+                      <th className="px-2 py-2 text-left">Category</th>
+                      <th className="px-2 py-2 text-left">Qty</th>
+                      <th className="px-2 py-2 text-left">Est. value</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {horizonBuckets.map((row, idx) => (
+                      <tr key={idx} className="border-b" data-testid={`expiry-horizon-${row.bucket}-${idx}`}>
+                        <td className="px-2 py-2">
+                          <Badge variant={row.bucket === "30" ? "destructive" : row.bucket === "60" ? "default" : "secondary"}>
+                            {row.bucket} days
+                          </Badge>
+                        </td>
+                        <td className="px-2 py-2">{row.warehouseName}</td>
+                        <td className="px-2 py-2">{row.category}</td>
+                        <td className="px-2 py-2">{row.quantity}</td>
+                        <td className="px-2 py-2">{row.estimatedValue}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {isManagerOrAdmin && (horizon.data?.writeOffCandidates ?? []).length > 0 ? (
+                <div className="rounded-md border p-3">
+                  <h3 className="mb-2 text-sm font-semibold">Write-off candidates (expired CTN balance)</h3>
+                  <div className="frozen-table-wrap rounded-md border">
+                    <table className="w-full text-sm">
+                      <thead className="bg-muted/50">
+                        <tr className="border-b">
+                          <th className="px-2 py-2 text-left">CTN</th>
+                          <th className="px-2 py-2 text-left">Item</th>
+                          <th className="px-2 py-2 text-left">Warehouse</th>
+                          <th className="px-2 py-2 text-left">Balance</th>
+                          <th className="px-2 py-2 text-left">Expired</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(horizon.data?.writeOffCandidates ?? []).map((row) => (
+                          <tr key={row.ctnId} className="border-b">
+                            <td className="px-2 py-2">{row.ctnCode}</td>
+                            <td className="px-2 py-2">{row.itemName}</td>
+                            <td className="px-2 py-2">{row.warehouseName}</td>
+                            <td className="px-2 py-2">{row.balance}</td>
+                            <td className="px-2 py-2">{row.expiryDate}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          )}
         </TabsContent>
         <TabsContent value="expired">
           <div className="space-y-2">

@@ -37,6 +37,13 @@ export default function NotificationPreferences() {
       color: "text-orange-600",
     },
     {
+      key: "expiryDigest",
+      label: "30-day expiry digest",
+      description: "Daily email digest when stock enters the 30-day expiry window",
+      icon: Package,
+      color: "text-orange-600",
+    },
+    {
       key: "lowStock",
       label: "Low Stock Alerts",
       description: "Receive alerts when inventory items are running low",
