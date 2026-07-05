@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import cors from "cors";
 import express, { type Express } from "express";
+import helmet from "helmet";
 import { getDb } from "../db";
 import { appRouter } from "../routers";
 import setupRouter from "../routes/setup";
@@ -23,6 +24,13 @@ import { scopedApiBodyParser } from "./scopedBodyParser";
 export function createApiApp(): Express {
   const app = express();
   app.set("trust proxy", 1);
+
+  app.use(
+    helmet({
+      contentSecurityPolicy: false,
+      crossOriginEmbedderPolicy: false,
+    })
+  );
 
   logCorsStartup(getAllowedOriginsList());
   app.options("/*splat", cors(createDynamicCorsMiddlewareOptions()));

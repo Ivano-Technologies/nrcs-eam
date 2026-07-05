@@ -124,8 +124,7 @@ export const authRouter = router({
         });
         throw new TRPCError({
           code: "UNAUTHORIZED",
-          message:
-            "Your account has been deactivated. Contact your administrator.",
+          message: "Invalid email or password",
         });
       }
 

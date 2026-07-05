@@ -47,7 +47,7 @@ export function setSessionCookies(
 ): void {
   const opts = getSessionCookieOptions(req);
   const accessMs = (session.expires_in ?? 3600) * 1000;
-  const refreshMs = 1000 * 60 * 60 * 24 * 365;
+  const refreshMs = 1000 * 60 * 60 * 24 * 60;
 
   res.cookie(SUPABASE_ACCESS_TOKEN_COOKIE, session.access_token, {
     ...opts,
