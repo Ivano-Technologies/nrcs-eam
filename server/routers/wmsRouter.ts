@@ -3,7 +3,7 @@
  * GRN lines with `ctnId` write to `stock_movements` on approval (Phase 2 — see `server/wms/grnStockLedger.ts`).
  */
 import { TRPCError } from "@trpc/server";
-import { and, count, desc, eq, gte, ilike, lte, or, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, ilike, inArray, lte, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import {
   commodityTrackingNumbers,
@@ -38,33 +38,42 @@ const createInput = z.object({
   notes: z.string().optional(),
 });
 
-async function computeCtnBalance(
+async function computeCtnBalancesForPage(
   db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
-  ctnId: number,
-  originalQuantity: number
-): Promise<number> {
-  const [movCount] = await db
-    .select({ c: count() })
-    .from(stockMovements)
-    .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
-    .where(eq(stockCards.ctnId, ctnId));
+  rows: Array<{ id: number; originalQuantity: number | string }>
+): Promise<Map<number, number>> {
+  const balances = new Map<number, number>();
+  if (rows.length === 0) return balances;
 
-  const movementRows = Number(movCount?.c ?? 0);
-  if (movementRows === 0) {
-    return originalQuantity;
-  }
-
-  const [agg] = await db
+  const ctnIds = rows.map((r) => r.id);
+  const aggregates = await db
     .select({
+      ctnId: stockCards.ctnId,
+      movementCount: count(stockMovements.id),
       net: sql<number>`coalesce(sum(${stockMovements.quantityIn} - ${stockMovements.quantityOut}), 0)`.mapWith(
         Number
       ),
     })
-    .from(stockMovements)
-    .innerJoin(stockCards, eq(stockMovements.stockCardId, stockCards.id))
-    .where(eq(stockCards.ctnId, ctnId));
+    .from(stockCards)
+    .leftJoin(stockMovements, eq(stockMovements.stockCardId, stockCards.id))
+    .where(inArray(stockCards.ctnId, ctnIds))
+    .groupBy(stockCards.ctnId);
 
-  return Number(agg?.net ?? 0);
+  const aggregateByCtnId = new Map(
+    aggregates.filter((row) => row.ctnId != null).map((row) => [row.ctnId!, row])
+  );
+
+  for (const row of rows) {
+    const agg = aggregateByCtnId.get(row.id);
+    balances.set(
+      row.id,
+      !agg || Number(agg.movementCount) === 0
+        ? Number(row.originalQuantity)
+        : Number(agg.net)
+    );
+  }
+
+  return balances;
 }
 
 export const wmsRouter = router({
@@ -126,12 +135,11 @@ export const wmsRouter = router({
         .limit(input.limit)
         .offset(input.offset);
 
-      const withBalance = await Promise.all(
-        rows.map(async (r) => ({
-          ...r,
-          currentBalance: await computeCtnBalance(database, r.id, Number(r.originalQuantity)),
-        }))
-      );
+      const balanceByCtnId = await computeCtnBalancesForPage(database, rows);
+      const withBalance = rows.map((r) => ({
+        ...r,
+        currentBalance: balanceByCtnId.get(r.id) ?? Number(r.originalQuantity),
+      }));
 
       const [totalRow] = await database
         .select({ c: count() })
