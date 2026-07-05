@@ -13,6 +13,7 @@ import {
   getAllowedOriginsList,
   logCorsStartup,
 } from "./corsConfig";
+import { authTrpcRateLimitMiddleware } from "./authRateLimit";
 
 /**
  * Shared API app for:
@@ -64,6 +65,7 @@ export function createApiApp(): Express {
 
   app.use(
     "/api/trpc",
+    authTrpcRateLimitMiddleware,
     createExpressMiddleware({
       router: appRouter,
       createContext,
