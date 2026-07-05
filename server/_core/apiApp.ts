@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { sql } from "drizzle-orm";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import cors from "cors";

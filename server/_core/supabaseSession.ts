@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   COOKIE_NAME,
   SUPABASE_ACCESS_TOKEN_COOKIE,
