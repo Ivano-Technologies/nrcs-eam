@@ -13,6 +13,7 @@ import {
   logCorsStartup,
 } from "./corsConfig";
 import { authTrpcRateLimitMiddleware } from "./authRateLimit";
+import { scopedApiBodyParser } from "./scopedBodyParser";
 
 /**
  * Shared API app for:
@@ -47,8 +48,7 @@ export function createApiApp(): Express {
   app.get("/keep-alive", keepAlive);
   app.get("/api/keep-alive", keepAlive);
 
-  app.use("/api", express.json({ limit: "50mb" }));
-  app.use("/api", express.urlencoded({ limit: "50mb", extended: true }));
+  app.use("/api", scopedApiBodyParser);
   app.use("/api", setupRouter);
   app.use("/api", documentsRouter);
 
