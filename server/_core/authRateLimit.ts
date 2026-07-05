@@ -4,12 +4,47 @@ import rateLimit from "express-rate-limit";
 const RATE_LIMIT_MESSAGE =
   "Too many attempts. Please wait a few minutes and try again.";
 
-function getTrpcProcedurePath(req: Request): string | null {
-  const path = req.originalUrl.split("?")[0] ?? "";
-  const marker = "/api/trpc/";
-  const idx = path.indexOf(marker);
-  if (idx === -1) return null;
-  return path.slice(idx + marker.length);
+const TRPC_PATH_MARKER = "/api/trpc/";
+
+const LOGIN_PROCEDURE = "auth.loginWithPassword";
+const SIGNUP_AND_RESET_PROCEDURES = new Set([
+  "auth.signup",
+  "auth.requestPasswordReset",
+]);
+
+/** Exported for unit tests — parses single or comma-separated tRPC procedure paths. */
+export function extractTrpcProcedures(req: Request): string[] {
+  const fromOriginalUrl = extractProceduresFromPath(req.originalUrl);
+  if (fromOriginalUrl.length > 0) {
+    return fromOriginalUrl;
+  }
+
+  // When mounted on `/api/trpc`, Express exposes the relative segment on req.path.
+  const relative = req.path.replace(/^\//, "");
+  if (relative) {
+    return splitProcedureSegment(relative);
+  }
+
+  return [];
+}
+
+function extractProceduresFromPath(originalUrl: string): string[] {
+  const path = originalUrl.split("?")[0] ?? "";
+  const idx = path.indexOf(TRPC_PATH_MARKER);
+  if (idx === -1) {
+    return [];
+  }
+  return splitProcedureSegment(path.slice(idx + TRPC_PATH_MARKER.length));
+}
+
+function splitProcedureSegment(segment: string): string[] {
+  if (!segment) {
+    return [];
+  }
+  return segment
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
 }
 
 const loginLimiter = rateLimit({
@@ -37,18 +72,18 @@ export function authTrpcRateLimitMiddleware(
   res: Response,
   next: NextFunction
 ): void {
-  const procedure = getTrpcProcedurePath(req);
-  if (!procedure) {
+  const procedures = extractTrpcProcedures(req);
+  if (procedures.length === 0) {
     next();
     return;
   }
 
-  if (procedure === "auth.loginWithPassword") {
+  if (procedures.includes(LOGIN_PROCEDURE)) {
     loginLimiter(req, res, next);
     return;
   }
 
-  if (procedure === "auth.signup" || procedure === "auth.requestPasswordReset") {
+  if (procedures.some((procedure) => SIGNUP_AND_RESET_PROCEDURES.has(procedure))) {
     signupAndResetLimiter(req, res, next);
     return;
   }
