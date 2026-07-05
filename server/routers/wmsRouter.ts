@@ -14,6 +14,7 @@ import {
 } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { protectedProcedure, router } from "../_core/trpc";
+import { staffOrAboveProcedure } from "./roleProcedures";
 import { itemCategoryZod } from "../../shared/itemCategory";
 
 const listInput = z.object({
@@ -144,7 +145,7 @@ export const wmsRouter = router({
       };
     }),
 
-    create: protectedProcedure.input(createInput).mutation(async ({ input }) => {
+    create: staffOrAboveProcedure.input(createInput).mutation(async ({ input }) => {
       const database = await getDb();
       if (!database) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
 
