@@ -36,9 +36,11 @@ import { DASHBOARD_NAV } from "@shared/dashboardNav";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-import { AlertTriangle, Banknote, LayoutDashboard, MapPin, ShieldCheck, Truck } from "lucide-react";
+import { AlertTriangle, Banknote, LayoutDashboard, MapPin, ShieldCheck, Truck, Wrench } from "lucide-react";
 
 import { useMemo, useState } from "react";
+
+import { Link } from "wouter";
 
 
 
@@ -55,6 +57,8 @@ const DEFAULT_WIDGETS = {
   facilityStatus: true,
 
   requisitionsTable: true,
+
+  fleetHealth: true,
 
 } as const;
 
@@ -93,6 +97,8 @@ export default function Home() {
   const rawRole = user?.role ?? "";
 
   const fixedLayout = rawRole === "staff" || rawRole === "field";
+
+  const isManagerOrAdmin = rawRole === "manager" || rawRole === "admin";
 
   const stockMovementWeeks = period === "Today" ? 4 : 12;
 
@@ -182,7 +188,10 @@ export default function Home() {
 
   }, [userPreferences?.dashboardWidgets, fixedLayout]);
 
-
+  const { data: fleetHealth } = trpc.fleetHealth.summary.useQuery(undefined, {
+    enabled: isManagerOrAdmin && (fixedLayout || widgetVisibility.fleetHealth),
+    staleTime: 120_000,
+  });
 
   const normalizeDirection = (direction?: string): "up" | "down" | "flat" =>
 
@@ -545,7 +554,57 @@ export default function Home() {
           tier2Loading ? <Skeleton className="h-48 rounded-xl" /> : <RequisitionsTable />
         ) : null}
 
-
+        {isManagerOrAdmin && showWidgets("fleetHealth") && fleetHealth ? (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <ShieldCheck className="h-5 w-5" />
+                  Fleet health
+                </CardTitle>
+                <CardDescription>Book value, end-of-life assets, and overdue maintenance</CardDescription>
+              </div>
+              <Link href="/app/fleet-health" className="text-sm text-primary underline">
+                View details
+              </Link>
+            </CardHeader>
+            <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <KpiCard
+                label="Book value"
+                value={formatNaira(fleetHealth.orgWide.totalBookValue)}
+                icon={Banknote}
+                tone="blue"
+              />
+              <KpiCard
+                label="Replacement pipeline"
+                value={String(fleetHealth.orgWide.endOfLifeCount)}
+                icon={AlertTriangle}
+                tone={fleetHealth.orgWide.endOfLifeCount > 0 ? "orange" : "green"}
+              />
+              <KpiCard
+                label="High-priority predictions"
+                value={String(fleetHealth.orgWide.highPriorityPredictions.length)}
+                icon={ShieldCheck}
+                tone={fleetHealth.orgWide.highPriorityPredictions.length > 0 ? "orange" : "green"}
+              />
+              <KpiCard
+                label="Overdue work orders"
+                value={String(
+                  fleetHealth.orgWide.openWorkOrdersByAge.days15to30 +
+                    fleetHealth.orgWide.openWorkOrdersByAge.days30plus
+                )}
+                icon={Wrench}
+                tone={
+                  fleetHealth.orgWide.openWorkOrdersByAge.days15to30 +
+                    fleetHealth.orgWide.openWorkOrdersByAge.days30plus >
+                  0
+                    ? "red"
+                    : "green"
+                }
+              />
+            </CardContent>
+          </Card>
+        ) : null}
 
         {(effectiveRole === "Manager" || effectiveRole === "Admin") && (tier3Loading || (branchPerf?.length ?? 0) > 0) ? (
           tier3Loading ? (

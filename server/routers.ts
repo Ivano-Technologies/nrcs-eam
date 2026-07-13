@@ -28,6 +28,7 @@ import {
 } from "./financeRouters";
 import { complianceTrackingRouter } from "./complianceTrackingRouters";
 import { observabilityRouter } from "./routers/observabilityRouter";
+import { verificationRouter } from "./routers/verificationRouter";
 import { donorAssetsRouter } from "./donorAssetsRouters";
 import {
   countDonorReportsDueSoon,
@@ -1809,19 +1810,19 @@ export const appRouter = router({
       }),
 
     // Predictive Maintenance AI
-    getPredictions: protectedProcedure
+    getPredictions: managerOrAdminProcedure
       .query(async () => {
         const { getAllMaintenancePredictions } = await import('./predictiveMaintenance');
         return await getAllMaintenancePredictions();
       }),
 
-    getHighPriorityPredictions: protectedProcedure
+    getHighPriorityPredictions: managerOrAdminProcedure
       .query(async () => {
         const { getHighPriorityPredictions } = await import('./predictiveMaintenance');
         return await getHighPriorityPredictions();
       }),
 
-    getAssetPrediction: protectedProcedure
+    getAssetPrediction: managerOrAdminProcedure
       .input(z.object({ assetId: z.number() }))
       .query(async ({ input }) => {
         const { analyzeAssetMaintenancePattern } = await import('./predictiveMaintenance');
@@ -3510,6 +3511,7 @@ export const appRouter = router({
         assetStatusChange: z.boolean().optional(),
         complianceDue: z.boolean().optional(),
         systemAlert: z.boolean().optional(),
+        expiryDigest: z.boolean().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         return await db.upsertNotificationPreferences(ctx.user.id, input);
@@ -3755,6 +3757,68 @@ export const appRouter = router({
       }),
   }),
 
+  fleetHealth: router({
+    summary: managerOrAdminProcedure
+      .input(z.object({ siteId: z.number().optional() }).optional())
+      .query(async ({ input }) => {
+        const { buildFleetHealthSummary } = await import("./reports/fleetHealth");
+        return await buildFleetHealthSummary(input ?? undefined);
+      }),
+
+    exportPdf: managerOrAdminProcedure
+      .input(z.object({ siteId: z.number().optional() }).optional())
+      .mutation(async ({ input }) => {
+        const { buildFleetHealthSummary } = await import("./reports/fleetHealth");
+        const { renderFleetHealthPdf } = await import("./reports/fleetHealthPdf");
+        const summary = await buildFleetHealthSummary(input ?? undefined);
+        const buffer = await renderFleetHealthPdf(summary);
+        return {
+          data: buffer.toString("base64"),
+          filename: `fleet-health-${summary.reportDate}.pdf`,
+          mimeType: "application/pdf",
+        };
+      }),
+  }),
+
+  branchScorecards: router({
+    list: managerOrAdminProcedure.query(async () => {
+      const { buildBranchScorecardList } = await import("./reports/branchScorecards");
+      return await buildBranchScorecardList();
+    }),
+
+    exportXlsx: managerOrAdminProcedure.mutation(async () => {
+      const { buildBranchScorecardList } = await import("./reports/branchScorecards");
+      const list = await buildBranchScorecardList();
+      const columns = [
+        { header: "Branch", key: "branchName", width: 24 },
+        { header: "Composite score", key: "compositeScore", width: 14 },
+        { header: "Trend vs prior", key: "trendVsPriorMonth", width: 14 },
+        { header: "Assets", key: "assetCount", width: 10 },
+        { header: "Book value", key: "bookValue", width: 14 },
+        { header: "Verified %", key: "verificationPercent", width: 12 },
+        { header: "Open WOs", key: "openWorkOrders", width: 10 },
+        { header: "Overdue WOs", key: "overdueWorkOrders", width: 12 },
+        { header: "Stock alerts", key: "stockAlerts", width: 12 },
+        { header: "30d expiry qty", key: "expiryExposure30Day", width: 14 },
+      ];
+      const rows = list.map((row) => ({
+        ...row,
+        trendVsPriorMonth: row.trendVsPriorMonth ?? "—",
+      }));
+      const buffer = await generateExcelReport("Branch scorecards", rows, columns, {
+        sheetName: "Scorecards",
+      });
+      const date = new Date().toISOString().slice(0, 10);
+      return {
+        data: buffer.toString("base64"),
+        filename: `branch-scorecards-${date}.xlsx`,
+        mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      };
+    }),
+  }),
+
+  verification: verificationRouter,
+
   // Asset Photos Management
   photos: router({
     create: protectedProcedure
@@ -3802,9 +3866,16 @@ export const appRouter = router({
     create: managerOrAdminProcedure
       .input(z.object({
         name: z.string(),
-        reportType: z.enum(['assetInventory', 'maintenanceSchedule', 'workOrders']),
+        reportType: z.enum([
+          'assetInventory',
+          'maintenanceSchedule',
+          'workOrders',
+          'fleetHealth',
+          'donorStatement',
+          'branchScorecards',
+        ]),
         format: z.enum(['pdf', 'excel']),
-        schedule: z.enum(['daily', 'weekly', 'monthly']),
+        schedule: z.enum(['daily', 'weekly', 'monthly', 'quarterly']),
         dayOfWeek: z.number().optional(),
         dayOfMonth: z.number().optional(),
         time: z.string(),
@@ -3823,9 +3894,16 @@ export const appRouter = router({
       .input(z.object({
         id: z.number(),
         name: z.string().optional(),
-        reportType: z.enum(['assetInventory', 'maintenanceSchedule', 'workOrders']).optional(),
+        reportType: z.enum([
+          'assetInventory',
+          'maintenanceSchedule',
+          'workOrders',
+          'fleetHealth',
+          'donorStatement',
+          'branchScorecards',
+        ]).optional(),
         format: z.enum(['pdf', 'excel']).optional(),
-        schedule: z.enum(['daily', 'weekly', 'monthly']).optional(),
+        schedule: z.enum(['daily', 'weekly', 'monthly', 'quarterly']).optional(),
         dayOfWeek: z.number().optional(),
         dayOfMonth: z.number().optional(),
         time: z.string().optional(),

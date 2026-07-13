@@ -1808,6 +1808,48 @@ export const inventoryV2Router = router({
       .input(z.object({ warehouseId: z.number().int().positive() }))
       .query(async ({ input }) => ({ suggested: await nextWaybillNumber(input.warehouseId) })),
 
+    suggestFefo: protectedProcedure
+      .input(
+        z.object({
+          warehouseId: z.number().int().positive(),
+          itemId: z.number().int().positive(),
+          quantity: z.number().positive(),
+        })
+      )
+      .query(async ({ input, ctx }) => {
+        requireRole(ctx, ["staff", "manager", "admin"]);
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        const { suggestWaybillFefo } = await import("../wms/fefoOverride");
+        return await suggestWaybillFefo(db, input);
+      }),
+
+    checkFefoOverride: protectedProcedure
+      .input(
+        z.object({
+          warehouseId: z.number().int().positive(),
+          itemId: z.number().int().positive(),
+          allocations: z.array(z.object({ ctnId: z.number(), quantity: z.number() })),
+        })
+      )
+      .query(async ({ input, ctx }) => {
+        requireRole(ctx, ["staff", "manager", "admin"]);
+        const db = await getDb();
+        if (!db) return [];
+        const { loadFefoCandidates } = await import("../wms/ctnAllocation");
+        const { detectFefoSkips } = await import("../wms/fefoOverride");
+        const today = new Date().toISOString().slice(0, 10);
+        const candidates = await loadFefoCandidates(db, {
+          itemId: input.itemId,
+          warehouseId: input.warehouseId,
+        });
+        return detectFefoSkips({
+          candidates,
+          manualAllocations: input.allocations,
+          todayIso: today,
+        });
+      }),
+
     create: protectedProcedure.input(waybillDraftSchema).mutation(async ({ input, ctx }) => {
       requireRole(ctx, ["staff", "manager", "admin"]);
       const db = await getDb();
@@ -1869,6 +1911,37 @@ export const inventoryV2Router = router({
           }))
         );
       }
+
+      const { loadFefoCandidates } = await import("../wms/ctnAllocation");
+      const { detectFefoSkips } = await import("../wms/fefoOverride");
+      const today = new Date().toISOString().slice(0, 10);
+      for (const line of input.lines) {
+        const qty = Number(line.nbOfUnits);
+        if (!qty || !line.itemId) continue;
+        const candidates = await loadFefoCandidates(db, {
+          itemId: line.itemId,
+          warehouseId: input.warehouseId,
+        });
+        const skips = detectFefoSkips({
+          candidates,
+          manualAllocations: line.ctnSources.map((s) => ({
+            ctnId: s.ctnId,
+            quantity: Number(s.quantity),
+          })),
+          todayIso: today,
+        });
+        if (skips.length > 0) {
+          await logAuditEvent({
+            userId: ctx.user.id,
+            action: AUDIT_ACTIONS.INVENTORY_FEFO_OVERRIDE,
+            entityType: "waybill",
+            entityId: created.id,
+            changes: { itemId: line.itemId, skippedCtns: skips },
+            req: ctx.req,
+          });
+        }
+      }
+
       return created;
     }),
 
@@ -3800,6 +3873,41 @@ export const inventoryV2Router = router({
         }));
       }),
 
+    donorStatement: protectedProcedure
+      .input(
+        z.object({
+          donorId: z.number().int().positive(),
+          from: z.string().optional(),
+          to: z.string().optional(),
+        })
+      )
+      .query(async ({ input, ctx }) => {
+        requireRole(ctx, ["manager", "admin"]);
+        const { buildDonorStatement } = await import("../reports/donorStatement");
+        return await buildDonorStatement(input);
+      }),
+
+    donorStatementPdf: protectedProcedure
+      .input(
+        z.object({
+          donorId: z.number().int().positive(),
+          from: z.string().optional(),
+          to: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["manager", "admin"]);
+        const { buildDonorStatement } = await import("../reports/donorStatement");
+        const { renderDonorStatementPdf } = await import("../reports/donorStatementPdf");
+        const statement = await buildDonorStatement(input);
+        const buffer = await renderDonorStatementPdf(statement);
+        return {
+          data: buffer.toString("base64"),
+          filename: `donor-statement-${statement.donorCode}-${statement.periodFrom}-${statement.periodTo}.pdf`,
+          mimeType: "application/pdf",
+        };
+      }),
+
     kitAssemblyAudit: protectedProcedure
       .query(async ({ ctx }) => {
         requireRole(ctx, ["manager", "admin"]);
@@ -5113,6 +5221,15 @@ export const inventoryV2Router = router({
         }
         return { processed };
       }),
+
+    horizon: protectedProcedure.query(async ({ ctx }) => {
+      const { buildExpiryHorizonBuckets } = await import("../wms/expiryHorizon");
+      const result = await buildExpiryHorizonBuckets();
+      if (ctx.user.role === "user") {
+        return { buckets: result.buckets, writeOffCandidates: [] };
+      }
+      return result;
+    }),
 
     disposeExpired: protectedProcedure
       .input(z.object({ batchIds: z.array(z.number()).min(1) }))

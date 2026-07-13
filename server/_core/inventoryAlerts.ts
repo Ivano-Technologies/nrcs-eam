@@ -6,6 +6,7 @@ import {
   donors,
   inventoryBatches,
   inventoryCatalogue,
+  notificationPreferences,
   stockSettings,
   sites,
   stockCards,
@@ -219,6 +220,42 @@ export async function runDailyChecks() {
       expiredMarked += 1;
     }
   }
+
+  const { listCtnsEntering30DayBucketToday } = await import("../wms/expiryHorizon");
+  const entering30 = await listCtnsEntering30DayBucketToday();
+  if (entering30.length > 0) {
+    const { sendEmail } = await import("../emailService");
+    for (const user of users) {
+      if (!["manager", "admin"].includes(user.role)) continue;
+      const prefs = await db
+        .select()
+        .from(notificationPreferences)
+        .where(eq(notificationPreferences.userId, user.id))
+        .limit(1);
+      const expiryDigest = prefs[0]?.expiryDigest ?? true;
+      if (!expiryDigest || !user.email) continue;
+      const lines = entering30
+        .map(
+          (r) =>
+            `<li>${r.itemName} (${r.ctnCode}) at ${r.warehouseName} — expires ${r.expiryDate}, qty ${r.balance}</li>`
+        )
+        .join("");
+      await sendEmail({
+        to: user.email,
+        subject: "Daily expiry digest — items entering 30-day window",
+        html: `<p>The following items entered the 30-day expiry window today:</p><ul>${lines}</ul>`,
+      });
+      await createNotificationDeduped({
+        userId: user.id,
+        type: "expiry_warning_30",
+        title: "Expiry digest",
+        message: `${entering30.length} item(s) entered the 30-day expiry window.`,
+        relatedEntityType: "inventory",
+        relatedEntityId: null,
+      });
+    }
+  }
+
   return { checked: batches.length, expiredMarked, notificationsSkipped };
 }
 

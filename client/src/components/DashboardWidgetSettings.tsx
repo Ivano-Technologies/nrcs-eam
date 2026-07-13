@@ -12,6 +12,7 @@ const DEFAULT_WIDGETS = {
   activityFeed: true,
   facilityStatus: true,
   requisitionsTable: true,
+  fleetHealth: true,
 };
 
 export function DashboardWidgetSettings() {
@@ -45,6 +46,7 @@ export function DashboardWidgetSettings() {
     activityFeed: { title: "Activity Feed", description: "Show recent system activity" },
     facilityStatus: { title: "Facility Status", description: "Show facility readiness list" },
     requisitionsTable: { title: "Requisitions", description: "Show pending requisitions summary" },
+    fleetHealth: { title: "Fleet health", description: "Book value, predictions, and overdue work orders" },
   };
 
   if (user?.role === "staff" || user?.role === "field") {

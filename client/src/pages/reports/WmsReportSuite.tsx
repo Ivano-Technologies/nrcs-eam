@@ -7,7 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc";
-import { Warehouse } from "lucide-react";
+import { Warehouse, FileDown } from "lucide-react";
+import { downloadBase64File } from "@/lib/download";
+import { toast } from "sonner";
 
 function exportCsv(filename: string, columns: string[], rows: Array<Record<string, unknown>>) {
   const body = rows.map((row) => columns.map((col) => JSON.stringify(row[col] ?? "")).join(",")).join("\n");
@@ -28,6 +30,9 @@ export default function WmsReportSuite(props: any) {
   const [search, setSearch] = useState("");
   const [sourceType, setSourceType] = useState("all");
   const [direction, setDirection] = useState<"all" | "in" | "out">("all");
+  const [donorId, setDonorId] = useState<string>("");
+  const [statementFrom, setStatementFrom] = useState("");
+  const [statementTo, setStatementTo] = useState("");
 
   const exportReportMutation = trpc.inventoryV2.reports.exportReport.useMutation();
 
@@ -56,6 +61,22 @@ export default function WmsReportSuite(props: any) {
   });
   const ctnAgingQuery = trpc.inventoryV2.reports.ctnAging.useQuery();
   const donorQuery = trpc.inventoryV2.reports.donorContribution.useQuery({ startDate: startDate || undefined, endDate: endDate || undefined });
+  const donorsQuery = trpc.wms.ctn.donors.useQuery();
+  const donorStatementQuery = trpc.inventoryV2.reports.donorStatement.useQuery(
+    {
+      donorId: Number(donorId),
+      from: statementFrom || undefined,
+      to: statementTo || undefined,
+    },
+    { enabled: !!donorId }
+  );
+  const donorStatementPdf = trpc.inventoryV2.reports.donorStatementPdf.useMutation({
+    onSuccess: (r) => {
+      downloadBase64File(r.data, r.filename, r.mimeType);
+      toast.success("Donor statement PDF downloaded");
+    },
+    onError: (e) => toast.error(e.message),
+  });
   const lossQuery = trpc.inventoryV2.reports.lossDamage.useQuery({ startDate: startDate || undefined, endDate: endDate || undefined });
   const kitQuery = trpc.inventoryV2.reports.kitAssemblyAudit.useQuery();
 
@@ -129,8 +150,76 @@ export default function WmsReportSuite(props: any) {
           </div>
         </TabsContent>
 
-        <TabsContent value="donor" className="space-y-2">
-          <Button variant="outline" disabled={exportReportMutation.isPending} onClick={() => { void downloadExcel("wms-donor-contribution.xlsx", (donorQuery.data ?? []) as any); }}>Export Excel</Button>
+        <TabsContent value="donor" className="space-y-4">
+          <div className="rounded-md border p-4 space-y-3">
+            <h3 className="text-sm font-semibold">Donor accountability statement</h3>
+            <div className="grid gap-3 md:grid-cols-4">
+              <div className="space-y-1">
+                <Label>Donor</Label>
+                <Select value={donorId || "none"} onValueChange={(v) => setDonorId(v === "none" ? "" : v)}>
+                  <SelectTrigger><SelectValue placeholder="Select donor" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Select donor</SelectItem>
+                    {(donorsQuery.data ?? []).map((d) => (
+                      <SelectItem key={d.id} value={String(d.id)}>{d.code} — {d.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1"><Label>From</Label><Input type="date" value={statementFrom} onChange={(e) => setStatementFrom(e.target.value)} /></div>
+              <div className="space-y-1"><Label>To</Label><Input type="date" value={statementTo} onChange={(e) => setStatementTo(e.target.value)} /></div>
+              <div className="flex items-end gap-2">
+                <Button
+                  variant="outline"
+                  disabled={!donorId || donorStatementPdf.isPending}
+                  onClick={() =>
+                    donorStatementPdf.mutate({
+                      donorId: Number(donorId),
+                      from: statementFrom || undefined,
+                      to: statementTo || undefined,
+                    })
+                  }
+                >
+                  <FileDown className="mr-2 h-4 w-4" />
+                  Export PDF
+                </Button>
+              </div>
+            </div>
+            {donorStatementQuery.data && !donorStatementQuery.data.reconciled ? (
+              <p className="text-sm text-amber-700">
+                Ledger discrepancies: {donorStatementQuery.data.discrepancies.join("; ") || "Review line balances."}
+              </p>
+            ) : null}
+            {donorId && donorStatementQuery.data ? (
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Item</TableHead>
+                      <TableHead>Opening</TableHead>
+                      <TableHead>Received</TableHead>
+                      <TableHead>Distributed</TableHead>
+                      <TableHead>Losses</TableHead>
+                      <TableHead>Closing</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {donorStatementQuery.data.lines.map((line) => (
+                      <TableRow key={line.catalogueId}>
+                        <TableCell>{line.itemCode} — {line.itemName}</TableCell>
+                        <TableCell>{line.openingBalance}</TableCell>
+                        <TableCell>{line.received}</TableCell>
+                        <TableCell>{line.distributed}</TableCell>
+                        <TableCell>{line.losses}</TableCell>
+                        <TableCell>{line.closingBalance}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : null}
+          </div>
+          <Button variant="outline" disabled={exportReportMutation.isPending} onClick={() => { void downloadExcel("wms-donor-contribution.xlsx", (donorQuery.data ?? []) as any); }}>Export contribution Excel</Button>
           <div className="rounded-md border">
             <Table><TableHeader><TableRow><TableHead>Donor</TableHead><TableHead>Item</TableHead><TableHead>Total units received</TableHead><TableHead>Total distributed</TableHead><TableHead>In stock</TableHead><TableHead>% distributed</TableHead></TableRow></TableHeader>
               <TableBody>{(donorQuery.data ?? []).map((row, idx) => <TableRow key={idx}><TableCell>{row.donor}</TableCell><TableCell>{row.item}</TableCell><TableCell>{row.received}</TableCell><TableCell>{row.distributed}</TableCell><TableCell>{row.inStock}</TableCell><TableCell>{row.percentDistributed.toFixed(2)}%</TableCell></TableRow>)}</TableBody>

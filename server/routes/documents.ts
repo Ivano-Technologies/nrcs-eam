@@ -34,7 +34,7 @@ async function requireDocumentExportUser(
   }
 }
 
-type ExportType = "grn" | "waybill" | "stock-card" | "bin-card" | "monthly-report";
+type ExportType = "grn" | "waybill" | "stock-card" | "bin-card" | "monthly-report" | "donor-statement";
 type ExportFormat = "pdf" | "xlsx";
 
 function mimeFor(format: ExportFormat): string {
@@ -61,7 +61,7 @@ router.get("/documents/:type/:id/export", async (req, res) => {
   const format = String(req.query.format ?? "pdf") as ExportFormat;
   const copyType = req.query.copy ? String(req.query.copy) : null;
 
-  if (!["grn", "waybill", "stock-card", "bin-card", "monthly-report"].includes(type)) {
+  if (!["grn", "waybill", "stock-card", "bin-card", "monthly-report", "donor-statement"].includes(type)) {
     return res.status(400).json({ error: "Unsupported document type" });
   }
   if (!["pdf", "xlsx"].includes(format)) {
@@ -205,6 +205,43 @@ router.get("/documents/:type/:id/export", async (req, res) => {
         );
       } else {
         buffer = await toSheetBuffer(detail.ledger, "BinCard");
+      }
+    } else if (type === "donor-statement") {
+      if (!["manager", "admin"].includes(user.role)) {
+        return res.status(403).json({ error: "Manager access required" });
+      }
+      const from = typeof req.query.from === "string" ? req.query.from : undefined;
+      const to = typeof req.query.to === "string" ? req.query.to : undefined;
+      const { buildDonorStatement } = await import("../reports/donorStatement");
+      const { renderDonorStatementPdf } = await import("../reports/donorStatementPdf");
+      const statement = await buildDonorStatement({ donorId: id, from, to });
+      filenameBase = `donor-statement-${statement.donorCode}-${statement.periodFrom}-${statement.periodTo}`;
+      if (format === "pdf") {
+        buffer = await renderDonorStatementPdf(statement);
+      } else {
+        const rows = statement.lines.map((line) => ({
+          itemCode: line.itemCode,
+          itemName: line.itemName,
+          openingBalance: line.openingBalance,
+          received: line.received,
+          distributed: line.distributed,
+          losses: line.losses,
+          closingBalance: line.closingBalance,
+        }));
+        buffer = await generateExcelReport(
+          `Donor statement — ${statement.donorName}`,
+          rows,
+          [
+            { header: "Item code", key: "itemCode", width: 14 },
+            { header: "Item", key: "itemName", width: 28 },
+            { header: "Opening", key: "openingBalance", width: 12 },
+            { header: "Received", key: "received", width: 12 },
+            { header: "Distributed", key: "distributed", width: 12 },
+            { header: "Losses", key: "losses", width: 10 },
+            { header: "Closing", key: "closingBalance", width: 12 },
+          ],
+          { sheetName: "Statement" }
+        );
       }
     } else {
       const now = new Date();

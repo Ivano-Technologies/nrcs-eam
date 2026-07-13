@@ -9,6 +9,9 @@ import { Redirect, Route, Switch, useRoute } from "wouter";
 const ActivityLog = lazy(() => import("@/pages/ActivityLog"));
 const ComplianceRegister = lazy(() => import("@/pages/Administration/ComplianceRegister"));
 const DepreciationSchedule = lazy(() => import("@/pages/reports/DepreciationSchedule"));
+const FleetHealth = lazy(() => import("@/pages/FleetHealth"));
+const BranchScorecards = lazy(() => import("@/pages/reports/BranchScorecards"));
+const VerificationCampaigns = lazy(() => import("@/pages/Administration/VerificationCampaigns"));
 const Observability = lazy(() => import("@/pages/Administration/Observability"));
 const AssetDetail = lazy(() => import("@/pages/AssetDetail"));
 const AssetMap = lazy(() => import("@/pages/AssetMap"));
@@ -233,8 +236,10 @@ function ProtectedAppSectionRoutes() {
             <Route path="/app/warranty-alerts" component={WarrantyAlerts} />
             <Route path="/app/administration/compliance-register" component={ComplianceRegister} />
             <Route path="/app/administration/activity-log" component={ActivityLog} />
+            <Route path="/app/administration/verification-campaigns" component={VerificationCampaigns} />
             <Route path="/app/administration/observability" component={Observability} />
             <Route path="/app/reports/depreciation-schedule" component={DepreciationSchedule} />
+            <Route path="/app/fleet-health" component={FleetHealth} />
             <Route path="/app/work-orders/:id" component={WorkOrderDetail} />
             <Route path="/app/work-orders" component={WorkOrders} />
             <Route path="/app/mobile-work-orders" component={MobileWorkOrders} />
@@ -335,6 +340,7 @@ function ProtectedAppSectionRoutes() {
             <Route path="/app/settings/notifications" component={NotificationPreferences} />
             <Route path="/app/notification-preferences" component={NotificationPreferences} />
             <Route path="/app/reports" component={Reports} />
+            <Route path="/app/reports/branch-scorecards" component={BranchScorecards} />
             <Route path="/app/reports/wms" component={WmsReportSuite} />
             <Route path="/app/reports/wms/monthly-warehouse-report" component={MonthlyWarehouseReport} />
             <Route path="/app/reports/wms/stock-movements" component={WmsStockMovementsReport} />

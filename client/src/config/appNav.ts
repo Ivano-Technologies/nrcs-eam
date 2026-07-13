@@ -27,6 +27,8 @@ import {
   AlertTriangle,
   UserPlus,
   TrendingDown,
+  Trophy,
+  ClipboardCheck,
 } from "lucide-react";
 
 export type AppNavItem = {
@@ -187,6 +189,18 @@ export const SIDEBAR_GROUPS: AppNavGroup[] = [
         icon: TrendingDown,
         managerOrAdminOnly: true,
       },
+      {
+        label: "Branch scorecards",
+        path: appPath("/reports/branch-scorecards"),
+        icon: Trophy,
+        managerOrAdminOnly: true,
+      },
+      {
+        label: "Fleet health",
+        path: appPath("/fleet-health"),
+        icon: ShieldCheck,
+        managerOrAdminOnly: true,
+      },
     ],
   },
 ];
@@ -210,6 +224,11 @@ export const SIDEBAR_GROUPS_ADMIN: AppNavGroup[] = [
         icon: ShieldCheck,
       },
       { label: "Activity Log", path: appPath("/administration/activity-log"), icon: History },
+      {
+        label: "Verification campaigns",
+        path: appPath("/administration/verification-campaigns"),
+        icon: ClipboardCheck,
+      },
       { label: "Observability", path: appPath("/administration/observability"), icon: BarChart3 },
     ],
   },

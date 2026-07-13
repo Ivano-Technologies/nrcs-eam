@@ -1,5 +1,6 @@
 import { authorizeCronRequest, logCronRun } from "../../server/_core/cronAuth";
 import { runMonthlyChecks } from "../../server/_core/inventoryAlerts";
+import { writeBranchScorecardSnapshots } from "../../server/reports/branchScorecards";
 import { captureServerEvent } from "../../server/_core/serverAnalytics";
 
 export default async function handler(req: any, res: any) {
@@ -10,7 +11,9 @@ export default async function handler(req: any, res: any) {
     return;
   }
   try {
-    const result = await runMonthlyChecks();
+    const monthly = await runMonthlyChecks();
+    const snapshots = await writeBranchScorecardSnapshots();
+    const result = { ...monthly, branchScorecardSnapshots: snapshots.written };
     logCronRun("monthly", startedAt, result);
     captureServerEvent("cron", "cron_monthly_complete", result);
     res.status(200).json({ ok: true, result });
