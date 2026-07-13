@@ -1,0 +1,28 @@
+name: Supabase keepalive
+
+# Pings the Supabase REST root so free-tier projects do not pause after 7 days of inactivity.
+# Note: GitHub also disables scheduled workflows after 60 days of repo inactivity.
+
+on:
+  schedule:
+    - cron: "0 8 * * 1,4" # Mon & Thu 08:00 UTC
+  workflow_dispatch:
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_ANON_KEY:-}" ]; then
+            echo "Missing SUPABASE_URL or SUPABASE_ANON_KEY repository secrets."
+            exit 1
+          fi
+          curl -sf "${SUPABASE_URL}/rest/v1/?apikey=${SUPABASE_ANON_KEY}" \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}"
+          echo "Supabase keepalive OK"
