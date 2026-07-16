@@ -6,17 +6,22 @@ import PageHeader from "@/components/ui/PageHeader";
 import { cn } from "@/lib/utils";
 import { Boxes } from "lucide-react";
 
+const DEFAULT_SUBTITLE =
+  "Humanitarian inventory management system for tracking relief materials across NRCS warehouses nationwide.";
+
 const TAB_DESCRIPTIONS: Partial<Record<InventoryShellTab, string>> = {
   "stock-overview":
     "Real-time visibility into inventory levels, stock movements, and warehouse availability.",
+  tracking:
+    "Track stock movements, inter-warehouse transfers, periodic counts, expiry, kits, and warehouse activity.",
+  "ctn-registry":
+    "Centralized registry for recording, monitoring, and validating consignment tracking numbers.",
   requisitions:
     "Manage inventory requests, picking, packing, and dispatch operations for relief distribution.",
   receipts:
     "Record and verify incoming stock deliveries, warehouse receipts, and inventory intake processes.",
   issues:
     "Track outbound shipments, delivery status, and logistics movement across distribution channels.",
-  tracking:
-    "Track stock movements, inter-warehouse transfers, periodic counts, expiry, kits, and warehouse activity.",
 };
 
 const TABS: { tab: InventoryShellTab; label: string; path: string }[] = [
@@ -50,22 +55,12 @@ export function InventoryShell({ activeTab, children }: InventoryShellProps) {
 
   return (
     <div className="space-y-5">
-      <div>
-        <PageHeader
-          icon={Boxes}
-          title="Inventory"
-          subtitle="Humanitarian inventory management system for tracking relief materials across NRCS warehouses nationwide."
-          className="mb-0"
-        />
-        {TAB_DESCRIPTIONS[activeTab] ? (
-          <p
-            className="text-sm text-muted-foreground max-w-2xl line-clamp-2 sm:line-clamp-none -mt-4 mb-2"
-            title={TAB_DESCRIPTIONS[activeTab]}
-          >
-            {TAB_DESCRIPTIONS[activeTab]}
-          </p>
-        ) : null}
-      </div>
+      <PageHeader
+        icon={Boxes}
+        title="Inventory"
+        subtitle={TAB_DESCRIPTIONS[activeTab] ?? DEFAULT_SUBTITLE}
+        className="mb-0"
+      />
 
       <div className="flex flex-wrap gap-2 border-b border-border pb-2">
         {TABS.map((t) => {

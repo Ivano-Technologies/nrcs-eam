@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { InventoryShell } from "@/components/inventory/InventoryShell";
-import PageHeader from "@/components/ui/PageHeader";
 import { ModuleFiltersCard, ModuleFilterSearch } from "@/components/ModuleFiltersCard";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,7 +31,7 @@ import TableLoader from "@/components/ui/TableLoader";
 import { ITEM_CATEGORY_VALUES } from "@shared/itemCategory";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Loader2, Tag } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 const CATEGORY_LABEL: Record<string, string> = {
   food_nutrition: "Food & nutrition",
@@ -100,11 +99,7 @@ export default function CtnRegistryPage() {
   return (
     <InventoryShell activeTab="ctn-registry">
       <div className="space-y-4">
-        <PageHeader
-          icon={Tag}
-          title="CTN Registry"
-          subtitle="Centralized registry for recording, monitoring, and validating consignment tracking numbers."
-        />
+        <h2 className="text-2xl font-bold">CTN Registry</h2>
 
         <ModuleFiltersCard
           filterRow={
