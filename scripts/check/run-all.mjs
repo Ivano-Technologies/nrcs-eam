@@ -154,6 +154,9 @@ function main() {
     runStep("node", ["scripts/check/migrations-applied.mjs", ".env.e2e", "E2E DB"]);
   }
 
+  runStep("pnpm", ["build:frontend"]);
+  runStep("node", ["scripts/check/verify-entry-graph.mjs"]);
+
   runStep("pnpm", ["exec", "vitest", "run"]);
 
   if (process.env.CHECK_FULL_SKIP_PLAYWRIGHT === "1") {
