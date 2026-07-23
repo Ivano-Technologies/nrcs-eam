@@ -25,3 +25,111 @@ jobs:
 
       - name: TypeScript check
         run: pnpm check
+
+      - name: Frontend production build
+        run: pnpm build:frontend
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: ESLint
+        run: pnpm lint
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: nrcs_eam_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d nrcs_eam_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/nrcs_eam_test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Bootstrap Supabase roles for vanilla Postgres
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client
+          psql "$DATABASE_URL" <<'SQL'
+          DO $$ BEGIN
+            CREATE ROLE anon NOLOGIN;
+          EXCEPTION WHEN duplicate_object THEN NULL;
+          END $$;
+          DO $$ BEGIN
+            CREATE ROLE authenticated NOLOGIN;
+          EXCEPTION WHEN duplicate_object THEN NULL;
+          END $$;
+          DO $$ BEGIN
+            CREATE ROLE service_role NOLOGIN;
+          EXCEPTION WHEN duplicate_object THEN NULL;
+          END $$;
+          CREATE EXTENSION IF NOT EXISTS pgcrypto;
+          -- Stub required by 0030 (CREATE OR REPLACE arrives in 0031; fresh DBs fail otherwise)
+          CREATE OR REPLACE FUNCTION public.nrcs_item_category_code(category_name text)
+          RETURNS varchar
+          LANGUAGE plpgsql
+          AS $$
+          BEGIN
+            RETURN CASE trim(coalesce(category_name, ''))
+              WHEN 'Computer' THEN 'CO'
+              WHEN 'Furniture & Fixtures' THEN 'FF'
+              WHEN 'Generator' THEN 'GE'
+              WHEN 'Land' THEN 'LA'
+              WHEN 'Land & Building' THEN 'LB'
+              WHEN 'Medical Equipment' THEN 'ME'
+              WHEN 'Office Equipment' THEN 'OE'
+              WHEN 'Vehicle' THEN 'VE'
+              ELSE NULL
+            END;
+          END;
+          $$;
+          -- Supabase-only helpers revoked in 0041 but never created by drizzle migrations
+          CREATE OR REPLACE FUNCTION public.sync_delete_auth_user()
+          RETURNS void LANGUAGE plpgsql AS $$ BEGIN END; $$;
+          CREATE OR REPLACE FUNCTION public.sync_delete_app_user()
+          RETURNS void LANGUAGE plpgsql AS $$ BEGIN END; $$;
+          CREATE OR REPLACE FUNCTION public.rls_auto_enable()
+          RETURNS void LANGUAGE plpgsql AS $$ BEGIN END; $$;
+          SQL
+
+      - name: Apply migrations
+        run: pnpm exec drizzle-kit migrate
+
+      - name: Seed database
+        run: pnpm exec tsx scripts/db/seed-db.mjs
+
+      - name: Run Vitest
+        run: pnpm exec vitest run
