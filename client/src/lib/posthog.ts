@@ -29,6 +29,8 @@ function loadPostHog(): Promise<PostHog | null> {
             if (import.meta.env.DEV) ph.opt_out_capturing();
           },
         });
+        // Preserve the prior global contract used by main.tsx unhandledrejection capture.
+        (window as unknown as { posthog?: PostHog }).posthog = posthog;
         return posthog;
       })
       .catch((err) => {
