@@ -26,7 +26,7 @@ Vitest includes DB-backed router tests (`server/eam.test.ts`, `server/bulkSiteIm
 **CI** (`.github/workflows/ci.yml` `test` job):
 
 1. Starts ephemeral `postgres:16` (`nrcs_eam_test`)
-2. Bootstraps Supabase-compatible roles (`anon`, `authenticated`, `service_role`) plus `pgcrypto` so migrations that reference them succeed on vanilla Postgres
+2. Bootstraps Supabase-compatible roles (`anon`, `authenticated`, `service_role`), `pgcrypto`, and a stub of `nrcs_item_category_code` (used by migration `0030` before `0031` creates it) so migrations succeed on vanilla Postgres
 3. Runs `pnpm exec drizzle-kit migrate`, then `node scripts/db/seed-db.mjs`, then `pnpm exec vitest run`
 
 **Locally:**
@@ -35,8 +35,23 @@ Vitest includes DB-backed router tests (`server/eam.test.ts`, `server/bulkSiteIm
 # Point at a Postgres DB (example)
 export DATABASE_URL=postgres://postgres:postgres@localhost:5432/nrcs_eam_test
 
-# One-time bootstrap if the DB is not Supabase (roles used by RLS migrations)
-psql "$DATABASE_URL" -c "CREATE ROLE anon NOLOGIN;" -c "CREATE ROLE authenticated NOLOGIN;" -c "CREATE ROLE service_role NOLOGIN;" -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;"
+# One-time bootstrap if the DB is not Supabase (roles + helper used by historical migrations)
+psql "$DATABASE_URL" <<'SQL'
+CREATE ROLE anon NOLOGIN;
+CREATE ROLE authenticated NOLOGIN;
+CREATE ROLE service_role NOLOGIN;
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE OR REPLACE FUNCTION public.nrcs_item_category_code(category_name text)
+RETURNS varchar LANGUAGE plpgsql AS $$
+BEGIN
+  RETURN CASE trim(coalesce(category_name, ''))
+    WHEN 'Computer' THEN 'CO' WHEN 'Furniture & Fixtures' THEN 'FF'
+    WHEN 'Generator' THEN 'GE' WHEN 'Land' THEN 'LA'
+    WHEN 'Land & Building' THEN 'LB' WHEN 'Medical Equipment' THEN 'ME'
+    WHEN 'Office Equipment' THEN 'OE' WHEN 'Vehicle' THEN 'VE'
+    ELSE NULL END;
+END; $$;
+SQL
 
 pnpm exec drizzle-kit migrate
 node scripts/db/seed-db.mjs
