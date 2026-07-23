@@ -51,6 +51,9 @@ BEGIN
     WHEN 'Office Equipment' THEN 'OE' WHEN 'Vehicle' THEN 'VE'
     ELSE NULL END;
 END; $$;
+CREATE OR REPLACE FUNCTION public.sync_delete_auth_user() RETURNS void LANGUAGE plpgsql AS $$ BEGIN END; $$;
+CREATE OR REPLACE FUNCTION public.sync_delete_app_user() RETURNS void LANGUAGE plpgsql AS $$ BEGIN END; $$;
+CREATE OR REPLACE FUNCTION public.rls_auto_enable() RETURNS void LANGUAGE plpgsql AS $$ BEGIN END; $$;
 SQL
 
 pnpm exec drizzle-kit migrate

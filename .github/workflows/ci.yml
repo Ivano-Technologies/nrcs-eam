@@ -116,6 +116,13 @@ jobs:
             END;
           END;
           $$;
+          -- Supabase-only helpers revoked in 0041 but never created by drizzle migrations
+          CREATE OR REPLACE FUNCTION public.sync_delete_auth_user()
+          RETURNS void LANGUAGE plpgsql AS $$ BEGIN END; $$;
+          CREATE OR REPLACE FUNCTION public.sync_delete_app_user()
+          RETURNS void LANGUAGE plpgsql AS $$ BEGIN END; $$;
+          CREATE OR REPLACE FUNCTION public.rls_auto_enable()
+          RETURNS void LANGUAGE plpgsql AS $$ BEGIN END; $$;
           SQL
 
       - name: Apply migrations
