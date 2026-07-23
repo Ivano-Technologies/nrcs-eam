@@ -27,7 +27,7 @@ Vitest includes DB-backed router tests (`server/eam.test.ts`, `server/bulkSiteIm
 
 1. Starts ephemeral `postgres:16` (`nrcs_eam_test`)
 2. Bootstraps Supabase-compatible roles (`anon`, `authenticated`, `service_role`), `pgcrypto`, and a stub of `nrcs_item_category_code` (used by migration `0030` before `0031` creates it) so migrations succeed on vanilla Postgres
-3. Runs `pnpm exec drizzle-kit migrate`, then `node scripts/db/seed-db.mjs`, then `pnpm exec vitest run`
+3. Runs `pnpm exec drizzle-kit migrate`, then `pnpm exec tsx scripts/db/seed-db.mjs`, then `pnpm exec vitest run`
 
 **Locally:**
 
@@ -57,7 +57,7 @@ CREATE OR REPLACE FUNCTION public.rls_auto_enable() RETURNS void LANGUAGE plpgsq
 SQL
 
 pnpm exec drizzle-kit migrate
-node scripts/db/seed-db.mjs
+pnpm exec tsx scripts/db/seed-db.mjs
 pnpm exec vitest run
 ```
 

@@ -129,7 +129,7 @@ jobs:
         run: pnpm exec drizzle-kit migrate
 
       - name: Seed database
-        run: node scripts/db/seed-db.mjs
+        run: pnpm exec tsx scripts/db/seed-db.mjs
 
       - name: Run Vitest
         run: pnpm exec vitest run
