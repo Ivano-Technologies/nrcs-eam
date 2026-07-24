@@ -23,7 +23,6 @@ const shared = {
     "pdf-lib",
     "bcrypt",
     "posthog-node",
-    "node-quickbooks",
     "sharp",
   ],
   logLevel: "info",
