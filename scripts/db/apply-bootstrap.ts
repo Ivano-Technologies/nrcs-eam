@@ -9,7 +9,7 @@ import * as dotenv from "dotenv";
 import postgres from "postgres";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: join(__dirname, "../../.env") });
+dotenv.config({ path: join(__dirname, "../../.env"), quiet: true });
 
 const url = process.env.DATABASE_URL;
 if (!url) {
