@@ -29,6 +29,9 @@ jobs:
       - name: Frontend production build
         run: pnpm build:frontend
 
+      - name: Verify entry module graph
+        run: node scripts/check/verify-entry-graph.mjs
+
   lint:
     name: Lint
     runs-on: ubuntu-latest
