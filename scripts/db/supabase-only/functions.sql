@@ -1,0 +1,3 @@
+-- Placeholder: paste pg_get_functiondef exports from Supabase here.
+-- See README.md in this folder for the export query.
+-- Do not invent function bodies.
