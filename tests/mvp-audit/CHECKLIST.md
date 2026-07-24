@@ -130,7 +130,7 @@ Local: Mailpit SMTP (`SMTP_HOST` / `MAILPIT_SMTP_HOST` on `1025`).
 |--------|------|
 | [x] | Admin-only: Users, Pending Users, Email Notifications, Audit Trail, bulk deletes |
 | [x] | Manager/Admin: sites/assets CRUD, etc. |
-| [x] | `DashboardSettings`, `NotificationPreferences`, `QuickBooksSettings` |
+| [x] | `DashboardSettings`, `NotificationPreferences` |
 
 ---
 
