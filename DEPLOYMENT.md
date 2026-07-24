@@ -116,6 +116,25 @@ Both branches share the same environment variables configured in Vercel. If a ne
 
 ---
 
+## 7b. Fresh environment database setup
+
+For a **new empty Postgres** (local Docker, CI-style vanilla Postgres, or a greenfield DB — not an existing Supabase project that already has roles/helpers):
+
+```bash
+# Requires DATABASE_URL in .env (or the environment)
+pnpm db:setup
+```
+
+This runs, in order:
+
+1. `pnpm db:bootstrap` — roles (`anon` / `authenticated` / `service_role`), `pgcrypto`, and existence-guarded function stubs (`scripts/db/bootstrap.sql`)
+2. `drizzle-kit migrate` — apply journaled migrations
+3. `tsx scripts/db/seed-db.mjs` — minimal sites + asset categories
+
+Bootstrap is idempotent and **does not** `CREATE OR REPLACE` existing functions, so an accidental run against production/Supabase leaves real bodies alone. Prefer `pnpm db:migrate:dev` / seed alone when the database already has Supabase objects.
+
+---
+
 ## 8. Security vulnerability backlog
 
 As of June 2026, GitHub Dependabot has flagged 50 vulnerabilities (2 critical, 26 high, 22 moderate) on the default branch. Review and address these at [github.com/Ivano-Technologies/nrcs-eam/security/dependabot](https://github.com/Ivano-Technologies/nrcs-eam/security/dependabot) before the next major feature cycle. Do not merge Dependabot PRs without testing on the staging branch first.
