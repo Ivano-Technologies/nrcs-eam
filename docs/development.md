@@ -19,6 +19,52 @@ Notes:
 - AWS Secrets Manager integration has been removed from runtime bootstrap.
 - WMS quantity source of truth is `stock_movements`; avoid adding new `inventory_stock` usage.
 
+## Running tests in CI and locally
+
+Vitest includes DB-backed router tests (`server/eam.test.ts`, `server/bulkSiteImport.test.ts`, `server/facilityHierarchy.test.ts`, `server/notifications.test.ts`, `server/qrcode.test.ts`). They need a Postgres database reachable via `DATABASE_URL`.
+
+**CI** (`.github/workflows/ci.yml` `test` job):
+
+1. Starts ephemeral `postgres:16` (`nrcs_eam_test`)
+2. Bootstraps Supabase-compatible roles (`anon`, `authenticated`, `service_role`), `pgcrypto`, and a stub of `nrcs_item_category_code` (used by migration `0030` before `0031` creates it) so migrations succeed on vanilla Postgres
+3. Runs `pnpm exec drizzle-kit migrate`, then `pnpm exec tsx scripts/db/seed-db.mjs`, then `pnpm exec vitest run`
+
+**Locally:**
+
+```bash
+# Point at a Postgres DB (example)
+export DATABASE_URL=postgres://postgres:postgres@localhost:5432/nrcs_eam_test
+
+# One-time bootstrap if the DB is not Supabase (roles + helper used by historical migrations)
+psql "$DATABASE_URL" <<'SQL'
+CREATE ROLE anon NOLOGIN;
+CREATE ROLE authenticated NOLOGIN;
+CREATE ROLE service_role NOLOGIN;
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE OR REPLACE FUNCTION public.nrcs_item_category_code(category_name text)
+RETURNS varchar LANGUAGE plpgsql AS $$
+BEGIN
+  RETURN CASE trim(coalesce(category_name, ''))
+    WHEN 'Computer' THEN 'CO' WHEN 'Furniture & Fixtures' THEN 'FF'
+    WHEN 'Generator' THEN 'GE' WHEN 'Land' THEN 'LA'
+    WHEN 'Land & Building' THEN 'LB' WHEN 'Medical Equipment' THEN 'ME'
+    WHEN 'Office Equipment' THEN 'OE' WHEN 'Vehicle' THEN 'VE'
+    ELSE NULL END;
+END; $$;
+CREATE OR REPLACE FUNCTION public.sync_delete_auth_user() RETURNS void LANGUAGE plpgsql AS $$ BEGIN END; $$;
+CREATE OR REPLACE FUNCTION public.sync_delete_app_user() RETURNS void LANGUAGE plpgsql AS $$ BEGIN END; $$;
+CREATE OR REPLACE FUNCTION public.rls_auto_enable() RETURNS void LANGUAGE plpgsql AS $$ BEGIN END; $$;
+SQL
+
+pnpm exec drizzle-kit migrate
+pnpm exec tsx scripts/db/seed-db.mjs
+pnpm exec vitest run
+```
+
+`vitest.setup.ts` loads `.env` via dotenv when present; a missing `.env` is a no-op, so CI relies on the job-level `DATABASE_URL` alone. Unit tests that do not touch the DB still run without Postgres.
+
+Also run `pnpm lint` (ESLint) and `pnpm check` (TypeScript) before opening a PR. CI enforces all three plus a frontend production build.
+
 ## Pre-push Verification
 
 Use `pnpm check:full` before pushing. It runs the full pre-push verification pipeline in order and fails fast on the first error:

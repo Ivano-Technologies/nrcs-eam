@@ -8,12 +8,12 @@ import { ThemeProvider } from "next-themes";
 import { Route, Switch } from "wouter";
 import Signup from "./pages/Signup";
 import Login from "./pages/Login";
-import ResetPassword from "@/pages/auth/ResetPassword";
 
 const TermsOfService = lazy(() => import("./pages/TermsOfService"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const LandingPage = lazy(() => import("@/pages/LandingPage"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
+const ResetPassword = lazy(() => import("@/pages/auth/ResetPassword"));
 
 function PublicRouteFallback() {
   return (

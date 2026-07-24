@@ -26,6 +26,21 @@ describe("DashboardQueryQueue", () => {
     const queue = new DashboardQueryQueue(1);
     const order: number[] = [];
 
+    // Saturate the single concurrency slot so later enqueues stay queued
+    // and priority ordering is actually exercised (drain starts immediately
+    // when capacity is free, so enqueueing without a blocker runs FIFO-on-arrival).
+    let releaseBlocker!: () => void;
+    const blockerReady = new Promise<void>((resolve) => {
+      releaseBlocker = resolve;
+    });
+    const blocker = queue.enqueue(0, async () => {
+      await blockerReady;
+      return "blocker";
+    });
+
+    // Let the blocker claim the slot before enqueueing ordered tasks
+    await delay(5);
+
     const low = queue.enqueue(3, async () => {
       order.push(3);
       return "low";
@@ -39,7 +54,8 @@ describe("DashboardQueryQueue", () => {
       return "mid";
     });
 
-    await Promise.all([low, high, mid]);
+    releaseBlocker();
+    await Promise.all([blocker, low, high, mid]);
     expect(order).toEqual([1, 2, 3]);
   });
 });

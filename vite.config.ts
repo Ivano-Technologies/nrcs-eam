@@ -7,6 +7,34 @@ import { defineConfig } from "vite";
 import { vitePluginManusRuntime } from "vite-plugin-manus-runtime";
 import { VitePWA } from "vite-plugin-pwa";
 
+/**
+ * Resolve the real npm package name from a module id.
+ * Uses the segment after the last `/node_modules/` so pnpm paths like
+ * `.../.pnpm/recharts@x/node_modules/react-is/...` are attributed to `react-is`,
+ * not wrongly to `recharts` via a naive `id.includes("recharts")` check.
+ */
+function packageNameFromId(id: string): string | null {
+  const normalized = id.replace(/\\/g, "/");
+  const marker = "/node_modules/";
+  const idx = normalized.lastIndexOf(marker);
+  if (idx === -1) return null;
+  const rest = normalized.slice(idx + marker.length);
+  if (!rest || rest.startsWith(".")) return null;
+  if (rest.startsWith("@")) {
+    const [scope, name] = rest.split("/");
+    if (!scope || !name) return null;
+    return `${scope}/${name}`;
+  }
+  return rest.split("/")[0] ?? null;
+}
+
+const VENDOR_CHUNKS: Record<string, string> = {
+  xlsx: "xlsx",
+  "framer-motion": "framerMotion",
+  "date-fns": "dateFns",
+  // recharts / @supabase/supabase-js / posthog-js: leave to Rollup defaults so
+  // shared helpers are not glued into a vendor chunk that the entry then imports.
+};
 
 // jsx-loc can throw during transform under concurrent Playwright loads (Windows).
 const plugins = [
@@ -74,18 +102,42 @@ const plugins = [
       lang: "en",
     },
     workbox: {
-      globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+      // App shell only — lazy route chunks use runtimeCaching below.
+      globPatterns: [
+        "index.html",
+        "manifest.webmanifest",
+        "assets/index-*.js",
+        "assets/*.css",
+        "favicon.ico",
+        "favicon-*.png",
+        "apple-touch-icon.png",
+        "icons/icon-*.png",
+        "icons/*.svg",
+        "**/*.{woff,woff2}",
+      ],
       globIgnores: [
         "**/ComponentShowcase*",
         "**/mermaid*",
         "**/xlsx*",
+        "**/screenshot-*",
         "**/node_modules/**",
       ],
-      maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+      maximumFileSizeToCacheInBytes: 2 * 1024 * 1024,
       /** SPA client routes (/app/*) fall back to cached shell when offline. */
       navigateFallback: "/index.html",
       navigateFallbackDenylist: [/^\/api\//, /^\/login/, /^\/signup/, /^\/reset-password/],
       runtimeCaching: [
+        {
+          urlPattern: /\/assets\/.+\.js$/i,
+          handler: "StaleWhileRevalidate",
+          options: {
+            cacheName: "js-assets",
+            expiration: {
+              maxEntries: 64,
+              maxAgeSeconds: 60 * 60 * 24 * 30,
+            },
+          },
+        },
         {
           urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
           handler: "CacheFirst",
@@ -124,15 +176,10 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id: string) {
-          if (id.includes("node_modules")) {
-            if (id.includes("xlsx")) return "xlsx";
-            if (id.includes("@radix-ui")) return "radix";
-            if (id.includes("recharts")) return "recharts";
-            if (id.includes("framer-motion")) return "framerMotion";
-            if (id.includes("@supabase/supabase-js")) return "supabase";
-            if (id.includes("posthog-js")) return "posthog";
-            if (id.includes("date-fns")) return "dateFns";
-          }
+          const pkg = packageNameFromId(id);
+          if (!pkg) return;
+          if (pkg.startsWith("@radix-ui/")) return "radix";
+          return VENDOR_CHUNKS[pkg];
         },
       },
     },

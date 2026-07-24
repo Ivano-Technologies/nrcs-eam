@@ -20,8 +20,9 @@ const db = drizzle(client);
 async function seed() {
   console.log("Seeding database...");
 
-  const siteData = [
-    {
+  const [nhq] = await db
+    .insert(sites)
+    .values({
       code: "NHQ",
       name: "NRCS Headquarters - Abuja",
       address: "11 Eko Akete Close, Off Okotie Eboh Street",
@@ -31,9 +32,12 @@ async function seed() {
       contactPerson: "Admin",
       contactPhone: "+234-XXX-XXXX",
       isActive: true,
-      facilityType: "branch",
+      facilityType: "national_headquarters",
       parentFacilityId: null,
-    },
+    })
+    .returning({ id: sites.id });
+
+  const branchData = [
     {
       code: "LAG",
       name: "NRCS Lagos Branch",
@@ -43,7 +47,7 @@ async function seed() {
       country: "Nigeria",
       isActive: true,
       facilityType: "branch",
-      parentFacilityId: null,
+      parentFacilityId: nhq.id,
     },
     {
       code: "KAN",
@@ -54,11 +58,11 @@ async function seed() {
       country: "Nigeria",
       isActive: true,
       facilityType: "branch",
-      parentFacilityId: null,
+      parentFacilityId: nhq.id,
     },
   ];
 
-  for (const site of siteData) {
+  for (const site of branchData) {
     await db.insert(sites).values(site);
   }
 
