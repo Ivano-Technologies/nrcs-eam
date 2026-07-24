@@ -82,51 +82,20 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Bootstrap Supabase roles for vanilla Postgres
+      # Double bootstrap proves idempotency (existence guards; no CREATE OR REPLACE).
+      - name: Bootstrap database (1/2)
+        run: pnpm db:bootstrap
+
+      - name: Capture bootstrap function hashes
+        run: pnpm exec tsx scripts/db/hash-bootstrap-functions.ts > /tmp/bootstrap-funcs-before.txt
+
+      - name: Bootstrap database (2/2 — idempotency)
+        run: pnpm db:bootstrap
+
+      - name: Verify bootstrap did not alter function bodies
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq postgresql-client
-          psql "$DATABASE_URL" <<'SQL'
-          DO $$ BEGIN
-            CREATE ROLE anon NOLOGIN;
-          EXCEPTION WHEN duplicate_object THEN NULL;
-          END $$;
-          DO $$ BEGIN
-            CREATE ROLE authenticated NOLOGIN;
-          EXCEPTION WHEN duplicate_object THEN NULL;
-          END $$;
-          DO $$ BEGIN
-            CREATE ROLE service_role NOLOGIN;
-          EXCEPTION WHEN duplicate_object THEN NULL;
-          END $$;
-          CREATE EXTENSION IF NOT EXISTS pgcrypto;
-          -- Stub required by 0030 (CREATE OR REPLACE arrives in 0031; fresh DBs fail otherwise)
-          CREATE OR REPLACE FUNCTION public.nrcs_item_category_code(category_name text)
-          RETURNS varchar
-          LANGUAGE plpgsql
-          AS $$
-          BEGIN
-            RETURN CASE trim(coalesce(category_name, ''))
-              WHEN 'Computer' THEN 'CO'
-              WHEN 'Furniture & Fixtures' THEN 'FF'
-              WHEN 'Generator' THEN 'GE'
-              WHEN 'Land' THEN 'LA'
-              WHEN 'Land & Building' THEN 'LB'
-              WHEN 'Medical Equipment' THEN 'ME'
-              WHEN 'Office Equipment' THEN 'OE'
-              WHEN 'Vehicle' THEN 'VE'
-              ELSE NULL
-            END;
-          END;
-          $$;
-          -- Supabase-only helpers revoked in 0041 but never created by drizzle migrations
-          CREATE OR REPLACE FUNCTION public.sync_delete_auth_user()
-          RETURNS void LANGUAGE plpgsql AS $$ BEGIN END; $$;
-          CREATE OR REPLACE FUNCTION public.sync_delete_app_user()
-          RETURNS void LANGUAGE plpgsql AS $$ BEGIN END; $$;
-          CREATE OR REPLACE FUNCTION public.rls_auto_enable()
-          RETURNS void LANGUAGE plpgsql AS $$ BEGIN END; $$;
-          SQL
+          pnpm exec tsx scripts/db/hash-bootstrap-functions.ts > /tmp/bootstrap-funcs-after.txt
+          diff -u /tmp/bootstrap-funcs-before.txt /tmp/bootstrap-funcs-after.txt
 
       - name: Apply migrations
         run: pnpm exec drizzle-kit migrate
