@@ -46,6 +46,7 @@ import { workOrderTemplatesRouter } from "./routers/workOrderTemplatesRouter";
 import { depreciationRouter } from "./routers/depreciationRouter";
 import { fleetHealthRouter } from "./routers/fleetHealthRouter";
 import { branchScorecardsRouter } from "./routers/branchScorecardsRouter";
+import { scheduledReportsRouter } from "./routers/scheduledReportsRouter";
 import { donorAssetsRouter } from "./donorAssetsRouters";
 import {
   countDonorReportsDueSoon,
@@ -3368,72 +3369,7 @@ export const appRouter = router({
   photos: photosRouter,
 
   // Scheduled Reports Management
-  scheduledReports: router({
-    list: protectedProcedure.query(async () => {
-      return await db.getScheduledReports();
-    }),
-
-    create: managerOrAdminProcedure
-      .input(z.object({
-        name: z.string(),
-        reportType: z.enum([
-          'assetInventory',
-          'maintenanceSchedule',
-          'workOrders',
-          'fleetHealth',
-          'donorStatement',
-          'branchScorecards',
-        ]),
-        format: z.enum(['pdf', 'excel']),
-        schedule: z.enum(['daily', 'weekly', 'monthly', 'quarterly']),
-        dayOfWeek: z.number().optional(),
-        dayOfMonth: z.number().optional(),
-        time: z.string(),
-        recipients: z.string(),
-        filters: z.string().optional(),
-      }))
-      .mutation(async ({ input, ctx }) => {
-        const reportId = await db.createScheduledReport({
-          ...input,
-          createdBy: ctx.user.id,
-        });
-        return { id: reportId };
-      }),
-
-    update: managerOrAdminProcedure
-      .input(z.object({
-        id: z.number(),
-        name: z.string().optional(),
-        reportType: z.enum([
-          'assetInventory',
-          'maintenanceSchedule',
-          'workOrders',
-          'fleetHealth',
-          'donorStatement',
-          'branchScorecards',
-        ]).optional(),
-        format: z.enum(['pdf', 'excel']).optional(),
-        schedule: z.enum(['daily', 'weekly', 'monthly', 'quarterly']).optional(),
-        dayOfWeek: z.number().optional(),
-        dayOfMonth: z.number().optional(),
-        time: z.string().optional(),
-        recipients: z.string().optional(),
-        filters: z.string().optional(),
-        isActive: z.boolean().optional(),
-      }))
-      .mutation(async ({ input }) => {
-        const { id, ...data } = input;
-        await db.updateScheduledReport(id, data);
-        return { success: true };
-      }),
-
-    delete: managerOrAdminProcedure
-      .input(z.object({ id: z.number() }))
-      .mutation(async ({ input }) => {
-        await db.deleteScheduledReport(input.id);
-        return { success: true };
-       }),
-  }),
+  scheduledReports: scheduledReportsRouter,
 
   // ============= BULK IMPORT/EXPORT =============
   bulkOperations: router({
