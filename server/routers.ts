@@ -45,6 +45,7 @@ import { pendingUsersRouter } from "./routers/pendingUsersRouter";
 import { workOrderTemplatesRouter } from "./routers/workOrderTemplatesRouter";
 import { depreciationRouter } from "./routers/depreciationRouter";
 import { fleetHealthRouter } from "./routers/fleetHealthRouter";
+import { branchScorecardsRouter } from "./routers/branchScorecardsRouter";
 import { donorAssetsRouter } from "./donorAssetsRouters";
 import {
   countDonorReportsDueSoon,
@@ -3359,42 +3360,7 @@ export const appRouter = router({
 
   fleetHealth: fleetHealthRouter,
 
-  branchScorecards: router({
-    list: managerOrAdminProcedure.query(async () => {
-      const { buildBranchScorecardList } = await import("./reports/branchScorecards");
-      return await buildBranchScorecardList();
-    }),
-
-    exportXlsx: managerOrAdminProcedure.mutation(async () => {
-      const { buildBranchScorecardList } = await import("./reports/branchScorecards");
-      const list = await buildBranchScorecardList();
-      const columns = [
-        { header: "Branch", key: "branchName", width: 24 },
-        { header: "Composite score", key: "compositeScore", width: 14 },
-        { header: "Trend vs prior", key: "trendVsPriorMonth", width: 14 },
-        { header: "Assets", key: "assetCount", width: 10 },
-        { header: "Book value", key: "bookValue", width: 14 },
-        { header: "Verified %", key: "verificationPercent", width: 12 },
-        { header: "Open WOs", key: "openWorkOrders", width: 10 },
-        { header: "Overdue WOs", key: "overdueWorkOrders", width: 12 },
-        { header: "Stock alerts", key: "stockAlerts", width: 12 },
-        { header: "30d expiry qty", key: "expiryExposure30Day", width: 14 },
-      ];
-      const rows = list.map((row) => ({
-        ...row,
-        trendVsPriorMonth: row.trendVsPriorMonth ?? "Ã¢â‚¬â€",
-      }));
-      const buffer = await generateExcelReport("Branch scorecards", rows, columns, {
-        sheetName: "Scorecards",
-      });
-      const date = new Date().toISOString().slice(0, 10);
-      return {
-        data: buffer.toString("base64"),
-        filename: `branch-scorecards-${date}.xlsx`,
-        mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      };
-    }),
-  }),
+  branchScorecards: branchScorecardsRouter,
 
   verification: verificationRouter,
 
