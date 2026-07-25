@@ -37,6 +37,7 @@ import { auditLogsRouter } from "./routers/auditLogsRouter";
 import { adminRouter } from "./routers/adminRouter";
 import { sitesRouter } from "./routers/sitesRouter";
 import { facilityPhotosRouter } from "./routers/facilityPhotosRouter";
+import { photosRouter } from "./routers/photosRouter";
 import { donorAssetsRouter } from "./donorAssetsRouters";
 import {
   countDonorReportsDueSoon,
@@ -3447,42 +3448,7 @@ export const appRouter = router({
   verification: verificationRouter,
 
   // Asset Photos Management
-  photos: router({
-    create: protectedProcedure
-      .input(z.object({
-        assetId: z.number().optional(),
-        workOrderId: z.number().optional(),
-        photoUrl: z.string(),
-        photoKey: z.string(),
-        caption: z.string().optional(),
-      }))
-      .mutation(async ({ input, ctx }) => {
-        const photoId = await db.createAssetPhoto({
-          ...input,
-          uploadedBy: ctx.user.id,
-        });
-        return { id: photoId };
-      }),
-
-    listByAsset: protectedProcedure
-      .input(z.object({ assetId: z.number() }))
-      .query(async ({ input }) => {
-        return await db.getAssetPhotos(input.assetId);
-      }),
-
-    listByWorkOrder: protectedProcedure
-      .input(z.object({ workOrderId: z.number() }))
-      .query(async ({ input }) => {
-        return await db.getWorkOrderPhotos(input.workOrderId);
-      }),
-
-    delete: protectedProcedure
-      .input(z.object({ id: z.number() }))
-      .mutation(async ({ input }) => {
-        await db.deleteAssetPhoto(input.id);
-        return { success: true };
-      }),
-  }),
+  photos: photosRouter,
 
   // Scheduled Reports Management
   scheduledReports: router({
