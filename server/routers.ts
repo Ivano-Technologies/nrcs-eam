@@ -30,6 +30,7 @@ import { complianceTrackingRouter } from "./complianceTrackingRouters";
 import { observabilityRouter } from "./routers/observabilityRouter";
 import { verificationRouter } from "./routers/verificationRouter";
 import { appSettingsRouter } from "./routers/appSettingsRouter";
+import { navRouter } from "./routers/navRouter";
 import { donorAssetsRouter } from "./donorAssetsRouters";
 import {
   countDonorReportsDueSoon,
@@ -1006,9 +1007,7 @@ export const appRouter = router({
       }),
   }),
 
-  nav: router({
-    sidebarCounts: protectedProcedure.query(async () => await db.getNavSidebarCounts()),
-  }),
+  nav: navRouter,
 
   // ============= ASSET CATEGORIES =============
   assetCategories: router({
