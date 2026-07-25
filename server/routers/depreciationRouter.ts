@@ -116,7 +116,7 @@ export const depreciationRouter = router({
         assetId: z.number(),
       }))
       .query(async ({ input }) => {
-        const { calculateDepreciation } = require('./depreciation');
+        const { calculateDepreciation } = require('../depreciation');
         const asset = await db.getAssetById(input.assetId);
         if (!asset) return null;
 
@@ -156,7 +156,7 @@ export const depreciationRouter = router({
       }),
     
     summary: protectedProcedure.query(async () => {
-      const { calculateDepreciation } = require('./depreciation');
+      const { calculateDepreciation } = require('../depreciation');
       const allAssets = await db.getAllAssets();
       
       let totalAcquisitionCost = 0;
