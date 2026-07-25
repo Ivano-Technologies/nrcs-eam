@@ -40,6 +40,7 @@ import { facilityPhotosRouter } from "./routers/facilityPhotosRouter";
 import { photosRouter } from "./routers/photosRouter";
 import { transfersRouter } from "./routers/transfersRouter";
 import { userPreferencesRouter } from "./routers/userPreferencesRouter";
+import { emailNotificationsRouter } from "./routers/emailNotificationsRouter";
 import { donorAssetsRouter } from "./donorAssetsRouters";
 import {
   countDonorReportsDueSoon,
@@ -3729,64 +3730,7 @@ export const appRouter = router({
 
   userPreferences: userPreferencesRouter,
 
-  // ============= EMAIL NOTIFICATIONS =============
-  emailNotifications: router({
-    send: adminProcedure
-      .input(z.object({
-        subject: z.string().min(1),
-        body: z.string().min(1),
-        recipientType: z.enum(['all', 'individual', 'role']),
-        recipientIds: z.array(z.number()).optional(),
-        recipientRole: z.enum(['admin', 'manager', 'user']).optional(),
-      }))
-      .mutation(async ({ input, ctx }) => {
-        // Get recipient emails based on type
-        let recipients: string[] = [];
-        
-        if (input.recipientType === 'all') {
-          const allUsers = await db.getAllUsers();
-          recipients = allUsers.filter(u => u.email).map(u => u.email!);
-        } else if (input.recipientType === 'individual' && input.recipientIds) {
-          const users = await Promise.all(
-            input.recipientIds.map(id => db.getUserById(id))
-          );
-          recipients = users.filter(u => u && u.email).map(u => u!.email!);
-        } else if (input.recipientType === 'role' && input.recipientRole) {
-          const allUsers = await db.getAllUsers();
-          recipients = allUsers
-            .filter(u => u.role === input.recipientRole && u.email)
-            .map(u => u.email!);
-        }
-        
-        // Send emails
-        const htmlBody = generateEmailTemplate(input.body, input.subject);
-        const { sent, failed } = await sendBulkEmails(recipients, input.subject, htmlBody);
-        
-        // Save to history
-        await db.createEmailNotification({
-          subject: input.subject,
-          body: input.body,
-          recipientType: input.recipientType,
-          recipientIds: input.recipientIds ? JSON.stringify(input.recipientIds) : null,
-          recipientRole: input.recipientRole || null,
-          sentBy: ctx.user.id,
-          status: failed > 0 ? 'failed' : 'sent',
-          recipientCount: sent,
-        });
-        
-        return { sent, failed, total: recipients.length };
-      }),
-    
-    history: adminProcedure.query(async () => {
-      return await db.getEmailNotificationHistory(100);
-    }),
-    
-    getById: adminProcedure
-      .input(z.object({ id: z.number() }))
-      .query(async ({ input }) => {
-        return await db.getEmailNotificationById(input.id);
-      }),
-  }),
+  emailNotifications: emailNotificationsRouter,
 
   // ============= DEPRECIATION =============
   depreciation: router({
