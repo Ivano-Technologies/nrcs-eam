@@ -20,7 +20,7 @@ import {
   managerOrAdminProcedure,
   staffOrAboveProcedure,
 } from "./routers/roleProcedures";
-import { inventoryV2Router } from "./routers/inventoryRouter";
+import { inventoryV2Router } from "./routers/inventoryV2Router";
 import { wmsRouter } from "./routers/wmsRouter";
 import {
   depreciationReportRouter,
