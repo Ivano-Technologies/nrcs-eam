@@ -39,6 +39,7 @@ import { sitesRouter } from "./routers/sitesRouter";
 import { facilityPhotosRouter } from "./routers/facilityPhotosRouter";
 import { photosRouter } from "./routers/photosRouter";
 import { transfersRouter } from "./routers/transfersRouter";
+import { userPreferencesRouter } from "./routers/userPreferencesRouter";
 import { donorAssetsRouter } from "./donorAssetsRouters";
 import {
   countDonorReportsDueSoon,
@@ -3726,35 +3727,7 @@ export const appRouter = router({
 
   transfers: transfersRouter,
 
-  // ============= USER PREFERENCES =============
-  userPreferences: router({
-    get: protectedProcedure.query(async ({ ctx }) => {
-      return await db.getUserPreferences(ctx.user.id);
-    }),
-    
-    update: protectedProcedure
-      .input(z.object({
-        sidebarWidth: z.number().optional(),
-        sidebarCollapsed: z.number().optional(),
-      }))
-      .mutation(async ({ input, ctx }) => {
-        return await db.upsertUserPreferences({
-          userId: ctx.user.id,
-          ...input,
-        });
-      }),
-
-    updateDashboardWidgets: protectedProcedure
-      .input(z.object({
-        widgets: z.record(z.string(), z.boolean()),
-      }))
-      .mutation(async ({ input, ctx }) => {
-        return await db.upsertUserPreferences({
-          userId: ctx.user.id,
-          dashboardWidgets: JSON.stringify(input.widgets),
-        });
-      }),
-  }),
+  userPreferences: userPreferencesRouter,
 
   // ============= EMAIL NOTIFICATIONS =============
   emailNotifications: router({
