@@ -31,6 +31,7 @@ import { observabilityRouter } from "./routers/observabilityRouter";
 import { verificationRouter } from "./routers/verificationRouter";
 import { appSettingsRouter } from "./routers/appSettingsRouter";
 import { navRouter } from "./routers/navRouter";
+import { assetCategoriesRouter } from "./routers/assetCategoriesRouter";
 import { donorAssetsRouter } from "./donorAssetsRouters";
 import {
   countDonorReportsDueSoon,
@@ -1009,21 +1010,7 @@ export const appRouter = router({
 
   nav: navRouter,
 
-  // ============= ASSET CATEGORIES =============
-  assetCategories: router({
-    list: protectedProcedure.query(async () => {
-      return await db.getAllAssetCategories();
-    }),
-    
-    create: managerOrAdminProcedure
-      .input(z.object({
-        name: z.string().min(1),
-        description: z.string().optional(),
-      }))
-      .mutation(async ({ input }) => {
-        return await db.createAssetCategory(input.name, input.description);
-      }),
-  }),
+  assetCategories: assetCategoriesRouter,
 
   // ============= ASSETS MANAGEMENT =============
   assets: router({
