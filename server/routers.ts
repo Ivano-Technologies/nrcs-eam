@@ -34,6 +34,7 @@ import { navRouter } from "./routers/navRouter";
 import { assetCategoriesRouter } from "./routers/assetCategoriesRouter";
 import { searchRouter } from "./routers/searchRouter";
 import { auditLogsRouter } from "./routers/auditLogsRouter";
+import { adminRouter } from "./routers/adminRouter";
 import { donorAssetsRouter } from "./donorAssetsRouters";
 import {
   countDonorReportsDueSoon,
@@ -4445,9 +4446,7 @@ export const appRouter = router({
 
   auditLogs: auditLogsRouter,
 
-  admin: router({
-    observability: observabilityRouter,
-  }),
+  admin: adminRouter,
 });
 
 const DASHBOARD_ALL_CLEAR_ATTENTION = [
