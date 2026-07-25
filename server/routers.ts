@@ -35,6 +35,7 @@ import { assetCategoriesRouter } from "./routers/assetCategoriesRouter";
 import { searchRouter } from "./routers/searchRouter";
 import { auditLogsRouter } from "./routers/auditLogsRouter";
 import { adminRouter } from "./routers/adminRouter";
+import { sitesRouter } from "./routers/sitesRouter";
 import { donorAssetsRouter } from "./donorAssetsRouters";
 import {
   countDonorReportsDueSoon,
@@ -93,12 +94,6 @@ import type { InsertUser } from "../drizzle/schema";
 import { validateFacilityHierarchy } from "./facilityHierarchy";
 import { calculateDepreciatedValue } from "./lib/depreciation";
 import type { DepreciationResult } from "./depreciation";
-
-const facilityTypeZod = z.enum(FACILITY_TYPE_VALUES);
-const facilityTypeNormalizingZod = z.preprocess(
-  (value) => (typeof value === "string" ? value.toLowerCase().trim().replace(/\s+/g, "_") : value),
-  facilityTypeZod
-);
 
 const appUserRoleZod = z.enum(["admin", "manager", "staff", "field", "user"]);
 const assetItemTypeInputZod = z.enum(["Asset", "Inventory", "asset", "inventory"]);
@@ -483,8 +478,8 @@ async function queryRecentActivity(
     .select({
       type: sql<string>`'requisition'`,
       description: sql<string>`case
-              when ${requisitions.status} = 'approved' then concat('Requisition approved · ', ${requisitions.reqNumber})
-              else concat('Requisition submitted · ', ${requisitions.reqNumber})
+              when ${requisitions.status} = 'approved' then concat('Requisition approved Â· ', ${requisitions.reqNumber})
+              else concat('Requisition submitted Â· ', ${requisitions.reqNumber})
             end`,
       timestamp: sql<Date>`coalesce(${requisitions.approvedHqAt}, ${requisitions.approvedBranchAt}, ${requisitions.createdAt})`,
       facilityName: sites.name,
@@ -499,7 +494,7 @@ async function queryRecentActivity(
   const recentAssetRows = await database
     .select({
       type: sql<string>`'asset'`,
-      description: sql<string>`concat('Asset created · ', ${assets.assetTag})`,
+      description: sql<string>`concat('Asset created Â· ', ${assets.assetTag})`,
       timestamp: assets.createdAt,
       facilityName: sites.name,
     })
@@ -513,7 +508,7 @@ async function queryRecentActivity(
   const recentTransferRows = await database
     .select({
       type: sql<string>`'asset_transfer'`,
-      description: sql<string>`concat('Asset transferred · ', ${assets.assetTag})`,
+      description: sql<string>`concat('Asset transferred Â· ', ${assets.assetTag})`,
       timestamp: sql<Date>`coalesce(${assetTransfers.transferDate}, ${assetTransfers.createdAt})`,
       facilityName: sites.name,
     })
@@ -701,17 +696,6 @@ function escapeHtmlForEmail(text: string): string {
     .replace(/"/g, "&quot;");
 }
 
-async function resolveFacilityParentForSave(params: {
-  facilityType: FacilityType;
-  parentFacilityId: number | null | undefined;
-  /** Set when updating an existing facility (for cycle checks). */
-  siteId?: number;
-}): Promise<number | null> {
-  const parentId = params.parentFacilityId ?? null;
-  await validateFacilityHierarchy(params.facilityType, parentId, params.siteId);
-  return parentId;
-}
-
 export const appRouter = router({
   system: systemRouter,
 
@@ -719,176 +703,7 @@ export const appRouter = router({
 
   appSettings: appSettingsRouter,
 
-  // ============= SITES MANAGEMENT =============
-  sites: router({
-    list: protectedProcedure
-      .input(z.object({ facilityType: facilityTypeZod.optional() }).optional())
-      .query(async ({ input }) => {
-        return await db.getSitesList(
-          input?.facilityType != null ? { facilityType: input.facilityType } : undefined
-        );
-      }),
-
-    mapData: protectedProcedure.query(async () => {
-      return await db.getSitesMapData();
-    }),
-
-    mapNetworkData: protectedProcedure.query(async () => {
-      const cacheKey = "sites:mapNetworkData:v1";
-      const cached = await cacheGetJson<Awaited<ReturnType<typeof db.getSitesMapNetworkData>>>(cacheKey);
-      if (cached) return cached;
-      const rows = await db.getSitesMapNetworkData();
-      await cacheSetJson(cacheKey, rows, 1800);
-      return rows;
-    }),
-
-    getById: protectedProcedure
-      .input(z.object({ id: z.number() }))
-      .query(async ({ input }) => {
-        return await db.getSiteByIdEnriched(input.id);
-      }),
-
-    create: managerOrAdminProcedure
-      .input(
-        z.object({
-          code: z.string().trim().min(1).max(64).optional(),
-          name: z.string().min(1),
-          facilityType: facilityTypeNormalizingZod.optional().default("branch"),
-          parentFacilityId: z.number().nullable().optional(),
-          address: z.string().optional(),
-          city: z.string().optional(),
-          state: z.string().optional(),
-          latitude: z.string().optional(),
-          longitude: z.string().optional(),
-          postalCode: z.string().max(32).optional(),
-          country: z.string().default("Nigeria"),
-          contactPerson: z.string().optional(),
-          contactPhone: z.string().optional(),
-          contactEmail: z.string().email().optional(),
-          isActive: z.boolean().optional(),
-        })
-      )
-      .mutation(async ({ input, ctx }) => {
-        const { facilityType, parentFacilityId, code, ...rest } = input;
-        const parentResolved = await resolveFacilityParentForSave({ facilityType, parentFacilityId });
-        const site = await db.createSite({
-          ...(code ? { code } : {}),
-          ...rest,
-          facilityType,
-          parentFacilityId: parentResolved,
-        });
-        if (site) {
-          await logAuditEvent({
-            userId: ctx.user.id,
-            action: AUDIT_ACTIONS.FACILITY_CREATE,
-            entityType: "site",
-            entityId: site.id,
-            changes: {
-              name: site.name,
-              code: site.code,
-              facilityType: site.facilityType,
-              isActive: site.isActive,
-            },
-            req: ctx.req,
-          });
-        }
-        return site;
-      }),
-
-    update: managerOrAdminProcedure
-      .input(
-        z.object({
-          id: z.number(),
-          code: z.string().trim().min(1).max(64).optional(),
-          name: z.string().min(1).optional(),
-          facilityType: facilityTypeNormalizingZod.optional(),
-          parentFacilityId: z.number().nullable().optional(),
-          address: z.string().optional(),
-          city: z.string().optional(),
-          state: z.string().optional(),
-          latitude: z.string().optional(),
-          longitude: z.string().optional(),
-          postalCode: z.string().max(32).optional(),
-          contactPerson: z.string().optional(),
-          contactPhone: z.string().optional(),
-          contactEmail: z.string().email().optional(),
-          isActive: z.boolean().optional(),
-        })
-      )
-      .mutation(async ({ input, ctx }) => {
-        const { id, facilityType, parentFacilityId, ...data } = input;
-        const existing = await db.getSiteById(id);
-        if (!existing) {
-          throw new TRPCError({ code: "NOT_FOUND", message: "Facility not found." });
-        }
-        const nextType = facilityType ?? existing.facilityType;
-        let nextParentRaw: number | null | undefined;
-        if (nextType === "national_headquarters") {
-          nextParentRaw = null;
-        } else if (parentFacilityId !== undefined) {
-          nextParentRaw = parentFacilityId;
-        } else {
-          nextParentRaw = existing.parentFacilityId;
-        }
-
-        const nextParent = await resolveFacilityParentForSave({
-          facilityType: nextType,
-          parentFacilityId: nextParentRaw,
-          siteId: id,
-        });
-
-        const updated = await db.updateSite(id, {
-          ...data,
-          ...(facilityType !== undefined ? { facilityType } : {}),
-          parentFacilityId: nextParent,
-        });
-        await logAuditEvent({
-          userId: ctx.user.id,
-          action: AUDIT_ACTIONS.FACILITY_UPDATE,
-          entityType: "site",
-          entityId: id,
-          changes: {
-            before: {
-              name: existing.name,
-              code: existing.code,
-              facilityType: existing.facilityType,
-              isActive: existing.isActive,
-              parentFacilityId: existing.parentFacilityId,
-            },
-            after: {
-              name: updated?.name ?? data.name ?? existing.name,
-              code: updated?.code ?? data.code ?? existing.code,
-              facilityType: updated?.facilityType ?? nextType,
-              isActive: updated?.isActive ?? data.isActive ?? existing.isActive,
-              parentFacilityId: nextParent,
-            },
-          },
-          req: ctx.req,
-        });
-        return updated;
-      }),
-
-    bulkDelete: managerOrAdminProcedure
-      .input(z.object({ ids: z.array(z.number()) }))
-      .mutation(async ({ input, ctx }) => {
-        let deleted = 0;
-        for (const id of input.ids) {
-          try {
-            await db.deleteSite(id);
-            await db.createAuditLog({
-              userId: ctx.user.id,
-              action: "bulk_delete_site",
-              entityType: "site",
-              entityId: id,
-            });
-            deleted++;
-          } catch (error) {
-            console.error(`Failed to delete facility ${id}:`, error);
-          }
-        }
-        return { deleted, total: input.ids.length };
-      }),
-  }),
+  sites: sitesRouter,
 
   facilityPhotos: router({
     list: protectedProcedure
@@ -2348,7 +2163,7 @@ export const appRouter = router({
         await cacheSetJson(metricsCacheKey, metricsPayload, metricsTimedOut ? 60 : 900);
         return metricsPayload;
       }),
-    /** Single round-trip for dashboard page — one pool, sequential sections. */
+    /** Single round-trip for dashboard page â€” one pool, sequential sections. */
     all: protectedProcedure
       .input(
         z.object({
@@ -2358,7 +2173,7 @@ export const appRouter = router({
         })
       )
       .query(async ({ input, ctx }): Promise<DashboardAllOutput> => loadDashboardAll(ctx, input)),
-    /** Progressive tier load — returns partial bundle for one tier (1=critical KPIs first). */
+    /** Progressive tier load â€” returns partial bundle for one tier (1=critical KPIs first). */
     byTier: protectedProcedure
       .input(
         z.object({
@@ -3172,7 +2987,7 @@ export const appRouter = router({
     <p>Nigerian Red Cross Society</p>`;
           const sent = await sendEmail({
             to: email,
-            subject: "Welcome to NRCS EAM — Your account is ready",
+            subject: "Welcome to NRCS EAM â€” Your account is ready",
             html: generateEmailTemplate(bodyHtml, "Welcome"),
           });
           if (!sent) {
@@ -3362,7 +3177,7 @@ export const appRouter = router({
         }
         const sent = await sendEmail({
           to: email,
-          subject: "NRCS EAM — Password reset",
+          subject: "NRCS EAM â€” Password reset",
           html: generateEmailTemplate(
             `<p>A password reset was requested for your NRCS EAM account.</p>
             <p><a href="${actionLink}">Set a new password</a></p>
@@ -3733,7 +3548,7 @@ export const appRouter = router({
       ];
       const rows = list.map((row) => ({
         ...row,
-        trendVsPriorMonth: row.trendVsPriorMonth ?? "—",
+        trendVsPriorMonth: row.trendVsPriorMonth ?? "â€”",
       }));
       const buffer = await generateExcelReport("Branch scorecards", rows, columns, {
         sheetName: "Scorecards",
@@ -4658,7 +4473,7 @@ function buildDashboardRequestRecord(params: {
   };
 }
 
-/** Runs after `appRouter` is defined — avoids circular type inference from createCaller inside the router. */
+/** Runs after `appRouter` is defined â€” avoids circular type inference from createCaller inside the router. */
 async function loadDashboardAll(
   ctx: TrpcContext,
   input: DashboardAllInput
