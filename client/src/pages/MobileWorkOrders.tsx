@@ -172,8 +172,7 @@ export default function MobileWorkOrders() {
                       className="flex-1"
                       onClick={(e) => {
                         e.stopPropagation();
-                        // Open camera for photo
-                        toast.info("Camera feature coming soon");
+                        setLocation(appPath(`/mobile-work-order/${wo.id}?takePhoto=1`));
                       }}
                     >
                       <Camera className="mr-2 h-4 w-4" />
