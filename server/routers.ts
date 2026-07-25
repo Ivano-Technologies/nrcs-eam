@@ -29,6 +29,7 @@ import {
 import { complianceTrackingRouter } from "./complianceTrackingRouters";
 import { observabilityRouter } from "./routers/observabilityRouter";
 import { verificationRouter } from "./routers/verificationRouter";
+import { appSettingsRouter } from "./routers/appSettingsRouter";
 import { donorAssetsRouter } from "./donorAssetsRouters";
 import {
   countDonorReportsDueSoon,
@@ -711,48 +712,7 @@ export const appRouter = router({
 
   auth: authRouter,
 
-  // ============= APP SETTINGS (admin) =============
-  appSettings: router({
-    getOpenRegistration: adminProcedure.query(async () => ({
-      openRegistration: await db.getOpenRegistration(),
-    })),
-    setOpenRegistration: adminProcedure
-      .input(z.object({ openRegistration: z.boolean() }))
-      .mutation(async ({ input }) => {
-        await db.setOpenRegistration(input.openRegistration);
-        return { ok: true as const };
-      }),
-
-    getEmailNotificationSettings: adminProcedure.query(async () => ({
-      newUserRequests: await db.getAppSettingBool("emailNotifyNewUserRequests", true),
-      lowStockAlerts: await db.getAppSettingBool("emailNotifyLowStock", true),
-      overdueMaintenance: await db.getAppSettingBool("emailNotifyOverdueMaintenance", true),
-    })),
-
-    setEmailNotificationSettings: adminProcedure
-      .input(
-        z.object({
-          newUserRequests: z.boolean().optional(),
-          lowStockAlerts: z.boolean().optional(),
-          overdueMaintenance: z.boolean().optional(),
-        })
-      )
-      .mutation(async ({ input }) => {
-        if (input.newUserRequests !== undefined) {
-          await db.setAppSettingValue("emailNotifyNewUserRequests", input.newUserRequests ? "true" : "false");
-        }
-        if (input.lowStockAlerts !== undefined) {
-          await db.setAppSettingValue("emailNotifyLowStock", input.lowStockAlerts ? "true" : "false");
-        }
-        if (input.overdueMaintenance !== undefined) {
-          await db.setAppSettingValue(
-            "emailNotifyOverdueMaintenance",
-            input.overdueMaintenance ? "true" : "false"
-          );
-        }
-        return { ok: true as const };
-      }),
-  }),
+  appSettings: appSettingsRouter,
 
   // ============= SITES MANAGEMENT =============
   sites: router({
