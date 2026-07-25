@@ -6,6 +6,8 @@ Maintenance scripts for local or controlled environments. **Run from the reposit
 
 | Command | Script |
 |---------|--------|
+| `pnpm db:bootstrap` | `apply-bootstrap.ts` |
+| `pnpm db:setup` | bootstrap → migrate → seed |
 | `pnpm db:reset` | `reset-db.mjs` |
 | `pnpm db:seed` | `seed-db.mjs` |
 | `pnpm db:seed:sample` | `seed-sample-data.mjs` |
@@ -15,6 +17,9 @@ Maintenance scripts for local or controlled environments. **Run from the reposit
 
 | Script | Purpose |
 |--------|---------|
+| `bootstrap.sql` / `apply-bootstrap.ts` | Idempotent vanilla-Postgres prerequisites (roles, pgcrypto, guarded function stubs) |
+| `hash-bootstrap-functions.ts` | md5 of bootstrap-managed function defs (CI idempotency check) |
+| `supabase-only/` | Export notes + placeholder for real Supabase function bodies |
 | `reset-db.mjs` | Truncate application tables (keeps users); PostgreSQL via `DATABASE_URL` |
 | `seed-db.mjs` | Seed minimal sites and asset categories |
 | `seed-sample-data.mjs` | Larger sample dataset |

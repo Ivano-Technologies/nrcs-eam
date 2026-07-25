@@ -57,7 +57,7 @@ All rows will be removed from operational tables, including:
   all users except admin, sites, assetCategories
 
 Tier 2B-retired tables (vendors, financialTransactions, complianceRecords,
-quickbooksConfig, budgets, maintenance_costs) are cleared only if still present.
+budgets, maintenance_costs, retired accounting-config) are cleared only if still present.
 
 Optional: activity_log (if the table exists).
 
@@ -190,7 +190,6 @@ async function main(): Promise<void> {
     await deleteAll(t, "assets", `"assets"`);
     await deleteAll(t, "inventoryItems", `"inventoryItems"`);
     await deleteAll(t, "email_templates", `email_templates`);
-    await deleteAllIfExists(t, "quickbooksConfig", `"quickbooksConfig"`, "quickbooksConfig");
 
     await tx.execute(sql`UPDATE pending_users SET approved_by = NULL WHERE approved_by IS NOT NULL`);
     await deleteAll(t, "pending_users", `pending_users`);
@@ -235,7 +234,6 @@ async function main(): Promise<void> {
     { regclass: "public.\"vendors\"", name: "vendors" },
     { regclass: "public.\"financialTransactions\"", name: "financialTransactions" },
     { regclass: "public.\"complianceRecords\"", name: "complianceRecords" },
-    { regclass: "public.\"quickbooksConfig\"", name: "quickbooksConfig" },
     { regclass: "public.maintenance_costs", name: "maintenance_costs" },
     { regclass: "public.budgets", name: "budgets" },
   ];
