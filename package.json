@@ -21,6 +21,8 @@
     "format": "prettier --write .",
     "test": "tsx scripts/db/seed-db.mjs && vitest run",
     "db:push": "drizzle-kit generate && drizzle-kit migrate",
+    "db:bootstrap": "tsx scripts/db/apply-bootstrap.ts",
+    "db:setup": "pnpm db:bootstrap && drizzle-kit migrate && tsx scripts/db/seed-db.mjs",
     "db:migrate:dev": "dotenv -e .env -- drizzle-kit migrate",
     "db:migrate:e2e": "dotenv -e .env.e2e -- drizzle-kit migrate",
     "db:reset": "node scripts/db/reset-db.mjs",
