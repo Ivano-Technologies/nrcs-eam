@@ -441,6 +441,30 @@ export const workOrders = pgTable("workOrders", {
 });
 
 /**
+ * Work-order field photos (mobile capture). Naming mirrors facility_photos.
+ */
+export const workOrderPhotos = pgTable(
+  "work_order_photos",
+  {
+    id: serial("id").primaryKey(),
+    workOrderId: integer("workOrderId")
+      .notNull()
+      .references(() => workOrders.id, { onDelete: "cascade" }),
+    storageKey: text("storageKey").notNull(),
+    publicUrl: text("publicUrl").notNull(),
+    caption: text("caption"),
+    uploadedByUserId: integer("uploadedByUserId").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
+  },
+  (t) => [index("idx_work_order_photos_work_order_id").on(t.workOrderId)],
+);
+
+export type WorkOrderPhoto = typeof workOrderPhotos.$inferSelect;
+export type NewWorkOrderPhoto = typeof workOrderPhotos.$inferInsert;
+
+/**
  * Preventive Maintenance Schedules
  */
 export const maintenanceSchedules = pgTable("maintenanceSchedules", {
