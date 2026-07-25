@@ -27,7 +27,6 @@ const db = drizzle(client);
 const TIER_2B_RETIRED_TABLES = [
   "complianceRecords",
   "financialTransactions",
-  "quickbooksConfig",
   "vendors",
   "budgets",
   "maintenance_costs",

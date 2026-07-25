@@ -1,7 +1,7 @@
 -- Reference SQL: clear operational sample data (PostgreSQL).
 -- Preserves users and __drizzle_migrations. Run manually with care.
 -- Tier 2B-retired tables (vendors, financialTransactions, complianceRecords,
--- quickbooksConfig, budgets, maintenance_costs) omitted — dropped in migration 0056.
+-- budgets, maintenance_costs, and retired accounting-config table) omitted — dropped in migration 0056.
 
 BEGIN;
 

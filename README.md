@@ -7,7 +7,7 @@ Single-organization web application for the **Nigerian Red Cross Society** to ma
 ## Scope
 
 - **Single-tenant:** one NRCS deployment—not a multi-tenant SaaS.
-- **Stack:** Vite + React, Express + tRPC, Drizzle ORM, **PostgreSQL** (Supabase). **Supabase Auth** for sessions. Optional QuickBooks, S3, and email integrations as configured in your environment.
+- **Stack:** Vite + React, Express + tRPC, Drizzle ORM, **PostgreSQL** (Supabase). **Supabase Auth** for sessions. Optional S3 and email integrations as configured in your environment.
 
 ## WMS capabilities
 
