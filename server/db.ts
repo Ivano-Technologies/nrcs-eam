@@ -29,6 +29,9 @@ import {
   facilityPhotos,
   type FacilityPhoto,
   type NewFacilityPhoto,
+  workOrderPhotos,
+  type WorkOrderPhoto,
+  type NewWorkOrderPhoto,
   scheduledReports, InsertScheduledReport, assetTransfers,
   userPreferences, InsertUserPreferences, emailNotifications, InsertEmailNotification,
   workOrderTemplates, InsertWorkOrderTemplate,
@@ -1984,6 +1987,59 @@ export async function getWorkOrderPhotos(workOrderId: number) {
   if (!db) return [];
   
   return await db.select().from(assetPhotos).where(eq(assetPhotos.workOrderId, workOrderId));
+}
+
+export async function listWorkOrderFieldPhotos(workOrderId: number): Promise<WorkOrderPhoto[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return await db
+    .select()
+    .from(workOrderPhotos)
+    .where(eq(workOrderPhotos.workOrderId, workOrderId))
+    .orderBy(desc(workOrderPhotos.createdAt));
+}
+
+export async function addWorkOrderFieldPhoto(data: NewWorkOrderPhoto): Promise<WorkOrderPhoto> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [row] = await db.insert(workOrderPhotos).values(data).returning();
+  if (!row) throw new Error("Failed to insert work order photo");
+  return row;
+}
+
+export async function getWorkOrderFieldPhotoById(id: number): Promise<WorkOrderPhoto | null> {
+  const db = await getDb();
+  if (!db) return null;
+  const [row] = await db
+    .select()
+    .from(workOrderPhotos)
+    .where(eq(workOrderPhotos.id, id))
+    .limit(1);
+  return row ?? null;
+}
+
+export async function deleteWorkOrderFieldPhotoById(id: number): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(workOrderPhotos).where(eq(workOrderPhotos.id, id));
+}
+
+export async function deleteWorkOrderFieldPhotoByUploader(
+  id: number,
+  uploadedByUserId: number,
+): Promise<boolean> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const deleted = await db
+    .delete(workOrderPhotos)
+    .where(
+      and(
+        eq(workOrderPhotos.id, id),
+        eq(workOrderPhotos.uploadedByUserId, uploadedByUserId),
+      ),
+    )
+    .returning({ id: workOrderPhotos.id });
+  return deleted.length > 0;
 }
 
 export async function deleteAssetPhoto(id: number) {
