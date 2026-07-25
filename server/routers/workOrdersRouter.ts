@@ -79,6 +79,21 @@ import type { DepreciationResult } from "../depreciation";
 const WORK_ORDER_PHOTOS_BUCKET = "work-order-photos";
 const WORK_ORDER_PHOTO_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 const MAX_WORK_ORDER_PHOTOS = 10;
+const MAX_WORK_ORDER_PHOTO_BYTES = 8 * 1024 * 1024;
+
+function extensionForMime(mimeType: string): string {
+  if (mimeType === "image/png") return "png";
+  if (mimeType === "image/webp") return "webp";
+  return "jpg";
+}
+
+function decodeBase64Image(data: string): Buffer {
+  const trimmed = data.trim();
+  const comma = trimmed.indexOf(",");
+  const payload =
+    trimmed.startsWith("data:") && comma !== -1 ? trimmed.slice(comma + 1) : trimmed;
+  return Buffer.from(payload, "base64");
+}
 
 async function ensureWorkOrderPhotosBucket() {
   const supabase = getSupabaseSecret();
@@ -96,7 +111,7 @@ async function ensureWorkOrderPhotosBucket() {
       WORK_ORDER_PHOTOS_BUCKET,
       {
         public: true,
-        fileSizeLimit: 5 * 1024 * 1024,
+        fileSizeLimit: MAX_WORK_ORDER_PHOTO_BYTES,
         allowedMimeTypes: [...WORK_ORDER_PHOTO_MIME_TYPES],
       },
     );
@@ -230,118 +245,173 @@ export const workOrdersRouter = router({
         return result;
       }),
 
-    listPhotos: protectedProcedure
-      .input(z.object({ workOrderId: z.number() }))
-      .query(async ({ input, ctx }) => {
-        const workOrder = await db.getWorkOrderById(input.workOrderId);
-        if (!workOrder) {
-          throw new TRPCError({ code: "NOT_FOUND", message: "Work order not found" });
-        }
-        assertRecordFacilityAccess(ctx.user, workOrder.siteId);
-        return await db.getWorkOrderPhotos(input.workOrderId);
-      }),
-
-    uploadUrl: protectedProcedure
-      .input(
-        z.object({
-          workOrderId: z.number(),
-          fileName: z.string().min(1),
-          fileType: z.string().min(1),
+    photos: router({
+      list: protectedProcedure
+        .input(z.object({ workOrderId: z.number() }))
+        .query(async ({ input, ctx }) => {
+          const workOrder = await db.getWorkOrderById(input.workOrderId);
+          if (!workOrder) {
+            throw new TRPCError({ code: "NOT_FOUND", message: "Work order not found" });
+          }
+          assertRecordFacilityAccess(ctx.user, workOrder.siteId);
+          return await db.listWorkOrderFieldPhotos(input.workOrderId);
         }),
-      )
-      .mutation(async ({ input, ctx }) => {
-        const workOrder = await db.getWorkOrderById(input.workOrderId);
-        if (!workOrder) {
-          throw new TRPCError({ code: "NOT_FOUND", message: "Work order not found" });
-        }
-        assertRecordFacilityAccess(ctx.user, workOrder.siteId);
 
-        if (
-          !(WORK_ORDER_PHOTO_MIME_TYPES as readonly string[]).includes(input.fileType)
-        ) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Only JPEG, PNG, and WebP images are allowed",
-          });
-        }
+      upload: protectedProcedure
+        .input(
+          z.object({
+            workOrderId: z.number(),
+            data: z.string().min(1),
+            mimeType: z.enum(["image/jpeg", "image/png", "image/webp"]),
+            caption: z.string().optional(),
+          }),
+        )
+        .mutation(async ({ input, ctx }) => {
+          const workOrder = await db.getWorkOrderById(input.workOrderId);
+          if (!workOrder) {
+            throw new TRPCError({ code: "NOT_FOUND", message: "Work order not found" });
+          }
+          assertRecordFacilityAccess(ctx.user, workOrder.siteId);
 
-        const existing = await db.getWorkOrderPhotos(input.workOrderId);
-        if (existing.length >= MAX_WORK_ORDER_PHOTOS) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: `Maximum ${MAX_WORK_ORDER_PHOTOS} photos per work order`,
-          });
-        }
+          const existing = await db.listWorkOrderFieldPhotos(input.workOrderId);
+          if (existing.length >= MAX_WORK_ORDER_PHOTOS) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `Maximum ${MAX_WORK_ORDER_PHOTOS} photos per work order`,
+            });
+          }
 
-        const supabase = await ensureWorkOrderPhotosBucket();
-        const safeName = input.fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
-        const photoKey = `work-orders/${input.workOrderId}/${Date.now()}-${safeName}`;
-        const { data, error } = await supabase.storage
-          .from(WORK_ORDER_PHOTOS_BUCKET)
-          .createSignedUploadUrl(photoKey);
-        if (error || !data?.signedUrl) {
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: error?.message ?? "Failed to create upload URL",
-          });
-        }
-        const { data: publicData } = supabase.storage
-          .from(WORK_ORDER_PHOTOS_BUCKET)
-          .getPublicUrl(photoKey);
-        if (!publicData?.publicUrl) {
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: "Could not resolve public photo URL",
-          });
-        }
-        return {
-          uploadUrl: data.signedUrl,
-          photoKey,
-          publicUrl: publicData.publicUrl,
-        };
-      }),
+          let bytes: Buffer;
+          try {
+            bytes = decodeBase64Image(input.data);
+          } catch {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Invalid image data",
+            });
+          }
+          if (!bytes.length) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Image data is empty",
+            });
+          }
+          if (bytes.length > MAX_WORK_ORDER_PHOTO_BYTES) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Image must be 8MB or smaller",
+            });
+          }
 
-    attachPhoto: protectedProcedure
-      .input(
-        z.object({
-          workOrderId: z.number(),
-          photoUrl: z.string().url(),
-          photoKey: z.string().min(1),
-          caption: z.string().optional(),
+          const supabase = await ensureWorkOrderPhotosBucket();
+          const storageKey = `work-orders/${input.workOrderId}/${nanoid()}.${extensionForMime(input.mimeType)}`;
+          const { error: uploadError } = await supabase.storage
+            .from(WORK_ORDER_PHOTOS_BUCKET)
+            .upload(storageKey, bytes, {
+              contentType: input.mimeType,
+              upsert: false,
+            });
+          if (uploadError) {
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: `Photo upload failed: ${uploadError.message}`,
+            });
+          }
+
+          const { data: publicData } = supabase.storage
+            .from(WORK_ORDER_PHOTOS_BUCKET)
+            .getPublicUrl(storageKey);
+          if (!publicData?.publicUrl) {
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: "Could not resolve public photo URL",
+            });
+          }
+
+          const photo = await db.addWorkOrderFieldPhoto({
+            workOrderId: input.workOrderId,
+            storageKey,
+            publicUrl: publicData.publicUrl,
+            caption: input.caption,
+            uploadedByUserId: ctx.user.id,
+          });
+
+          await db.createAuditLog({
+            userId: ctx.user.id,
+            action: "upload_work_order_photo",
+            entityType: "work_order",
+            entityId: input.workOrderId,
+            changes: JSON.stringify({ photoId: photo.id, storageKey }),
+          });
+
+          return photo;
         }),
-      )
-      .mutation(async ({ input, ctx }) => {
-        const workOrder = await db.getWorkOrderById(input.workOrderId);
-        if (!workOrder) {
-          throw new TRPCError({ code: "NOT_FOUND", message: "Work order not found" });
-        }
-        assertRecordFacilityAccess(ctx.user, workOrder.siteId);
 
-        const existing = await db.getWorkOrderPhotos(input.workOrderId);
-        if (existing.length >= MAX_WORK_ORDER_PHOTOS) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: `Maximum ${MAX_WORK_ORDER_PHOTOS} photos per work order`,
+      delete: protectedProcedure
+        .input(z.object({ id: z.number() }))
+        .mutation(async ({ input, ctx }) => {
+          const photo = await db.getWorkOrderFieldPhotoById(input.id);
+          if (!photo) {
+            throw new TRPCError({ code: "NOT_FOUND", message: "Photo not found" });
+          }
+          const workOrder = await db.getWorkOrderById(photo.workOrderId);
+          if (!workOrder) {
+            throw new TRPCError({ code: "NOT_FOUND", message: "Work order not found" });
+          }
+          assertRecordFacilityAccess(ctx.user, workOrder.siteId);
+
+          const isElevated =
+            ctx.user.role === "admin" || ctx.user.role === "manager";
+          const isUploader = photo.uploadedByUserId === ctx.user.id;
+          if (!isElevated && !isUploader) {
+            throw new TRPCError({
+              code: "FORBIDDEN",
+              message: "You can only delete photos you uploaded",
+            });
+          }
+
+          if (isElevated) {
+            await db.deleteWorkOrderFieldPhotoById(input.id);
+          } else {
+            const removed = await db.deleteWorkOrderFieldPhotoByUploader(
+              input.id,
+              ctx.user.id,
+            );
+            if (!removed) {
+              throw new TRPCError({
+                code: "FORBIDDEN",
+                message: "You can only delete photos you uploaded",
+              });
+            }
+          }
+
+          try {
+            const supabase = getSupabaseSecret();
+            const { error } = await supabase.storage
+              .from(WORK_ORDER_PHOTOS_BUCKET)
+              .remove([photo.storageKey]);
+            if (error) {
+              console.warn(
+                `Failed to remove work-order photo from storage: ${photo.storageKey}`,
+                error.message,
+              );
+            }
+          } catch (err) {
+            console.warn(
+              `Failed to remove work-order photo from storage: ${photo.storageKey}`,
+              err,
+            );
+          }
+
+          await db.createAuditLog({
+            userId: ctx.user.id,
+            action: "delete_work_order_photo",
+            entityType: "work_order",
+            entityId: photo.workOrderId,
+            changes: JSON.stringify({ photoId: photo.id, storageKey: photo.storageKey }),
           });
-        }
 
-        const photoId = await db.createAssetPhoto({
-          workOrderId: input.workOrderId,
-          assetId: workOrder.assetId,
-          photoUrl: input.photoUrl,
-          photoKey: input.photoKey,
-          caption: input.caption,
-          uploadedBy: ctx.user.id,
-        });
-
-        await db.createAuditLog({
-          userId: ctx.user.id,
-          action: "attach_work_order_photo",
-          entityType: "work_order",
-          entityId: input.workOrderId,
-          changes: JSON.stringify({ photoId, photoKey: input.photoKey }),
-        });
-
-        return { id: photoId };
-      }),
+          return { success: true as const };
+        }),
+    }),
   });
