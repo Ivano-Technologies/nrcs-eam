@@ -76,6 +76,55 @@ import { validateFacilityHierarchy } from "../facilityHierarchy";
 import { calculateDepreciatedValue } from "../lib/depreciation";
 import type { DepreciationResult } from "../depreciation";
 
+const WORK_ORDER_PHOTOS_BUCKET = "work-order-photos";
+const WORK_ORDER_PHOTO_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
+const MAX_WORK_ORDER_PHOTOS = 10;
+const MAX_WORK_ORDER_PHOTO_BYTES = 8 * 1024 * 1024;
+
+function extensionForMime(mimeType: string): string {
+  if (mimeType === "image/png") return "png";
+  if (mimeType === "image/webp") return "webp";
+  return "jpg";
+}
+
+function decodeBase64Image(data: string): Buffer {
+  const trimmed = data.trim();
+  const comma = trimmed.indexOf(",");
+  const payload =
+    trimmed.startsWith("data:") && comma !== -1 ? trimmed.slice(comma + 1) : trimmed;
+  return Buffer.from(payload, "base64");
+}
+
+async function ensureWorkOrderPhotosBucket() {
+  const supabase = getSupabaseSecret();
+  const { data: existingBucket, error: getBucketError } = await supabase.storage.getBucket(
+    WORK_ORDER_PHOTOS_BUCKET,
+  );
+  if (getBucketError && getBucketError.message && !/not found/i.test(getBucketError.message)) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: `Failed to access work-order photos bucket: ${getBucketError.message}`,
+    });
+  }
+  if (!existingBucket) {
+    const { error: createBucketError } = await supabase.storage.createBucket(
+      WORK_ORDER_PHOTOS_BUCKET,
+      {
+        public: true,
+        fileSizeLimit: MAX_WORK_ORDER_PHOTO_BYTES,
+        allowedMimeTypes: [...WORK_ORDER_PHOTO_MIME_TYPES],
+      },
+    );
+    if (createBucketError) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: `Failed to create work-order photos bucket: ${createBucketError.message}`,
+      });
+    }
+  }
+  return supabase;
+}
+
 export const workOrdersRouter = router({
     list: protectedProcedure
       .input(z.object({
@@ -195,4 +244,174 @@ export const workOrdersRouter = router({
         
         return result;
       }),
+
+    photos: router({
+      list: protectedProcedure
+        .input(z.object({ workOrderId: z.number() }))
+        .query(async ({ input, ctx }) => {
+          const workOrder = await db.getWorkOrderById(input.workOrderId);
+          if (!workOrder) {
+            throw new TRPCError({ code: "NOT_FOUND", message: "Work order not found" });
+          }
+          assertRecordFacilityAccess(ctx.user, workOrder.siteId);
+          return await db.listWorkOrderFieldPhotos(input.workOrderId);
+        }),
+
+      upload: protectedProcedure
+        .input(
+          z.object({
+            workOrderId: z.number(),
+            data: z.string().min(1),
+            mimeType: z.enum(["image/jpeg", "image/png", "image/webp"]),
+            caption: z.string().optional(),
+          }),
+        )
+        .mutation(async ({ input, ctx }) => {
+          const workOrder = await db.getWorkOrderById(input.workOrderId);
+          if (!workOrder) {
+            throw new TRPCError({ code: "NOT_FOUND", message: "Work order not found" });
+          }
+          assertRecordFacilityAccess(ctx.user, workOrder.siteId);
+
+          const existing = await db.listWorkOrderFieldPhotos(input.workOrderId);
+          if (existing.length >= MAX_WORK_ORDER_PHOTOS) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `Maximum ${MAX_WORK_ORDER_PHOTOS} photos per work order`,
+            });
+          }
+
+          let bytes: Buffer;
+          try {
+            bytes = decodeBase64Image(input.data);
+          } catch {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Invalid image data",
+            });
+          }
+          if (!bytes.length) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Image data is empty",
+            });
+          }
+          if (bytes.length > MAX_WORK_ORDER_PHOTO_BYTES) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Image must be 8MB or smaller",
+            });
+          }
+
+          const supabase = await ensureWorkOrderPhotosBucket();
+          const storageKey = `work-orders/${input.workOrderId}/${nanoid()}.${extensionForMime(input.mimeType)}`;
+          const { error: uploadError } = await supabase.storage
+            .from(WORK_ORDER_PHOTOS_BUCKET)
+            .upload(storageKey, bytes, {
+              contentType: input.mimeType,
+              upsert: false,
+            });
+          if (uploadError) {
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: `Photo upload failed: ${uploadError.message}`,
+            });
+          }
+
+          const { data: publicData } = supabase.storage
+            .from(WORK_ORDER_PHOTOS_BUCKET)
+            .getPublicUrl(storageKey);
+          if (!publicData?.publicUrl) {
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: "Could not resolve public photo URL",
+            });
+          }
+
+          const photo = await db.addWorkOrderFieldPhoto({
+            workOrderId: input.workOrderId,
+            storageKey,
+            publicUrl: publicData.publicUrl,
+            caption: input.caption,
+            uploadedByUserId: ctx.user.id,
+          });
+
+          await db.createAuditLog({
+            userId: ctx.user.id,
+            action: "upload_work_order_photo",
+            entityType: "work_order",
+            entityId: input.workOrderId,
+            changes: JSON.stringify({ photoId: photo.id, storageKey }),
+          });
+
+          return photo;
+        }),
+
+      delete: protectedProcedure
+        .input(z.object({ id: z.number() }))
+        .mutation(async ({ input, ctx }) => {
+          const photo = await db.getWorkOrderFieldPhotoById(input.id);
+          if (!photo) {
+            throw new TRPCError({ code: "NOT_FOUND", message: "Photo not found" });
+          }
+          const workOrder = await db.getWorkOrderById(photo.workOrderId);
+          if (!workOrder) {
+            throw new TRPCError({ code: "NOT_FOUND", message: "Work order not found" });
+          }
+          assertRecordFacilityAccess(ctx.user, workOrder.siteId);
+
+          const isElevated =
+            ctx.user.role === "admin" || ctx.user.role === "manager";
+          const isUploader = photo.uploadedByUserId === ctx.user.id;
+          if (!isElevated && !isUploader) {
+            throw new TRPCError({
+              code: "FORBIDDEN",
+              message: "You can only delete photos you uploaded",
+            });
+          }
+
+          if (isElevated) {
+            await db.deleteWorkOrderFieldPhotoById(input.id);
+          } else {
+            const removed = await db.deleteWorkOrderFieldPhotoByUploader(
+              input.id,
+              ctx.user.id,
+            );
+            if (!removed) {
+              throw new TRPCError({
+                code: "FORBIDDEN",
+                message: "You can only delete photos you uploaded",
+              });
+            }
+          }
+
+          try {
+            const supabase = getSupabaseSecret();
+            const { error } = await supabase.storage
+              .from(WORK_ORDER_PHOTOS_BUCKET)
+              .remove([photo.storageKey]);
+            if (error) {
+              console.warn(
+                `Failed to remove work-order photo from storage: ${photo.storageKey}`,
+                error.message,
+              );
+            }
+          } catch (err) {
+            console.warn(
+              `Failed to remove work-order photo from storage: ${photo.storageKey}`,
+              err,
+            );
+          }
+
+          await db.createAuditLog({
+            userId: ctx.user.id,
+            action: "delete_work_order_photo",
+            entityType: "work_order",
+            entityId: photo.workOrderId,
+            changes: JSON.stringify({ photoId: photo.id, storageKey: photo.storageKey }),
+          });
+
+          return { success: true as const };
+        }),
+    }),
   });

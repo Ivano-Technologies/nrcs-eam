@@ -9,6 +9,7 @@ export const LARGE_TRPC_BODY_PROCEDURES = [
   "bulkOperations.importSites",
   "bulkOperations.previewAssetRegisterImport",
   "auth.uploadAvatar",
+  "workOrders.photos.upload",
   "inventoryV2.documents.parseExcelImport",
   "inventoryV2.documents.parseTypedPdfImport",
   "inventoryV2.parseExcelSheet",

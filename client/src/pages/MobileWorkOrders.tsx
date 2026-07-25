@@ -7,9 +7,11 @@ import { CheckCircle2, Clock, AlertCircle, XCircle, ChevronRight, Camera, Loader
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 import { appPath } from "@/lib/routes";
+import { useConnectivity } from "@/hooks/useConnectivity";
 
 export default function MobileWorkOrders() {
   const [, setLocation] = useLocation();
+  const { isOnline } = useConnectivity();
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const { data: workOrders = [], isLoading, refetch } = trpc.workOrders.list.useQuery({
@@ -170,10 +172,15 @@ export default function MobileWorkOrders() {
                       size="sm"
                       variant="outline"
                       className="flex-1"
+                      disabled={!isOnline}
+                      title={!isOnline ? "Photos need a connection" : undefined}
                       onClick={(e) => {
                         e.stopPropagation();
-                        // Open camera for photo
-                        toast.info("Camera feature coming soon");
+                        if (!isOnline) {
+                          toast.error("Photos need a connection");
+                          return;
+                        }
+                        setLocation(appPath(`/mobile-work-order/${wo.id}?takePhoto=1`));
                       }}
                     >
                       <Camera className="mr-2 h-4 w-4" />
