@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
+import * as db from "./db";
 
 const uploadMock = vi.fn();
 const removeMock = vi.fn();
@@ -24,25 +25,45 @@ vi.mock("./_core/supabase", () => ({
 
 type AuthenticatedUser = NonNullable<TrpcContext["user"]>;
 
-function createTestContext(
-  role: "admin" | "manager" | "staff" | "user" = "admin",
+async function ensureTestUser(
+  role: "admin" | "manager" | "staff" | "user",
   siteId: number | null = null,
-): TrpcContext {
-  const user: AuthenticatedUser = {
-    id: role === "staff" ? 2 : 1,
-    openId: `test-user-${role}`,
+): Promise<AuthenticatedUser> {
+  const openId = `wo-photo-test-${role}`;
+  await db.upsertUser({
+    openId,
+    name: `WO Photo ${role}`,
+    email: `wo-photo-${role}@nrcs.org`,
+    loginMethod: "test",
+    role,
+    siteId: siteId ?? undefined,
+    lastSignedIn: new Date(),
+  });
+  const upserted = await db.getUserByOpenId(openId);
+  if (!upserted?.id) {
+    throw new Error(`Failed to upsert test user for role ${role}`);
+  }
+  return {
+    id: upserted.id,
+    openId,
     authUserId: null,
-    email: `${role}@nrcs.org`,
-    name: `Test ${role}`,
-    loginMethod: "supabase",
+    email: upserted.email ?? `wo-photo-${role}@nrcs.org`,
+    name: upserted.name ?? `WO Photo ${role}`,
+    loginMethod: "test",
     role,
     siteId,
     hasCompletedOnboarding: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    lastSignedIn: new Date(),
+    createdAt: upserted.createdAt,
+    updatedAt: upserted.updatedAt,
+    lastSignedIn: upserted.lastSignedIn,
   };
+}
 
+async function createTestContext(
+  role: "admin" | "manager" | "staff" | "user" = "admin",
+  siteId: number | null = null,
+): Promise<TrpcContext> {
+  const user = await ensureTestUser(role, siteId);
   return {
     user,
     req: {
@@ -58,7 +79,7 @@ const TINY_JPEG_BASE64 =
   "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAn/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIQAxAAAAGcP//EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAQUCf//EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQMBAT8Bf//EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQIBAT8Bf//EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEABj8Cf//EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAT8hf//Z";
 
 async function createWorkOrderFixture() {
-  const admin = appRouter.createCaller(createTestContext("admin"));
+  const admin = appRouter.createCaller(await createTestContext("admin"));
   const categories = await admin.assetCategories.list();
   const sites = await admin.sites.list();
   const site = sites[0];
@@ -107,7 +128,9 @@ describe("workOrders.photos", () => {
   it("rejects staff scoped to a different facility", async () => {
     const { workOrderId, siteId, otherSiteId } = await createWorkOrderFixture();
     const foreignSiteId = otherSiteId ?? siteId + 999;
-    const staffCaller = appRouter.createCaller(createTestContext("staff", foreignSiteId));
+    const staffCaller = appRouter.createCaller(
+      await createTestContext("staff", foreignSiteId),
+    );
 
     await expect(
       staffCaller.workOrders.photos.upload({
@@ -123,7 +146,7 @@ describe("workOrders.photos", () => {
   }, 30000);
 
   it("rejects unsupported mime types", async () => {
-    const admin = appRouter.createCaller(createTestContext("admin"));
+    const admin = appRouter.createCaller(await createTestContext("admin"));
     const { workOrderId } = await createWorkOrderFixture();
 
     await expect(
@@ -137,7 +160,7 @@ describe("workOrders.photos", () => {
   }, 30000);
 
   it("lists photos newest first", async () => {
-    const admin = appRouter.createCaller(createTestContext("admin"));
+    const admin = appRouter.createCaller(await createTestContext("admin"));
     const { workOrderId } = await createWorkOrderFixture();
 
     const first = await admin.workOrders.photos.upload({
