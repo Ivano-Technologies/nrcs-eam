@@ -144,26 +144,26 @@ export const maintenanceRouter = router({
     // Predictive Maintenance AI
     getPredictions: managerOrAdminProcedure
       .query(async () => {
-        const { getAllMaintenancePredictions } = await import('./predictiveMaintenance');
+        const { getAllMaintenancePredictions } = await import('../predictiveMaintenance');
         return await getAllMaintenancePredictions();
       }),
 
     getHighPriorityPredictions: managerOrAdminProcedure
       .query(async () => {
-        const { getHighPriorityPredictions } = await import('./predictiveMaintenance');
+        const { getHighPriorityPredictions } = await import('../predictiveMaintenance');
         return await getHighPriorityPredictions();
       }),
 
     getAssetPrediction: managerOrAdminProcedure
       .input(z.object({ assetId: z.number() }))
       .query(async ({ input }) => {
-        const { analyzeAssetMaintenancePattern } = await import('./predictiveMaintenance');
+        const { analyzeAssetMaintenancePattern } = await import('../predictiveMaintenance');
         return await analyzeAssetMaintenancePattern(input.assetId);
       }),
 
     autoCreateWorkOrders: managerOrAdminProcedure
       .mutation(async ({ ctx }) => {
-        const { autoCreatePreventiveWorkOrders } = await import('./predictiveMaintenance');
+        const { autoCreatePreventiveWorkOrders } = await import('../predictiveMaintenance');
         const workOrderIds = await autoCreatePreventiveWorkOrders(ctx.user.id);
         return { created: workOrderIds.length, workOrderIds };
       }),

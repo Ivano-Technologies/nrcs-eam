@@ -207,7 +207,7 @@ export const reportsRouter = router({
     branchSummary: managerOrAdminProcedure
       .input(z.object({ siteId: z.number(), consolidated: z.boolean().optional() }))
       .query(async ({ input, ctx }) => {
-        const { buildBranchSummaryReport } = await import("./reports/branchSummary");
+        const { buildBranchSummaryReport } = await import("../reports/branchSummary");
         return await buildBranchSummaryReport({
           siteId: input.siteId,
           consolidated: input.consolidated,
@@ -218,8 +218,8 @@ export const reportsRouter = router({
     branchSummaryPdf: managerOrAdminProcedure
       .input(z.object({ siteId: z.number(), consolidated: z.boolean().optional() }))
       .mutation(async ({ input, ctx }) => {
-        const { buildBranchSummaryReport } = await import("./reports/branchSummary");
-        const { renderBranchSummaryPdf } = await import("./reports/branchSummaryPdf");
+        const { buildBranchSummaryReport } = await import("../reports/branchSummary");
+        const { renderBranchSummaryPdf } = await import("../reports/branchSummaryPdf");
         const summary = await buildBranchSummaryReport({
           siteId: input.siteId,
           consolidated: input.consolidated,

@@ -80,14 +80,14 @@ export const pendingUsersRouter = router({
     list: adminProcedure.query(async () => {
       const database = await db.getDb();
       if (!database) return [];
-      const { pendingUsers } = await import("../drizzle/schema");
+      const { pendingUsers } = await import("../../drizzle/schema");
       return await database.select().from(pendingUsers);
     }),
     
     approve: adminProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input, ctx }) => {
-        const { approvePendingUser } = await import("./pendingUsersService");
+        const { approvePendingUser } = await import("../pendingUsersService");
         return await approvePendingUser(input.id, ctx.user.id);
       }),
     
@@ -97,7 +97,7 @@ export const pendingUsersRouter = router({
         reason: z.string().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
-        const { rejectPendingUser } = await import("./pendingUsersService");
+        const { rejectPendingUser } = await import("../pendingUsersService");
         return await rejectPendingUser(input.id, ctx.user.id, input.reason);
       }),
   });

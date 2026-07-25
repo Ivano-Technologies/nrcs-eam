@@ -348,7 +348,7 @@ export const assetsRouter = router({
     generateQRCode: protectedProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
-        const { generateAssetQRCode } = await import('./qrcode');
+        const { generateAssetQRCode } = await import('../qrcode');
         const asset = await db.getAssetById(input.id);
         if (!asset) throw new TRPCError({ code: 'NOT_FOUND', message: 'Asset not found' });
         
@@ -363,7 +363,7 @@ export const assetsRouter = router({
         labelSize: z.enum(['avery_5160', 'avery_5163', 'custom']).optional(),
       }))
       .mutation(async ({ input }) => {
-        const { generateBulkQRCodeLabels } = await import('./qrcode');
+        const { generateBulkQRCodeLabels } = await import('../qrcode');
         
         // Get assets
         const assets = [];
@@ -393,7 +393,7 @@ export const assetsRouter = router({
     scanQRCode: protectedProcedure
       .input(z.object({ qrData: z.string() }))
       .query(async ({ input }) => {
-        const { parseAssetQRCode } = await import('./qrcode');
+        const { parseAssetQRCode } = await import('../qrcode');
         const parsed = parseAssetQRCode(input.qrData);
         if (!parsed) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid QR code' });
         
@@ -408,7 +408,7 @@ export const assetsRouter = router({
         format: z.enum(['CODE128', 'CODE39', 'EAN13']).default('CODE128'),
       }))
       .mutation(async ({ input }) => {
-        const { generateBarcode, generateBarcodeValue } = await import('./barcode');
+        const { generateBarcode, generateBarcodeValue } = await import('../barcode');
         const asset = await db.getAssetById(input.id);
         if (!asset) throw new TRPCError({ code: 'NOT_FOUND', message: 'Asset not found' });
         

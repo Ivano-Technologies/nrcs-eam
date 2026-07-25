@@ -80,15 +80,15 @@ export const fleetHealthRouter = router({
     summary: managerOrAdminProcedure
       .input(z.object({ siteId: z.number().optional() }).optional())
       .query(async ({ input }) => {
-        const { buildFleetHealthSummary } = await import("./reports/fleetHealth");
+        const { buildFleetHealthSummary } = await import("../reports/fleetHealth");
         return await buildFleetHealthSummary(input ?? undefined);
       }),
 
     exportPdf: managerOrAdminProcedure
       .input(z.object({ siteId: z.number().optional() }).optional())
       .mutation(async ({ input }) => {
-        const { buildFleetHealthSummary } = await import("./reports/fleetHealth");
-        const { renderFleetHealthPdf } = await import("./reports/fleetHealthPdf");
+        const { buildFleetHealthSummary } = await import("../reports/fleetHealth");
+        const { renderFleetHealthPdf } = await import("../reports/fleetHealthPdf");
         const summary = await buildFleetHealthSummary(input ?? undefined);
         const buffer = await renderFleetHealthPdf(summary);
         return {

@@ -126,8 +126,8 @@ export const notificationsRouter = router({
       }),
 
     sendAssetCheckReminders: adminProcedure.mutation(async () => {
-      const { assetCheckReminderEmail, assetsListLink } = await import("./notifications/emailTemplates");
-      const { createEmailService } = await import("./_core/createEmailService");
+      const { assetCheckReminderEmail, assetsListLink } = await import("../notifications/emailTemplates");
+      const { createEmailService } = await import("../_core/createEmailService");
       const database = await db.getDb();
       if (!database) {
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });

@@ -80,7 +80,7 @@ import { assetItemTypeInputZod, normalizeAssetItemType } from "./_helpers";
 export const bulkOperationsRouter = router({
     exportAssets: protectedProcedure
       .query(async () => {
-        const { exportAssets } = await import('./bulkImportExport');
+        const { exportAssets } = await import('../bulkImportExport');
         const buffer = await exportAssets();
         return {
           data: buffer.toString('base64'),
@@ -91,7 +91,7 @@ export const bulkOperationsRouter = router({
 
     exportWorkOrders: protectedProcedure
       .query(async () => {
-        const { exportWorkOrders } = await import('./bulkImportExport');
+        const { exportWorkOrders } = await import('../bulkImportExport');
         const buffer = await exportWorkOrders();
         return {
           data: buffer.toString('base64'),
@@ -102,7 +102,7 @@ export const bulkOperationsRouter = router({
 
     exportInventory: protectedProcedure
       .query(async () => {
-        const { exportInventory } = await import('./bulkImportExport');
+        const { exportInventory } = await import('../bulkImportExport');
         const buffer = await exportInventory();
         return {
           data: buffer.toString('base64'),
@@ -114,7 +114,7 @@ export const bulkOperationsRouter = router({
     exportAllDataZip: adminProcedure.query(async () => {
       const JSZip = (await import("jszip")).default;
       const { exportAssets, exportWorkOrders, exportInventory, exportSites } = await import(
-        "./bulkImportExport"
+        "../bulkImportExport"
       );
       const zip = new JSZip();
       const [a, w, i, s] = await Promise.all([
@@ -138,7 +138,7 @@ export const bulkOperationsRouter = router({
     getImportTemplate: protectedProcedure
       .input(z.object({ entity: z.enum(['assets', 'workOrders', 'inventory']) }))
       .query(async ({ input }) => {
-        const { generateImportTemplate } = await import('./bulkImportExport');
+        const { generateImportTemplate } = await import('../bulkImportExport');
         const buffer = await generateImportTemplate(input.entity);
         return {
           data: buffer.toString('base64'),
@@ -150,7 +150,7 @@ export const bulkOperationsRouter = router({
     importAssets: managerOrAdminProcedure
       .input(z.object({ fileData: z.string() })) // base64 encoded
       .mutation(async ({ input, ctx }) => {
-        const { importAssets } = await import('./bulkImportExport');
+        const { importAssets } = await import('../bulkImportExport');
         const buffer = Buffer.from(input.fileData, 'base64');
         return await importAssets(buffer, ctx.user.id);
       }),
@@ -170,7 +170,7 @@ export const bulkOperationsRouter = router({
           .optional()
       )
       .query(async ({ input }) => {
-        const { buildNRCSAssetRegisterWorkbook } = await import("./nrcsAssetExcel");
+        const { buildNRCSAssetRegisterWorkbook } = await import("../nrcsAssetExcel");
         const { buffer, filename } = await buildNRCSAssetRegisterWorkbook({
           siteId: input?.siteId,
           categoryId: input?.categoryId,
@@ -190,7 +190,7 @@ export const bulkOperationsRouter = router({
     previewAssetRegisterImport: managerOrAdminProcedure
       .input(z.object({ fileData: z.string() }))
       .mutation(async ({ input }) => {
-        const { previewNRCSAssetImport } = await import("./nrcsAssetExcel");
+        const { previewNRCSAssetImport } = await import("../nrcsAssetExcel");
         return await previewNRCSAssetImport(Buffer.from(input.fileData, "base64"));
       }),
 
@@ -233,7 +233,7 @@ export const bulkOperationsRouter = router({
       )
       .mutation(async ({ input }) => {
         try {
-          const { confirmNRCSAssetImport } = await import("./nrcsAssetExcel");
+          const { confirmNRCSAssetImport } = await import("../nrcsAssetExcel");
           return await confirmNRCSAssetImport(
             input.rows.map((row) => ({
               ...row,
@@ -252,7 +252,7 @@ export const bulkOperationsRouter = router({
 
     exportSites: protectedProcedure
       .query(async () => {
-        const { exportSites } = await import('./bulkImportExport');
+        const { exportSites } = await import('../bulkImportExport');
         const buffer = await exportSites();
         return {
           data: buffer.toString('base64'),
@@ -264,14 +264,14 @@ export const bulkOperationsRouter = router({
     importSites: managerOrAdminProcedure
       .input(z.object({ fileData: z.string() })) // base64 encoded
       .mutation(async ({ input }) => {
-        const { importSites } = await import('./bulkImportExport');
+        const { importSites } = await import('../bulkImportExport');
         const buffer = Buffer.from(input.fileData, 'base64');
         return await importSites(buffer);
       }),
 
     downloadSiteTemplate: protectedProcedure
       .query(async () => {
-        const { generateSiteTemplate } = await import('./bulkImportExport');
+        const { generateSiteTemplate } = await import('../bulkImportExport');
         const buffer = await generateSiteTemplate();
         return {
           data: buffer.toString('base64'),

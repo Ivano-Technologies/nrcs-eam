@@ -78,12 +78,12 @@ import type { DepreciationResult } from "../depreciation";
 
 export const branchScorecardsRouter = router({
     list: managerOrAdminProcedure.query(async () => {
-      const { buildBranchScorecardList } = await import("./reports/branchScorecards");
+      const { buildBranchScorecardList } = await import("../reports/branchScorecards");
       return await buildBranchScorecardList();
     }),
 
     exportXlsx: managerOrAdminProcedure.mutation(async () => {
-      const { buildBranchScorecardList } = await import("./reports/branchScorecards");
+      const { buildBranchScorecardList } = await import("../reports/branchScorecards");
       const list = await buildBranchScorecardList();
       const columns = [
         { header: "Branch", key: "branchName", width: 24 },
