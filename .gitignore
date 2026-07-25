@@ -170,3 +170,8 @@ generate_assets.py
 
 # graphify generated knowledge graph (run `graphify update .` locally)
 graphify-out/
+
+# local CSP sweep artifacts
+.csp-sweep-creds.local
+scripts/_tmp_*
+
