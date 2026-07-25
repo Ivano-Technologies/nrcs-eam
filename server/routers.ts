@@ -41,6 +41,7 @@ import { photosRouter } from "./routers/photosRouter";
 import { transfersRouter } from "./routers/transfersRouter";
 import { userPreferencesRouter } from "./routers/userPreferencesRouter";
 import { emailNotificationsRouter } from "./routers/emailNotificationsRouter";
+import { pendingUsersRouter } from "./routers/pendingUsersRouter";
 import { donorAssetsRouter } from "./donorAssetsRouters";
 import {
   countDonorReportsDueSoon,
@@ -3842,32 +3843,7 @@ export const appRouter = router({
     }),
   }),
 
-  // ============= PENDING USERS (Admin Approval) =============
-  pendingUsers: router({
-    list: adminProcedure.query(async () => {
-      const database = await db.getDb();
-      if (!database) return [];
-      const { pendingUsers } = await import("../drizzle/schema");
-      return await database.select().from(pendingUsers);
-    }),
-    
-    approve: adminProcedure
-      .input(z.object({ id: z.number() }))
-      .mutation(async ({ input, ctx }) => {
-        const { approvePendingUser } = await import("./pendingUsersService");
-        return await approvePendingUser(input.id, ctx.user.id);
-      }),
-    
-    reject: adminProcedure
-      .input(z.object({
-        id: z.number(),
-        reason: z.string().optional(),
-      }))
-      .mutation(async ({ input, ctx }) => {
-        const { rejectPendingUser } = await import("./pendingUsersService");
-        return await rejectPendingUser(input.id, ctx.user.id, input.reason);
-      }),
-  }),
+  pendingUsers: pendingUsersRouter,
 
   // ============= WORK ORDER TEMPLATES =============
   workOrderTemplates: router({
