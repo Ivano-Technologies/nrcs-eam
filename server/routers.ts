@@ -43,6 +43,7 @@ import { userPreferencesRouter } from "./routers/userPreferencesRouter";
 import { emailNotificationsRouter } from "./routers/emailNotificationsRouter";
 import { pendingUsersRouter } from "./routers/pendingUsersRouter";
 import { workOrderTemplatesRouter } from "./routers/workOrderTemplatesRouter";
+import { depreciationRouter } from "./routers/depreciationRouter";
 import { donorAssetsRouter } from "./donorAssetsRouters";
 import {
   countDonorReportsDueSoon,
@@ -485,8 +486,8 @@ async function queryRecentActivity(
     .select({
       type: sql<string>`'requisition'`,
       description: sql<string>`case
-              when ${requisitions.status} = 'approved' then concat('Requisition approved Â· ', ${requisitions.reqNumber})
-              else concat('Requisition submitted Â· ', ${requisitions.reqNumber})
+              when ${requisitions.status} = 'approved' then concat('Requisition approved Ã‚Â· ', ${requisitions.reqNumber})
+              else concat('Requisition submitted Ã‚Â· ', ${requisitions.reqNumber})
             end`,
       timestamp: sql<Date>`coalesce(${requisitions.approvedHqAt}, ${requisitions.approvedBranchAt}, ${requisitions.createdAt})`,
       facilityName: sites.name,
@@ -501,7 +502,7 @@ async function queryRecentActivity(
   const recentAssetRows = await database
     .select({
       type: sql<string>`'asset'`,
-      description: sql<string>`concat('Asset created Â· ', ${assets.assetTag})`,
+      description: sql<string>`concat('Asset created Ã‚Â· ', ${assets.assetTag})`,
       timestamp: assets.createdAt,
       facilityName: sites.name,
     })
@@ -515,7 +516,7 @@ async function queryRecentActivity(
   const recentTransferRows = await database
     .select({
       type: sql<string>`'asset_transfer'`,
-      description: sql<string>`concat('Asset transferred Â· ', ${assets.assetTag})`,
+      description: sql<string>`concat('Asset transferred Ã‚Â· ', ${assets.assetTag})`,
       timestamp: sql<Date>`coalesce(${assetTransfers.transferDate}, ${assetTransfers.createdAt})`,
       facilityName: sites.name,
     })
@@ -644,41 +645,6 @@ function buildRegisterDepreciationForCreate(input: {
     }
   }
   return { depreciatedValueManualOverride: false };
-}
-
-function buildRegisterDepreciationResultFromAsset(asset: {
-  actualUnitValue: string | null;
-  itemCategory: string | null;
-  yearAcquiredRegister: number | null;
-}): DepreciationResult {
-  const actual = Number(asset.actualUnitValue);
-  const year = asset.yearAcquiredRegister ?? new Date().getFullYear();
-  const category = (asset.itemCategory ?? "").trim();
-  const book = calculateDepreciatedValue(actual, category, year);
-  const accumulated = Math.max(0, Math.round((actual - book) * 100) / 100);
-  const age = Math.max(0, new Date().getFullYear() - year);
-  const pct = actual > 0 ? (accumulated / actual) * 100 : 0;
-  const annual = age > 0 ? accumulated / age : accumulated;
-  const today = new Date().toISOString().split("T")[0]!;
-  return {
-    method: "NRCS Register (category-based)",
-    annualDepreciation: Math.round(annual * 100) / 100,
-    accumulatedDepreciation: accumulated,
-    currentBookValue: book,
-    depreciationPercentage: Math.round(pct * 100) / 100,
-    yearsElapsed: age,
-    remainingYears: 0,
-    schedule: [
-      {
-        year: 1,
-        date: today,
-        beginningValue: Math.round(actual * 100) / 100,
-        depreciationExpense: accumulated,
-        accumulatedDepreciation: accumulated,
-        endingValue: book,
-      },
-    ],
-  };
 }
 
 function getFrontendOriginForUserEmails(): string {
@@ -2051,7 +2017,7 @@ export const appRouter = router({
         await cacheSetJson(metricsCacheKey, metricsPayload, metricsTimedOut ? 60 : 900);
         return metricsPayload;
       }),
-    /** Single round-trip for dashboard page â€” one pool, sequential sections. */
+    /** Single round-trip for dashboard page Ã¢â‚¬â€ one pool, sequential sections. */
     all: protectedProcedure
       .input(
         z.object({
@@ -2061,7 +2027,7 @@ export const appRouter = router({
         })
       )
       .query(async ({ input, ctx }): Promise<DashboardAllOutput> => loadDashboardAll(ctx, input)),
-    /** Progressive tier load â€” returns partial bundle for one tier (1=critical KPIs first). */
+    /** Progressive tier load Ã¢â‚¬â€ returns partial bundle for one tier (1=critical KPIs first). */
     byTier: protectedProcedure
       .input(
         z.object({
@@ -2875,7 +2841,7 @@ export const appRouter = router({
     <p>Nigerian Red Cross Society</p>`;
           const sent = await sendEmail({
             to: email,
-            subject: "Welcome to NRCS EAM â€” Your account is ready",
+            subject: "Welcome to NRCS EAM Ã¢â‚¬â€ Your account is ready",
             html: generateEmailTemplate(bodyHtml, "Welcome"),
           });
           if (!sent) {
@@ -3065,7 +3031,7 @@ export const appRouter = router({
         }
         const sent = await sendEmail({
           to: email,
-          subject: "NRCS EAM â€” Password reset",
+          subject: "NRCS EAM Ã¢â‚¬â€ Password reset",
           html: generateEmailTemplate(
             `<p>A password reset was requested for your NRCS EAM account.</p>
             <p><a href="${actionLink}">Set a new password</a></p>
@@ -3436,7 +3402,7 @@ export const appRouter = router({
       ];
       const rows = list.map((row) => ({
         ...row,
-        trendVsPriorMonth: row.trendVsPriorMonth ?? "â€”",
+        trendVsPriorMonth: row.trendVsPriorMonth ?? "Ã¢â‚¬â€",
       }));
       const buffer = await generateExcelReport("Branch scorecards", rows, columns, {
         sheetName: "Scorecards",
@@ -3734,115 +3700,7 @@ export const appRouter = router({
 
   emailNotifications: emailNotificationsRouter,
 
-  // ============= DEPRECIATION =============
-  depreciation: router({
-    calculate: protectedProcedure
-      .input(z.object({
-        assetId: z.number(),
-      }))
-      .query(async ({ input }) => {
-        const { calculateDepreciation } = require('./depreciation');
-        const asset = await db.getAssetById(input.assetId);
-        if (!asset) return null;
-
-        const legacyReady =
-          asset.depreciationMethod &&
-          asset.depreciationMethod !== "none" &&
-          asset.acquisitionCost &&
-          asset.depreciationStartDate;
-
-        if (legacyReady) {
-          return calculateDepreciation({
-            acquisitionCost: Number(asset.acquisitionCost),
-            residualValue: Number(asset.residualValue || 0),
-            usefulLifeYears: asset.usefulLifeYears || 5,
-            depreciationStartDate: new Date(asset.depreciationStartDate!),
-            method: asset.depreciationMethod as "straight-line" | "declining-balance",
-            decliningBalanceRate: 2,
-          });
-        }
-
-        const registerReady =
-          asset.actualUnitValue != null &&
-          String(asset.actualUnitValue).trim() !== "" &&
-          asset.itemCategory &&
-          String(asset.itemCategory).trim() !== "" &&
-          asset.yearAcquiredRegister != null;
-
-        if (registerReady) {
-          return buildRegisterDepreciationResultFromAsset({
-            actualUnitValue: asset.actualUnitValue,
-            itemCategory: asset.itemCategory,
-            yearAcquiredRegister: asset.yearAcquiredRegister,
-          });
-        }
-
-        return null;
-      }),
-    
-    summary: protectedProcedure.query(async () => {
-      const { calculateDepreciation } = require('./depreciation');
-      const allAssets = await db.getAllAssets();
-      
-      let totalAcquisitionCost = 0;
-      let totalCurrentValue = 0;
-      let totalAccumulatedDepreciation = 0;
-      let assetsWithDepreciation = 0;
-      
-      for (const asset of allAssets) {
-        if (asset.acquisitionCost) {
-          totalAcquisitionCost += Number(asset.acquisitionCost);
-        }
-        
-        if (asset.depreciationMethod && asset.depreciationMethod !== 'none' && asset.depreciationStartDate && asset.acquisitionCost) {
-          assetsWithDepreciation++;
-          const result = calculateDepreciation({
-            acquisitionCost: Number(asset.acquisitionCost),
-            residualValue: Number(asset.residualValue || 0),
-            usefulLifeYears: asset.usefulLifeYears || 5,
-            depreciationStartDate: new Date(asset.depreciationStartDate!),
-            method: asset.depreciationMethod as 'straight-line' | 'declining-balance',
-            decliningBalanceRate: 2,
-          });
-          
-          if (result) {
-            totalCurrentValue += result.currentBookValue;
-            totalAccumulatedDepreciation += result.accumulatedDepreciation;
-          }
-        } else if (
-          asset.actualUnitValue != null &&
-          String(asset.actualUnitValue).trim() !== "" &&
-          asset.itemCategory &&
-          String(asset.itemCategory).trim() !== "" &&
-          asset.yearAcquiredRegister != null
-        ) {
-          assetsWithDepreciation++;
-          const reg = buildRegisterDepreciationResultFromAsset({
-            actualUnitValue: asset.actualUnitValue,
-            itemCategory: asset.itemCategory,
-            yearAcquiredRegister: asset.yearAcquiredRegister,
-          });
-          totalCurrentValue += reg.currentBookValue;
-          totalAccumulatedDepreciation += reg.accumulatedDepreciation;
-        } else if (asset.currentValue) {
-          totalCurrentValue += Number(asset.currentValue);
-        } else if (asset.acquisitionCost) {
-          totalCurrentValue += Number(asset.acquisitionCost);
-        }
-      }
-      
-      return {
-        totalAcquisitionCost: Math.round(totalAcquisitionCost * 100) / 100,
-        totalCurrentValue: Math.round(totalCurrentValue * 100) / 100,
-        totalAccumulatedDepreciation: Math.round(totalAccumulatedDepreciation * 100) / 100,
-        totalDepreciationPercentage: totalAcquisitionCost > 0 
-          ? Math.round((totalAccumulatedDepreciation / totalAcquisitionCost) * 10000) / 100 
-          : 0,
-        assetsWithDepreciation,
-        totalAssets: allAssets.length,
-      };
-    }),
-  }),
+  depreciation: depreciationRouter,
 
   pendingUsers: pendingUsersRouter,
 
@@ -4062,7 +3920,7 @@ function buildDashboardRequestRecord(params: {
   };
 }
 
-/** Runs after `appRouter` is defined â€” avoids circular type inference from createCaller inside the router. */
+/** Runs after `appRouter` is defined Ã¢â‚¬â€ avoids circular type inference from createCaller inside the router. */
 async function loadDashboardAll(
   ctx: TrpcContext,
   input: DashboardAllInput
