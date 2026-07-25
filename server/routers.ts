@@ -53,6 +53,7 @@ import { usersRouter } from "./routers/usersRouter";
 import { workOrdersRouter } from "./routers/workOrdersRouter";
 import { maintenanceRouter } from "./routers/maintenanceRouter";
 import { inventoryRouter } from "./routers/inventoryRouter";
+import { bulkOperationsRouter } from "./routers/bulkOperationsRouter";
 import { donorAssetsRouter } from "./donorAssetsRouters";
 import {
   countDonorReportsDueSoon,
@@ -111,14 +112,6 @@ import type { InsertUser } from "../drizzle/schema";
 import { validateFacilityHierarchy } from "./facilityHierarchy";
 import { calculateDepreciatedValue } from "./lib/depreciation";
 import type { DepreciationResult } from "./depreciation";
-
-const assetItemTypeInputZod = z.enum(["Asset", "Inventory", "asset", "inventory"]);
-
-function normalizeAssetItemType(
-  value: z.infer<typeof assetItemTypeInputZod> | undefined
-): "Asset" | "Inventory" {
-  return value?.toLowerCase() === "inventory" ? "Inventory" : "Asset";
-}
 
 
 const DASHBOARD_EMPTY_METRICS = {
@@ -494,8 +487,8 @@ async function queryRecentActivity(
     .select({
       type: sql<string>`'requisition'`,
       description: sql<string>`case
-              when ${requisitions.status} = 'approved' then concat('Requisition approved Ãƒâ€šÃ‚Â· ', ${requisitions.reqNumber})
-              else concat('Requisition submitted Ãƒâ€šÃ‚Â· ', ${requisitions.reqNumber})
+              when ${requisitions.status} = 'approved' then concat('Requisition approved ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· ', ${requisitions.reqNumber})
+              else concat('Requisition submitted ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· ', ${requisitions.reqNumber})
             end`,
       timestamp: sql<Date>`coalesce(${requisitions.approvedHqAt}, ${requisitions.approvedBranchAt}, ${requisitions.createdAt})`,
       facilityName: sites.name,
@@ -510,7 +503,7 @@ async function queryRecentActivity(
   const recentAssetRows = await database
     .select({
       type: sql<string>`'asset'`,
-      description: sql<string>`concat('Asset created Ãƒâ€šÃ‚Â· ', ${assets.assetTag})`,
+      description: sql<string>`concat('Asset created ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· ', ${assets.assetTag})`,
       timestamp: assets.createdAt,
       facilityName: sites.name,
     })
@@ -524,7 +517,7 @@ async function queryRecentActivity(
   const recentTransferRows = await database
     .select({
       type: sql<string>`'asset_transfer'`,
-      description: sql<string>`concat('Asset transferred Ãƒâ€šÃ‚Â· ', ${assets.assetTag})`,
+      description: sql<string>`concat('Asset transferred ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· ', ${assets.assetTag})`,
       timestamp: sql<Date>`coalesce(${assetTransfers.transferDate}, ${assetTransfers.createdAt})`,
       facilityName: sites.name,
     })
@@ -1528,7 +1521,7 @@ export const appRouter = router({
         await cacheSetJson(metricsCacheKey, metricsPayload, metricsTimedOut ? 60 : 900);
         return metricsPayload;
       }),
-    /** Single round-trip for dashboard page ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â one pool, sequential sections. */
+    /** Single round-trip for dashboard page ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â one pool, sequential sections. */
     all: protectedProcedure
       .input(
         z.object({
@@ -1538,7 +1531,7 @@ export const appRouter = router({
         })
       )
       .query(async ({ input, ctx }): Promise<DashboardAllOutput> => loadDashboardAll(ctx, input)),
-    /** Progressive tier load ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â returns partial bundle for one tier (1=critical KPIs first). */
+    /** Progressive tier load ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â returns partial bundle for one tier (1=critical KPIs first). */
     byTier: protectedProcedure
       .input(
         z.object({
@@ -2262,210 +2255,7 @@ export const appRouter = router({
   // Scheduled Reports Management
   scheduledReports: scheduledReportsRouter,
 
-  // ============= BULK IMPORT/EXPORT =============
-  bulkOperations: router({
-    exportAssets: protectedProcedure
-      .query(async () => {
-        const { exportAssets } = await import('./bulkImportExport');
-        const buffer = await exportAssets();
-        return {
-          data: buffer.toString('base64'),
-          filename: `assets_export_${Date.now()}.xlsx`,
-          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        };
-      }),
-
-    exportWorkOrders: protectedProcedure
-      .query(async () => {
-        const { exportWorkOrders } = await import('./bulkImportExport');
-        const buffer = await exportWorkOrders();
-        return {
-          data: buffer.toString('base64'),
-          filename: `work_orders_export_${Date.now()}.xlsx`,
-          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        };
-      }),
-
-    exportInventory: protectedProcedure
-      .query(async () => {
-        const { exportInventory } = await import('./bulkImportExport');
-        const buffer = await exportInventory();
-        return {
-          data: buffer.toString('base64'),
-          filename: `inventory_export_${Date.now()}.xlsx`,
-          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        };
-      }),
-
-    exportAllDataZip: adminProcedure.query(async () => {
-      const JSZip = (await import("jszip")).default;
-      const { exportAssets, exportWorkOrders, exportInventory, exportSites } = await import(
-        "./bulkImportExport"
-      );
-      const zip = new JSZip();
-      const [a, w, i, s] = await Promise.all([
-        exportAssets(),
-        exportWorkOrders(),
-        exportInventory(),
-        exportSites(),
-      ]);
-      zip.file("assets.xlsx", a);
-      zip.file("work_orders.xlsx", w);
-      zip.file("inventory.xlsx", i);
-      zip.file("facilities.xlsx", s);
-      const out = await zip.generateAsync({ type: "nodebuffer" });
-      return {
-        data: out.toString("base64"),
-        filename: `nrcs_export_${Date.now()}.zip`,
-        mimeType: "application/zip",
-      };
-    }),
-
-    getImportTemplate: protectedProcedure
-      .input(z.object({ entity: z.enum(['assets', 'workOrders', 'inventory']) }))
-      .query(async ({ input }) => {
-        const { generateImportTemplate } = await import('./bulkImportExport');
-        const buffer = await generateImportTemplate(input.entity);
-        return {
-          data: buffer.toString('base64'),
-          filename: `${input.entity}_import_template.xlsx`,
-          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        };
-      }),
-
-    importAssets: managerOrAdminProcedure
-      .input(z.object({ fileData: z.string() })) // base64 encoded
-      .mutation(async ({ input, ctx }) => {
-        const { importAssets } = await import('./bulkImportExport');
-        const buffer = Buffer.from(input.fileData, 'base64');
-        return await importAssets(buffer, ctx.user.id);
-      }),
-
-    exportAssetRegister: protectedProcedure
-      .input(
-        z
-          .object({
-            siteId: z.number().optional(),
-            categoryId: z.number().optional(),
-            categoryIds: z.array(z.number().int().positive()).optional(),
-            registerStatus: z.string().optional(),
-            itemType: z.string().optional(),
-            search: z.string().optional(),
-            siteLabel: z.string().optional(),
-          })
-          .optional()
-      )
-      .query(async ({ input }) => {
-        const { buildNRCSAssetRegisterWorkbook } = await import("./nrcsAssetExcel");
-        const { buffer, filename } = await buildNRCSAssetRegisterWorkbook({
-          siteId: input?.siteId,
-          categoryId: input?.categoryId,
-          categoryIds: input?.categoryIds,
-          registerStatus: input?.registerStatus,
-          itemType: input?.itemType,
-          search: input?.search,
-          siteLabel: input?.siteLabel,
-        });
-        return {
-          data: buffer.toString("base64"),
-          filename,
-          mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        };
-      }),
-
-    previewAssetRegisterImport: managerOrAdminProcedure
-      .input(z.object({ fileData: z.string() }))
-      .mutation(async ({ input }) => {
-        const { previewNRCSAssetImport } = await import("./nrcsAssetExcel");
-        return await previewNRCSAssetImport(Buffer.from(input.fileData, "base64"));
-      }),
-
-    confirmAssetRegisterImport: managerOrAdminProcedure
-      .input(
-        z.object({
-          rows: z.array(
-            z.object({
-              assetTag: z.string(),
-              name: z.string(),
-              description: z.string().optional(),
-              categoryId: z.number(),
-              siteId: z.number(),
-              branchCode: z.string(),
-              itemCategory: z.string(),
-              itemCategoryCode: z.string(),
-              assetNum: z.number().int().positive().optional(),
-              itemType: assetItemTypeInputZod,
-              subCategory: z.string().optional(),
-              serialNumber: z.string().optional(),
-              acquisitionCost: z.string().optional(),
-              currentDepreciatedValue: z.number().optional(),
-              currentValue: z.string().optional(),
-              acquisitionMethod: z.string().optional(),
-              projectRef: z.string().optional(),
-              acquisitionDate: z.date().optional(),
-              acquisitionCondition: z.enum(["New", "Used"]).optional(),
-              registerStatus: registerStatusZodEnum,
-              assignedToName: z.string().optional(),
-              department: z.string().optional(),
-              location: z.string().optional(),
-              physicalCondition: z
-                .enum(["Good", "Fair", "Damaged", "Beyond Repair"])
-                .optional(),
-              lastCheckedAt: z.date().optional(),
-              notes: z.string().optional(),
-            })
-          ),
-        })
-      )
-      .mutation(async ({ input }) => {
-        try {
-          const { confirmNRCSAssetImport } = await import("./nrcsAssetExcel");
-          return await confirmNRCSAssetImport(
-            input.rows.map((row) => ({
-              ...row,
-              itemType: normalizeAssetItemType(row.itemType),
-            }))
-          );
-        } catch (e) {
-          console.error("[bulkOperations.confirmAssetRegisterImport]", e);
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message:
-              "Import failed: the import could not be completed. Please contact your administrator if this persists.",
-          });
-        }
-      }),
-
-    exportSites: protectedProcedure
-      .query(async () => {
-        const { exportSites } = await import('./bulkImportExport');
-        const buffer = await exportSites();
-        return {
-          data: buffer.toString('base64'),
-          filename: `facilities_export_${Date.now()}.xlsx`,
-          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        };
-      }),
-
-    importSites: managerOrAdminProcedure
-      .input(z.object({ fileData: z.string() })) // base64 encoded
-      .mutation(async ({ input }) => {
-        const { importSites } = await import('./bulkImportExport');
-        const buffer = Buffer.from(input.fileData, 'base64');
-        return await importSites(buffer);
-      }),
-
-    downloadSiteTemplate: publicProcedure
-      .query(async () => {
-        const { generateSiteTemplate } = await import('./bulkImportExport');
-        const buffer = await generateSiteTemplate();
-        return {
-          data: buffer.toString('base64'),
-          filename: "NRCS_Facilities_Import_Template.xlsx",
-          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        };
-      }),
-  }),
+  bulkOperations: bulkOperationsRouter,
 
   transfers: transfersRouter,
 
@@ -2693,7 +2483,7 @@ function buildDashboardRequestRecord(params: {
   };
 }
 
-/** Runs after `appRouter` is defined ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â avoids circular type inference from createCaller inside the router. */
+/** Runs after `appRouter` is defined ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â avoids circular type inference from createCaller inside the router. */
 async function loadDashboardAll(
   ctx: TrpcContext,
   input: DashboardAllInput
