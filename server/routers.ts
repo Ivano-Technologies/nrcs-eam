@@ -38,6 +38,7 @@ import { adminRouter } from "./routers/adminRouter";
 import { sitesRouter } from "./routers/sitesRouter";
 import { facilityPhotosRouter } from "./routers/facilityPhotosRouter";
 import { photosRouter } from "./routers/photosRouter";
+import { transfersRouter } from "./routers/transfersRouter";
 import { donorAssetsRouter } from "./donorAssetsRouters";
 import {
   countDonorReportsDueSoon,
@@ -3723,99 +3724,7 @@ export const appRouter = router({
       }),
   }),
 
-  // ============= ASSET TRANSFERS =============
-  transfers: router({
-    list: protectedProcedure
-      .input(z.object({
-        status: z.string().optional(),
-        assetId: z.number().optional(),
-        siteId: z.number().optional(),
-      }).optional())
-      .query(async ({ input, ctx }) => {
-        const scopedSiteId = enforceFacilityScope(ctx.user, input?.siteId);
-        return await db.getAllAssetTransfers({ ...(input ?? {}), siteId: scopedSiteId });
-      }),
-
-    getById: protectedProcedure
-      .input(z.object({ id: z.number() }))
-      .query(async ({ input, ctx }) => {
-        const transfer = await db.getAssetTransferById(input.id);
-        assertRecordFacilityAccess(ctx.user, transfer?.fromSiteId);
-        return transfer;
-      }),
-
-    create: protectedProcedure
-      .input(z.object({
-        assetId: z.number(),
-        fromSiteId: z.number(),
-        toSiteId: z.number(),
-        reason: z.string(),
-        notes: z.string().optional(),
-      }))
-      .mutation(async ({ input, ctx }) => {
-        assertFacilityAccess(ctx.user, input.fromSiteId);
-        return await db.createAssetTransfer({
-          ...input,
-          requestedBy: ctx.user.id,
-        });
-      }),
-
-    approve: managerOrAdminProcedure
-      .input(z.object({ id: z.number() }))
-      .mutation(async ({ input, ctx }) => {
-        return await db.updateAssetTransfer(input.id, {
-          status: 'approved',
-          approvedBy: ctx.user.id,
-          approvalDate: new Date(),
-        });
-      }),
-
-    reject: managerOrAdminProcedure
-      .input(z.object({ id: z.number(), notes: z.string().optional() }))
-      .mutation(async ({ input, ctx }) => {
-        return await db.updateAssetTransfer(input.id, {
-          status: 'rejected',
-          approvedBy: ctx.user.id,
-          approvalDate: new Date(),
-          notes: input.notes,
-        });
-      }),
-
-    startTransfer: protectedProcedure
-      .input(z.object({ id: z.number() }))
-      .mutation(async ({ input }) => {
-        return await db.updateAssetTransfer(input.id, {
-          status: 'in_transit',
-          transferDate: new Date(),
-        });
-      }),
-
-    complete: protectedProcedure
-      .input(z.object({ 
-        id: z.number(),
-        handoverChecklist: z.string().optional(),
-      }))
-      .mutation(async ({ input }) => {
-        const transfer = await db.getAssetTransferById(input.id);
-        if (!transfer) throw new TRPCError({ code: 'NOT_FOUND', message: 'Transfer not found' });
-        
-        // Update asset location
-        await db.updateAsset(transfer.assetId, {
-          siteId: transfer.toSiteId,
-        });
-        
-        return await db.updateAssetTransfer(input.id, {
-          status: 'completed',
-          completionDate: new Date(),
-          handoverChecklist: input.handoverChecklist,
-        });
-      }),
-
-    getPending: managerOrAdminProcedure
-      .query(async () => {
-        return await db.getPendingTransferRequests();
-      }),
-  }),
+  transfers: transfersRouter,
 
   // ============= USER PREFERENCES =============
   userPreferences: router({
