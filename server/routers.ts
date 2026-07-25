@@ -51,6 +51,7 @@ import { reportsRouter } from "./routers/reportsRouter";
 import { notificationsRouter } from "./routers/notificationsRouter";
 import { usersRouter } from "./routers/usersRouter";
 import { workOrdersRouter } from "./routers/workOrdersRouter";
+import { maintenanceRouter } from "./routers/maintenanceRouter";
 import { donorAssetsRouter } from "./donorAssetsRouters";
 import {
   countDonorReportsDueSoon,
@@ -1225,99 +1226,7 @@ export const appRouter = router({
 
   workOrders: workOrdersRouter,
 
-  // ============= MAINTENANCE SCHEDULES =============
-  maintenance: router({
-    list: protectedProcedure
-      .input(z.object({
-        assetId: z.number().optional(),
-        isActive: z.boolean().optional(),
-      }).optional())
-      .query(async ({ input }) => {
-        return await db.getAllMaintenanceSchedules(input);
-      }),
-    
-    upcoming: protectedProcedure
-      .input(z.object({ days: z.number().default(30) }))
-      .query(async ({ input }) => {
-        return await db.getUpcomingMaintenance(input.days);
-      }),
-    
-    create: managerOrAdminProcedure
-      .input(z.object({
-        name: z.string().min(1),
-        description: z.string().optional(),
-        assetId: z.number(),
-        frequency: z.enum(["daily", "weekly", "monthly", "quarterly", "semi_annual", "annual"]),
-        frequencyValue: z.number().default(1),
-        nextDue: z.date(),
-        assignedTo: z.number().optional(),
-        taskTemplate: z.string().optional(),
-        estimatedDuration: z.number().optional(),
-      }))
-      .mutation(async ({ input, ctx }) => {
-        const schedule = await db.createMaintenanceSchedule(input);
-        await db.createAuditLog({
-          userId: ctx.user.id,
-          action: "create_maintenance_schedule",
-          entityType: "maintenance_schedule",
-          entityId: schedule?.id,
-        });
-        return schedule;
-      }),
-    
-    update: managerOrAdminProcedure
-      .input(z.object({
-        id: z.number(),
-        name: z.string().optional(),
-        description: z.string().optional(),
-        frequency: z.enum(["daily", "weekly", "monthly", "quarterly", "semi_annual", "annual"]).optional(),
-        frequencyValue: z.number().optional(),
-        lastPerformed: z.date().optional(),
-        nextDue: z.date().optional(),
-        assignedTo: z.number().optional(),
-        isActive: z.boolean().optional(),
-        taskTemplate: z.string().optional(),
-        estimatedDuration: z.number().optional(),
-      }))
-      .mutation(async ({ input, ctx }) => {
-        const { id, ...data } = input;
-        await db.createAuditLog({
-          userId: ctx.user.id,
-          action: "update_maintenance_schedule",
-          entityType: "maintenance_schedule",
-          entityId: id,
-          changes: JSON.stringify(data),
-        });
-        return await db.updateMaintenanceSchedule(id, data);
-      }),
-
-    // Predictive Maintenance AI
-    getPredictions: managerOrAdminProcedure
-      .query(async () => {
-        const { getAllMaintenancePredictions } = await import('./predictiveMaintenance');
-        return await getAllMaintenancePredictions();
-      }),
-
-    getHighPriorityPredictions: managerOrAdminProcedure
-      .query(async () => {
-        const { getHighPriorityPredictions } = await import('./predictiveMaintenance');
-        return await getHighPriorityPredictions();
-      }),
-
-    getAssetPrediction: managerOrAdminProcedure
-      .input(z.object({ assetId: z.number() }))
-      .query(async ({ input }) => {
-        const { analyzeAssetMaintenancePattern } = await import('./predictiveMaintenance');
-        return await analyzeAssetMaintenancePattern(input.assetId);
-      }),
-
-    autoCreateWorkOrders: managerOrAdminProcedure
-      .mutation(async ({ ctx }) => {
-        const { autoCreatePreventiveWorkOrders } = await import('./predictiveMaintenance');
-        const workOrderIds = await autoCreatePreventiveWorkOrders(ctx.user.id);
-        return { created: workOrderIds.length, workOrderIds };
-      }),
-  }),
+  maintenance: maintenanceRouter,
 
   // ============= INVENTORY =============
   inventory: router({
