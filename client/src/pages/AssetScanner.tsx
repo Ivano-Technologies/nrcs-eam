@@ -467,7 +467,7 @@ ${updateForm.notes}`
           </CardHeader>
           <CardContent className="text-sm space-y-2">
             <p>• Enter the asset tag exactly as it appears on the label</p>
-            <p>• Use the camera scan feature for barcode/QR code scanning (coming soon)</p>
+            <p>• Use the camera scan button to read barcode/QR codes with your device camera</p>
             <p>• Update status and location quickly without navigating to full asset details</p>
             <p>• Notes are automatically timestamped and appended to asset history</p>
           </CardContent>

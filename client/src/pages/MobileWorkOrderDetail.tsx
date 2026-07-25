@@ -5,16 +5,28 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, CheckCircle2, Camera, MessageSquare, Loader2, ImagePlus } from "lucide-react";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  Camera,
+  MessageSquare,
+  Loader2,
+  ImagePlus,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
-
-const MAX_FILE_SIZE_MB = 5;
-const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+import { compressImageForUpload } from "@/lib/compressImage";
+import { useConnectivity } from "@/hooks/useConnectivity";
+import { usePermissions } from "@/_core/hooks/usePermissions";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 export default function MobileWorkOrderDetail() {
   const [, params] = useRoute("/app/mobile-work-order/:id");
   const [, setLocation] = useLocation();
   const search = useSearch();
+  const { isOnline } = useConnectivity();
+  const { isManagerOrAdmin } = usePermissions();
+  const { user } = useAuth();
   const [notes, setNotes] = useState("");
   const [uploading, setUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -23,18 +35,26 @@ export default function MobileWorkOrderDetail() {
   const autoPhotoTriggered = useRef(false);
 
   const workOrderId = params?.id ? Number(params.id) : 0;
-  const { data: workOrder, isLoading, refetch } = trpc.workOrders.getById.useQuery({ id: workOrderId });
+  const { data: workOrder, isLoading, refetch } = trpc.workOrders.getById.useQuery({
+    id: workOrderId,
+  });
   const {
     data: photos = [],
     refetch: refetchPhotos,
     isLoading: photosLoading,
-  } = trpc.workOrders.listPhotos.useQuery(
+  } = trpc.workOrders.photos.list.useQuery(
     { workOrderId },
     { enabled: workOrderId > 0 },
   );
 
-  const uploadUrlMutation = trpc.workOrders.uploadUrl.useMutation();
-  const attachPhotoMutation = trpc.workOrders.attachPhoto.useMutation();
+  const uploadMutation = trpc.workOrders.photos.upload.useMutation();
+  const deleteMutation = trpc.workOrders.photos.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Photo deleted");
+      void refetchPhotos();
+    },
+    onError: (error) => toast.error(error.message),
+  });
 
   const updateMutation = trpc.workOrders.update.useMutation({
     onSuccess: () => {
@@ -47,36 +67,18 @@ export default function MobileWorkOrderDetail() {
   });
 
   const uploadPhoto = async (file: File) => {
-    if (!ACCEPTED_TYPES.includes(file.type)) {
-      toast.error("Only JPEG, PNG, and WebP images are allowed");
-      return;
-    }
-    if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-      toast.error(`Photo must be under ${MAX_FILE_SIZE_MB}MB`);
+    if (!isOnline) {
+      toast.error("Photos need a connection");
       return;
     }
 
     setUploading(true);
     try {
-      const { uploadUrl, photoKey, publicUrl } = await uploadUrlMutation.mutateAsync({
+      const compressed = await compressImageForUpload(file);
+      await uploadMutation.mutateAsync({
         workOrderId,
-        fileName: file.name || `wo-${workOrderId}.jpg`,
-        fileType: file.type,
-      });
-
-      const putRes = await fetch(uploadUrl, {
-        method: "PUT",
-        body: file,
-        headers: { "Content-Type": file.type },
-      });
-      if (!putRes.ok) {
-        throw new Error("Storage upload failed");
-      }
-
-      await attachPhotoMutation.mutateAsync({
-        workOrderId,
-        photoUrl: publicUrl,
-        photoKey,
+        data: compressed.dataUrl,
+        mimeType: compressed.mimeType,
       });
       toast.success("Photo uploaded");
       await refetchPhotos();
@@ -98,12 +100,11 @@ export default function MobileWorkOrderDetail() {
   useEffect(() => {
     const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
     if (params.get("takePhoto") !== "1" || autoPhotoTriggered.current) return;
-    if (!workOrder || workOrder.status !== "in_progress") return;
+    if (!workOrder || workOrder.status !== "in_progress" || !isOnline) return;
     autoPhotoTriggered.current = true;
-    // Give the page a tick to paint before opening the camera sheet.
     const t = window.setTimeout(() => cameraInputRef.current?.click(), 250);
     return () => window.clearTimeout(t);
-  }, [search, workOrder]);
+  }, [search, workOrder, isOnline]);
 
   const handleStatusUpdate = (newStatus: string) => {
     updateMutation.mutate({
@@ -182,28 +183,28 @@ export default function MobileWorkOrderDetail() {
 
   const canAttachPhotos =
     workOrder.status === "in_progress" || workOrder.status === "completed";
+  const photoCaptureDisabled = !isOnline || uploading || !canAttachPhotos || photos.length >= 10;
 
   return (
     <div className="min-h-screen bg-gray-50">
       <input
         ref={cameraInputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp"
+        accept="image/*"
         capture="environment"
         className="hidden"
-        disabled={uploading || !canAttachPhotos}
+        disabled={photoCaptureDisabled}
         onChange={onFilePicked}
       />
       <input
         ref={galleryInputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp"
+        accept="image/*"
         className="hidden"
-        disabled={uploading || !canAttachPhotos}
+        disabled={photoCaptureDisabled}
         onChange={onFilePicked}
       />
 
-      {/* Header */}
       <div className="bg-white border-b sticky top-0 z-10">
         <div className="p-4 flex items-center gap-3">
           <Button
@@ -220,9 +221,7 @@ export default function MobileWorkOrderDetail() {
         </div>
       </div>
 
-      {/* Content */}
       <div className="p-4 space-y-4">
-        {/* Status and Priority */}
         <Card>
           <CardContent className="p-4">
             <div className="flex gap-2 mb-4">
@@ -234,7 +233,6 @@ export default function MobileWorkOrderDetail() {
               </Badge>
             </div>
 
-            {/* Quick Actions */}
             {workOrder.status === "pending" && (
               <Button
                 className="w-full"
@@ -257,7 +255,7 @@ export default function MobileWorkOrderDetail() {
                 <Button
                   className="w-full"
                   variant="outline"
-                  disabled={uploading}
+                  disabled={photoCaptureDisabled}
                   onClick={() => cameraInputRef.current?.click()}
                 >
                   {uploading ? (
@@ -272,10 +270,15 @@ export default function MobileWorkOrderDetail() {
                     </>
                   )}
                 </Button>
+                {!isOnline && (
+                  <p className="text-xs text-muted-foreground text-center">
+                    Photos need a connection
+                  </p>
+                )}
                 <Button
                   className="w-full"
                   variant="ghost"
-                  disabled={uploading}
+                  disabled={photoCaptureDisabled}
                   onClick={() => galleryInputRef.current?.click()}
                 >
                   <ImagePlus className="mr-2 h-4 w-4" />
@@ -303,7 +306,6 @@ export default function MobileWorkOrderDetail() {
           </CardContent>
         </Card>
 
-        {/* Photos */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base">
@@ -325,39 +327,58 @@ export default function MobileWorkOrderDetail() {
               </p>
             ) : (
               <div className="grid grid-cols-2 gap-3">
-                {photos.map((photo) => (
-                  <button
-                    key={photo.id}
-                    type="button"
-                    className="aspect-square rounded-lg overflow-hidden border bg-muted"
-                    onClick={() => setPreviewUrl(photo.photoUrl)}
-                  >
-                    <img
-                      src={photo.photoUrl}
-                      alt={photo.caption || `Work order photo ${photo.id}`}
-                      className="w-full h-full object-cover"
-                    />
-                  </button>
-                ))}
+                {photos.map((photo) => {
+                  const canDelete =
+                    isManagerOrAdmin || photo.uploadedByUserId === user?.id;
+                  return (
+                    <div key={photo.id} className="relative aspect-square">
+                      <button
+                        type="button"
+                        className="w-full h-full rounded-lg overflow-hidden border bg-muted"
+                        onClick={() => setPreviewUrl(photo.publicUrl)}
+                      >
+                        <img
+                          src={photo.publicUrl}
+                          alt={photo.caption || `Work order photo ${photo.id}`}
+                          className="w-full h-full object-cover"
+                        />
+                      </button>
+                      {canDelete && (
+                        <button
+                          type="button"
+                          className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-1"
+                          disabled={deleteMutation.isPending}
+                          onClick={() => deleteMutation.mutate({ id: photo.id })}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
-            {workOrder.status === "completed" && canAttachPhotos && (
+            {workOrder.status === "completed" && (
               <div className="mt-3 space-y-2">
                 <Button
                   className="w-full"
                   variant="outline"
-                  disabled={uploading || photos.length >= 10}
+                  disabled={photoCaptureDisabled}
                   onClick={() => cameraInputRef.current?.click()}
                 >
                   <Camera className="mr-2 h-4 w-4" />
                   Add photo
                 </Button>
+                {!isOnline && (
+                  <p className="text-xs text-muted-foreground text-center">
+                    Photos need a connection
+                  </p>
+                )}
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Description */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Description</CardTitle>
@@ -369,24 +390,6 @@ export default function MobileWorkOrderDetail() {
           </CardContent>
         </Card>
 
-        {/* Asset Info */}
-        {(workOrder as { assetName?: string }).assetName && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Asset</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="font-medium">{(workOrder as { assetName?: string }).assetName}</p>
-              {(workOrder as { assetTag?: string }).assetTag && (
-                <p className="text-sm text-muted-foreground">
-                  Tag: {(workOrder as { assetTag?: string }).assetTag}
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Add Notes */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Add Notes</CardTitle>
@@ -420,7 +423,6 @@ export default function MobileWorkOrderDetail() {
           </CardContent>
         </Card>
 
-        {/* Existing Notes */}
         {workOrder.completionNotes && (
           <Card>
             <CardHeader>
@@ -432,7 +434,6 @@ export default function MobileWorkOrderDetail() {
           </Card>
         )}
 
-        {/* Dates */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Timeline</CardTitle>
