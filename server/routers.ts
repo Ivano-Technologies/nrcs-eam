@@ -44,6 +44,7 @@ import { emailNotificationsRouter } from "./routers/emailNotificationsRouter";
 import { pendingUsersRouter } from "./routers/pendingUsersRouter";
 import { workOrderTemplatesRouter } from "./routers/workOrderTemplatesRouter";
 import { depreciationRouter } from "./routers/depreciationRouter";
+import { fleetHealthRouter } from "./routers/fleetHealthRouter";
 import { donorAssetsRouter } from "./donorAssetsRouters";
 import {
   countDonorReportsDueSoon,
@@ -3356,28 +3357,7 @@ export const appRouter = router({
       }),
   }),
 
-  fleetHealth: router({
-    summary: managerOrAdminProcedure
-      .input(z.object({ siteId: z.number().optional() }).optional())
-      .query(async ({ input }) => {
-        const { buildFleetHealthSummary } = await import("./reports/fleetHealth");
-        return await buildFleetHealthSummary(input ?? undefined);
-      }),
-
-    exportPdf: managerOrAdminProcedure
-      .input(z.object({ siteId: z.number().optional() }).optional())
-      .mutation(async ({ input }) => {
-        const { buildFleetHealthSummary } = await import("./reports/fleetHealth");
-        const { renderFleetHealthPdf } = await import("./reports/fleetHealthPdf");
-        const summary = await buildFleetHealthSummary(input ?? undefined);
-        const buffer = await renderFleetHealthPdf(summary);
-        return {
-          data: buffer.toString("base64"),
-          filename: `fleet-health-${summary.reportDate}.pdf`,
-          mimeType: "application/pdf",
-        };
-      }),
-  }),
+  fleetHealth: fleetHealthRouter,
 
   branchScorecards: router({
     list: managerOrAdminProcedure.query(async () => {
