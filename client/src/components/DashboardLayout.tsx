@@ -225,7 +225,7 @@ function DashboardLayoutContent({
               <div className="flex flex-col items-center gap-2 px-1 w-full">
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Link href={appPath("/")}>
+                    <Link href={appPath("/")} aria-label="Go to Dashboard">
                       <div className="flex justify-center w-full rounded-md transition-opacity hover:opacity-80 cursor-pointer">
                         <img
                           src="/nrcs-logo-source.png"
@@ -311,6 +311,7 @@ function DashboardLayoutContent({
                   <input
                     type="text"
                     placeholder="Search menu..."
+                    aria-label="Search menu"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full h-9 pl-8 pr-3 text-[17px] bg-sidebar-accent/50 border border-sidebar-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground"
@@ -335,6 +336,13 @@ function DashboardLayoutContent({
                 <button
                   type="button"
                   data-testid="user-menu-trigger"
+                  aria-label={
+                    sidebarWidth === PRESET_WIDTHS.narrow
+                      ? user?.name
+                        ? `User menu, ${user.name}`
+                        : "User menu"
+                      : undefined
+                  }
                   className={`flex items-center gap-3 rounded-lg px-1 py-1 hover:bg-accent/50 transition-colors w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${sidebarWidth === PRESET_WIDTHS.narrow ? 'justify-center' : ''}`}
                 >
                   <Avatar className="h-[47px] w-[47px] border shrink-0">
