@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ViewToggle } from "@/components/ViewToggle";
+import { useMobileDefaultViewMode } from "@/hooks/useMobileDefaultViewMode";
 import { CardQrCode } from "@/components/CardQrCode";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
 import { ModuleFiltersCard, ModuleFilterSearch } from "@/components/ModuleFiltersCard";
@@ -115,14 +116,8 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
       setStatus(st);
     }
   }, [urlSearch]);
-  const [overviewViewMode, setOverviewViewMode] = useState<"table" | "card">(() => {
-    if (typeof window === "undefined") return "table";
-    return window.localStorage.getItem("viewMode_inventory") === "card" ? "card" : "table";
-  });
-  const [catalogueViewMode, setCatalogueViewMode] = useState<"table" | "card">(() => {
-    if (typeof window === "undefined") return "table";
-    return window.localStorage.getItem("viewMode_inventory_catalogue") === "card" ? "card" : "table";
-  });
+  const [overviewViewMode, setOverviewViewMode] = useMobileDefaultViewMode("viewMode_inventory");
+  const [catalogueViewMode, setCatalogueViewMode] = useMobileDefaultViewMode("viewMode_inventory_catalogue");
   const [warehouseId, setWarehouseId] = useState<string>("all");
   const [category, setCategory] = useState<string>("all");
   const [status, setStatus] = useState<string>("all");
@@ -335,18 +330,6 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
   }, [selectedItemDetail.data?.id, selectedItemDetail.data?.itemCategory]);
 
   const catalogueRows = catalogueQuery.data ?? [];
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem("viewMode_inventory", overviewViewMode);
-    }
-  }, [overviewViewMode]);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem("viewMode_inventory_catalogue", catalogueViewMode);
-    }
-  }, [catalogueViewMode]);
 
   return (
     <div className="space-y-5">

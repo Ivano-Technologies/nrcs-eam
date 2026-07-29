@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { ViewToggle, type ViewMode } from "@/components/ViewToggle";
+import { ViewToggle } from "@/components/ViewToggle";
+import { useMobileDefaultViewMode } from "@/hooks/useMobileDefaultViewMode";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { toast } from "sonner";
 import { downloadBase64File } from "@/lib/download";
@@ -27,7 +28,7 @@ function priorityVariant(priority?: string) {
 export default function Requisitions({ embedInShell = false }: { embedInShell?: boolean } = {}) {
   const [location, setLocation] = useLocation();
   const { isAdmin } = usePermissions();
-  const [viewMode, setViewMode] = useState<ViewMode>(() => (localStorage.getItem("viewMode_inventory_requisitions") as ViewMode) || "table");
+  const [viewMode, setViewMode] = useMobileDefaultViewMode("viewMode_inventory_requisitions");
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState("all");
   const [priority, setPriority] = useState("all");
@@ -39,10 +40,6 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
   const [incidentReference, setIncidentReference] = useState("");
   const [affectedPopulation, setAffectedPopulation] = useState("");
   const [lines, setLines] = useState<ReqLine[]>([{ catalogueId: "", quantity: "", urgency: "routine", notes: "" }]);
-
-  useEffect(() => {
-    localStorage.setItem("viewMode_inventory_requisitions", viewMode);
-  }, [viewMode]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;

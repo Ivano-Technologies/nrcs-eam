@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,13 +8,14 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ViewToggle, type ViewMode } from "@/components/ViewToggle";
+import { ViewToggle } from "@/components/ViewToggle";
+import { useMobileDefaultViewMode } from "@/hooks/useMobileDefaultViewMode";
 import { toast } from "sonner";
 import { downloadBase64File } from "@/lib/download";
 import { Loader2 } from "lucide-react";
 
 export default function Distributions({ embedInShell = false }: { embedInShell?: boolean } = {}) {
-  const [viewMode, setViewMode] = useState<ViewMode>(() => (localStorage.getItem("viewMode_inventory_distributions") as ViewMode) || "table");
+  const [viewMode, setViewMode] = useMobileDefaultViewMode("viewMode_inventory_distributions");
   const [open, setOpen] = useState(false);
   const [incident, setIncident] = useState("");
   const [location, setLocation] = useState("");
@@ -31,8 +32,6 @@ export default function Distributions({ embedInShell = false }: { embedInShell?:
   const [observers, setObservers] = useState("");
   const [notes, setNotes] = useState("");
   const [challenges, setChallenges] = useState("");
-
-  useEffect(() => localStorage.setItem("viewMode_inventory_distributions", viewMode), [viewMode]);
 
   const waybills = trpc.inventoryV2.waybills.list.useQuery({ status: "dispatched" });
   const list = trpc.inventoryV2.distributions.list.useQuery({ incidentReference: incident || undefined, location: location || undefined });
