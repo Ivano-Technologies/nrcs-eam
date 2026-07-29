@@ -1,8 +1,10 @@
 import { ManagerFinanceGate } from "@/components/finance/ManagerFinanceGate";
 import PageHeader from "@/components/ui/PageHeader";
 import PageLoader from "@/components/ui/PageLoader";
+import { ViewToggle } from "@/components/ViewToggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -15,12 +17,14 @@ import { downloadBase64File } from "@/lib/download";
 import { formatNaira } from "@/lib/format";
 import { appPath } from "@/lib/routes";
 import { trpc } from "@/lib/trpc";
+import { useMobileDefaultViewMode } from "@/hooks/useMobileDefaultViewMode";
 import { ArrowDown, ArrowUp, FileDown, Loader2, Trophy } from "lucide-react";
 import { useMemo } from "react";
 import { Link } from "wouter";
 import { toast } from "sonner";
 
 export default function BranchScorecards() {
+  const [viewMode, setViewMode] = useMobileDefaultViewMode("viewMode_branch_scorecards");
   const { data, isLoading } = trpc.branchScorecards.list.useQuery();
   const exportXlsx = trpc.branchScorecards.exportXlsx.useMutation({
     onSuccess: (r) => {
@@ -45,7 +49,8 @@ export default function BranchScorecards() {
           subtitle="Composite branch health — verification, maintenance, stock, expiry, and asset pipeline."
         />
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <ViewToggle value={viewMode} onChange={setViewMode} />
           <Button
             variant="outline"
             size="sm"
@@ -61,6 +66,57 @@ export default function BranchScorecards() {
           </Button>
         </div>
 
+        {viewMode === "card" ? (
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {rows.map((row, idx) => (
+              <Card
+                key={row.branchId}
+                data-testid={`scorecard-row-${row.branchId}`}
+                className={
+                  row.branchId === bestId
+                    ? "border-green-200 bg-green-50/50 dark:border-green-900 dark:bg-green-950/20"
+                    : row.branchId === worstId
+                      ? "border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/20"
+                      : undefined
+                }
+              >
+                <CardContent className="space-y-2 p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm text-muted-foreground">#{idx + 1}</span>
+                    <span className="text-lg font-semibold">{row.compositeScore}</span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-semibold">{row.branchName}</p>
+                    {row.branchId === bestId ? (
+                      <Badge className="bg-green-100 text-green-800">Top</Badge>
+                    ) : null}
+                    {row.branchId === worstId ? (
+                      <Badge className="bg-amber-100 text-amber-800">Needs attention</Badge>
+                    ) : null}
+                  </div>
+                  <p className="text-sm">
+                    {row.trendVsPriorMonth == null ? (
+                      <span className="text-muted-foreground">Trend —</span>
+                    ) : row.trendVsPriorMonth >= 0 ? (
+                      <span className="inline-flex items-center text-green-700">
+                        <ArrowUp className="mr-1 h-3 w-3" />
+                        {row.trendVsPriorMonth.toFixed(1)}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center text-red-700">
+                        <ArrowDown className="mr-1 h-3 w-3" />
+                        {row.trendVsPriorMonth.toFixed(1)}
+                      </span>
+                    )}
+                  </p>
+                  <Link href={appPath(`/reports?branch=${row.branchId}`)} className="text-sm text-primary hover:underline">
+                    Branch summary
+                  </Link>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
         <div className="rounded-md border">
           <Table>
             <TableHeader>
@@ -131,6 +187,7 @@ export default function BranchScorecards() {
             </TableBody>
           </Table>
         </div>
+        )}
       </div>
     </ManagerFinanceGate>
   );

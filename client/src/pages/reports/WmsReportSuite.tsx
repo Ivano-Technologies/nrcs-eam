@@ -10,6 +10,8 @@ import { trpc } from "@/lib/trpc";
 import { ExportMenu } from "@/components/ExportMenu";
 import { Warehouse, FileDown } from "lucide-react";
 import { downloadBase64File } from "@/lib/download";
+import { useMobileTableColumns, MobileColumnsToggle, mobileSecondaryCol } from "@/hooks/useMobileTableColumns";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 function exportCsv(filename: string, columns: string[], rows: Array<Record<string, unknown>>) {
@@ -24,6 +26,7 @@ function exportCsv(filename: string, columns: string[], rows: Array<Record<strin
 }
 
 export default function WmsReportSuite(props: any) {
+  const { isMobile, showAllColumns, showAll, setShowAll } = useMobileTableColumns();
   const initialTab = props.initialTab ?? "movements";
   const [warehouseId, setWarehouseId] = useState<string>("all");
   const [startDate, setStartDate] = useState("");
@@ -119,6 +122,9 @@ export default function WmsReportSuite(props: any) {
             </Select>
           </div>
         </div>
+        <div className="flex justify-end pt-2">
+          <MobileColumnsToggle isMobile={isMobile} showAll={showAll} onToggle={setShowAll} />
+        </div>
       </div>
 
       <Tabs defaultValue={initialTab}>
@@ -153,18 +159,18 @@ export default function WmsReportSuite(props: any) {
               },
             ]}
           />
-          <div className="rounded-md border">
-            <Table><TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Document ref</TableHead><TableHead>Item</TableHead><TableHead>CTN</TableHead><TableHead>Donor</TableHead><TableHead>From/To</TableHead><TableHead>Qty in</TableHead><TableHead>Qty out</TableHead><TableHead>Balance</TableHead><TableHead>Source</TableHead></TableRow></TableHeader>
-              <TableBody>{(movementsQuery.data ?? []).map((row, idx) => <TableRow key={idx}><TableCell>{row.date}</TableCell><TableCell>{row.documentRef ?? "—"}</TableCell><TableCell>{row.item}</TableCell><TableCell>{row.ctn}</TableCell><TableCell>{row.donor}</TableCell><TableCell>{row.fromTo ?? "—"}</TableCell><TableCell>{row.qtyIn}</TableCell><TableCell>{row.qtyOut}</TableCell><TableCell>{row.balanceAfter}</TableCell><TableCell>{row.sourceType}</TableCell></TableRow>)}</TableBody>
+          <div className="frozen-table-wrap sticky-first-col overflow-x-auto rounded-md border">
+            <Table><TableHeader><TableRow><TableHead>Date</TableHead><TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Document ref</TableHead><TableHead>Item</TableHead><TableHead className={cn(mobileSecondaryCol(showAllColumns))}>CTN</TableHead><TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Donor</TableHead><TableHead className={cn(mobileSecondaryCol(showAllColumns))}>From/To</TableHead><TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Qty in</TableHead><TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Qty out</TableHead><TableHead>Balance</TableHead><TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Source</TableHead></TableRow></TableHeader>
+              <TableBody>{(movementsQuery.data ?? []).map((row, idx) => <TableRow key={idx}><TableCell>{row.date}</TableCell><TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.documentRef ?? "—"}</TableCell><TableCell>{row.item}</TableCell><TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.ctn}</TableCell><TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.donor}</TableCell><TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.fromTo ?? "—"}</TableCell><TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.qtyIn}</TableCell><TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.qtyOut}</TableCell><TableCell>{row.balanceAfter}</TableCell><TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.sourceType}</TableCell></TableRow>)}</TableBody>
             </Table>
           </div>
         </TabsContent>
 
         <TabsContent value="aging" className="space-y-2">
           <Button variant="outline" onClick={() => exportCsv("wms-ctn-aging.csv", ["ctnCode","item","donor","warehouse","balance","expiryDate","daysUntilExpiry","color"], (ctnAgingQuery.data ?? []) as any)}>Export CSV</Button>
-          <div className="rounded-md border">
-            <Table><TableHeader><TableRow><TableHead>CTN code</TableHead><TableHead>Item</TableHead><TableHead>Donor</TableHead><TableHead>Warehouse</TableHead><TableHead>Balance</TableHead><TableHead>Expiry</TableHead><TableHead>Days</TableHead></TableRow></TableHeader>
-              <TableBody>{(ctnAgingQuery.data ?? []).map((row, idx) => <TableRow key={idx}><TableCell>{row.ctnCode}</TableCell><TableCell>{row.item}</TableCell><TableCell>{row.donor}</TableCell><TableCell>{row.warehouse}</TableCell><TableCell>{row.balance}</TableCell><TableCell>{row.expiryDate ?? "—"}</TableCell><TableCell className={row.color === "red" ? "text-red-600" : row.color === "amber" ? "text-amber-600" : "text-green-600"}>{row.daysUntilExpiry ?? "—"}</TableCell></TableRow>)}</TableBody>
+          <div className="frozen-table-wrap sticky-first-col overflow-x-auto rounded-md border">
+            <Table><TableHeader><TableRow><TableHead>CTN code</TableHead><TableHead>Item</TableHead><TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Donor</TableHead><TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Warehouse</TableHead><TableHead>Balance</TableHead><TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Expiry</TableHead><TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Days</TableHead></TableRow></TableHeader>
+              <TableBody>{(ctnAgingQuery.data ?? []).map((row, idx) => <TableRow key={idx}><TableCell>{row.ctnCode}</TableCell><TableCell>{row.item}</TableCell><TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.donor}</TableCell><TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.warehouse}</TableCell><TableCell>{row.balance}</TableCell><TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.expiryDate ?? "—"}</TableCell><TableCell className={cn(row.color === "red" ? "text-red-600" : row.color === "amber" ? "text-amber-600" : "text-green-600", mobileSecondaryCol(showAllColumns))}>{row.daysUntilExpiry ?? "—"}</TableCell></TableRow>)}</TableBody>
             </Table>
           </div>
         </TabsContent>
@@ -210,15 +216,15 @@ export default function WmsReportSuite(props: any) {
               </p>
             ) : null}
             {donorId && donorStatementQuery.data ? (
-              <div className="rounded-md border">
+              <div className="frozen-table-wrap sticky-first-col overflow-x-auto rounded-md border">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Item</TableHead>
                       <TableHead>Opening</TableHead>
-                      <TableHead>Received</TableHead>
-                      <TableHead>Distributed</TableHead>
-                      <TableHead>Losses</TableHead>
+                      <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Received</TableHead>
+                      <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Distributed</TableHead>
+                      <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Losses</TableHead>
                       <TableHead>Closing</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -227,9 +233,9 @@ export default function WmsReportSuite(props: any) {
                       <TableRow key={line.catalogueId}>
                         <TableCell>{line.itemCode} — {line.itemName}</TableCell>
                         <TableCell>{line.openingBalance}</TableCell>
-                        <TableCell>{line.received}</TableCell>
-                        <TableCell>{line.distributed}</TableCell>
-                        <TableCell>{line.losses}</TableCell>
+                        <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{line.received}</TableCell>
+                        <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{line.distributed}</TableCell>
+                        <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{line.losses}</TableCell>
                         <TableCell>{line.closingBalance}</TableCell>
                       </TableRow>
                     ))}
@@ -239,26 +245,26 @@ export default function WmsReportSuite(props: any) {
             ) : null}
           </div>
           <Button variant="outline" disabled={exportReportMutation.isPending} onClick={() => { void downloadExcel("wms-donor-contribution.xlsx", (donorQuery.data ?? []) as any); }}>Export contribution Excel</Button>
-          <div className="rounded-md border">
-            <Table><TableHeader><TableRow><TableHead>Donor</TableHead><TableHead>Item</TableHead><TableHead>Total units received</TableHead><TableHead>Total distributed</TableHead><TableHead>In stock</TableHead><TableHead>% distributed</TableHead></TableRow></TableHeader>
-              <TableBody>{(donorQuery.data ?? []).map((row, idx) => <TableRow key={idx}><TableCell>{row.donor}</TableCell><TableCell>{row.item}</TableCell><TableCell>{row.received}</TableCell><TableCell>{row.distributed}</TableCell><TableCell>{row.inStock}</TableCell><TableCell>{row.percentDistributed.toFixed(2)}%</TableCell></TableRow>)}</TableBody>
+          <div className="frozen-table-wrap sticky-first-col overflow-x-auto rounded-md border">
+            <Table><TableHeader><TableRow><TableHead>Donor</TableHead><TableHead>Item</TableHead><TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Total units received</TableHead><TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Total distributed</TableHead><TableHead>In stock</TableHead><TableHead className={cn(mobileSecondaryCol(showAllColumns))}>% distributed</TableHead></TableRow></TableHeader>
+              <TableBody>{(donorQuery.data ?? []).map((row, idx) => <TableRow key={idx}><TableCell>{row.donor}</TableCell><TableCell>{row.item}</TableCell><TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.received}</TableCell><TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.distributed}</TableCell><TableCell>{row.inStock}</TableCell><TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.percentDistributed.toFixed(2)}%</TableCell></TableRow>)}</TableBody>
             </Table>
           </div>
         </TabsContent>
 
         <TabsContent value="loss" className="space-y-2">
           <Button variant="outline" onClick={() => exportCsv("wms-loss-damage.csv", ["date","item","ctn","donor","warehouse","qty","sourceType","documentRef","reason"], (lossQuery.data ?? []) as any)}>Export CSV</Button>
-          <div className="rounded-md border">
-            <Table><TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Item</TableHead><TableHead>CTN</TableHead><TableHead>Donor</TableHead><TableHead>Warehouse</TableHead><TableHead>Qty</TableHead><TableHead>Source</TableHead><TableHead>Document ref</TableHead><TableHead>Reason</TableHead></TableRow></TableHeader>
-              <TableBody>{(lossQuery.data ?? []).map((row, idx) => <TableRow key={idx}><TableCell>{row.date}</TableCell><TableCell>{row.item}</TableCell><TableCell>{row.ctn}</TableCell><TableCell>{row.donor}</TableCell><TableCell>{row.warehouse}</TableCell><TableCell>{row.qty}</TableCell><TableCell>{row.sourceType}</TableCell><TableCell>{row.documentRef ?? "—"}</TableCell><TableCell>{row.reason ?? "—"}</TableCell></TableRow>)}</TableBody>
+          <div className="frozen-table-wrap sticky-first-col overflow-x-auto rounded-md border">
+            <Table><TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Item</TableHead><TableHead className={cn(mobileSecondaryCol(showAllColumns))}>CTN</TableHead><TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Donor</TableHead><TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Warehouse</TableHead><TableHead>Qty</TableHead><TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Source</TableHead><TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Document ref</TableHead><TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Reason</TableHead></TableRow></TableHeader>
+              <TableBody>{(lossQuery.data ?? []).map((row, idx) => <TableRow key={idx}><TableCell>{row.date}</TableCell><TableCell>{row.item}</TableCell><TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.ctn}</TableCell><TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.donor}</TableCell><TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.warehouse}</TableCell><TableCell>{row.qty}</TableCell><TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.sourceType}</TableCell><TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.documentRef ?? "—"}</TableCell><TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.reason ?? "—"}</TableCell></TableRow>)}</TableBody>
             </Table>
           </div>
         </TabsContent>
 
         <TabsContent value="kits" className="space-y-2">
-          <div className="rounded-md border">
-            <Table><TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Kit item</TableHead><TableHead>Kit CTN</TableHead><TableHead>Qty assembled</TableHead><TableHead>Contributing CTNs and donors</TableHead><TableHead>Assembler</TableHead></TableRow></TableHeader>
-              <TableBody>{(kitQuery.data ?? []).map((row, idx) => <TableRow key={idx}><TableCell>{row.date}</TableCell><TableCell>{row.kitItem}</TableCell><TableCell>{row.kitCtn}</TableCell><TableCell>{row.qtyAssembled}</TableCell><TableCell>{row.contributingCtnAndDonor}</TableCell><TableCell>{row.assemblerName ?? "—"}</TableCell></TableRow>)}</TableBody>
+          <div className="frozen-table-wrap sticky-first-col overflow-x-auto rounded-md border">
+            <Table><TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Kit item</TableHead><TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Kit CTN</TableHead><TableHead>Qty assembled</TableHead><TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Contributing CTNs and donors</TableHead><TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Assembler</TableHead></TableRow></TableHeader>
+              <TableBody>{(kitQuery.data ?? []).map((row, idx) => <TableRow key={idx}><TableCell>{row.date}</TableCell><TableCell>{row.kitItem}</TableCell><TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.kitCtn}</TableCell><TableCell>{row.qtyAssembled}</TableCell><TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.contributingCtnAndDonor}</TableCell><TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.assemblerName ?? "—"}</TableCell></TableRow>)}</TableBody>
             </Table>
           </div>
         </TabsContent>

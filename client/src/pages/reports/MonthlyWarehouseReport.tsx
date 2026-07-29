@@ -8,11 +8,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { trpc } from "@/lib/trpc";
 import { downloadBase64File } from "@/lib/download";
 import { ExportMenu } from "@/components/ExportMenu";
+import { useMobileTableColumns, MobileColumnsToggle, mobileSecondaryCol } from "@/hooks/useMobileTableColumns";
+import { cn } from "@/lib/utils";
 import PageHeader from "@/components/ui/PageHeader";
 import { CalendarDays, Loader2 } from "lucide-react";
 
 export default function MonthlyWarehouseReport() {
   const [, setLocation] = useLocation();
+  const { isMobile, showAllColumns, showAll, setShowAll } = useMobileTableColumns();
   const now = new Date();
   const [warehouseId, setWarehouseId] = useState<string>("");
   const [month, setMonth] = useState(String(now.getMonth() + 1));
@@ -76,6 +79,7 @@ export default function MonthlyWarehouseReport() {
       </div>
 
       <div className="flex flex-wrap gap-2">
+        <MobileColumnsToggle isMobile={isMobile} showAll={showAll} onToggle={setShowAll} />
         <ExportMenu
           disabled={!canQuery}
           formats={[
@@ -145,21 +149,21 @@ export default function MonthlyWarehouseReport() {
         </Button>
       </div>
 
-      <div className="frozen-table-wrap rounded-md border">
+      <div className="frozen-table-wrap sticky-first-col overflow-x-auto rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>SN</TableHead>
               <TableHead>Product</TableHead>
-              <TableHead>Unit & weight</TableHead>
-              <TableHead>Opening Balance (a)</TableHead>
-              <TableHead>IN (b)</TableHead>
-              <TableHead>OUT TO: Distributions (c)</TableHead>
-              <TableHead>OUT TO: Branches store (d)</TableHead>
-              <TableHead>OUT TO: Others (e)</TableHead>
-              <TableHead>Loss/Damaged (f)</TableHead>
+              <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Unit & weight</TableHead>
+              <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Opening Balance (a)</TableHead>
+              <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>IN (b)</TableHead>
+              <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>OUT TO: Distributions (c)</TableHead>
+              <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>OUT TO: Branches store (d)</TableHead>
+              <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>OUT TO: Others (e)</TableHead>
+              <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Loss/Damaged (f)</TableHead>
               <TableHead>Closing Balance</TableHead>
-              <TableHead>Comments</TableHead>
+              <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Comments</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -167,15 +171,15 @@ export default function MonthlyWarehouseReport() {
               <TableRow key={row.sn}>
                 <TableCell>{row.sn}</TableCell>
                 <TableCell>{row.product}</TableCell>
-                <TableCell>{row.unitAndWeight}</TableCell>
-                <TableCell>{row.openingBalance}</TableCell>
-                <TableCell>{row.inbound}</TableCell>
-                <TableCell>{row.outDistributions}</TableCell>
-                <TableCell>{row.outBranches}</TableCell>
-                <TableCell>{row.outOthers}</TableCell>
-                <TableCell>{row.lossAndDamaged}</TableCell>
+                <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.unitAndWeight}</TableCell>
+                <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.openingBalance}</TableCell>
+                <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.inbound}</TableCell>
+                <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.outDistributions}</TableCell>
+                <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.outBranches}</TableCell>
+                <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.outOthers}</TableCell>
+                <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.lossAndDamaged}</TableCell>
                 <TableCell>{row.closingBalance}</TableCell>
-                <TableCell>{row.comments}</TableCell>
+                <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.comments}</TableCell>
               </TableRow>
             ))}
           </TableBody>

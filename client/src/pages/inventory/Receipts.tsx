@@ -10,6 +10,8 @@ import { toast } from "sonner";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { Badge } from "@/components/ui/badge";
 import { ModuleFiltersCard, ModuleFilterSearch } from "@/components/ModuleFiltersCard";
+import { useMobileTableColumns, MobileColumnsToggle, mobileSecondaryCol } from "@/hooks/useMobileTableColumns";
+import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
 import { downloadBase64File } from "@/lib/download";
 import { appPath } from "@/lib/routes";
@@ -18,6 +20,7 @@ import { Loader2 } from "lucide-react";
 type Line = { catalogueId: string; ctnId: string; quantity: string; batchNumber: string; expiryDate: string; notes: string };
 
 export default function Receipts({ embedInShell = false }: { embedInShell?: boolean } = {}) {
+  const { isMobile, showAllColumns, showAll, setShowAll } = useMobileTableColumns();
   const [location, setLocation] = useLocation();
   const { isManagerOrAdmin, isStaffOrAbove } = usePermissions();
   const [status, setStatus] = useState<"all" | "draft" | "pending_approval" | "finalized" | "claim_raised">("all");
@@ -108,6 +111,9 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
             </Select>
           </>
         }
+        toolbarStart={
+          <MobileColumnsToggle isMobile={isMobile} showAll={showAll} onToggle={setShowAll} />
+        }
         toolbarEnd={
           <>
             <Button variant="outline">Export</Button>
@@ -125,7 +131,7 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
       />
 
       <div
-        className="frozen-table-wrap rounded-md border"
+        className="frozen-table-wrap sticky-first-col overflow-x-auto rounded-md border"
         style={
           {
             "--col1-width": "170px",
@@ -139,12 +145,12 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
           <thead className="bg-muted/50">
             <tr className="border-b">
               <th className="px-2 py-2 text-left">Document #</th>
-              <th className="px-2 py-2 text-left">Date of Arrival</th>
+              <th className={cn("px-2 py-2 text-left", mobileSecondaryCol(showAllColumns))}>Date of Arrival</th>
               <th className="px-2 py-2 text-left">Received From</th>
-              <th className="px-2 py-2 text-left">Consignment(s)</th>
-              <th className="px-2 py-2 text-left">Items</th>
+              <th className={cn("px-2 py-2 text-left", mobileSecondaryCol(showAllColumns))}>Consignment(s)</th>
+              <th className={cn("px-2 py-2 text-left", mobileSecondaryCol(showAllColumns))}>Items</th>
               <th className="px-2 py-2 text-left">Status</th>
-              <th className="px-2 py-2 text-left">Actions</th>
+              <th className={cn("px-2 py-2 text-left", mobileSecondaryCol(showAllColumns))}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -162,7 +168,7 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
                 }
               >
                 <td className="px-2 py-2 font-mono">{row.documentNumber}</td>
-                <td className="px-2 py-2">
+                <td className={cn("px-2 py-2", mobileSecondaryCol(showAllColumns))}>
                   {row.dateOfArrival
                     ? new Date(row.dateOfArrival).toLocaleDateString()
                     : row.createdAt
@@ -170,8 +176,8 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
                       : "—"}
                 </td>
                 <td className="px-2 py-2">{row.referenceDocument ?? "—"}</td>
-                <td className="px-2 py-2">{row.referenceDocument ?? "—"}</td>
-                <td className="px-2 py-2">{row.lineCount}</td>
+                <td className={cn("px-2 py-2", mobileSecondaryCol(showAllColumns))}>{row.referenceDocument ?? "—"}</td>
+                <td className={cn("px-2 py-2", mobileSecondaryCol(showAllColumns))}>{row.lineCount}</td>
                 <td className="px-2 py-2">
                   {row.status === "finalized" || row.status === "completed" ? (
                     <Badge className="bg-green-600">finalized</Badge>
@@ -183,7 +189,7 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
                     <Badge variant="secondary">draft</Badge>
                   )}
                 </td>
-                <td className="px-2 py-2">
+                <td className={cn("px-2 py-2", mobileSecondaryCol(showAllColumns))}>
                   <Button
                     size="sm"
                     variant="outline"

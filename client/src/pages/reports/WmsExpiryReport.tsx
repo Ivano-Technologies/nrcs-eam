@@ -1,6 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useMobileTableColumns, MobileColumnsToggle, mobileSecondaryCol } from "@/hooks/useMobileTableColumns";
 import { trpc } from "@/lib/trpc";
+import { cn } from "@/lib/utils";
 
 function tone(days: number | null) {
   if (days == null) return "";
@@ -10,6 +12,7 @@ function tone(days: number | null) {
 }
 
 export default function WmsExpiryReport() {
+  const { isMobile, showAllColumns, showAll, setShowAll } = useMobileTableColumns();
   const q = trpc.inventoryV2.reports.expiryWms.useQuery({ days: 365 });
 
   const exportCsv = () => {
@@ -29,20 +32,23 @@ export default function WmsExpiryReport() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-3xl font-bold">WMS Expiry Report</h1>
-        <Button onClick={exportCsv}>Export CSV</Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <MobileColumnsToggle isMobile={isMobile} showAll={showAll} onToggle={setShowAll} />
+          <Button onClick={exportCsv}>Export CSV</Button>
+        </div>
       </div>
-      <div className="frozen-table-wrap rounded-md border">
+      <div className="frozen-table-wrap sticky-first-col overflow-x-auto rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Item</TableHead>
-              <TableHead>CTN code</TableHead>
-              <TableHead>Donor</TableHead>
-              <TableHead>Location</TableHead>
+              <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>CTN code</TableHead>
+              <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Donor</TableHead>
+              <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Location</TableHead>
               <TableHead className="text-right">Balance</TableHead>
-              <TableHead>Expiry date</TableHead>
+              <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Expiry date</TableHead>
               <TableHead>Days until expiry</TableHead>
             </TableRow>
           </TableHeader>
@@ -50,11 +56,11 @@ export default function WmsExpiryReport() {
             {(q.data ?? []).map((row, idx) => (
               <TableRow key={`${row.ctnCode}-${idx}`}>
                 <TableCell>{row.item}</TableCell>
-                <TableCell className="font-mono">{row.ctnCode}</TableCell>
-                <TableCell>{row.donor}</TableCell>
-                <TableCell>{row.location}</TableCell>
+                <TableCell className={cn("font-mono", mobileSecondaryCol(showAllColumns))}>{row.ctnCode}</TableCell>
+                <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.donor}</TableCell>
+                <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.location}</TableCell>
                 <TableCell className="text-right">{row.balance}</TableCell>
-                <TableCell>{row.expiryDate ?? "—"}</TableCell>
+                <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.expiryDate ?? "—"}</TableCell>
                 <TableCell className={tone(row.daysUntilExpiry)}>{row.daysUntilExpiry ?? "—"}</TableCell>
               </TableRow>
             ))}
@@ -64,4 +70,3 @@ export default function WmsExpiryReport() {
     </div>
   );
 }
-
