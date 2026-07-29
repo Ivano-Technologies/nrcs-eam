@@ -40,6 +40,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc";
+import { useMobileTableColumns, MobileColumnsToggle, mobileSecondaryCol } from "@/hooks/useMobileTableColumns";
+import { cn } from "@/lib/utils";
 import { Ghost, Loader2, Trash2, UserPlus, Users as UsersIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -71,6 +73,7 @@ function statusLabel(s: string): string {
 
 export default function Users() {
   const { user } = useAuth();
+  const { isMobile, showAllColumns, showAll, setShowAll } = useMobileTableColumns();
   const utils = trpc.useUtils();
 
   const [search, setSearch] = useState("");
@@ -284,10 +287,11 @@ export default function Users() {
             </SelectContent>
           </Select>
         </div>
+        <MobileColumnsToggle isMobile={isMobile} showAll={showAll} onToggle={setShowAll} className="self-end" />
       </div>
 
       <div
-        className="frozen-table-wrap rounded-md border"
+        className="frozen-table-wrap sticky-first-col overflow-x-auto rounded-md border"
         style={
           {
             "--col1-width": "180px",
@@ -301,11 +305,11 @@ export default function Users() {
           <TableHeader className="bg-background">
             <TableRow>
               <TableHead className="bg-background">Name</TableHead>
-              <TableHead className="bg-background">Email</TableHead>
+              <TableHead className={cn("max-w-[220px] truncate bg-background", mobileSecondaryCol(showAllColumns))}>Email</TableHead>
               <TableHead className="bg-background">Role</TableHead>
-              <TableHead>Facility</TableHead>
+              <TableHead className={cn("max-w-[200px] truncate", mobileSecondaryCol(showAllColumns))}>Facility</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Last sign in</TableHead>
+              <TableHead className={cn("whitespace-nowrap text-muted-foreground", mobileSecondaryCol(showAllColumns))}>Last sign in</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -316,15 +320,15 @@ export default function Users() {
               return (
                 <TableRow key={u.id} data-testid={`user-row-${u.id}`}>
                   <TableCell className="font-medium bg-background">{u.name || "—"}</TableCell>
-                  <TableCell className="max-w-[220px] truncate bg-background">{u.email || "—"}</TableCell>
+                  <TableCell className={cn("max-w-[220px] truncate bg-background", mobileSecondaryCol(showAllColumns))}>{u.email || "—"}</TableCell>
                   <TableCell className="bg-background">
                     <Badge className={roleBadgeClass(u.role)} variant="secondary">
                       {roleLabel(u.role)}
                     </Badge>
                   </TableCell>
-                  <TableCell className="max-w-[200px] truncate">{facilityName ?? "—"}</TableCell>
+                  <TableCell className={cn("max-w-[200px] truncate", mobileSecondaryCol(showAllColumns))}>{facilityName ?? "—"}</TableCell>
                   <TableCell>{statusLabel(st)}</TableCell>
-                  <TableCell className="whitespace-nowrap text-muted-foreground text-sm">
+                  <TableCell className={cn("whitespace-nowrap text-muted-foreground text-sm", mobileSecondaryCol(showAllColumns))}>
                     {u.lastSignedIn ? new Date(u.lastSignedIn).toLocaleString() : "—"}
                   </TableCell>
                   <TableCell className="text-right">

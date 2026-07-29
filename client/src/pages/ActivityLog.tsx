@@ -6,11 +6,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useMobileTableColumns, MobileColumnsToggle, mobileSecondaryCol } from "@/hooks/useMobileTableColumns";
+import { cn } from "@/lib/utils";
 import { Search, Activity } from "lucide-react";
 import { useAuth } from "@/_core/hooks/useAuth";
 
 export default function ActivityLog() {
   const { user } = useAuth();
+  const { isMobile, showAllColumns, showAll, setShowAll } = useMobileTableColumns();
   const [userQuery, setUserQuery] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [entityType, setEntityType] = useState<string>("all");
@@ -164,6 +167,9 @@ export default function ActivityLog() {
               }}
             />
           </div>
+          <div className="flex justify-end pt-2">
+            <MobileColumnsToggle isMobile={isMobile} showAll={showAll} onToggle={setShowAll} />
+          </div>
         </CardContent>
       </Card>
 
@@ -173,7 +179,7 @@ export default function ActivityLog() {
         <Card>
           <CardContent className="pt-6">
             <div
-              className="frozen-table-wrap"
+              className="frozen-table-wrap sticky-first-col overflow-x-auto"
               style={
                 {
                   "--col1-width": "200px",
@@ -187,9 +193,9 @@ export default function ActivityLog() {
                     <TableHead className="bg-background">Timestamp</TableHead>
                     <TableHead className="bg-background">User</TableHead>
                     <TableHead className="bg-background">Action</TableHead>
-                    <TableHead>Resource</TableHead>
-                    <TableHead>Details</TableHead>
-                    <TableHead>Facility</TableHead>
+                    <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Resource</TableHead>
+                    <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Details</TableHead>
+                    <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Facility</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -200,9 +206,9 @@ export default function ActivityLog() {
                       </TableCell>
                       <TableCell className="bg-background">{log.userLabel}</TableCell>
                       <TableCell className="bg-background">{log.action}</TableCell>
-                      <TableCell>{log.resource}</TableCell>
-                      <TableCell>{log.details ?? "-"}</TableCell>
-                      <TableCell>{log.facilityName ?? "-"}</TableCell>
+                      <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{log.resource}</TableCell>
+                      <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{log.details ?? "-"}</TableCell>
+                      <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{log.facilityName ?? "-"}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

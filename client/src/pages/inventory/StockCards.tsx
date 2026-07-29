@@ -1,7 +1,11 @@
 import { ModuleFilterSearch, ModuleFiltersCard } from "@/components/ModuleFiltersCard";
+import { ViewToggle } from "@/components/ViewToggle";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useMobileDefaultViewMode } from "@/hooks/useMobileDefaultViewMode";
 import { trpc } from "@/lib/trpc";
 import { useMemo, useState } from "react";
 import { useLocation } from "wouter";
@@ -9,6 +13,7 @@ import { useLocation } from "wouter";
 type Props = { embedInShell?: boolean };
 
 export default function StockCards({ embedInShell = false }: Props = {}) {
+  const [viewMode, setViewMode] = useMobileDefaultViewMode("viewMode_stock_cards");
   const [search, setSearch] = useState("");
   const [locationId, setLocationId] = useState("all");
   const [expiryWindow, setExpiryWindow] = useState<"all" | "expiring-30" | "expiring-90" | "expired">("all");
@@ -24,6 +29,9 @@ export default function StockCards({ embedInShell = false }: Props = {}) {
     expiryWindow,
     lowStockOnly,
   });
+
+  const rows = cards.data ?? [];
+  const openDetail = (stockCardId: number) => setLocation(`/app/inventory/tracking/stock-cards/${stockCardId}`);
 
   return (
     <div className="space-y-4">
@@ -49,7 +57,7 @@ export default function StockCards({ embedInShell = false }: Props = {}) {
                 ))}
               </SelectContent>
             </Select>
-            <Select value={expiryWindow} onValueChange={(v) => setExpiryWindow(v as any)}>
+            <Select value={expiryWindow} onValueChange={(v) => setExpiryWindow(v as typeof expiryWindow)}>
               <SelectTrigger className="h-9 w-[180px]">
                 <SelectValue placeholder="Expiry window" />
               </SelectTrigger>
@@ -69,52 +77,79 @@ export default function StockCards({ embedInShell = false }: Props = {}) {
             </Button>
           </>
         }
+        toolbarStart={<ViewToggle value={viewMode} onChange={setViewMode} />}
       />
 
-      <div className="frozen-table-wrap rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Item name</TableHead>
-              <TableHead>CTN code</TableHead>
-              <TableHead>Donor</TableHead>
-              <TableHead>Location</TableHead>
-              <TableHead className="text-right">Current balance</TableHead>
-              <TableHead>Unit</TableHead>
-              <TableHead>Expiry date</TableHead>
-              <TableHead>Min stock flag</TableHead>
-              <TableHead>Last movement</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {(cards.data ?? []).map((row) => (
-              <TableRow
-                key={row.stockCardId}
-                className="cursor-pointer"
-                onClick={() => setLocation(`/app/inventory/tracking/stock-cards/${row.stockCardId}`)}
-              >
-                <TableCell>{row.itemName}</TableCell>
-                <TableCell className="font-mono">{row.ctnCode}</TableCell>
-                <TableCell>{row.donorCode}</TableCell>
-                <TableCell>{row.locationName}</TableCell>
-                <TableCell className="text-right tabular-nums">{row.currentBalance}</TableCell>
-                <TableCell>{row.unit || "—"}</TableCell>
-                <TableCell>{row.expiryDate || "—"}</TableCell>
-                <TableCell>{row.minStockFlag ? "YES" : "—"}</TableCell>
-                <TableCell>{row.lastMovementDate || "—"}</TableCell>
-              </TableRow>
+      {viewMode === "card" ? (
+        rows.length === 0 && !cards.isLoading ? (
+          <p className="text-sm text-muted-foreground">No stock cards found.</p>
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {rows.map((row) => (
+              <Card key={row.stockCardId} className="cursor-pointer" onClick={() => openDetail(row.stockCardId)}>
+                <CardContent className="space-y-2 p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-semibold">{row.itemName}</p>
+                    {row.minStockFlag ? <Badge variant="destructive">Low stock</Badge> : null}
+                  </div>
+                  <p className="font-mono text-sm text-muted-foreground">{row.ctnCode}</p>
+                  <p className="text-sm text-muted-foreground">{row.locationName}</p>
+                  <p className="text-sm tabular-nums">
+                    Balance: {row.currentBalance} {row.unit || ""}
+                  </p>
+                  {row.expiryDate ? (
+                    <p className="text-xs text-muted-foreground">Expires {row.expiryDate}</p>
+                  ) : null}
+                </CardContent>
+              </Card>
             ))}
-            {!cards.isLoading && (cards.data ?? []).length === 0 ? (
+          </div>
+        )
+      ) : (
+        <div className="frozen-table-wrap rounded-md border">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={9} className="text-muted-foreground">
-                  No stock cards found.
-                </TableCell>
+                <TableHead>Item name</TableHead>
+                <TableHead>CTN code</TableHead>
+                <TableHead>Donor</TableHead>
+                <TableHead>Location</TableHead>
+                <TableHead className="text-right">Current balance</TableHead>
+                <TableHead>Unit</TableHead>
+                <TableHead>Expiry date</TableHead>
+                <TableHead>Min stock flag</TableHead>
+                <TableHead>Last movement</TableHead>
               </TableRow>
-            ) : null}
-          </TableBody>
-        </Table>
-      </div>
+            </TableHeader>
+            <TableBody>
+              {rows.map((row) => (
+                <TableRow
+                  key={row.stockCardId}
+                  className="cursor-pointer"
+                  onClick={() => openDetail(row.stockCardId)}
+                >
+                  <TableCell>{row.itemName}</TableCell>
+                  <TableCell className="font-mono">{row.ctnCode}</TableCell>
+                  <TableCell>{row.donorCode}</TableCell>
+                  <TableCell>{row.locationName}</TableCell>
+                  <TableCell className="text-right tabular-nums">{row.currentBalance}</TableCell>
+                  <TableCell>{row.unit || "—"}</TableCell>
+                  <TableCell>{row.expiryDate || "—"}</TableCell>
+                  <TableCell>{row.minStockFlag ? "YES" : "—"}</TableCell>
+                  <TableCell>{row.lastMovementDate || "—"}</TableCell>
+                </TableRow>
+              ))}
+              {!cards.isLoading && rows.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-muted-foreground">
+                    No stock cards found.
+                  </TableCell>
+                </TableRow>
+              ) : null}
+            </TableBody>
+          </Table>
+        </div>
+      )}
     </div>
   );
 }
-

@@ -49,8 +49,9 @@ import { ViewToggle } from "@/components/ViewToggle";
 import { CardQrCode } from "@/components/CardQrCode";
 import { ModuleFiltersCard, ModuleFilterSearch } from "@/components/ModuleFiltersCard";
 import { useBulkImportFileInput } from "@/hooks/useBulkImportFileInput";
+import { useIsMobile } from "@/hooks/useMobile";
 
-type ViewMode = "table" | "card" | "map";
+type FacilitiesViewMode = "table" | "card" | "map";
 type SortKey = "code" | "name" | "facilityType" | "parentFacilityName" | "state" | "isActive";
 type SortDir = "asc" | "desc";
 type PageSize = "25" | "50" | "100" | "all";
@@ -115,10 +116,17 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
   const [location, setLocation] = useLocation();
   const { canEditFacilities } = usePermissions();
   const lockedFacilityType = segmentToListFilter(segment);
-  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+  const isMobile = useIsMobile();
+  const [storedViewMode, setStoredViewMode] = useState<"table" | "card">(() => {
     if (typeof window === "undefined") return "table";
     return window.localStorage.getItem("viewMode_facilities") === "card" ? "card" : "table";
   });
+  const [viewOverride, setViewOverride] = useState<FacilitiesViewMode | null>(null);
+  const viewMode: FacilitiesViewMode = viewOverride ?? (isMobile ? "card" : storedViewMode);
+  const setViewMode = (mode: FacilitiesViewMode) => {
+    setViewOverride(mode);
+    if (mode === "table" || mode === "card") setStoredViewMode(mode);
+  };
   const [typeFilter, setTypeFilter] = useState<string>("all"); // only used when segment === "all"
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [stateFilter, setStateFilter] = useState<string>("all");
@@ -259,10 +267,10 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
   }, [page, totalPages]);
 
   useEffect(() => {
-    if (typeof window !== "undefined" && (viewMode === "table" || viewMode === "card")) {
-      window.localStorage.setItem("viewMode_facilities", viewMode);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("viewMode_facilities", storedViewMode);
     }
-  }, [viewMode]);
+  }, [storedViewMode]);
 
   useEffect(() => {
     if (!map) return;

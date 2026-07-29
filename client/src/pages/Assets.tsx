@@ -44,7 +44,8 @@ import { appPath } from "@/lib/routes";
 import { formatNaira } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { ViewToggle, type ViewMode } from "@/components/ViewToggle";
+import { ViewToggle } from "@/components/ViewToggle";
+import { useMobileDefaultViewMode } from "@/hooks/useMobileDefaultViewMode";
 import { CardQrCode } from "@/components/CardQrCode";
 import { ModuleFiltersCard, ModuleFilterSearch } from "@/components/ModuleFiltersCard";
 import { useBulkImportFileInput } from "@/hooks/useBulkImportFileInput";
@@ -203,10 +204,7 @@ export default function Assets() {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState<string>("50");
-  const [viewMode, setViewMode] = useState<ViewMode>(() => {
-    if (typeof window === "undefined") return "table";
-    return window.localStorage.getItem("viewMode_assets") === "card" ? "card" : "table";
-  });
+  const [viewMode, setViewMode] = useMobileDefaultViewMode("viewMode_assets");
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -301,12 +299,6 @@ export default function Assets() {
   useEffect(() => {
     setPage(0);
   }, [searchTerm, statusFilter, categoryFilter, siteFilter, itemTypeFilter, pageSize]);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem("viewMode_assets", viewMode);
-    }
-  }, [viewMode]);
 
   const handleDownloadTemplate = async () => {
     try {
