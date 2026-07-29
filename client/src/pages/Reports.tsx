@@ -11,6 +11,7 @@ import { trpc } from "@/lib/trpc";
 import { downloadBase64File } from "@/lib/download";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { Download, FileBarChart, Loader2 } from "lucide-react";
+import { ExportMenu } from "@/components/ExportMenu";
 import { toast } from "sonner";
 import {
   Bar,
@@ -300,22 +301,26 @@ export default function Reports() {
               </SelectContent>
             </Select>
           </div>
-          <Button
-            variant="outline"
-            data-testid="report-download-csv-btn"
-            onClick={() => downloadCsv(tableRows as any[], `report-${selectedReport}.csv`)}
-          >
-            <Download className="mr-2 h-4 w-4" />
-            Export CSV
-          </Button>
-          <Button variant="outline" data-testid="report-download-excel-btn" onClick={() => downloadCsv(tableRows as any[], `report-${selectedReport}.xlsx.csv`)}>
-            <Download className="mr-2 h-4 w-4" />
-            Export Excel
-          </Button>
-          <Button variant="outline" data-testid="report-download-pdf-btn" onClick={() => window.print()}>
-            <Download className="mr-2 h-4 w-4" />
-            Export PDF
-          </Button>
+          <ExportMenu
+            testId="report-export-menu"
+            formats={[
+              {
+                id: "csv",
+                label: "Export CSV",
+                onSelect: () => downloadCsv(tableRows as any[], `report-${selectedReport}.csv`),
+              },
+              {
+                id: "excel",
+                label: "Export Excel",
+                onSelect: () => downloadCsv(tableRows as any[], `report-${selectedReport}.xlsx.csv`),
+              },
+              {
+                id: "pdf",
+                label: "Export PDF",
+                onSelect: () => window.print(),
+              },
+            ]}
+          />
         </CardContent>
       </Card>
 
