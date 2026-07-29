@@ -28,6 +28,7 @@ import { NotificationCenter } from "./NotificationCenter";
 import Footer from "./Footer";
 import { ThemeToggle } from "./ui/ThemeToggle";
 import { SidebarGroupedNav } from "./SidebarGroupedNav";
+import { MobileBottomNav } from "./MobileBottomNav";
 import { GlobalSearch } from "./GlobalSearch";
 import { flattenNavItems } from "@/config/appNav";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
@@ -426,10 +427,20 @@ function DashboardLayoutContent({
             </div>
           </div>
         )}
-        <main data-testid="app-page-main" className="flex-1 overflow-x-hidden p-3 sm:p-4">
+        <main
+          data-testid="app-page-main"
+          className={cn("flex-1 overflow-x-hidden p-3 sm:p-4", isMobile && "pb-20")}
+        >
           {children}
         </main>
         <Footer />
+        {isMobile ? (
+          <MobileBottomNav
+            location={location}
+            setLocation={setLocation}
+            userRole={user?.role}
+          />
+        ) : null}
       </SidebarInset>
     </DashboardRolePreviewProvider>
   );
