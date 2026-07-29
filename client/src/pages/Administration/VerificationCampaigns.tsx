@@ -1,5 +1,6 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import PageHeader from "@/components/ui/PageHeader";
+import { ViewToggle } from "@/components/ViewToggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,6 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc";
+import { useMobileDefaultViewMode } from "@/hooks/useMobileDefaultViewMode";
 import { ClipboardCheck, Loader2, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -33,6 +35,7 @@ function statusBadge(status: string) {
 
 export default function VerificationCampaigns() {
   const { user } = useAuth();
+  const [viewMode, setViewMode] = useMobileDefaultViewMode("viewMode_verification_campaigns");
   const isAdmin = user?.role === "admin";
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -110,10 +113,33 @@ export default function VerificationCampaigns() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between gap-3">
             <CardTitle className="text-base">Campaigns</CardTitle>
+            <ViewToggle value={viewMode} onChange={setViewMode} />
           </CardHeader>
           <CardContent>
+            {viewMode === "card" ? (
+              <div className="grid gap-3 md:grid-cols-2">
+                {(campaigns ?? []).map((c) => (
+                  <Card
+                    key={c.id}
+                    className={`cursor-pointer ${selectedId === c.id ? "ring-2 ring-primary" : ""}`}
+                    data-testid={`campaign-row-${c.id}`}
+                    onClick={() => setSelectedId(c.id)}
+                  >
+                    <CardContent className="space-y-2 p-4">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="font-semibold">{c.name}</p>
+                        {statusBadge(c.status)}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(c.startsAt).toLocaleDateString()} — {new Date(c.endsAt).toLocaleDateString()}
+                      </p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -139,6 +165,7 @@ export default function VerificationCampaigns() {
                 ))}
               </TableBody>
             </Table>
+            )}
           </CardContent>
         </Card>
 
@@ -187,6 +214,19 @@ export default function VerificationCampaigns() {
                 {(discrepancies.data ?? []).length > 0 ? (
                   <div>
                     <h4 className="mb-2 text-sm font-medium">Location discrepancies</h4>
+                    {viewMode === "card" ? (
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        {(discrepancies.data ?? []).map((row) => (
+                          <Card key={row.assetId}>
+                            <CardContent className="space-y-1 p-3 text-sm">
+                              <p className="font-medium">{row.assetTag}</p>
+                              <p className="text-muted-foreground">Registered: {row.registeredSiteName}</p>
+                              <p className="text-muted-foreground">Verified at: {row.verifiedSiteName}</p>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    ) : (
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -205,6 +245,7 @@ export default function VerificationCampaigns() {
                         ))}
                       </TableBody>
                     </Table>
+                    )}
                   </div>
                 ) : (
                   <p className="text-xs text-muted-foreground">No location discrepancies recorded.</p>

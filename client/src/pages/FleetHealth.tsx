@@ -20,6 +20,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ViewToggle } from "@/components/ViewToggle";
+import { useMobileDefaultViewMode } from "@/hooks/useMobileDefaultViewMode";
 import { downloadBase64File } from "@/lib/download";
 import { formatNaira } from "@/lib/format";
 import { KPI_VALUE_CLASS } from "@/lib/kpiTypography";
@@ -29,6 +31,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 export default function FleetHealth() {
+  const [viewMode, setViewMode] = useMobileDefaultViewMode("viewMode_fleet_health");
   const [siteId, setSiteId] = useState<string>("all");
   const queryInput = useMemo(
     () => (siteId !== "all" ? { siteId: parseInt(siteId, 10) } : undefined),
@@ -133,13 +136,37 @@ export default function FleetHealth() {
             </div>
 
             <Card>
-              <CardHeader>
-                <CardTitle>Replacement pipeline</CardTitle>
-                <CardDescription>Assets past 80% of estimated useful life</CardDescription>
+              <CardHeader className="flex flex-row items-start justify-between gap-3">
+                <div>
+                  <CardTitle>Replacement pipeline</CardTitle>
+                  <CardDescription>Assets past 80% of estimated useful life</CardDescription>
+                </div>
+                <ViewToggle value={viewMode} onChange={setViewMode} />
               </CardHeader>
               <CardContent>
                 {row.replacementPipeline.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No assets in replacement pipeline.</p>
+                ) : viewMode === "card" ? (
+                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    {row.replacementPipeline.slice(0, 25).map((a) => (
+                      <Card key={a.assetId}>
+                        <CardContent className="space-y-2 p-4">
+                          <div>
+                            <p className="font-semibold">{a.assetName}</p>
+                            <p className="text-xs text-muted-foreground">{a.assetTag}</p>
+                          </div>
+                          <p className="text-sm text-muted-foreground">{a.siteName}</p>
+                          <p className="text-sm">{a.category}</p>
+                          <div className="flex items-center justify-between gap-2">
+                            <Badge variant={a.lifePercentUsed >= 100 ? "destructive" : "secondary"}>
+                              {a.yearsElapsed}y / {a.usefulLifeYears}y ({a.lifePercentUsed}%)
+                            </Badge>
+                            <span className={`text-sm ${KPI_VALUE_CLASS}`}>{formatNaira(a.currentBookValue)}</span>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
                 ) : (
                   <Table>
                     <TableHeader>
