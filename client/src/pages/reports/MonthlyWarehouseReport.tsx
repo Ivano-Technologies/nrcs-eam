@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc";
 import { downloadBase64File } from "@/lib/download";
+import { ExportMenu } from "@/components/ExportMenu";
 import PageHeader from "@/components/ui/PageHeader";
 import { CalendarDays, Loader2 } from "lucide-react";
 
@@ -75,40 +76,41 @@ export default function MonthlyWarehouseReport() {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <Button
-          variant="outline"
-          disabled={!canQuery || pdfMutation.isPending}
-          onClick={async () => {
-            const file = await pdfMutation.mutateAsync({ warehouseId: Number(warehouseId), month: Number(month), year: Number(year) });
-            downloadBase64File(file.data, file.filename, file.mimeType);
-          }}
-        >
-          {pdfMutation.isPending ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Exporting…
-            </>
-          ) : (
-            "Export PDF"
-          )}
-        </Button>
-        <Button
-          variant="outline"
-          disabled={!canQuery || excelMutation.isPending}
-          onClick={async () => {
-            const file = await excelMutation.mutateAsync({ warehouseId: Number(warehouseId), month: Number(month), year: Number(year) });
-            downloadBase64File(file.data, file.filename, file.mimeType);
-          }}
-        >
-          {excelMutation.isPending ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Exporting…
-            </>
-          ) : (
-            "Export Excel"
-          )}
-        </Button>
+        <ExportMenu
+          disabled={!canQuery}
+          formats={[
+            {
+              id: "pdf",
+              label: pdfMutation.isPending ? "Exporting PDF…" : "Export PDF",
+              disabled: !canQuery || pdfMutation.isPending,
+              onSelect: () => {
+                void (async () => {
+                  const file = await pdfMutation.mutateAsync({
+                    warehouseId: Number(warehouseId),
+                    month: Number(month),
+                    year: Number(year),
+                  });
+                  downloadBase64File(file.data, file.filename, file.mimeType);
+                })();
+              },
+            },
+            {
+              id: "excel",
+              label: excelMutation.isPending ? "Exporting Excel…" : "Export Excel",
+              disabled: !canQuery || excelMutation.isPending,
+              onSelect: () => {
+                void (async () => {
+                  const file = await excelMutation.mutateAsync({
+                    warehouseId: Number(warehouseId),
+                    month: Number(month),
+                    year: Number(year),
+                  });
+                  downloadBase64File(file.data, file.filename, file.mimeType);
+                })();
+              },
+            },
+          ]}
+        />
         <Button
           variant="outline"
           disabled={!canQuery || emailMutation.isPending}
