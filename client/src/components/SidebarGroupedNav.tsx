@@ -184,6 +184,7 @@ export function SidebarGroupedNav({
           data-testid={sidebarNavTestId(item.path)}
           onClick={() => setLocation(item.path)}
           tooltip={isNarrow ? item.label : undefined}
+          aria-label={isNarrow ? item.label : undefined}
           className={cn("h-10 transition-all font-normal", isNarrow ? "justify-center" : "")}
         >
           <item.icon className={cn("h-[20px] w-[20px]", isActive ? "text-primary" : "")} />
@@ -213,6 +214,7 @@ export function SidebarGroupedNav({
     const headerBtn = (
       <button
         type="button"
+        aria-label={g.label}
         title={isNarrow ? g.label : undefined}
         className={cn(
           "flex w-full items-center gap-2 rounded-md border border-transparent px-2 py-1.5 text-left text-[15px] font-normal text-white transition-[background-color,color,transform] duration-200",

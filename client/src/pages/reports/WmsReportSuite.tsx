@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc";
+import { ExportMenu } from "@/components/ExportMenu";
 import { Warehouse, FileDown } from "lucide-react";
 import { downloadBase64File } from "@/lib/download";
 import { useMobileTableColumns, MobileColumnsToggle, mobileSecondaryCol } from "@/hooks/useMobileTableColumns";
@@ -136,10 +137,28 @@ export default function WmsReportSuite(props: any) {
         </TabsList>
 
         <TabsContent value="movements" className="space-y-2">
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => exportCsv("wms-stock-movements.csv", ["date","documentRef","item","ctn","donor","warehouse","fromTo","qtyIn","qtyOut","balanceAfter","sourceType"], (movementsQuery.data ?? []) as any)}>Export CSV</Button>
-            <Button variant="outline" disabled={exportReportMutation.isPending} onClick={() => { void downloadExcel("wms-stock-movements.xlsx", (movementsQuery.data ?? []) as any); }}>Export Excel</Button>
-          </div>
+          <ExportMenu
+            formats={[
+              {
+                id: "csv",
+                label: "Export CSV",
+                onSelect: () =>
+                  exportCsv(
+                    "wms-stock-movements.csv",
+                    ["date", "documentRef", "item", "ctn", "donor", "warehouse", "fromTo", "qtyIn", "qtyOut", "balanceAfter", "sourceType"],
+                    (movementsQuery.data ?? []) as any
+                  ),
+              },
+              {
+                id: "excel",
+                label: "Export Excel",
+                disabled: exportReportMutation.isPending,
+                onSelect: () => {
+                  void downloadExcel("wms-stock-movements.xlsx", (movementsQuery.data ?? []) as any);
+                },
+              },
+            ]}
+          />
           <div className="frozen-table-wrap sticky-first-col overflow-x-auto rounded-md border">
             <Table><TableHeader><TableRow><TableHead>Date</TableHead><TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Document ref</TableHead><TableHead>Item</TableHead><TableHead className={cn(mobileSecondaryCol(showAllColumns))}>CTN</TableHead><TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Donor</TableHead><TableHead className={cn(mobileSecondaryCol(showAllColumns))}>From/To</TableHead><TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Qty in</TableHead><TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Qty out</TableHead><TableHead>Balance</TableHead><TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Source</TableHead></TableRow></TableHeader>
               <TableBody>{(movementsQuery.data ?? []).map((row, idx) => <TableRow key={idx}><TableCell>{row.date}</TableCell><TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.documentRef ?? "—"}</TableCell><TableCell>{row.item}</TableCell><TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.ctn}</TableCell><TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.donor}</TableCell><TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.fromTo ?? "—"}</TableCell><TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.qtyIn}</TableCell><TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.qtyOut}</TableCell><TableCell>{row.balanceAfter}</TableCell><TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.sourceType}</TableCell></TableRow>)}</TableBody>
