@@ -14,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc";
+import { useMobileTableColumns, MobileColumnsToggle, mobileSecondaryCol } from "@/hooks/useMobileTableColumns";
 import { Activity, BarChart3, Database, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -55,6 +56,7 @@ function redisStatusBadge(status: "connected" | "error" | "fallback" | undefined
 
 export default function Observability() {
   const { user } = useAuth();
+  const { isMobile, showAllColumns, showAll, setShowAll } = useMobileTableColumns();
   const utils = trpc.useUtils();
 
   const pool = trpc.admin.observability.poolStatus.useQuery(undefined, {
@@ -108,6 +110,7 @@ export default function Observability() {
           className="mb-0"
         />
         <div className="flex items-center gap-3">
+          <MobileColumnsToggle isMobile={isMobile} showAll={showAll} onToggle={setShowAll} />
           <span className="text-xs text-muted-foreground">Updated {lastUpdated}</span>
           <Button variant="outline" size="sm" onClick={refreshAll}>
             <RefreshCw className="mr-2 h-4 w-4" />
@@ -191,13 +194,14 @@ export default function Observability() {
               <span>p99: {dashboard.data?.p99Ms ?? 0} ms</span>
               <span>Timeouts: {dashboard.data?.timeoutRatePct ?? 0}%</span>
             </div>
+            <div className="frozen-table-wrap sticky-first-col overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>ms</TableHead>
                   <TableHead>T1</TableHead>
-                  <TableHead>T2</TableHead>
-                  <TableHead>T3</TableHead>
+                  <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>T2</TableHead>
+                  <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>T3</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
@@ -219,8 +223,8 @@ export default function Observability() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-xs">{row.tier1Ms ?? "—"}</TableCell>
-                        <TableCell className="text-xs">{row.tier2Ms ?? "—"}</TableCell>
-                        <TableCell className="text-xs">{row.tier3Ms ?? "—"}</TableCell>
+                        <TableCell className={cn("text-xs", mobileSecondaryCol(showAllColumns))}>{row.tier2Ms ?? "—"}</TableCell>
+                        <TableCell className={cn("text-xs", mobileSecondaryCol(showAllColumns))}>{row.tier3Ms ?? "—"}</TableCell>
                         <TableCell className="text-xs">
                           {timedOut ? "⚠️ timeout" : "✅"}
                         </TableCell>
@@ -230,6 +234,7 @@ export default function Observability() {
                 )}
               </TableBody>
             </Table>
+            </div>
           </CardContent>
         </Card>
 
@@ -244,12 +249,13 @@ export default function Observability() {
           <CardContent className="space-y-4">
             <div>
               <p className="mb-2 text-sm font-medium">Top tables by size</p>
+              <div className="frozen-table-wrap sticky-first-col overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Table</TableHead>
                     <TableHead className="text-right">Rows</TableHead>
-                    <TableHead className="text-right">MB</TableHead>
+                    <TableHead className={cn("text-right", mobileSecondaryCol(showAllColumns))}>MB</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -264,11 +270,12 @@ export default function Observability() {
                         ) : null}
                       </TableCell>
                       <TableCell className="text-right text-xs">{t.rowCount.toLocaleString()}</TableCell>
-                      <TableCell className="text-right text-xs">{t.sizeMb}</TableCell>
+                      <TableCell className={cn("text-right text-xs", mobileSecondaryCol(showAllColumns))}>{t.sizeMb}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3 text-sm">

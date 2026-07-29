@@ -6,9 +6,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
 import { Badge } from "@/components/ui/badge";
 import { ModuleFiltersCard, ModuleFilterSearch } from "@/components/ModuleFiltersCard";
+import { useMobileTableColumns, MobileColumnsToggle, mobileSecondaryCol } from "@/hooks/useMobileTableColumns";
+import { cn } from "@/lib/utils";
 import { useLocation, useSearch } from "wouter";
 
 export default function Issues({ embedInShell = false }: { embedInShell?: boolean } = {}) {
+  const { isMobile, showAllColumns, showAll, setShowAll } = useMobileTableColumns();
   const [, setLocation] = useLocation();
   const urlSearch = useSearch();
   const [status, setStatus] = useState<"all" | "draft" | "dispatched" | "received" | "claim_raised">("all");
@@ -95,11 +98,14 @@ export default function Issues({ embedInShell = false }: { embedInShell?: boolea
             </Select>
           </>
         }
+        toolbarStart={
+          <MobileColumnsToggle isMobile={isMobile} showAll={showAll} onToggle={setShowAll} />
+        }
         toolbarEnd={<Button data-testid="new-waybill-btn" onClick={() => setLocation("/app/inventory/issues/new")}>New Waybill</Button>}
       />
 
       <div
-        className="frozen-table-wrap rounded-md border"
+        className="frozen-table-wrap sticky-first-col overflow-x-auto rounded-md border"
         style={
           {
             "--col1-width": "150px",
@@ -113,11 +119,11 @@ export default function Issues({ embedInShell = false }: { embedInShell?: boolea
           <thead className="bg-muted/50">
             <tr className="border-b">
               <th className="px-2 py-2 text-left">WB number</th>
-              <th className="px-2 py-2 text-left">Date</th>
-              <th className="px-2 py-2 text-left">Source warehouse</th>
+              <th className={cn("px-2 py-2 text-left", mobileSecondaryCol(showAllColumns))}>Date</th>
+              <th className={cn("px-2 py-2 text-left", mobileSecondaryCol(showAllColumns))}>Source warehouse</th>
               <th className="px-2 py-2 text-left">Destination</th>
-              <th className="px-2 py-2 text-left">Line count</th>
-              <th className="px-2 py-2 text-left">Total units</th>
+              <th className={cn("px-2 py-2 text-left", mobileSecondaryCol(showAllColumns))}>Line count</th>
+              <th className={cn("px-2 py-2 text-left", mobileSecondaryCol(showAllColumns))}>Total units</th>
               <th className="px-2 py-2 text-left">Status</th>
             </tr>
           </thead>
@@ -130,11 +136,11 @@ export default function Issues({ embedInShell = false }: { embedInShell?: boolea
                 onClick={() => setLocation(`/app/inventory/issues/${row.id}`)}
               >
                 <td className="px-2 py-2 font-mono">{row.wbNumber}</td>
-                <td className="px-2 py-2">{row.date ?? "—"}</td>
-                <td className="px-2 py-2">{wh.find((x) => x.id === row.warehouseId)?.name ?? row.warehouseId}</td>
+                <td className={cn("px-2 py-2", mobileSecondaryCol(showAllColumns))}>{row.date ?? "—"}</td>
+                <td className={cn("px-2 py-2", mobileSecondaryCol(showAllColumns))}>{wh.find((x) => x.id === row.warehouseId)?.name ?? row.warehouseId}</td>
                 <td className="px-2 py-2">{row.destinationBeneficiary ?? "—"}</td>
-                <td className="px-2 py-2">{row.lineCount ?? 0}</td>
-                <td className="px-2 py-2">{row.totalUnits ?? 0}</td>
+                <td className={cn("px-2 py-2", mobileSecondaryCol(showAllColumns))}>{row.lineCount ?? 0}</td>
+                <td className={cn("px-2 py-2", mobileSecondaryCol(showAllColumns))}>{row.totalUnits ?? 0}</td>
                 <td className="px-2 py-2">{statusBadge(row.status)}</td>
               </tr>
             ))}

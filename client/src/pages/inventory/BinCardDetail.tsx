@@ -1,7 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useMobileTableColumns, MobileColumnsToggle, mobileSecondaryCol } from "@/hooks/useMobileTableColumns";
 import { trpc } from "@/lib/trpc";
+import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { useLocation, useRoute } from "wouter";
 import { toast } from "sonner";
@@ -20,6 +22,7 @@ export default function BinCardDetail() {
     },
     onError: (e) => toast.error(e.message),
   });
+  const { isMobile, showAllColumns, showAll, setShowAll } = useMobileTableColumns();
   const reopen = trpc.inventoryV2.binCards.reopen.useMutation({
     onSuccess: () => {
       toast.success("Bin card reopened.");
@@ -79,18 +82,21 @@ export default function BinCardDetail() {
           </>
         )}
       </div>
-      <div className="frozen-table-wrap rounded-md border">
+      <div className="flex justify-end">
+        <MobileColumnsToggle isMobile={isMobile} showAll={showAll} onToggle={setShowAll} />
+      </div>
+      <div className="frozen-table-wrap sticky-first-col overflow-x-auto rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Date</TableHead>
               <TableHead>From/To</TableHead>
-              <TableHead>WB No.</TableHead>
-              <TableHead className="text-right">IN (+)</TableHead>
-              <TableHead className="text-right">OUT (-)</TableHead>
+              <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>WB No.</TableHead>
+              <TableHead className={cn("text-right", mobileSecondaryCol(showAllColumns))}>IN (+)</TableHead>
+              <TableHead className={cn("text-right", mobileSecondaryCol(showAllColumns))}>OUT (-)</TableHead>
               <TableHead className="text-right">Balance</TableHead>
-              <TableHead>Initials</TableHead>
-              <TableHead>Signature</TableHead>
+              <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Initials</TableHead>
+              <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Signature</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -98,12 +104,12 @@ export default function BinCardDetail() {
               <TableRow key={row.id}>
                 <TableCell>{row.date}</TableCell>
                 <TableCell>{row.fromTo || "—"}</TableCell>
-                <TableCell>{row.documentRef || "—"}</TableCell>
-                <TableCell className="text-right">{row.quantityIn}</TableCell>
-                <TableCell className="text-right">{row.quantityOut}</TableCell>
+                <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.documentRef || "—"}</TableCell>
+                <TableCell className={cn("text-right", mobileSecondaryCol(showAllColumns))}>{row.quantityIn}</TableCell>
+                <TableCell className={cn("text-right", mobileSecondaryCol(showAllColumns))}>{row.quantityOut}</TableCell>
                 <TableCell className="text-right">{row.balanceAfter}</TableCell>
-                <TableCell>{row.storekeeperInitials || "—"}</TableCell>
-                <TableCell>{row.signatureUrl || "—"}</TableCell>
+                <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.storekeeperInitials || "—"}</TableCell>
+                <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.signatureUrl || "—"}</TableCell>
               </TableRow>
             ))}
           </TableBody>

@@ -28,6 +28,8 @@ import {
 } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc";
 import TableLoader from "@/components/ui/TableLoader";
+import { useMobileTableColumns, MobileColumnsToggle, mobileSecondaryCol } from "@/hooks/useMobileTableColumns";
+import { cn } from "@/lib/utils";
 import { ITEM_CATEGORY_VALUES } from "@shared/itemCategory";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -60,6 +62,8 @@ export default function CtnRegistryPage() {
     expiryDate: "",
     notes: "",
   });
+
+  const { isMobile, showAllColumns, showAll, setShowAll } = useMobileTableColumns();
 
   const listQuery = trpc.wms.ctn.list.useQuery({
     donorId: donorId === "all" ? undefined : Number(donorId),
@@ -158,6 +162,9 @@ export default function CtnRegistryPage() {
               </div>
             </>
           }
+          toolbarStart={
+            <MobileColumnsToggle isMobile={isMobile} showAll={showAll} onToggle={setShowAll} />
+          }
           toolbarEnd={
             <Button className="h-9" onClick={() => setCreateOpen(true)} data-testid="ctn-create-open">
               New CTN
@@ -170,16 +177,16 @@ export default function CtnRegistryPage() {
           original quantity.
         </span>
 
-        <div className="frozen-table-wrap rounded-md border">
+        <div className="frozen-table-wrap sticky-first-col overflow-x-auto rounded-md border">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>CTN code</TableHead>
                 <TableHead>Item</TableHead>
-                <TableHead>Donor</TableHead>
-                <TableHead className="text-right">Original qty</TableHead>
-                <TableHead>Received</TableHead>
-                <TableHead>Expiry</TableHead>
+                <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Donor</TableHead>
+                <TableHead className={cn("text-right", mobileSecondaryCol(showAllColumns))}>Original qty</TableHead>
+                <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Received</TableHead>
+                <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Expiry</TableHead>
                 <TableHead className="text-right">Current balance</TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>
@@ -206,17 +213,17 @@ export default function CtnRegistryPage() {
                       <div className="font-medium">{r.itemName}</div>
                       <div className="text-muted-foreground text-xs">{r.itemCode}</div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>
                       {r.donorName}
                       <span className="text-muted-foreground text-xs"> · {r.donorCode}</span>
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">
+                    <TableCell className={cn("text-right tabular-nums", mobileSecondaryCol(showAllColumns))}>
                       {r.originalQuantity} {r.unit}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>
                       {r.receivedDate ? format(new Date(r.receivedDate), "yyyy-MM-dd") : "—"}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>
                       {r.expiryDate ? format(new Date(r.expiryDate), "yyyy-MM-dd") : "—"}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">

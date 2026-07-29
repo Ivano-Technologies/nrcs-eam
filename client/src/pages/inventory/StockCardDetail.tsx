@@ -1,7 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useMobileTableColumns, MobileColumnsToggle, mobileSecondaryCol } from "@/hooks/useMobileTableColumns";
 import { trpc } from "@/lib/trpc";
+import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useLocation, useRoute } from "wouter";
@@ -16,6 +18,7 @@ export default function StockCardDetail() {
   const [notes, setNotes] = useState("");
   const [supervisorId, setSupervisorId] = useState("");
 
+  const { isMobile, showAllColumns, showAll, setShowAll } = useMobileTableColumns();
   const card = trpc.inventoryV2.stockCards.get.useQuery({ id }, { enabled: id > 0 });
   const addStockCheck = trpc.inventoryV2.stockCards.addStockCheck.useMutation({
     onSuccess: () => {
@@ -87,33 +90,38 @@ export default function StockCardDetail() {
         </Button>
       </div>
 
-      <div className="frozen-table-wrap rounded-md border">
+      <div className="flex justify-end">
+        <MobileColumnsToggle isMobile={isMobile} showAll={showAll} onToggle={setShowAll} />
+      </div>
+      <div className="frozen-table-wrap sticky-first-col overflow-x-auto rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Date</TableHead>
-              <TableHead>Document Ref</TableHead>
+              <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Document Ref</TableHead>
               <TableHead>From/To</TableHead>
-              <TableHead>Store No.</TableHead>
-              <TableHead className="text-right">IN</TableHead>
-              <TableHead className="text-right">OUT</TableHead>
+              <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Store No.</TableHead>
+              <TableHead className={cn("text-right", mobileSecondaryCol(showAllColumns))}>IN</TableHead>
+              <TableHead className={cn("text-right", mobileSecondaryCol(showAllColumns))}>OUT</TableHead>
               <TableHead className="text-right">Balance</TableHead>
-              <TableHead>Remarks</TableHead>
-              <TableHead>Bin Card N°</TableHead>
+              <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Remarks</TableHead>
+              <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Bin Card N°</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {running.map((row) => (
               <TableRow key={row.id}>
                 <TableCell>{row.date}</TableCell>
-                <TableCell>{row.sourceType === "stock_check" ? "— STOCK CHECK" : row.documentRef || "—"}</TableCell>
+                <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>
+                  {row.sourceType === "stock_check" ? "— STOCK CHECK" : row.documentRef || "—"}
+                </TableCell>
                 <TableCell>{row.fromTo || "—"}</TableCell>
-                <TableCell>{row.createdByName || "—"}</TableCell>
-                <TableCell className="text-right">{row.quantityIn}</TableCell>
-                <TableCell className="text-right">{row.quantityOut}</TableCell>
+                <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.createdByName || "—"}</TableCell>
+                <TableCell className={cn("text-right", mobileSecondaryCol(showAllColumns))}>{row.quantityIn}</TableCell>
+                <TableCell className={cn("text-right", mobileSecondaryCol(showAllColumns))}>{row.quantityOut}</TableCell>
                 <TableCell className="text-right">{row.runningBalance}</TableCell>
-                <TableCell>{row.remarks || "—"}</TableCell>
-                <TableCell>{row.binCardId ?? "—"}</TableCell>
+                <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.remarks || "—"}</TableCell>
+                <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.binCardId ?? "—"}</TableCell>
               </TableRow>
             ))}
           </TableBody>
