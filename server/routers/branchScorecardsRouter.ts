@@ -99,7 +99,7 @@ export const branchScorecardsRouter = router({
       ];
       const rows = list.map((row) => ({
         ...row,
-        trendVsPriorMonth: row.trendVsPriorMonth ?? "Ã¢â‚¬â€",
+        trendVsPriorMonth: row.trendVsPriorMonth ?? "—",
       }));
       const buffer = await generateExcelReport("Branch scorecards", rows, columns, {
         sheetName: "Scorecards",
