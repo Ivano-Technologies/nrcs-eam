@@ -207,7 +207,7 @@ export const usersRouter = router({
     <p>Nigerian Red Cross Society</p>`;
           const sent = await sendEmail({
             to: email,
-            subject: "Welcome to NRCS EAM Ã¢â‚¬â€ Your account is ready",
+            subject: "Welcome to NRCS EAM — Your account is ready",
             html: generateEmailTemplate(bodyHtml, "Welcome"),
           });
           if (!sent) {
@@ -397,7 +397,7 @@ export const usersRouter = router({
         }
         const sent = await sendEmail({
           to: email,
-          subject: "NRCS EAM Ã¢â‚¬â€ Password reset",
+          subject: "NRCS EAM — Password reset",
           html: generateEmailTemplate(
             `<p>A password reset was requested for your NRCS EAM account.</p>
             <p><a href="${actionLink}">Set a new password</a></p>
