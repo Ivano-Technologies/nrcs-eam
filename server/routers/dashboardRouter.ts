@@ -379,7 +379,7 @@ export const dashboardRouter = router({
         await cacheSetJson(metricsCacheKey, metricsPayload, metricsTimedOut ? 60 : 900);
         return metricsPayload;
       }),
-    /** Single round-trip for dashboard page ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â one pool, sequential sections. */
+    /** Single round-trip for dashboard page — one pool, sequential sections. */
     all: protectedProcedure
       .input(
         z.object({
@@ -389,7 +389,7 @@ export const dashboardRouter = router({
         })
       )
       .query(async ({ input, ctx }): Promise<DashboardAllOutput> => loadDashboardAll(ctx, input)),
-    /** Progressive tier load ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â returns partial bundle for one tier (1=critical KPIs first). */
+    /** Progressive tier load — returns partial bundle for one tier (1=critical KPIs first). */
     byTier: protectedProcedure
       .input(
         z.object({
