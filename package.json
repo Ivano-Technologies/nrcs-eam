@@ -17,6 +17,7 @@
     "check": "tsc --noEmit",
     "check:full": "node scripts/check/run-all.mjs",
     "check:entry-graph": "node scripts/check/verify-entry-graph.mjs",
+    "check:mojibake": "node scripts/check/verify-no-mojibake.mjs",
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "tsx scripts/db/seed-db.mjs && vitest run",

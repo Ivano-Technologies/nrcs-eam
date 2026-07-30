@@ -1,4 +1,4 @@
-﻿import {
+import {
   eq,
   and,
   desc,
@@ -63,7 +63,7 @@ export async function getDb() {
   const fingerprint = databaseUrlFingerprint();
   if (_db && _dbUrlFingerprint && _dbUrlFingerprint !== fingerprint) {
     console.warn(
-      "[Database] DATABASE_URL changed â€” resetting pooled connection"
+      "[Database] DATABASE_URL changed — resetting pooled connection"
     );
     await resetDbConnection();
   }
@@ -484,7 +484,7 @@ export type SiteMapNetworkDataRow = {
   lastMovementDate: string | null;
 };
 
-/** Facilities for network map â€” coordinates + stock readiness per site. */
+/** Facilities for network map — coordinates + stock readiness per site. */
 export async function getSitesMapNetworkData(): Promise<SiteMapNetworkDataRow[]> {
   const database = await getDb();
   if (!database) return [];
@@ -1677,7 +1677,7 @@ export async function getDashboardStats(opts?: { siteId?: number }) {
   };
 }
 
-/** Counts for Reports â€œWeekly insightsâ€ widget (30-day windows where applicable). */
+/** Counts for Reports “Weekly insights” widget (30-day windows where applicable). */
 export async function getWeeklyInsights(opts?: { siteId?: number }) {
   const database = await getDb();
   if (!database) {

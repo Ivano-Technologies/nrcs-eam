@@ -28,18 +28,24 @@ export function ActivityFeed() {
       </CardHeader>
       <CardContent className="space-y-3">
         {(data ?? []).length === 0 ? <p className="text-sm text-[#334155] dark:text-[hsl(0_0%_95%)]">No recent activity yet.</p> : null}
-        {(data ?? []).map((item, idx) => (
-          <div key={`${item.timestamp}-${idx}`} className="flex items-center gap-3">
-            <span className="w-16 shrink-0 font-mono text-xs text-[#334155] dark:text-[hsl(0_0%_95%)]">
-              {formatDistanceToNow(new Date(item.timestamp), { addSuffix: true })}
-            </span>
-            <span className={cn("h-2.5 w-2.5 rounded-full shrink-0", KIND_DOT[item.type] ?? KIND_DOT.requisition)} />
-            <div className="min-w-0">
-              <p className="text-sm font-medium truncate">{item.description}</p>
-              <p className="text-xs text-[#334155] dark:text-[hsl(0_0%_95%)]">{item.facilityName}</p>
+        {(data ?? []).map((item, idx) => {
+          const prevFacility = idx > 0 ? (data ?? [])[idx - 1]?.facilityName : undefined;
+          const showFacility = Boolean(item.facilityName) && item.facilityName !== prevFacility;
+          return (
+            <div key={`${item.timestamp}-${idx}`} className="flex items-center gap-3">
+              <span className="w-24 shrink-0 whitespace-nowrap font-mono text-xs text-[#334155] dark:text-[hsl(0_0%_95%)]">
+                {formatDistanceToNow(new Date(item.timestamp), { addSuffix: true })}
+              </span>
+              <span className={cn("h-2.5 w-2.5 rounded-full shrink-0", KIND_DOT[item.type] ?? KIND_DOT.requisition)} />
+              <div className="min-w-0">
+                <p className="text-sm font-medium truncate">{item.description}</p>
+                {showFacility ? (
+                  <p className="text-xs text-[#334155] dark:text-[hsl(0_0%_95%)]">{item.facilityName}</p>
+                ) : null}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </CardContent>
     </Card>
   );

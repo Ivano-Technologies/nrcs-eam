@@ -51,6 +51,9 @@ jobs:
       - name: ESLint
         run: pnpm lint
 
+      - name: Verify no mojibake
+        run: pnpm check:mojibake
+
   test:
     name: Test
     runs-on: ubuntu-latest

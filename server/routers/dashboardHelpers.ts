@@ -421,8 +421,8 @@ export async function queryRecentActivity(
     .select({
       type: sql<string>`'requisition'`,
       description: sql<string>`case
-              when ${requisitions.status} = 'approved' then concat('Requisition approved ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· ', ${requisitions.reqNumber})
-              else concat('Requisition submitted ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· ', ${requisitions.reqNumber})
+              when ${requisitions.status} = 'approved' then concat('Requisition approved · ', ${requisitions.reqNumber})
+              else concat('Requisition submitted · ', ${requisitions.reqNumber})
             end`,
       timestamp: sql<Date>`coalesce(${requisitions.approvedHqAt}, ${requisitions.approvedBranchAt}, ${requisitions.createdAt})`,
       facilityName: sites.name,
@@ -437,7 +437,7 @@ export async function queryRecentActivity(
   const recentAssetRows = await database
     .select({
       type: sql<string>`'asset'`,
-      description: sql<string>`concat('Asset created ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· ', ${assets.assetTag})`,
+      description: sql<string>`concat('Asset created · ', ${assets.assetTag})`,
       timestamp: assets.createdAt,
       facilityName: sites.name,
     })
@@ -451,7 +451,7 @@ export async function queryRecentActivity(
   const recentTransferRows = await database
     .select({
       type: sql<string>`'asset_transfer'`,
-      description: sql<string>`concat('Asset transferred ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· ', ${assets.assetTag})`,
+      description: sql<string>`concat('Asset transferred · ', ${assets.assetTag})`,
       timestamp: sql<Date>`coalesce(${assetTransfers.transferDate}, ${assetTransfers.createdAt})`,
       facilityName: sites.name,
     })
@@ -730,7 +730,7 @@ export function buildDashboardRequestRecord(params: {
   };
 }
 
-/** Runs after `appRouter` is defined ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â avoids circular type inference from createCaller inside the router. */
+/** Runs after `appRouter` is defined — avoids circular type inference from createCaller inside the router. */
 export async function loadDashboardAll(
   ctx: TrpcContext,
   input: DashboardAllInput
