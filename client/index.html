@@ -8,7 +8,7 @@
         try {
           var key = "nrcs-theme";
           var theme = localStorage.getItem(key);
-          if (theme === "system") {
+          if (theme !== "light" && theme !== "dark") {
             localStorage.setItem(key, "light");
             theme = "light";
           }

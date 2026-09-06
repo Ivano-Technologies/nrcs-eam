@@ -2,18 +2,17 @@ import { and, eq, inArray, notInArray, sql } from "drizzle-orm";
 import {
   assets,
   assetCategories,
-  notifications,
+  inventoryItems,
   sites,
   workOrders,
 } from "../../drizzle/schema";
-import { getDb, getLowStockItems } from "../db";
+import { getDb } from "../db";
 import {
   calculateDepreciation,
   estimateUsefulLife,
   type DepreciationResult,
 } from "../depreciation";
 import { calculateDepreciatedValue } from "../lib/depreciation";
-import { getHighPriorityPredictions } from "../predictiveMaintenance";
 
 export type WorkOrderAgeBuckets = {
   days0to7: number;
@@ -198,6 +197,9 @@ function emptySiteRow(siteId: number, siteName: string): FleetHealthSiteRow {
   };
 }
 
+const PIPELINE_CANDIDATE_LIMIT = 150;
+const bookValueSql = sql`coalesce(${assets.depreciatedValue}::numeric, ${assets.actualUnitValue}::numeric, ${assets.acquisitionCost}::numeric, 0)`;
+
 export async function buildFleetHealthSummary(opts?: {
   siteId?: number;
 }): Promise<FleetHealthSummary> {
@@ -206,154 +208,156 @@ export async function buildFleetHealthSummary(opts?: {
     throw new Error("Database unavailable");
   }
 
+  const siteWhere = opts?.siteId != null ? eq(sites.id, opts.siteId) : eq(sites.isActive, true);
   const siteRows = await database
     .select({ id: sites.id, name: sites.name })
     .from(sites)
-    .where(eq(sites.isActive, true));
+    .where(siteWhere);
 
   const siteNameById = new Map(siteRows.map((s) => [s.id, s.name]));
-  let targetSiteIds = siteRows.map((s) => s.id);
-  if (opts?.siteId != null) {
-    targetSiteIds = [opts.siteId];
-  }
-
-  const assetRows = await database
-    .select({
-      id: assets.id,
-      assetTag: assets.assetTag,
-      name: assets.name,
-      siteId: assets.siteId,
-      categoryName: sql<string>`coalesce(${assetCategories.name}, ${assets.itemCategory}, 'Uncategorised')`,
-      acquisitionCost: assets.acquisitionCost,
-      residualValue: assets.residualValue,
-      usefulLifeYears: assets.usefulLifeYears,
-      depreciationMethod: assets.depreciationMethod,
-      depreciationStartDate: assets.depreciationStartDate,
-      actualUnitValue: assets.actualUnitValue,
-      itemCategory: assets.itemCategory,
-      yearAcquiredRegister: assets.yearAcquiredRegister,
-      depreciatedValue: assets.depreciatedValue,
-      depreciatedValueManualOverride: assets.depreciatedValueManualOverride,
-    })
-    .from(assets)
-    .leftJoin(assetCategories, eq(assets.categoryId, assetCategories.id))
-    .where(
-      and(
-        eq(assets.status, "operational"),
-        inArray(assets.siteId, targetSiteIds)
-      )
-    );
-
-  const openWoRows = await database
-    .select({
-      siteId: workOrders.siteId,
-      updatedAt: workOrders.updatedAt,
-    })
-    .from(workOrders)
-    .where(
-      and(
-        notInArray(workOrders.status, ["completed", "cancelled"]),
-        inArray(workOrders.siteId, targetSiteIds)
-      )
-    );
-
-  const alertRows = await database
-    .select({
-      userId: notifications.userId,
-      type: notifications.type,
-    })
-    .from(notifications)
-    .where(
-      and(
-        eq(notifications.isRead, false),
-        inArray(notifications.type, [
-          "low_stock",
-          "critical_stock",
-          "expiry_warning_30",
-        ])
-      )
-    );
-
-  const predictions = await getHighPriorityPredictions();
-  const assetSiteById = new Map(assetRows.map((a) => [a.id, a.siteId]));
-
+  const targetSiteIds = siteRows.map((s) => s.id);
   const siteMap = new Map<number, FleetHealthSiteRow>();
   for (const sid of targetSiteIds) {
     siteMap.set(sid, emptySiteRow(sid, siteNameById.get(sid) ?? `Site ${sid}`));
   }
 
-  for (const asset of assetRows) {
-    const row = siteMap.get(asset.siteId);
-    if (!row) continue;
-    row.operationalAssetCount += 1;
-    const computed = computeAssetBookValue(asset as AssetRow);
-    if (!computed) continue;
-
-    row.totalBookValue += computed.bookValue;
-    const lifePct =
-      computed.usefulLifeYears > 0
-        ? computed.yearsElapsed / computed.usefulLifeYears
-        : 0;
-    if (lifePct >= 0.8) {
-      row.endOfLifeCount += 1;
-      row.replacementPipeline.push({
-        assetId: asset.id,
-        assetTag: asset.assetTag,
-        assetName: asset.name,
-        siteId: asset.siteId,
-        siteName: siteNameById.get(asset.siteId) ?? "",
-        category: asset.categoryName,
-        yearsElapsed: Math.round(computed.yearsElapsed * 10) / 10,
-        usefulLifeYears: computed.usefulLifeYears,
-        lifePercentUsed: Math.round(lifePct * 1000) / 10,
-        currentBookValue: computed.bookValue,
-      });
-    }
+  if (targetSiteIds.length === 0) {
+    return {
+      reportDate: new Date().toISOString().slice(0, 10),
+      orgWide: emptySiteRow(0, "Organisation-wide"),
+      bySite: [],
+    };
   }
 
-  for (const wo of openWoRows) {
+  const siteIdFilter = inArray(assets.siteId, targetSiteIds);
+
+  const [aggRows, woRows, alertRows, pipelineAssets] = await Promise.all([
+    database
+      .select({
+        siteId: assets.siteId,
+        operationalAssetCount: sql<number>`count(*)`.mapWith(Number),
+        totalBookValue: sql<number>`coalesce(sum(${bookValueSql}), 0)`.mapWith(Number),
+      })
+      .from(assets)
+      .where(and(eq(assets.status, "operational"), siteIdFilter))
+      .groupBy(assets.siteId),
+    database
+      .select({
+        siteId: workOrders.siteId,
+        days0to7: sql<number>`count(*) filter (where ${workOrders.updatedAt} >= now() - interval '7 days')`.mapWith(
+          Number
+        ),
+        days8to14: sql<number>`count(*) filter (where ${workOrders.updatedAt} >= now() - interval '14 days' and ${workOrders.updatedAt} < now() - interval '7 days')`.mapWith(
+          Number
+        ),
+        days15to30: sql<number>`count(*) filter (where ${workOrders.updatedAt} >= now() - interval '30 days' and ${workOrders.updatedAt} < now() - interval '14 days')`.mapWith(
+          Number
+        ),
+        days30plus: sql<number>`count(*) filter (where ${workOrders.updatedAt} < now() - interval '30 days')`.mapWith(
+          Number
+        ),
+      })
+      .from(workOrders)
+      .where(
+        and(notInArray(workOrders.status, ["completed", "cancelled"]), inArray(workOrders.siteId, targetSiteIds))
+      )
+      .groupBy(workOrders.siteId),
+    database
+      .select({
+        siteId: inventoryItems.siteId,
+        count: sql<number>`count(*)`.mapWith(Number),
+      })
+      .from(inventoryItems)
+      .where(
+        and(
+          sql`${inventoryItems.currentStock} < ${inventoryItems.minStockLevel}`,
+          inArray(inventoryItems.siteId, targetSiteIds)
+        )
+      )
+      .groupBy(inventoryItems.siteId),
+    database
+      .select({
+        id: assets.id,
+        assetTag: assets.assetTag,
+        name: assets.name,
+        siteId: assets.siteId,
+        categoryName: sql<string>`coalesce(${assetCategories.name}, ${assets.itemCategory}, 'Uncategorised')`,
+        acquisitionCost: assets.acquisitionCost,
+        residualValue: assets.residualValue,
+        usefulLifeYears: assets.usefulLifeYears,
+        depreciationMethod: assets.depreciationMethod,
+        depreciationStartDate: assets.depreciationStartDate,
+        actualUnitValue: assets.actualUnitValue,
+        itemCategory: assets.itemCategory,
+        yearAcquiredRegister: assets.yearAcquiredRegister,
+        depreciatedValue: assets.depreciatedValue,
+        depreciatedValueManualOverride: assets.depreciatedValueManualOverride,
+      })
+      .from(assets)
+      .leftJoin(assetCategories, eq(assets.categoryId, assetCategories.id))
+      .where(
+        and(
+          eq(assets.status, "operational"),
+          siteIdFilter,
+          sql`(
+            (${assets.usefulLifeYears} is not null and ${assets.depreciationStartDate} is not null)
+            or ${assets.yearAcquiredRegister} is not null
+          )`
+        )
+      )
+      .limit(PIPELINE_CANDIDATE_LIMIT),
+  ]);
+
+  for (const agg of aggRows) {
+    const row = siteMap.get(agg.siteId);
+    if (!row) continue;
+    row.operationalAssetCount = Number(agg.operationalAssetCount ?? 0);
+    row.totalBookValue = Number(agg.totalBookValue ?? 0);
+  }
+
+  for (const wo of woRows) {
     const row = siteMap.get(wo.siteId);
     if (!row) continue;
-    const bucket = bucketWorkOrderAge(wo.updatedAt);
-    row.openWorkOrdersByAge[bucket] += 1;
+    row.openWorkOrdersByAge = {
+      days0to7: Number(wo.days0to7 ?? 0),
+      days8to14: Number(wo.days8to14 ?? 0),
+      days15to30: Number(wo.days15to30 ?? 0),
+      days30plus: Number(wo.days30plus ?? 0),
+    };
   }
 
-  for (const pred of predictions) {
-    const sid = assetSiteById.get(pred.assetId);
-    if (sid == null || !siteMap.has(sid)) continue;
-    if (opts?.siteId != null && sid !== opts.siteId) continue;
-    siteMap.get(sid)!.highPriorityPredictions.push({
-      assetId: pred.assetId,
-      assetTag: pred.assetTag,
-      assetName: pred.assetName,
-      siteId: sid,
-      priority: pred.priority,
-      predictedFailureDate: pred.predictedFailureDate.toISOString().slice(0, 10),
-      reason: pred.reason,
-      recommendedAction: pred.recommendedAction,
+  for (const alert of alertRows) {
+    const row = siteMap.get(alert.siteId);
+    if (row) row.activeInventoryAlerts = Number(alert.count ?? 0);
+  }
+
+  for (const asset of pipelineAssets) {
+    const row = siteMap.get(asset.siteId);
+    if (!row) continue;
+    const computed = computeAssetBookValue(asset as AssetRow);
+    if (!computed || computed.usefulLifeYears <= 0) continue;
+    const lifePct = computed.yearsElapsed / computed.usefulLifeYears;
+    if (lifePct < 0.8) continue;
+    row.endOfLifeCount += 1;
+    row.replacementPipeline.push({
+      assetId: asset.id,
+      assetTag: asset.assetTag,
+      assetName: asset.name,
+      siteId: asset.siteId,
+      siteName: siteNameById.get(asset.siteId) ?? "",
+      category: asset.categoryName,
+      yearsElapsed: Math.round(computed.yearsElapsed * 10) / 10,
+      usefulLifeYears: computed.usefulLifeYears,
+      lifePercentUsed: Math.round(lifePct * 1000) / 10,
+      currentBookValue: computed.bookValue,
     });
   }
-
-  const lowStockBySite = await Promise.all(
-    targetSiteIds.map(async (sid) => ({
-      sid,
-      count: (await getLowStockItems(sid)).length,
-    }))
-  );
-  for (const { sid, count } of lowStockBySite) {
-    const row = siteMap.get(sid);
-    if (row) row.activeInventoryAlerts += count;
-  }
-
-  void alertRows;
 
   const bySite = Array.from(siteMap.values())
     .map((row) => ({
       ...row,
       totalBookValue: Math.round(row.totalBookValue * 100) / 100,
-      replacementPipeline: row.replacementPipeline.sort(
-        (a, b) => b.lifePercentUsed - a.lifePercentUsed
-      ),
+      replacementPipeline: row.replacementPipeline.sort((a, b) => b.lifePercentUsed - a.lifePercentUsed),
     }))
     .sort((a, b) => a.siteName.localeCompare(b.siteName));
 
@@ -363,7 +367,6 @@ export async function buildFleetHealthSummary(opts?: {
       acc.totalBookValue += row.totalBookValue;
       acc.endOfLifeCount += row.endOfLifeCount;
       acc.replacementPipeline.push(...row.replacementPipeline);
-      acc.highPriorityPredictions.push(...row.highPriorityPredictions);
       acc.openWorkOrdersByAge.days0to7 += row.openWorkOrdersByAge.days0to7;
       acc.openWorkOrdersByAge.days8to14 += row.openWorkOrdersByAge.days8to14;
       acc.openWorkOrdersByAge.days15to30 += row.openWorkOrdersByAge.days15to30;

@@ -416,7 +416,7 @@ export default function DashboardSettings() {
             <>
               <Button
                 type="button"
-                variant={theme === "light" ? "default" : "outline"}
+                variant={theme === "dark" ? "outline" : "default"}
                 className="gap-2"
                 onClick={() => setTheme("light")}
               >

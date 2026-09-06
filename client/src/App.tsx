@@ -48,7 +48,7 @@ function Router() {
 function ThemeMigration() {
   const { theme, setTheme } = useTheme();
   useEffect(() => {
-    if (theme === "system") setTheme("light");
+    if (theme === "system" || theme == null) setTheme("light");
   }, [theme, setTheme]);
   return null;
 }
