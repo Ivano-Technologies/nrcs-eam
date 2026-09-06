@@ -10,6 +10,7 @@ import {
 } from "../_core/dashboardRequestBuffer";
 import { dashboardQueryQueue } from "../_core/dashboardQueryQueue";
 import { upstashFetch } from "../_core/upstashRedis";
+import { POSTGRES_JS_SERVERLESS_POOL_MAX } from "../../shared/mysqlSsl";
 import { cacheGetJson, cacheSetJson } from "../_core/cache";
 import * as db from "../db";
 import { auditLogs } from "../../drizzle/schema";
@@ -36,8 +37,8 @@ export const observabilityRouter = router({
       queueRunning: stats.running,
       queueQueued: stats.queued,
       maxConcurrent: stats.maxConcurrent,
-      dbPoolMax: 3,
-      poolDescription: "Supabase transaction pooler (postgres.js max: 3)",
+      dbPoolMax: Number(process.env.DB_POOL_MAX ?? POSTGRES_JS_SERVERLESS_POOL_MAX),
+      poolDescription: `Supabase transaction pooler (postgres.js max: ${POSTGRES_JS_SERVERLESS_POOL_MAX})`,
       redisStatus,
     };
   }),

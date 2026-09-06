@@ -143,6 +143,9 @@ export function getMysql2SslOptions(): Mysql2SslConfig | undefined {
   return { rejectUnauthorized: false };
 }
 
+/** Per-instance cap. 3 starved dashboard + register when one report held connections. */
+export const POSTGRES_JS_SERVERLESS_POOL_MAX = 8;
+
 /** Shared postgres.js pool options (Supabase Transaction pooler + Vercel serverless). */
 export function getPostgresJsPoolOptions(
   databaseUrl: string = process.env.DATABASE_URL ?? ""
@@ -157,7 +160,7 @@ export function getPostgresJsPoolOptions(
     prepare: false,
     max:
       serverless || supabase
-        ? 3
+        ? Number(process.env.DB_POOL_MAX ?? POSTGRES_JS_SERVERLESS_POOL_MAX)
         : Number(process.env.DB_POOL_MAX ?? 10),
     idle_timeout: 20,
     connect_timeout: serverless ? 10 : 30,

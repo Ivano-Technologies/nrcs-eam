@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import postgres from "postgres";
 import { getPostgresJsSslOption } from "../../shared/mysqlSsl";
 import { getPlaywrightTestSchema } from "../helpers/testSchema";
+import { applyTestDatabaseUrl } from "../../shared/testDatabaseGuard";
 
 function requireEnv(name: string): string {
   const value = process.env[name]?.trim();
@@ -21,7 +22,7 @@ export default async function globalTeardown(): Promise<void> {
   }
 
   const schema = getPlaywrightTestSchema();
-  const databaseUrl = requireEnv("DATABASE_URL");
+  const databaseUrl = applyTestDatabaseUrl();
   const supabaseUrl = requireEnv("SUPABASE_URL");
   const secretKey = requireEnv("SUPABASE_SECRET_KEY");
   const ssl = getPostgresJsSslOption();

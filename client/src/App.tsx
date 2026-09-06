@@ -3,8 +3,8 @@ import ProtectedAppSection from "@/components/ProtectedAppSection";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { APP_ROUTE_PATTERN } from "@/lib/routes";
-import { lazy, Suspense } from "react";
-import { ThemeProvider } from "next-themes";
+import { lazy, Suspense, useEffect } from "react";
+import { ThemeProvider, useTheme } from "next-themes";
 import { Route, Switch } from "wouter";
 import Signup from "./pages/Signup";
 import Login from "./pages/Login";
@@ -45,15 +45,24 @@ function Router() {
   );
 }
 
+function ThemeMigration() {
+  const { theme, setTheme } = useTheme();
+  useEffect(() => {
+    if (theme === "system" || theme == null) setTheme("light");
+  }, [theme, setTheme]);
+  return null;
+}
+
 function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider
         attribute="class"
-        defaultTheme="system"
-        enableSystem
+        defaultTheme="light"
+        enableSystem={false}
         storageKey="nrcs-theme"
       >
+        <ThemeMigration />
         <TooltipProvider>
           <Toaster />
           <Router />

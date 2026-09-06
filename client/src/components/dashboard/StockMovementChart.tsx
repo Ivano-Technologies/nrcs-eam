@@ -1,3 +1,4 @@
+import { DashboardSectionError } from "@/components/dashboard/DashboardSectionError";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart3 } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
@@ -10,9 +11,11 @@ type StockMovementPoint = {
 
 type Props = {
   data: StockMovementPoint[];
+  failed?: boolean;
+  onRetry?: () => void;
 };
 
-export function StockMovementChart({ data }: Props) {
+export function StockMovementChart({ data, failed, onRetry }: Props) {
   const hasMovementData = data.some((point) => point.inbound > 0 || point.outbound > 0);
   const isDark = typeof document !== "undefined" && document.documentElement.classList.contains("dark");
 
@@ -37,7 +40,9 @@ export function StockMovementChart({ data }: Props) {
         </div>
       </CardHeader>
       <CardContent className="h-[280px] min-h-[200px] overflow-x-auto">
-        {!hasMovementData ? (
+        {failed ? (
+          <DashboardSectionError onRetry={onRetry} />
+        ) : !hasMovementData ? (
           <div className="dashboard-empty-state flex h-full flex-col items-center justify-center gap-2">
             <BarChart3 className="dashboard-empty-state-icon" />
             <p className="text-sm font-medium text-[#1a2332] dark:text-[hsl(0_0%_95%)]">No stock movements recorded yet</p>

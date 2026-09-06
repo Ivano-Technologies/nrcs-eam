@@ -1,4 +1,9 @@
-import { useDashboardBundle } from "@/components/dashboard/DashboardBundleContext";
+import {
+  dashboardSectionState,
+  useDashboardBundle,
+  useDashboardRetry,
+} from "@/components/dashboard/DashboardBundleContext";
+import { DashboardSectionError } from "@/components/dashboard/DashboardSectionError";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
@@ -14,6 +19,8 @@ const KIND_DOT: Record<string, string> = {
 
 export function ActivityFeed() {
   const bundle = useDashboardBundle();
+  const onRetry = useDashboardRetry();
+  const sectionState = dashboardSectionState(bundle, "recentActivity");
   const { data: fetched } = trpc.dashboard.recentActivity.useQuery(
     { limit: 5 },
     { enabled: bundle === undefined, staleTime: 60_000 }
@@ -27,8 +34,9 @@ export function ActivityFeed() {
         <CardDescription className="text-[#334155] dark:text-[hsl(0_0%_95%)]">Latest operational events</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        {(data ?? []).length === 0 ? <p className="text-sm text-[#334155] dark:text-[hsl(0_0%_95%)]">No recent activity yet.</p> : null}
-        {(data ?? []).map((item, idx) => {
+        {sectionState !== "ok" ? <DashboardSectionError onRetry={onRetry} /> : null}
+        {sectionState === "ok" && (data ?? []).length === 0 ? <p className="text-sm text-[#334155] dark:text-[hsl(0_0%_95%)]">No recent activity yet.</p> : null}
+        {sectionState === "ok" ? (data ?? []).map((item, idx) => {
           const prevFacility = idx > 0 ? (data ?? [])[idx - 1]?.facilityName : undefined;
           const showFacility = Boolean(item.facilityName) && item.facilityName !== prevFacility;
           return (
@@ -45,7 +53,7 @@ export function ActivityFeed() {
               </div>
             </div>
           );
-        })}
+        }) : null}
       </CardContent>
     </Card>
   );

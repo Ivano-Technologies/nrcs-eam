@@ -98,6 +98,8 @@ export type DashboardMetricsPayload = {
   };
 };
 
+export type DashboardSectionStatus = "ok" | "failed" | "timeout";
+
 export type DashboardAllOutput = {
   metrics: DashboardMetricsPayload;
   totalAssetValue: { totalNgn: number; propertyNgn: number; movableNgn: number };
@@ -121,6 +123,8 @@ export type DashboardAllOutput = {
     adequateCards: number;
     totalCards: number;
   }>;
+  failedSections: string[];
+  timedOutSections: string[];
 };
 
 type DashboardDb = NonNullable<Awaited<ReturnType<typeof db.getDb>>>;
@@ -546,6 +550,8 @@ function emptyDashboardAllOutput(includeBranch: boolean): DashboardAllOutput {
     pendingRequisitions: { total: 0, urgent: 0, oldestDaysAgo: null },
     attentionItems: [...DASHBOARD_ALL_CLEAR_ATTENTION],
     branchPerformance: includeBranch ? [] : [],
+    failedSections: [],
+    timedOutSections: [],
   };
 }
 
@@ -611,8 +617,7 @@ async function runQueuedDashboardSection(
             timedOut: sectionTimedOut,
           })
         );
-        const empty = emptyDashboardAllOutput(includeBranch);
-        return empty[section];
+        return undefined;
       }
     },
     section
@@ -636,6 +641,7 @@ async function runQueuedDashboardSection(
     );
   }
 
+  if (sectionFailed) return {};
   return { [section]: sectionResult } as Partial<DashboardAllOutput>;
 }
 
@@ -684,6 +690,7 @@ export async function loadDashboardTier(
       sections,
       queue: dashboardQueryQueue.getStats(),
       timedOutSections: failures.timedOutSections,
+      failedSections: failures.failedSections,
     })
   );
   return {
@@ -770,6 +777,16 @@ export async function loadDashboardAll(
     ...tier1Result.data,
     ...tier2Result.data,
     ...tier3Result.data,
+    failedSections: [
+      ...tier1Result.failedSections,
+      ...tier2Result.failedSections,
+      ...tier3Result.failedSections,
+    ],
+    timedOutSections: [
+      ...tier1Result.timedOutSections,
+      ...tier2Result.timedOutSections,
+      ...tier3Result.timedOutSections,
+    ],
   };
 }
 

@@ -4,13 +4,16 @@ import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { sites, assetCategories } from "../../drizzle/schema.ts";
 import * as dotenv from "dotenv";
+import { applyTestDatabaseUrl } from "../../shared/testDatabaseGuard.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: join(__dirname, "../../.env") });
 
-const url = process.env.DATABASE_URL;
-if (!url) {
-  console.error("DATABASE_URL is required");
+let url;
+try {
+  url = applyTestDatabaseUrl();
+} catch (error) {
+  console.error(error instanceof Error ? error.message : String(error));
   process.exit(1);
 }
 

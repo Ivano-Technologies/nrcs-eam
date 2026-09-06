@@ -1,8 +1,30 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="light">
 
   <head>
     <meta charset="UTF-8" />
+    <script>
+      (function () {
+        try {
+          var key = "nrcs-theme";
+          var theme = localStorage.getItem(key);
+          if (theme !== "light" && theme !== "dark") {
+            localStorage.setItem(key, "light");
+            theme = "light";
+          }
+          if (theme === "dark") {
+            document.documentElement.classList.remove("light");
+            document.documentElement.classList.add("dark");
+          } else {
+            document.documentElement.classList.remove("dark");
+            document.documentElement.classList.add("light");
+          }
+        } catch (e) {
+          document.documentElement.classList.remove("dark");
+          document.documentElement.classList.add("light");
+        }
+      })();
+    </script>
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1" />

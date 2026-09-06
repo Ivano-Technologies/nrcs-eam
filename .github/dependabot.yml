@@ -3,12 +3,13 @@ updates:
   # npm/pnpm dependencies
   - package-ecosystem: "npm"
     directory: "/"
+    target-branch: "blue"
     schedule:
       interval: "monthly"
       day: "monday"
       time: "09:00"
       timezone: "Africa/Lagos"
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 1
     labels:
       - "dependencies"
       - "security"
@@ -17,38 +18,14 @@ updates:
       - dependency-name: "xlsx"
         update-types: ["version-update:semver-patch"]
     groups:
-      aws-sdk:
-        patterns:
-          - "@aws-sdk/*"
-      dev-toolchain:
-        patterns:
-          - "vite*"
-          - "vitest*"
-          - "esbuild*"
-          - "drizzle-kit"
-        update-types:
-          - "minor"
-          - "patch"
-      radix-ui:
-        patterns:
-          - "@radix-ui/*"
-      production-minor-patch:
+      all-dependencies:
         patterns:
           - "*"
-        update-types:
-          - "minor"
-          - "patch"
-        exclude-patterns:
-          - "@aws-sdk/*"
-          - "@radix-ui/*"
-          - "vite*"
-          - "vitest*"
-          - "esbuild*"
-          - "drizzle-kit"
 
   # GitHub Actions dependencies
   - package-ecosystem: "github-actions"
     directory: "/"
+    target-branch: "blue"
     schedule:
       interval: "monthly"
     open-pull-requests-limit: 1

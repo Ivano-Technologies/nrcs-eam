@@ -76,7 +76,7 @@
 
 /// <reference types="@types/google.maps" />
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePersistFn } from "@/hooks/usePersistFn";
 import { DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM_COUNTRY } from "@/lib/mapDefaults";
 import { cn } from "@/lib/utils";
@@ -84,6 +84,7 @@ import { cn } from "@/lib/utils";
 declare global {
   interface Window {
     google?: typeof google;
+    gm_authFailure?: () => void;
   }
 }
 
@@ -119,7 +120,7 @@ function loadMapScript() {
     };
     script.onerror = () => {
       console.error("Failed to load Google Maps script");
-      resolve(null);
+      resolve(new Error("script_failed"));
     };
     document.head.appendChild(script);
   });
@@ -130,6 +131,7 @@ interface MapViewProps {
   initialCenter?: google.maps.LatLngLiteral;
   initialZoom?: number;
   onMapReady?: (map: google.maps.Map) => void;
+  onLoadError?: (message: string) => void;
 }
 
 export function MapView({
@@ -137,18 +139,41 @@ export function MapView({
   initialCenter = { ...DEFAULT_MAP_CENTER },
   initialZoom = DEFAULT_MAP_ZOOM_COUNTRY,
   onMapReady,
+  onLoadError,
 }: MapViewProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<google.maps.Map | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const fail = usePersistFn((message: string) => {
+    setErrorMessage(message);
+    onLoadError?.(message);
+  });
 
   const init = usePersistFn(async () => {
-    await loadMapScript();
+    const previousAuthFailure = window.gm_authFailure;
+    window.gm_authFailure = () => {
+      fail(
+        "Google Maps rejected this host. Add blue.nrcseam.techivano.com to the API key HTTP referrer allowlist."
+      );
+      previousAuthFailure?.();
+    };
+    const scriptResult = await loadMapScript();
+    if (scriptResult instanceof Error) {
+      fail("Google Maps did not load. Check the API key and HTTP referrer allowlist.");
+      return;
+    }
     const hasKey = Boolean(GOOGLE_MAPS_KEY || FORGE_API_KEY);
-    if (!hasKey || !window.google?.maps) {
+    if (!hasKey) {
+      fail("Google Maps is not configured for this environment.");
+      return;
+    }
+    if (!window.google?.maps) {
+      fail("Google Maps did not load. Check the API key and HTTP referrer allowlist.");
       return;
     }
     if (!mapContainer.current) {
-      console.error("Map container not found");
+      fail("Map container not found");
       return;
     }
     map.current = new window.google.maps.Map(mapContainer.current, {
@@ -170,10 +195,21 @@ export function MapView({
   }, [init]);
 
   return (
-    <div
-      ref={mapContainer}
-      data-testid="asset-map-container"
-      className={cn("w-full min-h-[500px] h-[500px] bg-muted/40", className)}
-    />
+    <div className="relative w-full">
+      <div
+        ref={mapContainer}
+        data-testid="asset-map-container"
+        className={cn("w-full min-h-[500px] h-[500px] bg-muted/40", className)}
+      />
+      {errorMessage ? (
+        <div
+          role="alert"
+          data-testid="asset-map-error"
+          className="absolute inset-0 flex items-center justify-center bg-muted/90 p-6 text-center text-sm text-foreground"
+        >
+          {errorMessage}
+        </div>
+      ) : null}
+    </div>
   );
 }

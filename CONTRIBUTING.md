@@ -6,8 +6,8 @@ This application is **single-organization** (Nigerian Red Cross Society). Featur
 
 ## Branches
 
-- **`main`** — integration branch; keep it buildable (`pnpm check`, `pnpm test` when you touch logic).
-- **Feature branches** — `feature/<short-name>` or `fix/<short-name>` from `main`; open PRs into `main` when your team uses reviews.
+- **`main`** and **`blue`** — keep them in sync; keep both buildable (`pnpm check`, `pnpm test` when you touch logic).
+- **Feature branches** — `feature/<short-name>` or `fix/<short-name>` from `blue` (or `main`); open PRs into `blue` unless the work is explicitly for `main`.
 
 ## Secrets and operational data
 
@@ -25,6 +25,35 @@ pnpm dev
 ```
 
 Run `pnpm run check` before pushing TypeScript changes.
+
+## Test database (required)
+
+Automated tests and `scripts/db/seed-db.mjs` **must not** use production. They read **`TEST_DATABASE_URL` only** and refuse to start if it is unset, if `NODE_ENV=production`, or if the host matches the live Supabase project (`gdseyeyedpzyhczvnzug`). They never fall back to `DATABASE_URL`.
+
+`.env` may still hold a production `DATABASE_URL` for `pnpm dev`. Test setup overwrites `process.env.DATABASE_URL` with `TEST_DATABASE_URL` for that process only.
+
+### Local Postgres
+
+```bash
+# Option A — local Postgres (or `npx supabase start` and use its DB URL)
+createdb nrcs_eam_test
+export TEST_DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/nrcs_eam_test
+pnpm db:bootstrap
+pnpm exec drizzle-kit migrate
+pnpm test
+```
+
+### Dedicated Supabase project or branch
+
+Create a separate project or a persistent branch database. Put that connection string in `TEST_DATABASE_URL`. Do not use the production project ref.
+
+Add the same key to `.env` (gitignored):
+
+```bash
+TEST_DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/nrcs_eam_test
+```
+
+`pnpm db:seed` and `pnpm db:setup` also require `TEST_DATABASE_URL`. They insert HQ / Lagos / Kano fixtures and must never run against production.
 
 **Documentation:** operational and deployment guides are listed in **[docs/README.md](docs/README.md)** (AWS, Vercel, bulk import, PWA). Planning notes and backlogs live under **`docs/planning/`**.
 

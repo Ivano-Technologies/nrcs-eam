@@ -124,6 +124,7 @@ export default function AssetMap() {
     null
   );
   const [highlightId, setHighlightId] = useState<number | null>(null);
+  const [mapLoadError, setMapLoadError] = useState<string | null>(null);
 
   const mapRef = useRef<google.maps.Map | null>(null);
   const facilityMarkersRef = useRef<google.maps.Marker[]>([]);
@@ -553,8 +554,33 @@ export default function AssetMap() {
           initialCenter={{ ...DEFAULT_MAP_CENTER }}
           initialZoom={DEFAULT_MAP_ZOOM_COUNTRY}
           onMapReady={handleMapReady}
+          onLoadError={setMapLoadError}
         />
       </div>
+      {mapLoadError ? (
+        <div
+          className="rounded-lg border bg-card p-4"
+          data-testid="asset-map-facility-fallback"
+        >
+          <p className="mb-3 text-sm font-medium">{mapLoadError}</p>
+          <p className="mb-3 text-sm text-muted-foreground">
+            Facility list is still available below.
+          </p>
+          <ul className="max-h-80 space-y-2 overflow-auto text-sm">
+            {(viewMode === "network" ? filteredNetwork : (mapData.data ?? [])).map((facility) => (
+              <li key={facility.id} className="flex items-center justify-between gap-3 border-b pb-2 last:border-0">
+                <Link href={appPath(`/facilities/${facility.id}`)} className="font-medium text-primary underline">
+                  {facility.name}
+                </Link>
+                <span className="text-muted-foreground">
+                  {FACILITY_LABELS[facility.facilityType]}
+                  {"isActive" in facility ? (facility.isActive ? " · Active" : " · Offline") : ""}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       <div className="flex flex-wrap items-center gap-4 text-sm">
         {viewMode === "network" ? (

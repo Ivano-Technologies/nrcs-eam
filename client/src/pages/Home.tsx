@@ -2,7 +2,8 @@ import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 
 import { AttentionPanel } from "@/components/dashboard/AttentionPanel";
 
-import { DashboardBundleProvider } from "@/components/dashboard/DashboardBundleContext";
+import { DashboardBundleProvider, dashboardSectionState } from "@/components/dashboard/DashboardBundleContext";
+import { DashboardSectionError } from "@/components/dashboard/DashboardSectionError";
 
 import { FacilityStatusList } from "@/components/dashboard/FacilityStatusList";
 
@@ -36,7 +37,7 @@ import { DASHBOARD_NAV } from "@shared/dashboardNav";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-import { AlertTriangle, Banknote, LayoutDashboard, MapPin, ShieldCheck, Truck, Wrench } from "lucide-react";
+import { AlertTriangle, Banknote, LayoutDashboard, MapPin, ShieldCheck, Truck } from "lucide-react";
 
 import { useMemo, useState } from "react";
 
@@ -140,6 +141,16 @@ export default function Home() {
       ...tier1Result.data,
       ...tier2Result?.data,
       ...tier3Result?.data,
+      failedSections: [
+        ...(tier1Result.failedSections ?? []),
+        ...(tier2Result?.failedSections ?? []),
+        ...(tier3Result?.failedSections ?? []),
+      ],
+      timedOutSections: [
+        ...(tier1Result.timedOutSections ?? []),
+        ...(tier2Result?.timedOutSections ?? []),
+        ...(tier3Result?.timedOutSections ?? []),
+      ],
     };
   }, [tier1Result, tier2Result, tier3Result]);
 
@@ -157,6 +168,11 @@ export default function Home() {
   const { data: userPreferences } = trpc.userPreferences.get.useQuery();
 
 
+
+  const metricsFailed = dashboardSectionState(bundle, "metrics") !== "ok";
+  const totalAssetValueFailed = dashboardSectionState(bundle, "totalAssetValue") !== "ok";
+  const stockMovementFailed = dashboardSectionState(bundle, "stockMovement") !== "ok";
+  const branchFailed = dashboardSectionState(bundle, "branchPerformance") !== "ok";
 
   const metrics = bundle?.metrics;
 
@@ -188,11 +204,6 @@ export default function Home() {
 
   }, [userPreferences?.dashboardWidgets, fixedLayout]);
 
-  const { data: fleetHealth } = trpc.fleetHealth.summary.useQuery(undefined, {
-    enabled: isManagerOrAdmin && (fixedLayout || widgetVisibility.fleetHealth),
-    staleTime: 120_000,
-  });
-
   const normalizeDirection = (direction?: string): "up" | "down" | "flat" =>
 
     direction === "up" || direction === "down" ? direction : "flat";
@@ -223,7 +234,7 @@ export default function Home() {
 
     return (
 
-      <DashboardBundleProvider value={bundle}>
+      <DashboardBundleProvider value={bundle} onRetry={refetchBundle}>
 
         <div className="space-y-6">
 
@@ -243,7 +254,7 @@ export default function Home() {
 
           </div>
 
-          <FieldDashboard metrics={metrics} />
+          <FieldDashboard metrics={metrics} metricsFailed={metricsFailed} onRetry={refetchBundle} />
 
         </div>
 
@@ -304,6 +315,7 @@ export default function Home() {
       goodWhen: (metrics?.lowStockItems.goodWhen ?? "down") as "up" | "down",
 
       href: DASHBOARD_NAV.inventoryStockLow,
+      failed: metricsFailed,
 
     },
 
@@ -328,6 +340,7 @@ export default function Home() {
       goodWhen: (metrics?.activeFacilities.goodWhen ?? "up") as "up" | "down",
 
       href: DASHBOARD_NAV.facilitiesActive,
+      failed: metricsFailed,
 
     },
 
@@ -352,6 +365,7 @@ export default function Home() {
       goodWhen: (metrics?.stockReadiness?.goodWhen ?? "up") as "up" | "down",
 
       href: DASHBOARD_NAV.inventoryStockOverview,
+      failed: metricsFailed,
 
     },
 
@@ -382,6 +396,7 @@ export default function Home() {
       goodWhen: (metrics?.distributionVelocity?.goodWhen ?? "up") as "up" | "down",
 
       href: waybillsPeriodHref(period),
+      failed: metricsFailed,
 
     },
 
@@ -406,6 +421,7 @@ export default function Home() {
       goodWhen: "up" as const,
 
       href: DASHBOARD_NAV.assetValuation,
+      failed: totalAssetValueFailed,
 
     },
 
@@ -425,7 +441,7 @@ export default function Home() {
 
   return (
 
-    <DashboardBundleProvider value={bundle}>
+    <DashboardBundleProvider value={bundle} onRetry={refetchBundle}>
 
       <div className="space-y-6">
 
@@ -500,6 +516,8 @@ export default function Home() {
                 valueTestId={`dashboard-kpi-value-${kpi.key}`}
 
                 href={kpi.href}
+                failed={kpi.failed}
+                onRetry={refetchBundle}
 
               />
 
@@ -517,7 +535,7 @@ export default function Home() {
               <Skeleton className="h-72 rounded-xl" />
             ) : (
               <div className="grid gap-6">
-                <StockMovementChart data={movement ?? []} />
+                <StockMovementChart data={movement ?? []} failed={stockMovementFailed} onRetry={refetchBundle} />
               </div>
             )
           ) : null
@@ -529,7 +547,7 @@ export default function Home() {
             </div>
           ) : (
             <div className="grid gap-6 md:grid-cols-1 xl:grid-cols-[1.55fr_1fr]">
-              {showWidgets("stockMovement") ? <StockMovementChart data={movement ?? []} /> : null}
+              {showWidgets("stockMovement") ? <StockMovementChart data={movement ?? []} failed={stockMovementFailed} onRetry={refetchBundle} /> : null}
               {showWidgets("attentionPanel") ? <AttentionPanel role={effectiveRole} /> : null}
             </div>
           )
@@ -554,7 +572,7 @@ export default function Home() {
           tier2Loading ? <Skeleton className="h-48 rounded-xl" /> : <RequisitionsTable />
         ) : null}
 
-        {isManagerOrAdmin && showWidgets("fleetHealth") && fleetHealth ? (
+        {isManagerOrAdmin && showWidgets("fleetHealth") ? (
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
@@ -562,53 +580,31 @@ export default function Home() {
                   <ShieldCheck className="h-5 w-5" />
                   Fleet health
                 </CardTitle>
-                <CardDescription>Book value, end-of-life assets, and overdue maintenance</CardDescription>
+                <CardDescription>
+                  Open the fleet health report for book value, end-of-life assets, and overdue work orders.
+                  It is not loaded on this page so the asset register stays responsive.
+                </CardDescription>
               </div>
               <Link href="/app/fleet-health" className="text-sm text-primary underline">
-                View details
+                View report
               </Link>
             </CardHeader>
-            <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <KpiCard
-                label="Book value"
-                value={formatNaira(fleetHealth.orgWide.totalBookValue)}
-                icon={Banknote}
-                tone="blue"
-              />
-              <KpiCard
-                label="Replacement pipeline"
-                value={String(fleetHealth.orgWide.endOfLifeCount)}
-                icon={AlertTriangle}
-                tone={fleetHealth.orgWide.endOfLifeCount > 0 ? "orange" : "green"}
-              />
-              <KpiCard
-                label="High-priority predictions"
-                value={String(fleetHealth.orgWide.highPriorityPredictions.length)}
-                icon={ShieldCheck}
-                tone={fleetHealth.orgWide.highPriorityPredictions.length > 0 ? "orange" : "green"}
-              />
-              <KpiCard
-                label="Overdue work orders"
-                value={String(
-                  fleetHealth.orgWide.openWorkOrdersByAge.days15to30 +
-                    fleetHealth.orgWide.openWorkOrdersByAge.days30plus
-                )}
-                icon={Wrench}
-                tone={
-                  fleetHealth.orgWide.openWorkOrdersByAge.days15to30 +
-                    fleetHealth.orgWide.openWorkOrdersByAge.days30plus >
-                  0
-                    ? "red"
-                    : "green"
-                }
-              />
-            </CardContent>
           </Card>
         ) : null}
 
-        {(effectiveRole === "Manager" || effectiveRole === "Admin") && (tier3Loading || (branchPerf?.length ?? 0) > 0) ? (
+        {(effectiveRole === "Manager" || effectiveRole === "Admin") && (tier3Loading || branchFailed || (branchPerf?.length ?? 0) > 0) ? (
           tier3Loading ? (
             <Skeleton className="h-56 rounded-xl" />
+          ) : branchFailed ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Branch Performance</CardTitle>
+              <CardDescription>Stock readiness by branch (warehouse stock cards)</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <DashboardSectionError onRetry={refetchBundle} />
+            </CardContent>
+          </Card>
           ) : branchPerf?.length ? (
 
           <Card>

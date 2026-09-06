@@ -7,6 +7,7 @@ import { trpc } from "@/lib/trpc";
 import { appPath } from "@/lib/routes";
 import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
+import { DashboardSectionError } from "@/components/dashboard/DashboardSectionError";
 import { Loader2, PackagePlus } from "lucide-react";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -21,9 +22,11 @@ const STATUS_LABEL: Record<string, string> = {
 
 type FieldDashboardProps = {
   metrics?: DashboardBundle["metrics"];
+  metricsFailed?: boolean;
+  onRetry?: () => void;
 };
 
-export function FieldDashboard({ metrics: metricsProp }: FieldDashboardProps) {
+export function FieldDashboard({ metrics: metricsProp, metricsFailed, onRetry }: FieldDashboardProps) {
   const { data: fetchedMetrics, isLoading: metricsLoading } = trpc.dashboard.metrics.useQuery(
     { period: "Month" },
     { enabled: metricsProp === undefined, staleTime: 60_000 }
@@ -51,15 +54,21 @@ export function FieldDashboard({ metrics: metricsProp }: FieldDashboardProps) {
           <CardDescription>Readiness for your assigned facility (warehouse stock cards)</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-end gap-4">
-            <div className={cn(KPI_VALUE_CLASS, "text-primary")}>{pct}%</div>
-            <p className="text-muted-foreground pb-1">
-              {adequate} of {total} readiness buckets adequately stocked
-            </p>
-          </div>
-          <div className="h-3 w-full overflow-hidden rounded-full bg-muted">
-            <div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} />
-          </div>
+          {metricsFailed ? (
+            <DashboardSectionError onRetry={onRetry} />
+          ) : (
+            <>
+              <div className="flex items-end gap-4">
+                <div className={cn(KPI_VALUE_CLASS, "text-primary")}>{pct}%</div>
+                <p className="text-muted-foreground pb-1">
+                  {adequate} of {total} readiness buckets adequately stocked
+                </p>
+              </div>
+              <div className="h-3 w-full overflow-hidden rounded-full bg-muted">
+                <div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 

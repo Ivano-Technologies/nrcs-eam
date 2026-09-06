@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, blue]
   pull_request:
-    branches: [main]
+    branches: [main, blue]
 
 jobs:
   typecheck:
@@ -72,7 +72,30 @@ jobs:
           --health-retries 5
     env:
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/nrcs_eam_test
+      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/nrcs_eam_test
     steps:
+      - name: Refuse production database URLs
+        run: |
+          node -e "
+            const prod = 'gdseyeyedpzyhczvnzug';
+            const keys = ['TEST_DATABASE_URL', 'DATABASE_URL'];
+            for (const key of keys) {
+              const value = process.env[key] || '';
+              if (!value) {
+                console.error(key + ' must be set in CI');
+                process.exit(1);
+              }
+              if (value.toLowerCase().includes(prod)) {
+                console.error('[test-db-guard] ' + key + ' points at production. Refusing to run.');
+                process.exit(1);
+              }
+            }
+            if (process.env.NODE_ENV === 'production') {
+              console.error('[test-db-guard] NODE_ENV=production. Refusing to run tests.');
+              process.exit(1);
+            }
+            console.log('CI test database URL is not production.');
+          "
       - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
