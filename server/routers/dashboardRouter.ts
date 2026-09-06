@@ -510,20 +510,44 @@ export const dashboardRouter = router({
         adequateCards: number;
         totalCards: number;
       };
+      const started = Date.now();
+      const steps: {
+        cacheMs?: number;
+        getDbMs?: number;
+        branchesMs?: number;
+        anyMovementMs?: number;
+        mvCheckMs?: number;
+        scoringMs?: number;
+        cacheWriteMs?: number;
+      } = {};
+      let path: "cache_hit" | "no_db" | "empty_movements" | "scored" = "no_db";
+      try {
+      const t0 = Date.now();
       const cached = await cacheGetJson<BranchPerformanceRow[]>(cacheKey);
-      if (cached) return cached;
+      steps.cacheMs = Date.now() - t0;
+      if (cached) {
+        path = "cache_hit";
+        return cached;
+      }
 
+      const t1 = Date.now();
       const database = await db.getDb();
+      steps.getDbMs = Date.now() - t1;
       if (!database) return [];
 
+      const t2 = Date.now();
       const branches = await database
         .select({ id: sites.id, name: sites.name, code: sites.code, isActive: sites.isActive })
         .from(sites)
         .where(eq(sites.facilityType, "branch"))
         .orderBy(asc(sites.name));
+      steps.branchesMs = Date.now() - t2;
 
+      const t3 = Date.now();
       const [anyMovement] = await database.select({ id: stockMovements.id }).from(stockMovements).limit(1);
+      steps.anyMovementMs = Date.now() - t3;
       if (!anyMovement) {
+        path = "empty_movements";
         const emptyScores = branches.map((b) => ({
           id: b.id,
           name: b.name,
@@ -533,13 +557,18 @@ export const dashboardRouter = router({
           adequateCards: 0,
           totalCards: 0,
         }));
+        const tWrite = Date.now();
         await cacheSetJson(cacheKey, emptyScores, 1800);
+        steps.cacheWriteMs = Date.now() - tWrite;
         return emptyScores;
       }
 
+      const t4 = Date.now();
       const { isStockCardBalancesMvAvailable } = await import("../_core/stockCardBalancesMv");
       const useMv = await isStockCardBalancesMvAvailable(database);
+      steps.mvCheckMs = Date.now() - t4;
 
+      const t5 = Date.now();
       let scoreRows: { locationId: number; total: number; adequate: number }[];
 
       if (useMv) {
@@ -588,6 +617,8 @@ export const dashboardRouter = router({
           .leftJoin(movementTotals, eq(movementTotals.stockCardId, stockCards.id))
           .groupBy(stockCards.locationId);
       }
+      steps.scoringMs = Date.now() - t5;
+      path = "scored";
 
       const scoreByLocation = new Map<number, { total: number; adequate: number }>();
       for (const row of scoreRows) {
@@ -610,8 +641,20 @@ export const dashboardRouter = router({
           totalCards: score?.total ?? 0,
         };
       });
+      const tWrite = Date.now();
       await cacheSetJson(cacheKey, result, 1800);
+      steps.cacheWriteMs = Date.now() - tWrite;
       return result;
+      } finally {
+        console.log(
+          JSON.stringify({
+            event: "dashboard_branch_performance_steps",
+            path,
+            ...steps,
+            totalMs: Date.now() - started,
+          })
+        );
+      }
     }),
 
     attentionItems: protectedProcedure
