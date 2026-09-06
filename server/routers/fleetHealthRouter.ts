@@ -81,7 +81,17 @@ export const fleetHealthRouter = router({
       .input(z.object({ siteId: z.number().optional() }).optional())
       .query(async ({ input }) => {
         const { buildFleetHealthSummary } = await import("../reports/fleetHealth");
-        return await buildFleetHealthSummary(input ?? undefined);
+        const siteKey = input?.siteId ?? "all";
+        try {
+          return await withDashboardCache(`fleetHealth:summary:${siteKey}`, 900, () =>
+            withTimeout(buildFleetHealthSummary(input ?? undefined), 8000, "fleetHealth.summary")
+          );
+        } catch (err) {
+          throw new TRPCError({
+            code: "TIMEOUT",
+            message: err instanceof Error ? err.message : "Fleet health timed out",
+          });
+        }
       }),
 
     exportPdf: managerOrAdminProcedure

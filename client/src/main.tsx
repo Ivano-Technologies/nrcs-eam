@@ -13,10 +13,12 @@ import { OfflineSyncProvider } from "./components/OfflineSyncProvider";
 import { getLoginUrl } from "./const";
 import "./index.css";
 import { initPostHog } from "./lib/posthog";
+import { applyNrcsThemeClass, migrateNrcsTheme } from "./lib/nrcsTheme";
 
 try {
-  if (globalThis.localStorage?.getItem("nrcs-theme") === "system") {
-    globalThis.localStorage.setItem("nrcs-theme", "light");
+  if (globalThis.localStorage) {
+    const theme = migrateNrcsTheme(globalThis.localStorage);
+    applyNrcsThemeClass(document.documentElement, theme);
   }
 } catch {
   // Ignore quota / private-mode failures — ThemeProvider still defaults to light.

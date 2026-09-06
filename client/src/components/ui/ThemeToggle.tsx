@@ -8,6 +8,9 @@ export function ThemeToggle({ className }: { className?: string }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    if (theme === "system") setTheme("light");
+  }, [theme, setTheme]);
   if (!mounted) return null;
 
   const isDark = theme === "dark" || resolvedTheme === "dark";
