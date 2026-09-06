@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   cacheGet,
   cacheSet,
+  cacheSetJson,
   resetCacheMemoryForTests,
   withDashboardCache,
 } from "../_core/cache";
@@ -31,6 +32,17 @@ describe("cache fallback", () => {
     delete process.env.UPSTASH_REDIS_REST_TOKEN;
     await cacheSet("k", "v", 60);
     await expect(cacheGet("k")).resolves.toBe("v");
+  });
+
+  it("cacheSetJson settles when remote fetch never resolves", async () => {
+    process.env.UPSTASH_REDIS_REST_URL = "https://example.invalid";
+    process.env.UPSTASH_REDIS_REST_TOKEN = "token";
+    vi.spyOn(globalThis, "fetch").mockImplementation(() => new Promise(() => undefined));
+
+    const started = Date.now();
+    await cacheSetJson("hang-key", { n: 1 }, 60);
+    expect(Date.now() - started).toBeLessThan(800);
+    await expect(cacheGet("hang-key")).resolves.toBe(JSON.stringify({ n: 1 }));
   });
 
   it("withDashboardCache returns the computed value when Upstash throws", async () => {
