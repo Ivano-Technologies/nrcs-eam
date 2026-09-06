@@ -599,7 +599,7 @@ async function runQueuedDashboardSection(
     // Timeout starts after dequeue — queue wait must not consume the 8s budget.
     const sectionResult = await dashboardQueryQueue.enqueueWithTimeout(
       priority,
-      runSection,
+      async () => runSection(),
       8000,
       section
     );
