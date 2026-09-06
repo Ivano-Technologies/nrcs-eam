@@ -510,147 +510,164 @@ export const dashboardRouter = router({
         adequateCards: number;
         totalCards: number;
       };
+
       const started = Date.now();
-      const steps: {
-        cacheMs?: number;
-        getDbMs?: number;
-        branchesMs?: number;
-        anyMovementMs?: number;
-        mvCheckMs?: number;
-        scoringMs?: number;
-        cacheWriteMs?: number;
-      } = {};
-      let path: "cache_hit" | "no_db" | "empty_movements" | "scored" = "no_db";
+      let step = "start";
+      const pending = setInterval(() => {
+        console.warn(
+          JSON.stringify({
+            event: "dashboard_branch_performance_pending",
+            step,
+            waitedMs: Date.now() - started,
+          })
+        );
+      }, 250);
+      const mark = (next: string) => {
+        step = next;
+        console.log(
+          JSON.stringify({
+            event: "dashboard_branch_performance_step",
+            step,
+            ms: Date.now() - started,
+          })
+        );
+      };
+
       try {
-      const t0 = Date.now();
-      const cached = await cacheGetJson<BranchPerformanceRow[]>(cacheKey);
-      steps.cacheMs = Date.now() - t0;
-      if (cached) {
-        path = "cache_hit";
-        return cached;
-      }
+        mark("cache_get");
+        const cached = await cacheGetJson<BranchPerformanceRow[]>(cacheKey);
+        if (cached) {
+          mark("cache_hit");
+          return cached;
+        }
 
-      const t1 = Date.now();
-      const database = await db.getDb();
-      steps.getDbMs = Date.now() - t1;
-      if (!database) return [];
+        mark("get_db");
+        const database = await db.getDb();
+        if (!database) {
+          mark("no_db");
+          return [];
+        }
 
-      const t2 = Date.now();
-      const branches = await database
-        .select({ id: sites.id, name: sites.name, code: sites.code, isActive: sites.isActive })
-        .from(sites)
-        .where(eq(sites.facilityType, "branch"))
-        .orderBy(asc(sites.name));
-      steps.branchesMs = Date.now() - t2;
-
-      const t3 = Date.now();
-      const [anyMovement] = await database.select({ id: stockMovements.id }).from(stockMovements).limit(1);
-      steps.anyMovementMs = Date.now() - t3;
-      if (!anyMovement) {
-        path = "empty_movements";
-        const emptyScores = branches.map((b) => ({
-          id: b.id,
-          name: b.name,
-          code: b.code,
-          isActive: b.isActive,
-          stockScorePercent: null,
-          adequateCards: 0,
-          totalCards: 0,
+        mark("branches");
+        const branchRows = await database
+          .select({ id: sites.id, name: sites.name, code: sites.code, isActive: sites.isActive })
+          .from(sites)
+          .where(eq(sites.facilityType, "branch"))
+          .orderBy(asc(sites.name));
+        const branchList = (Array.isArray(branchRows) ? branchRows : []).map((b) => ({
+          id: Number(b.id),
+          name: String(b.name ?? ""),
+          code: b.code ?? null,
+          isActive: Boolean(b.isActive),
         }));
-        const tWrite = Date.now();
-        await cacheSetJson(cacheKey, emptyScores, 1800);
-        steps.cacheWriteMs = Date.now() - tWrite;
-        return emptyScores;
-      }
+        mark("branches_done");
 
-      const t4 = Date.now();
-      const { isStockCardBalancesMvAvailable } = await import("../_core/stockCardBalancesMv");
-      const useMv = await isStockCardBalancesMvAvailable(database);
-      steps.mvCheckMs = Date.now() - t4;
+        mark("any_movement");
+        const movementRows = await database.execute(sql`select id from stock_movements limit 1`);
+        const movementList = Array.isArray(movementRows)
+          ? movementRows
+          : ((movementRows as { rows?: unknown[] }).rows ?? []);
+        const hasMovement = movementList.length > 0;
+        mark(hasMovement ? "any_movement_hit" : "any_movement_empty");
 
-      const t5 = Date.now();
-      let scoreRows: { locationId: number; total: number; adequate: number }[];
+        if (!hasMovement) {
+          const emptyScores: BranchPerformanceRow[] = branchList.map((b) => ({
+            ...b,
+            stockScorePercent: null,
+            adequateCards: 0,
+            totalCards: 0,
+          }));
+          mark("cache_write_empty");
+          void cacheSetJson(cacheKey, emptyScores, 1800);
+          mark("return_empty");
+          return emptyScores;
+        }
 
-      if (useMv) {
-        scoreRows = await database
-          .select({
-            locationId: stockCards.locationId,
-            total: sql<number>`count(distinct ${stockCards.id})`.mapWith(Number),
-            adequate: sql<number>`count(distinct ${stockCards.id}) filter (where coalesce(scb.net_quantity, 0) > coalesce(${stockSettings.minLevel}, 0))`.mapWith(Number),
-          })
-          .from(stockCards)
-          .leftJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
-          .leftJoin(
-            stockSettings,
-            and(
-              eq(stockSettings.catalogueId, commodityTrackingNumbers.itemId),
-              eq(stockSettings.warehouseId, stockCards.locationId)
+        mark("mv_check");
+        const { isStockCardBalancesMvAvailable } = await import("../_core/stockCardBalancesMv");
+        const useMv = await isStockCardBalancesMvAvailable(database);
+        mark(useMv ? "scoring_mv" : "scoring_live");
+
+        let scoreRows: { locationId: number; total: number; adequate: number }[];
+
+        if (useMv) {
+          scoreRows = await database
+            .select({
+              locationId: stockCards.locationId,
+              total: sql<number>`count(distinct ${stockCards.id})`.mapWith(Number),
+              adequate: sql<number>`count(distinct ${stockCards.id}) filter (where coalesce(scb.net_quantity, 0) > coalesce(${stockSettings.minLevel}, 0))`.mapWith(Number),
+            })
+            .from(stockCards)
+            .leftJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
+            .leftJoin(
+              stockSettings,
+              and(
+                eq(stockSettings.catalogueId, commodityTrackingNumbers.itemId),
+                eq(stockSettings.warehouseId, stockCards.locationId)
+              )
             )
-          )
-          .leftJoin(sql`stock_card_balances scb`, sql`scb.stock_card_id = ${stockCards.id}`)
-          .groupBy(stockCards.locationId);
-      } else {
-        const movementTotals = database
-          .select({
-            stockCardId: stockMovements.stockCardId,
-            netQuantity: sql<number>`coalesce(sum(${stockMovements.quantityIn} - ${stockMovements.quantityOut}), 0)`.mapWith(Number).as("netQuantity"),
-          })
-          .from(stockMovements)
-          .groupBy(stockMovements.stockCardId)
-          .as("movement_totals_bp");
+            .leftJoin(sql`stock_card_balances scb`, sql`scb.stock_card_id = ${stockCards.id}`)
+            .groupBy(stockCards.locationId);
+        } else {
+          const movementTotals = database
+            .select({
+              stockCardId: stockMovements.stockCardId,
+              netQuantity: sql<number>`coalesce(sum(${stockMovements.quantityIn} - ${stockMovements.quantityOut}), 0)`
+                .mapWith(Number)
+                .as("netQuantity"),
+            })
+            .from(stockMovements)
+            .groupBy(stockMovements.stockCardId)
+            .as("movement_totals_bp");
 
-        scoreRows = await database
-          .select({
-            locationId: stockCards.locationId,
-            total: sql<number>`count(distinct ${stockCards.id})`.mapWith(Number),
-            adequate: sql<number>`count(distinct ${stockCards.id}) filter (where coalesce(${movementTotals.netQuantity}, 0) > coalesce(${stockSettings.minLevel}, 0))`.mapWith(Number),
-          })
-          .from(stockCards)
-          .leftJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
-          .leftJoin(
-            stockSettings,
-            and(
-              eq(stockSettings.catalogueId, commodityTrackingNumbers.itemId),
-              eq(stockSettings.warehouseId, stockCards.locationId)
+          scoreRows = await database
+            .select({
+              locationId: stockCards.locationId,
+              total: sql<number>`count(distinct ${stockCards.id})`.mapWith(Number),
+              adequate: sql<number>`count(distinct ${stockCards.id}) filter (where coalesce(${movementTotals.netQuantity}, 0) > coalesce(${stockSettings.minLevel}, 0))`.mapWith(Number),
+            })
+            .from(stockCards)
+            .leftJoin(commodityTrackingNumbers, eq(stockCards.ctnId, commodityTrackingNumbers.id))
+            .leftJoin(
+              stockSettings,
+              and(
+                eq(stockSettings.catalogueId, commodityTrackingNumbers.itemId),
+                eq(stockSettings.warehouseId, stockCards.locationId)
+              )
             )
-          )
-          .leftJoin(movementTotals, eq(movementTotals.stockCardId, stockCards.id))
-          .groupBy(stockCards.locationId);
-      }
-      steps.scoringMs = Date.now() - t5;
-      path = "scored";
+            .leftJoin(movementTotals, eq(movementTotals.stockCardId, stockCards.id))
+            .groupBy(stockCards.locationId);
+        }
+        mark("scoring_done");
 
-      const scoreByLocation = new Map<number, { total: number; adequate: number }>();
-      for (const row of scoreRows) {
-        scoreByLocation.set(row.locationId, {
-          total: Number(row.total ?? 0),
-          adequate: Number(row.adequate ?? 0),
+        const scoreByLocation = new Map<number, { total: number; adequate: number }>();
+        for (const row of scoreRows) {
+          scoreByLocation.set(row.locationId, {
+            total: Number(row.total ?? 0),
+            adequate: Number(row.adequate ?? 0),
+          });
+        }
+
+        const result: BranchPerformanceRow[] = branchList.map((b) => {
+          const score = scoreByLocation.get(b.id);
+          const pct = score && score.total > 0 ? Math.round((score.adequate / score.total) * 100) : null;
+          return {
+            ...b,
+            stockScorePercent: pct,
+            adequateCards: score?.adequate ?? 0,
+            totalCards: score?.total ?? 0,
+          };
         });
-      }
-
-      const result = branches.map((b) => {
-        const score = scoreByLocation.get(b.id);
-        const pct = score && score.total > 0 ? Math.round((score.adequate / score.total) * 100) : null;
-        return {
-          id: b.id,
-          name: b.name,
-          code: b.code,
-          isActive: b.isActive,
-          stockScorePercent: pct,
-          adequateCards: score?.adequate ?? 0,
-          totalCards: score?.total ?? 0,
-        };
-      });
-      const tWrite = Date.now();
-      await cacheSetJson(cacheKey, result, 1800);
-      steps.cacheWriteMs = Date.now() - tWrite;
-      return result;
+        mark("cache_write_scored");
+        void cacheSetJson(cacheKey, result, 1800);
+        mark("return_scored");
+        return result;
       } finally {
+        clearInterval(pending);
         console.log(
           JSON.stringify({
             event: "dashboard_branch_performance_steps",
-            path,
-            ...steps,
+            step,
             totalMs: Date.now() - started,
           })
         );
