@@ -14,6 +14,14 @@ import { getLoginUrl } from "./const";
 import "./index.css";
 import { initPostHog } from "./lib/posthog";
 
+try {
+  if (globalThis.localStorage?.getItem("nrcs-theme") === "system") {
+    globalThis.localStorage.setItem("nrcs-theme", "light");
+  }
+} catch {
+  // Ignore quota / private-mode failures — ThemeProvider still defaults to light.
+}
+
 initPostHog();
 initAnalytics();
 

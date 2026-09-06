@@ -1,4 +1,9 @@
-import { useDashboardBundle } from "@/components/dashboard/DashboardBundleContext";
+import {
+  dashboardSectionState,
+  useDashboardBundle,
+  useDashboardRetry,
+} from "@/components/dashboard/DashboardBundleContext";
+import { DashboardSectionError } from "@/components/dashboard/DashboardSectionError";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
@@ -50,6 +55,8 @@ type Props = {
 export function AttentionPanel({ role }: Props) {
   const [, setLocation] = useLocation();
   const bundle = useDashboardBundle();
+  const onRetry = useDashboardRetry();
+  const sectionState = dashboardSectionState(bundle, "attentionItems");
   const { data: fetched } = trpc.dashboard.attentionItems.useQuery(
     { role },
     { enabled: bundle === undefined, staleTime: 60_000 }
@@ -63,7 +70,8 @@ export function AttentionPanel({ role }: Props) {
         <CardDescription className="text-[#334155] dark:text-[hsl(0_0%_95%)]">Personalised for {role}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-1">
-        {(data ?? []).map((item, idx) => {
+        {sectionState !== "ok" ? <DashboardSectionError onRetry={onRetry} /> : null}
+        {sectionState === "ok" ? (data ?? []).map((item, idx) => {
           const Icon = ICON_MAP[item.icon] ?? AlertTriangle;
           const clickable = Boolean(item.href);
           const RowTag = clickable ? ("button" as const) : ("div" as const);
@@ -98,7 +106,7 @@ export function AttentionPanel({ role }: Props) {
               </div>
             </RowTag>
           );
-        })}
+        }) : null}
       </CardContent>
     </Card>
   );

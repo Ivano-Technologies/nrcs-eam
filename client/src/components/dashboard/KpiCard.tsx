@@ -1,3 +1,4 @@
+import { DashboardSectionError } from "@/components/dashboard/DashboardSectionError";
 import { Card, CardContent } from "@/components/ui/card";
 import { KPI_VALUE_CLASS } from "@/lib/kpiTypography";
 import { cn } from "@/lib/utils";
@@ -29,6 +30,8 @@ type Props = {
   goodWhen?: GoodWhen;
   valueTestId?: string;
   href?: string;
+  failed?: boolean;
+  onRetry?: () => void;
 };
 
 function DeltaPill({
@@ -64,6 +67,8 @@ function KpiCardInner({
   deltaDirection = "flat",
   goodWhen = "up",
   valueTestId,
+  failed,
+  onRetry,
   interactive,
 }: Props & { interactive: boolean }) {
   const showPill = Boolean(delta) && deltaDirection !== "flat";
@@ -84,18 +89,24 @@ function KpiCardInner({
           </div>
         </header>
 
-        <div 
-          className={cn(
-            "mt-3 min-w-0 whitespace-nowrap tracking-tight text-[#1a2332] dark:text-[hsl(0_0%_95%)]",
-            KPI_VALUE_CLASS
-          )}
-          data-testid={valueTestId}
-        >
-          {value}
-        </div>
+        {failed ? (
+          <div className="mt-3">
+            <DashboardSectionError onRetry={onRetry} compact />
+          </div>
+        ) : (
+          <div
+            className={cn(
+              "mt-3 min-w-0 whitespace-nowrap tracking-tight text-[#1a2332] dark:text-[hsl(0_0%_95%)]",
+              KPI_VALUE_CLASS
+            )}
+            data-testid={valueTestId}
+          >
+            {value}
+          </div>
+        )}
 
         <footer className="relative mt-auto flex flex-col items-start gap-2 pt-4 pr-6">
-          {sub ? (
+          {failed ? null : sub ? (
             <span className="w-full min-w-0 whitespace-normal break-words text-sm leading-relaxed text-[#334155] dark:text-[hsl(0_0%_95%)]">
               {sub}
             </span>
@@ -104,7 +115,7 @@ function KpiCardInner({
               {"\u00a0"}
             </span>
           )}
-          {showPill ? <DeltaPill delta={delta!} deltaDirection={deltaDirection} goodWhen={goodWhen} /> : null}
+          {!failed && showPill ? <DeltaPill delta={delta!} deltaDirection={deltaDirection} goodWhen={goodWhen} /> : null}
           {interactive ? (
             <ChevronRight
               className="pointer-events-none absolute bottom-0 right-0 h-4 w-4 text-muted-foreground/80"
@@ -118,14 +129,14 @@ function KpiCardInner({
 }
 
 export function KpiCard(props: Props) {
-  const { href, label, ...rest } = props;
-  if (!href) {
+  const { href, label, failed, ...rest } = props;
+  if (!href || failed) {
     return <KpiCardInner {...props} interactive={false} />;
   }
 
   return (
     <Link href={href} className="block h-full min-h-[168px] rounded-xl outline-none" aria-label={`View ${label}`}>
-      <KpiCardInner label={label} {...rest} interactive />
+      <KpiCardInner label={label} failed={failed} {...rest} interactive />
     </Link>
   );
 }

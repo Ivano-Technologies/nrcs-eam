@@ -103,6 +103,8 @@ export async function recordDashboardRequest(record: DashboardRequestRecord): Pr
         err: err instanceof Error ? err.message : String(err),
       })
     );
+    memoryBuffer.unshift(record);
+    if (memoryBuffer.length > MAX_BUFFER_SIZE) memoryBuffer.length = MAX_BUFFER_SIZE;
   }
 }
 

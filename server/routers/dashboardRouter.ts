@@ -418,7 +418,12 @@ export const dashboardRouter = router({
             })
           );
         }
-        return { tier: input.tier, data: result.data };
+        return {
+          tier: input.tier,
+          data: result.data,
+          failedSections: result.failedSections,
+          timedOutSections: result.timedOutSections,
+        };
       }),
     stockMovement: protectedProcedure
       .input(z.object({ weeks: z.number().min(4).max(26).default(12) }).optional())
