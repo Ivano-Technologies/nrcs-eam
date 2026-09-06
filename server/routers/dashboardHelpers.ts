@@ -650,6 +650,26 @@ export async function loadDashboardTier(
   const { appRouter } = await import("../routers");
   const caller = appRouter.createCaller(ctx);
   const includeBranch = ctx.user?.role === "admin" || ctx.user?.role === "manager";
+  const warmStarted = Date.now();
+  try {
+    await db.warmDbConnection(1);
+    console.log(
+      JSON.stringify({
+        event: "dashboard_pool_warm",
+        tier: input.tier,
+        warmMs: Date.now() - warmStarted,
+      })
+    );
+  } catch (err) {
+    console.warn(
+      JSON.stringify({
+        event: "dashboard_pool_warm_failed",
+        tier: input.tier,
+        warmMs: Date.now() - warmStarted,
+        err: err instanceof Error ? err.message : String(err),
+      })
+    );
+  }
   const tierStarted = Date.now();
   const sections = sectionsForTier(input.tier);
   const failures: SectionFailureTracker = { timedOutSections: [], failedSections: [] };
