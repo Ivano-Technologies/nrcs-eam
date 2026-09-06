@@ -1,4 +1,9 @@
-import { useDashboardBundle } from "@/components/dashboard/DashboardBundleContext";
+import {
+  dashboardSectionState,
+  useDashboardBundle,
+  useDashboardRetry,
+} from "@/components/dashboard/DashboardBundleContext";
+import { DashboardSectionError } from "@/components/dashboard/DashboardSectionError";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
@@ -10,6 +15,8 @@ function statusClass(status: "active" | "offline") {
 
 export function FacilityStatusList() {
   const bundle = useDashboardBundle();
+  const onRetry = useDashboardRetry();
+  const sectionState = dashboardSectionState(bundle, "facilityStatus");
   const { data: fetched } = trpc.dashboard.facilityStatus.useQuery(undefined, {
     enabled: bundle === undefined,
     staleTime: 60_000,
@@ -28,8 +35,9 @@ export function FacilityStatusList() {
         <CardDescription className="text-[#334155] dark:text-[hsl(0_0%_95%)]">Facility records from the live sites table</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        {(data ?? []).length === 0 ? <p className="text-sm text-[#334155] dark:text-[hsl(0_0%_95%)]">No facilities found.</p> : null}
-        {(data ?? []).map((row) => (
+        {sectionState !== "ok" ? <DashboardSectionError onRetry={onRetry} /> : null}
+        {sectionState === "ok" && (data ?? []).length === 0 ? <p className="text-sm text-[#334155] dark:text-[hsl(0_0%_95%)]">No facilities found.</p> : null}
+        {sectionState === "ok" ? (data ?? []).map((row) => (
           <div key={row.id} className="flex items-center gap-4 rounded-xl border p-3">
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold truncate">{row.name}</p>
@@ -49,7 +57,7 @@ export function FacilityStatusList() {
             </div>
             <span className={cn("rounded-full px-2.5 py-1 text-xs font-medium capitalize", statusClass(row.status))}>{row.status}</span>
           </div>
-        ))}
+        )) : null}
       </CardContent>
     </Card>
   );

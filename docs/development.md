@@ -5,7 +5,8 @@
 1. `pnpm install`
 2. `cp .env.example .env`
 3. Set required env vars:
-   - `DATABASE_URL`
+   - `DATABASE_URL` (app / `pnpm dev` only)
+   - `TEST_DATABASE_URL` (required for `pnpm test`, Playwright, and `seed-db.mjs` — never production)
    - `SUPABASE_URL`
    - `SUPABASE_PUBLISHABLE_KEY`
    - `SUPABASE_SECRET_KEY`
@@ -22,7 +23,7 @@ Notes:
 
 ## Running tests in CI and locally
 
-Vitest includes DB-backed router tests (`server/eam.test.ts`, `server/bulkSiteImport.test.ts`, `server/facilityHierarchy.test.ts`, `server/notifications.test.ts`, `server/qrcode.test.ts`). They need a Postgres database reachable via `DATABASE_URL`.
+Vitest includes DB-backed router tests (`server/eam.test.ts`, `server/bulkSiteImport.test.ts`, `server/facilityHierarchy.test.ts`, `server/notifications.test.ts`, `server/qrcode.test.ts`). They need a Postgres database reachable via **`TEST_DATABASE_URL`**. Setup refuses to run if that variable is unset or points at production (`gdseyeyedpzyhczvnzug`). It never falls back to `DATABASE_URL`. See CONTRIBUTING.md.
 
 **CI** (`.github/workflows/ci.yml` `test` job):
 
@@ -33,8 +34,8 @@ Vitest includes DB-backed router tests (`server/eam.test.ts`, `server/bulkSiteIm
 **Locally:**
 
 ```bash
-# Point at a Postgres DB (example)
-export DATABASE_URL=postgres://postgres:postgres@localhost:5432/nrcs_eam_test
+# Point tests at a dedicated Postgres DB (never production)
+export TEST_DATABASE_URL=postgres://postgres:postgres@localhost:5432/nrcs_eam_test
 
 # Bootstrap + migrate + seed (vanilla Postgres / CI parity)
 pnpm db:setup
@@ -42,7 +43,7 @@ pnpm db:setup
 pnpm exec vitest run
 ```
 
-`vitest.setup.ts` loads `.env` via dotenv when present; a missing `.env` is a no-op, so CI relies on the job-level `DATABASE_URL` alone. Unit tests that do not touch the DB still run without Postgres.
+`vitest.setup.ts` loads `.env` via dotenv when present, then binds `DATABASE_URL` to `TEST_DATABASE_URL`. CI sets both to the ephemeral `nrcs_eam_test` service. Unit tests that do not touch the DB still require `TEST_DATABASE_URL` so a missing or production URL cannot slip through.
 
 Also run `pnpm lint` (ESLint) and `pnpm check` (TypeScript) before opening a PR. CI enforces all three plus a frontend production build.
 

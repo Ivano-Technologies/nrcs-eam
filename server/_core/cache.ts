@@ -1,5 +1,6 @@
 /**
- * Optional shared cache (Upstash Redis REST). Falls back to in-process Map when unset.
+ * Optional shared cache (Upstash Redis REST). Falls back to in-process Map when unset
+ * or when the remote cache throws / times out. Cache errors must never fail a request.
  */
 
 import { recordCacheHit, recordCacheMiss } from "./cacheMetrics";
@@ -25,13 +26,17 @@ function memorySet(key: string, value: string, ttlSeconds: number): void {
 
 export async function cacheGet(key: string): Promise<string | null> {
   const started = Date.now();
-  const res = await upstashFetch(`/get/${encodeURIComponent(key)}`);
-  if (res?.ok) {
-    const body = (await res.json()) as { result?: string | null };
-    if (body.result != null) {
-      void recordCacheHit(key, Date.now() - started);
-      return body.result;
+  try {
+    const res = await upstashFetch(`/get/${encodeURIComponent(key)}`);
+    if (res?.ok) {
+      const body = (await res.json()) as { result?: string | null };
+      if (body.result != null) {
+        void recordCacheHit(key, Date.now() - started);
+        return body.result;
+      }
     }
+  } catch {
+    // Remote cache is optional — fall through to in-process memory.
   }
   const mem = memoryGet(key);
   const durationMs = Date.now() - started;
@@ -44,23 +49,32 @@ export async function cacheGet(key: string): Promise<string | null> {
 }
 
 export async function cacheSet(key: string, value: string, ttlSeconds: number): Promise<void> {
-  const res = await upstashFetch("", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(["SET", key, value, "EX", ttlSeconds]),
-  });
-  if (!res?.ok) memorySet(key, value, ttlSeconds);
+  try {
+    const res = await upstashFetch("", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(["SET", key, value, "EX", ttlSeconds]),
+    });
+    if (res?.ok) return;
+  } catch {
+    // Fall through to memory.
+  }
+  memorySet(key, value, ttlSeconds);
 }
 
 export async function cacheDel(key: string): Promise<void> {
-  await upstashFetch(`/del/${encodeURIComponent(key)}`, { method: "POST" });
+  try {
+    await upstashFetch(`/del/${encodeURIComponent(key)}`, { method: "POST" });
+  } catch {
+    // Still drop the in-process entry.
+  }
   memory.delete(key);
 }
 
 export async function cacheGetJson<T>(key: string): Promise<T | null> {
-  const raw = await cacheGet(key);
-  if (!raw) return null;
   try {
+    const raw = await cacheGet(key);
+    if (!raw) return null;
     return JSON.parse(raw) as T;
   } catch {
     return null;
@@ -68,7 +82,11 @@ export async function cacheGetJson<T>(key: string): Promise<T | null> {
 }
 
 export async function cacheSetJson(key: string, value: unknown, ttlSeconds: number): Promise<void> {
-  await cacheSet(key, JSON.stringify(value), ttlSeconds);
+  try {
+    await cacheSet(key, JSON.stringify(value), ttlSeconds);
+  } catch {
+    // Writes are best-effort.
+  }
 }
 
 export async function withDashboardCache<T>(
@@ -76,9 +94,22 @@ export async function withDashboardCache<T>(
   ttlSeconds: number,
   compute: () => Promise<T>
 ): Promise<T> {
-  const cached = await cacheGetJson<T>(key);
-  if (cached != null) return cached;
+  try {
+    const cached = await cacheGetJson<T>(key);
+    if (cached != null) return cached;
+  } catch {
+    // Compute fresh if the read fails.
+  }
   const result = await compute();
-  await cacheSetJson(key, result, ttlSeconds);
+  try {
+    await cacheSetJson(key, result, ttlSeconds);
+  } catch {
+    // A failed write must not discard the computed result.
+  }
   return result;
+}
+
+/** Test helper — clears the in-process fallback map. */
+export function resetCacheMemoryForTests(): void {
+  memory.clear();
 }

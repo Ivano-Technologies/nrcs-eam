@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import postgres from "postgres";
 import { getPostgresJsSslOption } from "../../shared/mysqlSsl";
+import { applyTestDatabaseUrl } from "../../shared/testDatabaseGuard";
 
 export function getPlaywrightTestSchema(): string {
   const value = process.env.SUPABASE_TEST_SCHEMA?.trim();
@@ -12,9 +13,9 @@ export async function applySupabaseTestSchema(
   label: string,
 ): Promise<void> {
   const schema = getPlaywrightTestSchema();
-  const databaseUrl = process.env.DATABASE_URL?.trim();
+  const databaseUrl = applyTestDatabaseUrl();
   if (!databaseUrl) {
-    throw new Error(`[${label}] Missing DATABASE_URL for search_path setup`);
+    throw new Error(`[${label}] Missing TEST_DATABASE_URL for search_path setup`);
   }
 
   const ssl = getPostgresJsSslOption();

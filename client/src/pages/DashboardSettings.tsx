@@ -20,7 +20,7 @@ import { Switch } from "@/components/ui/switch";
 import { trpc } from "@/lib/trpc";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { appPath } from "@/lib/routes";
-import { Camera, Loader2, Monitor, Moon, Settings, Sun } from "lucide-react";
+import { Camera, Loader2, Moon, Settings, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearch } from "wouter";
@@ -408,7 +408,7 @@ export default function DashboardSettings() {
         <CardHeader>
           <CardTitle>Appearance</CardTitle>
           <CardDescription>
-            Choose a light or dark interface. System follows your device setting.
+            Choose a light or dark interface.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
@@ -431,15 +431,6 @@ export default function DashboardSettings() {
               >
                 <Moon className="h-4 w-4" />
                 Dark
-              </Button>
-              <Button
-                type="button"
-                variant={theme === "system" ? "default" : "outline"}
-                className="gap-2"
-                onClick={() => setTheme("system")}
-              >
-                <Monitor className="h-4 w-4" />
-                System
               </Button>
             </>
           )}

@@ -14,7 +14,13 @@ import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 
-export function NotificationCenter({ triggerClassName }: { triggerClassName?: string } = {}) {
+export function NotificationCenter({
+  triggerClassName,
+  unreadCount: unreadCountProp,
+}: {
+  triggerClassName?: string;
+  unreadCount?: number;
+} = {}) {
   const [isOpen, setIsOpen] = useState(false);
   const utils = trpc.useUtils();
 
@@ -23,9 +29,14 @@ export function NotificationCenter({ triggerClassName }: { triggerClassName?: st
     { enabled: isOpen }
   );
 
-  const { data: unreadCount = 0 } = trpc.notifications.unreadCount.useQuery(undefined, {
-    refetchInterval: 30000, // Refresh every 30 seconds
+  const { data: unreadCountQuery = 0 } = trpc.notifications.unreadCount.useQuery(undefined, {
+    refetchInterval: 30_000,
+    staleTime: 30_000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    enabled: unreadCountProp === undefined,
   });
+  const unreadCount = unreadCountProp ?? unreadCountQuery;
 
   const markAsReadMutation = trpc.notifications.markAsRead.useMutation({
     onSuccess: () => {

@@ -2,7 +2,8 @@ import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 
 import { AttentionPanel } from "@/components/dashboard/AttentionPanel";
 
-import { DashboardBundleProvider } from "@/components/dashboard/DashboardBundleContext";
+import { DashboardBundleProvider, dashboardSectionState } from "@/components/dashboard/DashboardBundleContext";
+import { DashboardSectionError } from "@/components/dashboard/DashboardSectionError";
 
 import { FacilityStatusList } from "@/components/dashboard/FacilityStatusList";
 
@@ -140,6 +141,16 @@ export default function Home() {
       ...tier1Result.data,
       ...tier2Result?.data,
       ...tier3Result?.data,
+      failedSections: [
+        ...(tier1Result.failedSections ?? []),
+        ...(tier2Result?.failedSections ?? []),
+        ...(tier3Result?.failedSections ?? []),
+      ],
+      timedOutSections: [
+        ...(tier1Result.timedOutSections ?? []),
+        ...(tier2Result?.timedOutSections ?? []),
+        ...(tier3Result?.timedOutSections ?? []),
+      ],
     };
   }, [tier1Result, tier2Result, tier3Result]);
 
@@ -157,6 +168,11 @@ export default function Home() {
   const { data: userPreferences } = trpc.userPreferences.get.useQuery();
 
 
+
+  const metricsFailed = dashboardSectionState(bundle, "metrics") !== "ok";
+  const totalAssetValueFailed = dashboardSectionState(bundle, "totalAssetValue") !== "ok";
+  const stockMovementFailed = dashboardSectionState(bundle, "stockMovement") !== "ok";
+  const branchFailed = dashboardSectionState(bundle, "branchPerformance") !== "ok";
 
   const metrics = bundle?.metrics;
 
@@ -223,7 +239,7 @@ export default function Home() {
 
     return (
 
-      <DashboardBundleProvider value={bundle}>
+      <DashboardBundleProvider value={bundle} onRetry={refetchBundle}>
 
         <div className="space-y-6">
 
@@ -243,7 +259,7 @@ export default function Home() {
 
           </div>
 
-          <FieldDashboard metrics={metrics} />
+          <FieldDashboard metrics={metrics} metricsFailed={metricsFailed} onRetry={refetchBundle} />
 
         </div>
 
@@ -304,6 +320,7 @@ export default function Home() {
       goodWhen: (metrics?.lowStockItems.goodWhen ?? "down") as "up" | "down",
 
       href: DASHBOARD_NAV.inventoryStockLow,
+      failed: metricsFailed,
 
     },
 
@@ -328,6 +345,7 @@ export default function Home() {
       goodWhen: (metrics?.activeFacilities.goodWhen ?? "up") as "up" | "down",
 
       href: DASHBOARD_NAV.facilitiesActive,
+      failed: metricsFailed,
 
     },
 
@@ -352,6 +370,7 @@ export default function Home() {
       goodWhen: (metrics?.stockReadiness?.goodWhen ?? "up") as "up" | "down",
 
       href: DASHBOARD_NAV.inventoryStockOverview,
+      failed: metricsFailed,
 
     },
 
@@ -382,6 +401,7 @@ export default function Home() {
       goodWhen: (metrics?.distributionVelocity?.goodWhen ?? "up") as "up" | "down",
 
       href: waybillsPeriodHref(period),
+      failed: metricsFailed,
 
     },
 
@@ -406,6 +426,7 @@ export default function Home() {
       goodWhen: "up" as const,
 
       href: DASHBOARD_NAV.assetValuation,
+      failed: totalAssetValueFailed,
 
     },
 
@@ -425,7 +446,7 @@ export default function Home() {
 
   return (
 
-    <DashboardBundleProvider value={bundle}>
+    <DashboardBundleProvider value={bundle} onRetry={refetchBundle}>
 
       <div className="space-y-6">
 
@@ -500,6 +521,8 @@ export default function Home() {
                 valueTestId={`dashboard-kpi-value-${kpi.key}`}
 
                 href={kpi.href}
+                failed={kpi.failed}
+                onRetry={refetchBundle}
 
               />
 
@@ -517,7 +540,7 @@ export default function Home() {
               <Skeleton className="h-72 rounded-xl" />
             ) : (
               <div className="grid gap-6">
-                <StockMovementChart data={movement ?? []} />
+                <StockMovementChart data={movement ?? []} failed={stockMovementFailed} onRetry={refetchBundle} />
               </div>
             )
           ) : null
@@ -529,7 +552,7 @@ export default function Home() {
             </div>
           ) : (
             <div className="grid gap-6 md:grid-cols-1 xl:grid-cols-[1.55fr_1fr]">
-              {showWidgets("stockMovement") ? <StockMovementChart data={movement ?? []} /> : null}
+              {showWidgets("stockMovement") ? <StockMovementChart data={movement ?? []} failed={stockMovementFailed} onRetry={refetchBundle} /> : null}
               {showWidgets("attentionPanel") ? <AttentionPanel role={effectiveRole} /> : null}
             </div>
           )
@@ -606,9 +629,19 @@ export default function Home() {
           </Card>
         ) : null}
 
-        {(effectiveRole === "Manager" || effectiveRole === "Admin") && (tier3Loading || (branchPerf?.length ?? 0) > 0) ? (
+        {(effectiveRole === "Manager" || effectiveRole === "Admin") && (tier3Loading || branchFailed || (branchPerf?.length ?? 0) > 0) ? (
           tier3Loading ? (
             <Skeleton className="h-56 rounded-xl" />
+          ) : branchFailed ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Branch Performance</CardTitle>
+              <CardDescription>Stock readiness by branch (warehouse stock cards)</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <DashboardSectionError onRetry={refetchBundle} />
+            </CardContent>
+          </Card>
           ) : branchPerf?.length ? (
 
           <Card>

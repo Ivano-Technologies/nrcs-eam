@@ -108,7 +108,17 @@ function DashboardLayoutContent({
 
   useEffect(() => {
     void utils.nav.sidebarCounts.invalidate();
-  }, [location, utils]);
+    // Intentionally not depending on `utils` — a new utils identity must not
+    // retrigger invalidation (and a remount cascade) on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location]);
+
+  const { data: unreadCount = 0 } = trpc.notifications.unreadCount.useQuery(undefined, {
+    refetchInterval: 30_000,
+    staleTime: 30_000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+  });
 
   // Auto-redirect first-time users to welcome page
   useEffect(() => {
@@ -417,7 +427,7 @@ function DashboardLayoutContent({
               <ConnectivityIndicator />
               <GlobalSearch />
               <ThemeToggle />
-              <NotificationCenter />
+              <NotificationCenter unreadCount={unreadCount} />
             </div>
           </div>
         )}
@@ -431,7 +441,10 @@ function DashboardLayoutContent({
               </div>
               <ConnectivityIndicator />
               <ThemeToggle className="text-[#1a2332] hover:bg-black/5 dark:text-[hsl(0_0%_95%)] dark:hover:bg-white/10" />
-              <NotificationCenter triggerClassName="text-[#1a2332] hover:bg-black/5 dark:text-[hsl(0_0%_95%)] dark:hover:bg-white/10" />
+              <NotificationCenter
+                unreadCount={unreadCount}
+                triggerClassName="text-[#1a2332] hover:bg-black/5 dark:text-[hsl(0_0%_95%)] dark:hover:bg-white/10"
+              />
             </div>
           </div>
         )}
