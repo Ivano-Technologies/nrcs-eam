@@ -24,10 +24,32 @@ function memorySet(key: string, value: string, ttlSeconds: number): void {
   memory.set(key, { value, expiresAt: Date.now() + ttlSeconds * 1000 });
 }
 
+const CACHE_REMOTE_BUDGET_MS = 400;
+
+/** Resolve `null` if `promise` has not settled. Does not cancel the underlying work. */
+async function settleOrNull<T>(promise: Promise<T>, ms: number): Promise<T | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<null>((resolve) => {
+        timer = setTimeout(() => resolve(null), ms);
+      }),
+    ]);
+  } catch {
+    return null;
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+  }
+}
+
 export async function cacheGet(key: string): Promise<string | null> {
   const started = Date.now();
   try {
-    const res = await upstashFetch(`/get/${encodeURIComponent(key)}`);
+    const res = await settleOrNull(
+      upstashFetch(`/get/${encodeURIComponent(key)}`),
+      CACHE_REMOTE_BUDGET_MS
+    );
     if (res?.ok) {
       const body = (await res.json()) as { result?: string | null };
       if (body.result != null) {
@@ -50,11 +72,14 @@ export async function cacheGet(key: string): Promise<string | null> {
 
 export async function cacheSet(key: string, value: string, ttlSeconds: number): Promise<void> {
   try {
-    const res = await upstashFetch("", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(["SET", key, value, "EX", ttlSeconds]),
-    });
+    const res = await settleOrNull(
+      upstashFetch("", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(["SET", key, value, "EX", ttlSeconds]),
+      }),
+      CACHE_REMOTE_BUDGET_MS
+    );
     if (res?.ok) return;
   } catch {
     // Fall through to memory.
