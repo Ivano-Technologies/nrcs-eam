@@ -11,7 +11,6 @@ import {
   stockSettings,
 } from "../../drizzle/schema";
 import { withDashboardCache } from "../_core/cache";
-import { withTimeout } from "../_core/withTimeout";
 import { dashboardQueryQueue } from "../_core/dashboardQueryQueue";
 import {
   DASHBOARD_QUERY_TIERS,
@@ -572,77 +571,56 @@ async function runQueuedDashboardSection(
   }
 
   const priority = tierForSection(section);
-  const enqueuedAt = Date.now();
 
-  let sectionFailed = false;
-  let sectionTimedOut = false;
+  const runSection = () => {
+    switch (section) {
+      case "metrics":
+        return caller.dashboard.metrics({ period: input.period });
+      case "totalAssetValue":
+        return caller.dashboard.totalAssetValue();
+      case "stockMovement":
+        return caller.dashboard.stockMovement({ weeks: input.stockMovementWeeks });
+      case "facilityStatus":
+        return caller.dashboard.facilityStatus();
+      case "recentActivity":
+        return caller.dashboard.recentActivity({ limit: 5 });
+      case "pendingRequisitions":
+        return caller.dashboard.pendingRequisitions({ limit: 4 });
+      case "attentionItems":
+        return caller.dashboard.attentionItems({ role: input.role });
+      case "branchPerformance":
+        return caller.dashboard.branchPerformance();
+      default:
+        throw new Error(`Unknown dashboard section: ${section satisfies never}`);
+    }
+  };
 
-  const sectionResult = await dashboardQueryQueue.enqueue(
-    priority,
-    async () => {
-      try {
-        switch (section) {
-          case "metrics":
-            return await withTimeout(caller.dashboard.metrics({ period: input.period }), 8000, "metrics");
-          case "totalAssetValue":
-            return await withTimeout(caller.dashboard.totalAssetValue(), 8000, "totalAssetValue");
-          case "stockMovement":
-            return await withTimeout(
-              caller.dashboard.stockMovement({ weeks: input.stockMovementWeeks }),
-              8000,
-              "stockMovement"
-            );
-          case "facilityStatus":
-            return await withTimeout(caller.dashboard.facilityStatus(), 8000, "facilityStatus");
-          case "recentActivity":
-            return await withTimeout(caller.dashboard.recentActivity({ limit: 5 }), 8000, "recentActivity");
-          case "pendingRequisitions":
-            return await withTimeout(caller.dashboard.pendingRequisitions({ limit: 4 }), 8000, "pendingRequisitions");
-          case "attentionItems":
-            return await withTimeout(caller.dashboard.attentionItems({ role: input.role }), 8000, "attentionItems");
-          case "branchPerformance":
-            return await withTimeout(caller.dashboard.branchPerformance(), 8000, "branchPerformance");
-          default:
-            throw new Error(`Unknown dashboard section: ${section satisfies never}`);
-        }
-      } catch (err) {
-        sectionFailed = true;
-        const msg = err instanceof Error ? err.message : String(err);
-        sectionTimedOut = msg.startsWith("timeout:") || msg === "metrics_timeout";
-        console.warn(
-          JSON.stringify({
-            event: "dashboard_all_section_failed",
-            section,
-            err: msg,
-            timedOut: sectionTimedOut,
-          })
-        );
-        return undefined;
-      }
-    },
-    section
-  );
-
-  if (sectionFailed && failures) {
-    if (sectionTimedOut) failures.timedOutSections.push(section);
-    else failures.failedSections.push(section);
-  }
-
-  const waitMs = Date.now() - enqueuedAt;
-  if (waitMs > 50) {
-    console.log(
+  try {
+    // Timeout starts after dequeue — queue wait must not consume the 8s budget.
+    const sectionResult = await dashboardQueryQueue.enqueueWithTimeout(
+      priority,
+      async () => runSection(),
+      8000,
+      section
+    );
+    return { [section]: sectionResult } as Partial<DashboardAllOutput>;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    const sectionTimedOut = msg.startsWith("timeout:") || msg === "metrics_timeout";
+    console.warn(
       JSON.stringify({
-        event: "dashboard_section_dequeued",
+        event: "dashboard_all_section_failed",
         section,
-        waitMs,
-        priority,
-        queue: dashboardQueryQueue.getStats(),
+        err: msg,
+        timedOut: sectionTimedOut,
       })
     );
+    if (failures) {
+      if (sectionTimedOut) failures.timedOutSections.push(section);
+      else failures.failedSections.push(section);
+    }
+    return {};
   }
-
-  if (sectionFailed) return {};
-  return { [section]: sectionResult } as Partial<DashboardAllOutput>;
 }
 
 type TierLoadResult = {
