@@ -1,6 +1,9 @@
-/** Limits concurrent dashboard DB work to match Supabase pool max (3). */
+/** Limits concurrent dashboard DB work to match the serverless postgres.js pool. */
 
-export const MAX_CONCURRENT_DASHBOARD_QUERIES = 3;
+import { POSTGRES_JS_SERVERLESS_POOL_MAX } from "../../shared/mysqlSsl";
+import { withTimeout } from "./withTimeout";
+
+export const MAX_CONCURRENT_DASHBOARD_QUERIES = POSTGRES_JS_SERVERLESS_POOL_MAX;
 
 type QueuedTask<T> = {
   priority: number;
@@ -8,6 +11,7 @@ type QueuedTask<T> = {
   resolve: (value: T) => void;
   reject: (reason: unknown) => void;
   enqueuedAt: number;
+  label?: string;
 };
 
 export class DashboardQueryQueue {
@@ -25,38 +29,66 @@ export class DashboardQueryQueue {
         resolve: resolve as (value: unknown) => void,
         reject,
         enqueuedAt: Date.now(),
+        label,
       });
       this.queue.sort((a, b) => a.priority - b.priority || a.enqueuedAt - b.enqueuedAt);
-      this.drain(label);
+      this.drain();
     });
   }
 
-  private drain(label?: string) {
+  /**
+   * Enqueue work and start `withTimeout` only after a slot is taken.
+   * Queue wait must not count toward the deadline — a section can sit behind
+   * higher-priority work for longer than `timeoutMs` and still succeed.
+   */
+  enqueueWithTimeout<T>(
+    priority: number,
+    fn: () => Promise<T>,
+    timeoutMs: number,
+    label: string
+  ): Promise<T> {
+    return this.enqueue(priority, () => withTimeout(fn, timeoutMs, label), label);
+  }
+
+  private drain() {
     while (this.running < this.maxConcurrent && this.queue.length > 0) {
       const task = this.queue.shift()!;
       this.running++;
-      const waitMs = Date.now() - task.enqueuedAt;
-      if (waitMs > 10) {
+      const queueWaitMs = Date.now() - task.enqueuedAt;
+      if (queueWaitMs > 10) {
         console.log(
           JSON.stringify({
-            event: "dashboard_queue_wait",
-            waitMs,
+            event: "dashboard_section_dequeued",
+            section: task.label ?? null,
+            waitMs: queueWaitMs,
             priority: task.priority,
-            label: label ?? null,
-            running: this.running,
-            queued: this.queue.length,
+            queue: this.getStats(),
           })
         );
       }
       void (async () => {
+        const startedAt = Date.now();
         try {
           const result = await task.fn();
           task.resolve(result);
         } catch (err) {
           task.reject(err);
         } finally {
+          const executionMs = Date.now() - startedAt;
+          if (queueWaitMs > 50 || executionMs > 50) {
+            console.log(
+              JSON.stringify({
+                event: "dashboard_section_completed",
+                section: task.label ?? null,
+                queueWaitMs,
+                executionMs,
+                priority: task.priority,
+                queue: this.getStats(),
+              })
+            );
+          }
           this.running--;
-          this.drain(label);
+          this.drain();
         }
       })();
     }

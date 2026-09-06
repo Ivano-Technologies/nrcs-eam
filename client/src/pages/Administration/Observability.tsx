@@ -88,7 +88,7 @@ export default function Observability() {
   }
 
   const poolRunning = pool.data?.queueRunning ?? 0;
-  const poolMax = pool.data?.maxConcurrent ?? 3;
+  const poolMax = pool.data?.maxConcurrent ?? 8;
   const poolPct = Math.round((poolRunning / poolMax) * 100);
   const hitRate = cache.data?.hitRatePct ?? 0;
   const redisBadge = redisStatusBadge(pool.data?.redisStatus);
