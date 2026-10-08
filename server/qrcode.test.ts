@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
-import { generateAssetQRCode, parseAssetQRCode } from "./qrcode";
+import { assetQrUrl, generateAssetQRCode, parseAssetQRCode } from "./qrcode";
 
 type AuthenticatedUser = NonNullable<TrpcContext["user"]>;
 
@@ -32,6 +32,26 @@ function createTestContext(role: "admin" | "manager" | "staff" | "user" = "admin
 }
 
 describe("QR Code Generation", () => {
+  it("links QR codes to the app asset page (/app/assets/<id>)", () => {
+    expect(assetQrUrl(1015, "https://nrcseam.techivano.com")).toBe(
+      "https://nrcseam.techivano.com/app/assets/1015"
+    );
+    expect(assetQrUrl(7, "https://nrcseam.techivano.com/")).toBe(
+      "https://nrcseam.techivano.com/app/assets/7"
+    );
+  });
+
+  it("uses VITE_APP_URL as the default base", () => {
+    const original = process.env.VITE_APP_URL;
+    process.env.VITE_APP_URL = "https://example.org";
+    try {
+      expect(assetQrUrl(42)).toBe("https://example.org/app/assets/42");
+    } finally {
+      if (original === undefined) delete process.env.VITE_APP_URL;
+      else process.env.VITE_APP_URL = original;
+    }
+  });
+
   it("should generate QR code data URL for an asset", async () => {
     const qrCode = await generateAssetQRCode(1, "TEST-001");
     
@@ -43,7 +63,7 @@ describe("QR Code Generation", () => {
     const qrData = JSON.stringify({
       assetId: 1,
       assetTag: "TEST-001",
-      url: "https://example.com/assets/1",
+      url: "https://example.com/app/assets/1",
       type: "NRCS_ASSET",
     });
 
@@ -131,7 +151,7 @@ describe("QR Code API Endpoints", () => {
     const qrData = JSON.stringify({
       assetId: asset.id,
       assetTag: asset.assetTag,
-      url: `https://example.com/assets/${asset.id}`,
+      url: `https://example.com/app/assets/${asset.id}`,
       type: "NRCS_ASSET",
     });
 

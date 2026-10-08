@@ -1,4 +1,13 @@
 import QRCode from "qrcode";
+import { assetDetailPath } from "../shared/spaRoutes";
+
+/** Absolute link to the asset detail page (`/app/assets/<id>`) for QR payloads. */
+export function assetQrUrl(
+  assetId: number,
+  baseUrl: string = process.env.VITE_APP_URL || "https://your-app-url.com"
+): string {
+  return `${baseUrl.replace(/\/+$/, "")}${assetDetailPath(assetId)}`;
+}
 
 /**
  * Generate QR code as data URL for an asset
@@ -8,8 +17,7 @@ import QRCode from "qrcode";
  */
 export async function generateAssetQRCode(assetId: number, assetTag: string): Promise<string> {
   // Create URL that links to asset detail page
-  const baseUrl = process.env.VITE_APP_URL || 'https://your-app-url.com';
-  const assetUrl = `${baseUrl}/assets/${assetId}`;
+  const assetUrl = assetQrUrl(assetId);
   
   // Generate QR code with asset information
   const qrData = JSON.stringify({
@@ -46,8 +54,7 @@ export async function generateAssetQRCode(assetId: number, assetTag: string): Pr
  * @returns Promise<Buffer> - PNG buffer of the QR code
  */
 export async function generateAssetQRCodeBuffer(assetId: number, assetTag: string): Promise<Buffer> {
-  const baseUrl = process.env.VITE_APP_URL || 'https://your-app-url.com';
-  const assetUrl = `${baseUrl}/assets/${assetId}`;
+  const assetUrl = assetQrUrl(assetId);
   
   const qrData = JSON.stringify({
     assetId,

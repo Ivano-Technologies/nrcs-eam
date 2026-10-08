@@ -1,7 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { APP_SPA_PREFIX, isKnownSpaPath, PUBLIC_SPA_PATHS } from "../../shared/spaRoutes";
+import {
+  APP_SPA_PREFIX,
+  isKnownSpaPath,
+  legacyAssetRedirectTarget,
+  PUBLIC_SPA_PATHS,
+} from "../../shared/spaRoutes";
 
 const root = path.resolve(import.meta.dirname, "../..");
 
@@ -62,5 +67,46 @@ describe("SPA route allowlist stays in sync", () => {
       if (p === "/404") continue; // intentionally a 404
       expect(PUBLIC_SPA_PATHS as readonly string[]).toContain(p);
     }
+  });
+});
+
+describe("legacy QR label redirect (/assets/<id> -> /app/assets/<id>)", () => {
+  it.each([
+    ["/assets/1015", "/app/assets/1015"],
+    ["/assets/7", "/app/assets/7"],
+  ])("forwards %s to %s", (from, to) => {
+    expect(legacyAssetRedirectTarget(from)).toBe(to);
+  });
+
+  it.each([
+    "/assets/index-BAngcvC-.js",
+    "/assets/index-DdA1b2c3.css",
+    "/assets/inter-latin-400.woff2",
+    "/assets/123.js",
+    "/assets/1015.png",
+    "/assets/1015/edit",
+    "/assets/1015/",
+    "/assets/donors",
+    "/assets/",
+    "/app/assets/1015",
+  ])("leaves %s alone", (p) => {
+    expect(legacyAssetRedirectTarget(p)).toBeNull();
+  });
+
+  it("leaves every built bundle file alone", () => {
+    const dir = path.join(root, "dist/public/assets");
+    if (!fs.existsSync(dir)) return; // only after a build
+    for (const file of fs.readdirSync(dir)) {
+      expect(legacyAssetRedirectTarget(`/assets/${file}`)).toBeNull();
+    }
+  });
+
+  it("vercel.json has the matching permanent redirect (digits only)", () => {
+    const config = JSON.parse(fs.readFileSync(path.join(root, "vercel.json"), "utf8")) as {
+      redirects?: { source: string; destination: string; permanent?: boolean }[];
+    };
+    expect(config.redirects).toEqual([
+      { source: "/assets/:id(\\d+)", destination: "/app/assets/:id", permanent: true },
+    ]);
   });
 });
