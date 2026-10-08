@@ -32,6 +32,13 @@ import { chipBase, focusRing, mutedText, OfflineGlyph, ReadinessPill, TypeGlyph 
 
 const LEGEND_KEY = "nrcs-asset-map-legend-open";
 
+/**
+ * Type chip counts. Solid colours rather than opacity so they hold AA (4.5:1 at 13px) on the
+ * resting, hover and pressed chip in both themes.
+ */
+const chipCountText =
+  "text-[#4B5563] group-aria-pressed:text-[#D6DCE5] dark:text-[#A3AEBD] dark:group-aria-pressed:text-[#3D4A5C]";
+
 export type FacilityPanelProps = {
   layer: MapLayer;
   scheme: MapScheme;
@@ -366,11 +373,11 @@ export function FacilityPanel(props: FacilityPanelProps) {
                     aria-pressed={pressed}
                     onClick={() => onToggleType(t)}
                     data-type={t}
-                    className={chipBase}
+                    className={cn(chipBase, "group")}
                   >
                     <TypeGlyph type={t} scheme={scheme} neutral={pressed ? "chipOn" : "chip"} size={14} />
                     {TYPE_CHIP_LABELS[t]}
-                    <span className="opacity-70">{typeCounts[t] ?? 0}</span>
+                    <span className={chipCountText}>{typeCounts[t] ?? 0}</span>
                   </button>
                 );
               })}
