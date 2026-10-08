@@ -4,10 +4,18 @@
  * the real map. Markers carry `data-testid="asset-map-marker-<code>"`.
  */
 import { forwardRef, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { pinTier, type MapScheme } from "@/lib/facilityMapHelpers";
+import type { MapScheme } from "@/lib/facilityMapHelpers";
 import type { MapController } from "@/lib/assetMap/controller";
 import { quadraticCurve } from "@/lib/assetMap/curves";
-import { facilityAriaLabel, facilityPosition, tooltipText, type MapFacility, type MapLayer } from "@/lib/assetMap/model";
+import {
+  facilityAriaLabelFor,
+  facilityPosition,
+  pinTierFor,
+  tooltipTextFor,
+  type MapFacility,
+  type MapLayer,
+  type PinMode,
+} from "@/lib/assetMap/model";
 import { buildBubbleContent, buildGhostDot, buildLabelContent, buildPinContent } from "@/lib/assetMap/pinContent";
 import { MAP_TOKENS } from "@/lib/assetMap/tokens";
 import type { Insets } from "@/lib/assetMap/useMapSelection";
@@ -25,6 +33,8 @@ type Props = {
   lines: boolean;
   empty: boolean;
   insets: Insets;
+  /** Pin colouring. Defaults to readiness (Asset Map); the Facilities map uses status. */
+  pinMode?: PinMode;
   onSelect: (id: number, opener: HTMLElement | null) => void;
   onHover: (id: number | null) => void;
   onBackgroundClick: () => void;
@@ -114,7 +124,7 @@ export const MockMapCanvas = forwardRef<MapController, Props>(function MockMapCa
     if (f.id === p.hoveredId) return 900;
     if (p.layer === "assets") return 500 - Math.min(499, f.assetCount ?? 0);
     if (f.facilityType === "national_headquarters") return 10;
-    return { none: 1, offline: 1, good: 2, partial: 3, low: 4 }[pinTier(f)];
+    return { none: 1, offline: 1, good: 2, partial: 3, low: 4 }[pinTierFor(f, p.pinMode)];
   };
 
   return (
@@ -186,13 +196,21 @@ export const MockMapCanvas = forwardRef<MapController, Props>(function MockMapCa
                   touch: false,
                 })
             : () =>
-                buildPinContent({ type: f.facilityType, tier: pinTier(f), scheme: p.scheme, selected, hovered, touch: false });
+                buildPinContent({
+                  type: f.facilityType,
+                  tier: pinTierFor(f, p.pinMode),
+                  scheme: p.scheme,
+                  selected,
+                  hovered,
+                  touch: false,
+                  solidOffline: p.pinMode === "status",
+                });
         return (
           <button
             key={f.id}
             type="button"
             data-testid={`asset-map-marker-${f.code ?? f.id}`}
-            aria-label={facilityAriaLabel(f)}
+            aria-label={facilityAriaLabelFor(f, p.pinMode)}
             className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-[#C8102E]"
             style={{ left: pos.x, top: pos.y, zIndex: zOf(f) }}
             onClick={(e) => {
@@ -210,7 +228,7 @@ export const MockMapCanvas = forwardRef<MapController, Props>(function MockMapCa
         const f = id != null ? shown.find((x) => x.id === id) : undefined;
         if (!f) return null;
         const pos = project(f.lat as number, f.lng as number);
-        const tt = tooltipText(f);
+        const tt = tooltipTextFor(f, p.pinMode);
         const lift =
           p.layer === "assets"
             ? Math.ceil(10 + 4.5 + 1.45 * Math.sqrt(f.assetCount ?? 0))
