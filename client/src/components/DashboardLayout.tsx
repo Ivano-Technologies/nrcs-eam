@@ -454,7 +454,7 @@ function DashboardLayoutContent({
         >
           {children}
         </main>
-        <Footer />
+        <Footer className={isMobile ? "pb-16" : undefined} />
         {isMobile ? (
           <MobileBottomNav
             location={location}

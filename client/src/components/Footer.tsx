@@ -1,15 +1,18 @@
+import { IvanoCopyright } from "@/components/brand/IvanoCopyright";
+import { cn } from "@/lib/utils";
 import { Link } from "wouter";
 
-export default function Footer() {
+export default function Footer({ className }: { className?: string }) {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="border-t bg-background mt-auto">
+    <footer className={cn("border-t bg-background mt-auto", className)}>
       <div className="container mx-auto px-4 py-6">
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="text-sm text-muted-foreground text-center md:text-left">
             <p>© {currentYear} Nigerian Red Cross Society. All rights reserved.</p>
             <p className="text-xs mt-1">Enterprise Asset Management System</p>
+            <IvanoCopyright className="mt-2" />
           </div>
           
           <div className="flex gap-6 text-sm">
