@@ -1,675 +1,659 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "wouter";
-import { MapView } from "@/components/Map";
-import PageHeader from "@/components/ui/PageHeader";
-import PageLoader from "@/components/ui/PageLoader";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+/**
+ * Asset Map: where each facility is, how ready its stock is, and where its assets are.
+ *
+ * One map for the page visit (MapView keeps it alive across layer, filter and theme changes).
+ * Pins and bubbles are AdvancedMarkerElements managed by AssetMapOverlay. Selecting a pin or a
+ * list row opens the drawer and at most pans the map; it never changes zoom.
+ */
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { ListFilter, List as ListIcon, Search, X } from "lucide-react";
+import type { FacilityType } from "@shared/facilities";
+import { MapView, type MapColorScheme } from "@/components/Map";
+import { FacilityPanel } from "@/components/assetMap/FacilityPanel";
+import { FacilityDrawer } from "@/components/assetMap/FacilityDrawer";
+import { EmptyMapCard, LayerBar, MapControls, MapErrorCard, NoLocationChip, TileShimmer } from "@/components/assetMap/MapChrome";
+import { MockMapCanvas } from "@/components/assetMap/MockMapCanvas";
+import { BottomSheet, snapHeight, type SheetSnap } from "@/components/assetMap/BottomSheet";
+import { focusRing, mutedText, surfaceClass, useMapScheme, useMediaQuery } from "@/components/assetMap/parts";
+import { createGoogleController, type MapController, type MapStyle } from "@/lib/assetMap/controller";
+import { AssetMapOverlay } from "@/lib/assetMap/googleOverlay";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+  EMPTY_FILTERS,
+  buildMapSearch,
+  countByTier,
+  countByType,
+  countNoLocation,
+  facilityPosition,
+  facilityUrlKey,
+  filterFacilities,
+  filterSummary,
+  findByUrlKey,
+  formatClock,
+  hasActiveFilters,
+  matchesFilters,
+  parseMapSearch,
+  sortFacilities,
+  type ListSort,
+  type MapFacility,
+  type MapFilters,
+  type MapLayer,
+} from "@/lib/assetMap/model";
+import { useMapSelection, type Insets } from "@/lib/assetMap/useMapSelection";
+import type { ReadinessTier } from "@/lib/facilityMapHelpers";
 import { DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM_COUNTRY } from "@/lib/mapDefaults";
-import { appPath } from "@/lib/routes";
 import { trpc } from "@/lib/trpc";
-import type { AppRouter } from "../../../server/routers";
-import {
-  FACILITY_TYPE_VALUES,
-  type FacilityType,
-} from "@shared/facilities";
-import type { inferRouterOutputs } from "@trpc/server";
-import { Map as MapIcon, Search } from "lucide-react";
-import {
-  matchesStockTierForTest as matchesStockTier,
-  stockPinColorForTest as stockPinColor,
-  type StockTier,
-} from "@/lib/facilityMapHelpers";
+import { cn } from "@/lib/utils";
 
-type SiteMapDataRow = inferRouterOutputs<AppRouter>["sites"]["mapData"][number];
-type SiteNetworkRow = inferRouterOutputs<AppRouter>["sites"]["mapNetworkData"][number];
+const PANEL_W = 360;
+const DRAWER_W = 368;
+const TABLET_DRAWER_W = 360;
+const RAIL_W = 56;
+const GAP = 16;
+/** Leaves Google's logo and attribution visible below floating panels. */
+const BOTTOM_INSET = 40;
 
-type MapViewMode = "assets" | "network";
-
-const FACILITY_COLOURS: Record<FacilityType, string> = {
-  national_headquarters: "#DC2626",
-  division: "#EAB308",
-  branch: "#EA580C",
-  clinic: "#2563EB",
-  warehouse: "#16A34A",
+/** Applied once per map instance. Keeps the view on Nigeria and its neighbours. */
+const MAP_OPTIONS: google.maps.MapOptions = {
+  minZoom: 5,
+  clickableIcons: false,
+  keyboardShortcuts: true,
+  restriction: {
+    // Generous so the map can pan a pin above a mobile sheet; still Nigeria and its neighbours.
+    latLngBounds: { north: 26, south: -20, west: -16, east: 32 },
+    strictBounds: false,
+  },
 };
 
-const FACILITY_LABELS: Record<FacilityType, string> = {
-  national_headquarters: "NHQ",
-  division: "Division",
-  branch: "Branch",
-  clinic: "Clinic",
-  warehouse: "Warehouse",
+/** Phones: the strip above the list sheet is short, so allow one more zoom level out to fit Nigeria. */
+const MOBILE_MAP_OPTIONS: google.maps.MapOptions = {
+  ...MAP_OPTIONS,
+  minZoom: 4,
+  // At zoom 4 a tall phone viewport spans about 60 degrees of latitude, and the sheet pushes the
+  // fitted centre well south, so the restriction has to be looser than on desktop.
+  restriction: { latLngBounds: { north: 45, south: -50, west: -35, east: 50 }, strictBounds: false },
 };
 
-const STOCK_COLOURS = {
-  adequate: "#16A34A",
-  partial: "#EAB308",
-  low: "#DC2626",
-  offline: "#9CA3AF",
-} as const;
+const SHIMMER_CSS = `
+.nrcs-map-shimmer{background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.06) 50%,transparent 70%);background-size:200% 100%;animation:nrcs-map-sweep 1.2s linear infinite}
+.dark .nrcs-map-shimmer{background-image:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.04) 50%,transparent 70%)}
+@keyframes nrcs-map-sweep{from{background-position:200% 0}to{background-position:-200% 0}}
+@media (prefers-reduced-motion:reduce){.nrcs-map-shimmer{animation:none;background:rgba(255,255,255,.06)}.dark .nrcs-map-shimmer{background:rgba(255,255,255,.04)}}
+`;
 
-const ASSET_OVERLAY_COLOUR = "#F59E0B";
-
-function parseCoord(value: string | null | undefined): number | null {
-  if (value == null || value === "") return null;
-  const n = parseFloat(value);
-  return Number.isFinite(n) ? n : null;
+function readInitialUrl() {
+  if (typeof window === "undefined") return parseMapSearch("");
+  return parseMapSearch(window.location.search);
 }
 
-function facilityPosition(facility: {
-  latitude: string | null;
-  longitude: string | null;
-}): google.maps.LatLngLiteral | null {
-  const lat = parseCoord(facility.latitude);
-  const lng = parseCoord(facility.longitude);
-  if (lat == null || lng == null) return null;
-  return { lat, lng };
-}
-
-function buildAssetInfoWindow(
-  facility: SiteMapDataRow,
-  photoUrl: string | null
-): string {
-  const facilityDetailHref = appPath(`/facilities/${facility.id}`);
-  return `
-    <div style="min-width:220px;font-family:sans-serif;border-radius:8px;overflow:hidden">
-      ${
-        photoUrl
-          ? `<div style="width:100%;height:140px;overflow:hidden;margin-bottom:10px;border-radius:6px">
-          <img src="${photoUrl}" style="width:100%;height:100%;object-fit:cover" alt="Facility photo" />
-        </div>`
-          : ""
-      }
-      <div style="padding: ${photoUrl ? "0 4px 4px" : "4px"}">
-        <div style="font-weight:700;font-size:15px;margin-bottom:4px">${facility.name}</div>
-        <div style="font-size:12px;color:#666;margin-bottom:8px">${FACILITY_LABELS[facility.facilityType]}</div>
-        <div style="font-size:13px;margin-bottom:4px">Assets: <strong>${facility.assetCount}</strong></div>
-        <div style="font-size:13px;margin-bottom:12px">Inventory items: <strong>${facility.inventoryCount}</strong></div>
-        <a href="${facilityDetailHref}" style="display:inline-block;background:#DC2626;color:#fff;padding:6px 14px;border-radius:6px;font-size:13px;text-decoration:none;font-weight:600">View Details</a>
-      </div>
-    </div>
-  `;
+/** Element height, plus whether it has held still for 250ms (layout settles after mount). */
+function useElementHeight(ref: React.RefObject<HTMLElement | null>): { height: number; stable: boolean } {
+  const [h, setH] = useState(0);
+  const [stable, setStable] = useState(false);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    let timer = 0;
+    const update = () => {
+      setH(el.clientHeight);
+      setStable(false);
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => setStable(true), 250);
+    };
+    update();
+    if (typeof ResizeObserver === "undefined") return () => window.clearTimeout(timer);
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+      window.clearTimeout(timer);
+    };
+  }, [ref]);
+  return { height: h, stable };
 }
 
 export default function AssetMap() {
-  const [viewMode, setViewMode] = useState<MapViewMode>("network");
-  const [selectedFacilityType, setSelectedFacilityType] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [stockFilter, setStockFilter] = useState<StockTier>("all");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [showAssetOverlay, setShowAssetOverlay] = useState(false);
-  const [activeFacilityPhoto, setActiveFacilityPhoto] = useState<string | null>(null);
-  const [activeFacilityId, setActiveFacilityId] = useState<number | null>(null);
-  const [selectedNetworkFacility, setSelectedNetworkFacility] = useState<SiteNetworkRow | null>(
-    null
-  );
-  const [highlightId, setHighlightId] = useState<number | null>(null);
-  const [mapLoadError, setMapLoadError] = useState<string | null>(null);
+  const [initial] = useState(readInitialUrl);
+  const mapMock = initial.mapMock;
+  const scheme = useMapScheme();
+  const isDesktop = useMediaQuery("(min-width: 1024px)");
+  const isMobile = !useMediaQuery("(min-width: 640px)");
+  const isTablet = !isDesktop && !isMobile;
+  const touch = useMediaQuery("(pointer: coarse)");
 
-  const mapRef = useRef<google.maps.Map | null>(null);
-  const facilityMarkersRef = useRef<google.maps.Marker[]>([]);
-  const polylinesRef = useRef<
-    { line: google.maps.Polyline; childId: number; parentId: number }[]
-  >([]);
-  const assetMarkersRef = useRef<google.maps.Marker[]>([]);
-  const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
-  const mapListenersAttachedRef = useRef(false);
-
-  const mapData = trpc.sites.mapData.useQuery(undefined, { enabled: viewMode === "assets" });
-  const networkData = trpc.sites.mapNetworkData.useQuery(undefined, {
-    enabled: viewMode === "network",
+  /* ---------------- data ---------------- */
+  const mapQuery = trpc.sites.mapFacilities.useQuery(undefined, {
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
   });
-  const assets = trpc.assets.list.useQuery({}, { enabled: showAssetOverlay && viewMode === "assets" });
-  const facilityPhotosQuery = trpc.facilityPhotos.list.useQuery(
-    { siteId: activeFacilityId! },
-    { enabled: activeFacilityId !== null && viewMode === "assets" }
+  const all: MapFacility[] = useMemo(() => mapQuery.data?.facilities ?? [], [mapQuery.data]);
+  const statsLimited = mapQuery.data ? mapQuery.data.statsScope !== "all" : false;
+  const freshness = formatClock(mapQuery.data?.generatedAt);
+
+  /* ---------------- view state ---------------- */
+  const [layer, setLayer] = useState<MapLayer>(initial.layer);
+  const [lines, setLines] = useState(initial.lines);
+  const [filters, setFilters] = useState<MapFilters>(initial.filters);
+  const [searchText, setSearchText] = useState(initial.filters.q);
+  const [sortByLayer, setSortByLayer] = useState<Record<MapLayer, ListSort>>({ facilities: "readiness", assets: "assets" });
+  const sort = sortByLayer[layer];
+  const [hoveredId, setHoveredId] = useState<number | null>(null);
+  const [mapStyle, setMapStyle] = useState<MapStyle>("default");
+  const [mapError, setMapError] = useState<string | null>(null);
+  const [tilesLoading, setTilesLoading] = useState(false);
+  const [railOpen, setRailOpen] = useState(false);
+  const [listSnap, setListSnap] = useState<SheetSnap>("half");
+  const [detailSnap, setDetailSnap] = useState<SheetSnap>("half");
+
+  // Debounced search (200ms). Search filters the list and pins; it never pans or zooms.
+  useEffect(() => {
+    if (searchText === filters.q) return;
+    const t = window.setTimeout(() => setFilters((f) => ({ ...f, q: searchText })), 200);
+    return () => window.clearTimeout(t);
+  }, [searchText, filters.q]);
+
+  const filtered = useMemo(() => filterFacilities(all, filters), [all, filters]);
+  const visibleIds = useMemo(() => new Set(filtered.map((f) => f.id)), [filtered]);
+  const tierCounts = useMemo(() => countByTier(all, filters), [all, filters]);
+  const typeCounts = useMemo(() => countByType(all, filters), [all, filters]);
+  const noLocationCount = useMemo(() => countNoLocation(all), [all]);
+  const activeFilters = hasActiveFilters(filters);
+  const onMapCount = filtered.filter((f) => facilityPosition(f)).length;
+  const isEmpty = !mapQuery.isLoading && all.length > 0 && activeFilters && onMapCount === 0 && !filters.noLocationOnly;
+  const byId = useMemo(() => new Map(all.map((f) => [f.id, f])), [all]);
+
+  /* ---------------- geometry ---------------- */
+  const frameRef = useRef<HTMLDivElement>(null);
+  const { height: frameHeight, stable: frameStable } = useElementHeight(frameRef);
+  const drawerRef = useRef<HTMLDivElement>(null);
+
+  const insetsFor = useCallback(
+    (drawerOpen: boolean): Insets => {
+      if (isMobile) {
+        const sheet = drawerOpen
+          ? snapHeight(detailSnap, frameHeight, Math.min(500, frameHeight - 80))
+          : snapHeight(listSnap, frameHeight);
+        return { top: 16 + 52 + (noLocationCount > 0 ? 48 : 0), right: 16, bottom: sheet, left: 16 };
+      }
+      const left = isDesktop ? GAP + PANEL_W + GAP : GAP + RAIL_W + GAP;
+      const right = drawerOpen ? GAP + (isDesktop ? DRAWER_W : TABLET_DRAWER_W) + GAP : GAP + 48;
+      return { top: 72, right, bottom: BOTTOM_INSET, left };
+    },
+    [isMobile, isDesktop, frameHeight, detailSnap, listSnap, noLocationCount]
   );
 
-  const isLoading = viewMode === "assets" ? mapData.isLoading : networkData.isLoading;
+  /** Fitting may let the notice chip overlap the far north on phones, as in the mockup. */
+  const fitInsetsFor = useCallback(
+    (drawerOpen: boolean): Insets => {
+      const base = insetsFor(drawerOpen);
+      return isMobile ? { ...base, top: 16 + 54 } : base;
+    },
+    [insetsFor, isMobile]
+  );
 
-  const filteredNetwork = useMemo(() => {
-    const rows = networkData.data ?? [];
-    const q = searchQuery.trim().toLowerCase();
-    return rows.filter((f) => {
-      if (selectedFacilityType !== "all" && f.facilityType !== selectedFacilityType) return false;
-      if (statusFilter === "active" && !f.isActive) return false;
-      if (statusFilter === "inactive" && f.isActive) return false;
-      if (!matchesStockTier(f, stockFilter)) return false;
-      if (q) {
-        const hay = `${f.name} ${f.code ?? ""}`.toLowerCase();
-        if (!hay.includes(q)) return false;
-      }
-      return true;
-    });
-  }, [networkData.data, selectedFacilityType, statusFilter, stockFilter, searchQuery]);
+  /* ---------------- map plumbing ---------------- */
+  const controllerRef = useRef<MapController | null>(null);
+  const mapRef = useRef<google.maps.Map | null>(null);
+  const [mapEpoch, setMapEpoch] = useState(0);
+  const fittedRef = useRef(false);
+  const mockRef = useRef<MapController | null>(null);
 
-  useEffect(() => {
-    if (facilityPhotosQuery.data?.length) {
-      setActiveFacilityPhoto(facilityPhotosQuery.data[0].photoUrl);
-    } else {
-      setActiveFacilityPhoto(null);
-    }
-  }, [facilityPhotosQuery.data]);
+  const byIdRef = useRef(byId);
+  const insetsRef = useRef(insetsFor);
+  useLayoutEffect(() => {
+    byIdRef.current = byId;
+    insetsRef.current = insetsFor;
+  });
+  const ensureVisible = useCallback((id: number) => {
+    const f = byIdRef.current.get(id);
+    const pos = f ? facilityPosition(f) : null;
+    if (!pos) return;
+    // Wait a frame so the drawer insets are current; this only ever pans.
+    window.requestAnimationFrame(() => controllerRef.current?.ensureVisible(pos, insetsRef.current(true)));
+  }, []);
+  const { selectedId, select, clear } = useMapSelection({ ensureVisible });
+  const selected = selectedId != null ? byId.get(selectedId) : undefined;
 
-  useEffect(() => {
-    if (infoWindowRef.current && activeFacilityId !== null && mapRef.current && viewMode === "assets") {
-      const facility = mapData.data?.find((f) => f.id === activeFacilityId);
-      if (facility) {
-        infoWindowRef.current.setContent(buildAssetInfoWindow(facility, activeFacilityPhoto));
-      }
-    }
-  }, [activeFacilityPhoto, activeFacilityId, mapData.data, viewMode]);
+  const detailQuery = trpc.sites.mapFacilityDetail.useQuery(
+    { id: selectedId ?? 0 },
+    { enabled: selectedId != null, staleTime: 5 * 60_000, refetchOnWindowFocus: false }
+  );
 
-  const resetPolylines = useCallback(() => {
-    polylinesRef.current.forEach(({ line }) => {
-      line.setOptions({
-        strokeColor: "#9CA3AF",
-        strokeOpacity: 0.15,
-        strokeWeight: 1.5,
-      });
-    });
+  const selectedIdRef = useRef(selectedId);
+  useLayoutEffect(() => {
+    selectedIdRef.current = selectedId;
+  });
+  // Stable callbacks shared by the Google overlay and the mock canvas (select and clear are stable).
+  const [callbacks] = useState(() => ({
+    onSelect: (id: number, opener: HTMLElement | null) => select(id, opener),
+    onHover: (id: number | null) => setHoveredId(id),
+    onBackgroundClick: () => {
+      if (selectedIdRef.current != null) clear({ restoreFocus: false });
+    },
+  }));
+
+  const [overlay] = useState(() => (mapMock ? null : new AssetMapOverlay(callbacks)));
+  useEffect(() => () => overlay?.destroy(), [overlay]);
+
+  const shimmerTimer = useRef<number | null>(null);
+  const startShimmer = useCallback(() => {
+    setTilesLoading(true);
+    if (shimmerTimer.current) window.clearTimeout(shimmerTimer.current);
+    shimmerTimer.current = window.setTimeout(() => setTilesLoading(false), 8000);
+  }, []);
+  const stopShimmer = useCallback(() => {
+    if (shimmerTimer.current) window.clearTimeout(shimmerTimer.current);
+    shimmerTimer.current = null;
+    setTilesLoading(false);
+  }, []);
+  useEffect(() => () => {
+    if (shimmerTimer.current) window.clearTimeout(shimmerTimer.current);
   }, []);
 
-  const highlightPolylines = useCallback(
-    (facilityId: number) => {
-      resetPolylines();
-      polylinesRef.current.forEach(({ line, childId, parentId }) => {
-        if (childId === facilityId || parentId === facilityId) {
-          line.setOptions({
-            strokeColor: "#DC2626",
-            strokeOpacity: 0.85,
-            strokeWeight: 3,
-          });
-        }
-      });
+  const mapListeners = useRef<google.maps.MapsEventListener[]>([]);
+  const onMapReady = useCallback(
+    (map: google.maps.Map) => {
+      mapListeners.current.forEach((l) => l.remove());
+      mapRef.current = map;
+      controllerRef.current = createGoogleController(map);
+      overlay?.setMap(map);
+      mapListeners.current = [
+        map.addListener("zoom_changed", startShimmer),
+        map.addListener("maptypeid_changed", startShimmer),
+      ];
+      setMapEpoch((n) => n + 1);
     },
-    [resetPolylines]
-  );
-
-  const renderNetworkMap = useCallback(() => {
-    const map = mapRef.current;
-    const facilities = filteredNetwork;
-    if (!map) return;
-
-    facilityMarkersRef.current.forEach((m) => m.setMap(null));
-    facilityMarkersRef.current = [];
-    polylinesRef.current.forEach(({ line }) => line.setMap(null));
-    polylinesRef.current = [];
-    assetMarkersRef.current.forEach((m) => m.setMap(null));
-    assetMarkersRef.current = [];
-
-    const bounds = new google.maps.LatLngBounds();
-    let plotted = 0;
-
-    for (const facility of facilities) {
-      const position = facilityPosition(facility);
-      if (!position) continue;
-      plotted += 1;
-
-      const fillColor = stockPinColor(facility);
-      const isHighlight = highlightId === facility.id;
-      const marker = new google.maps.Marker({
-        position,
-        map,
-        title: facility.name,
-        label: facility.code
-          ? { text: facility.code.slice(0, 6), color: "#fff", fontSize: "9px", fontWeight: "600" }
-          : undefined,
-        icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: isHighlight ? 16 : 12,
-          fillColor,
-          fillOpacity: 1,
-          strokeColor: isHighlight ? "#1d4ed8" : "#ffffff",
-          strokeWeight: isHighlight ? 3 : 2,
-        },
-        zIndex: isHighlight ? 300 : facility.facilityType === "national_headquarters" ? 200 : 100,
-      });
-
-      marker.addListener("click", () => {
-        setSelectedNetworkFacility(facility);
-        setHighlightId(facility.id);
-        map.panTo(position);
-        if (map.getZoom() != null && map.getZoom()! < 8) map.setZoom(8);
-      });
-
-      facilityMarkersRef.current.push(marker);
-      bounds.extend(position);
-    }
-
-    if (plotted > 0) {
-      map.fitBounds(bounds);
-      if (plotted === 1) map.setZoom(12);
-    } else {
-      map.setCenter({ ...DEFAULT_MAP_CENTER });
-      map.setZoom(DEFAULT_MAP_ZOOM_COUNTRY);
-    }
-  }, [filteredNetwork, highlightId]);
-
-  const renderAssetsMap = useCallback(() => {
-    const map = mapRef.current;
-    const facilities = mapData.data;
-    if (!map || !facilities) return;
-
-    facilityMarkersRef.current.forEach((m) => m.setMap(null));
-    facilityMarkersRef.current = [];
-    polylinesRef.current.forEach(({ line }) => line.setMap(null));
-    polylinesRef.current = [];
-    assetMarkersRef.current.forEach((m) => m.setMap(null));
-    assetMarkersRef.current = [];
-
-    if (!infoWindowRef.current) {
-      infoWindowRef.current = new google.maps.InfoWindow();
-    }
-
-    const facilityById = new globalThis.Map(facilities.map((f) => [f.id, f] as const));
-    const bounds = new google.maps.LatLngBounds();
-    let facilitiesWithValidCoords = 0;
-
-    for (const facility of facilities) {
-      const position = facilityPosition(facility);
-      if (!position) continue;
-      facilitiesWithValidCoords += 1;
-      const type = facility.facilityType;
-
-      const marker = new google.maps.Marker({
-        position,
-        map,
-        title: facility.name,
-        icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: type === "national_headquarters" ? 16 : 12,
-          fillColor: FACILITY_COLOURS[type],
-          fillOpacity: 1,
-          strokeColor: "#ffffff",
-          strokeWeight: 2,
-        },
-        zIndex: type === "national_headquarters" ? 200 : 100,
-      });
-
-      if (selectedFacilityType !== "all" && type !== selectedFacilityType) {
-        marker.setOpacity(0.2);
-      } else {
-        marker.setOpacity(1);
-      }
-
-      marker.addListener("click", () => {
-        highlightPolylines(facility.id);
-        setActiveFacilityId(facility.id);
-        setActiveFacilityPhoto(null);
-        infoWindowRef.current?.setContent(buildAssetInfoWindow(facility, null));
-        infoWindowRef.current?.open({ map, anchor: marker });
-      });
-
-      facilityMarkersRef.current.push(marker);
-      bounds.extend(position);
-    }
-
-    for (const facility of facilities) {
-      if (facility.parentFacilityId == null) continue;
-      const parent = facilityById.get(facility.parentFacilityId);
-      if (!parent) continue;
-      const childPos = facilityPosition(facility);
-      const parentPos = facilityPosition(parent);
-      if (!childPos || !parentPos) continue;
-
-      const line = new google.maps.Polyline({
-        map,
-        path: [childPos, parentPos],
-        strokeColor: "#9CA3AF",
-        strokeOpacity: 0.15,
-        strokeWeight: 1.5,
-        zIndex: 10,
-      });
-      polylinesRef.current.push({
-        line,
-        childId: facility.id,
-        parentId: facility.parentFacilityId,
-      });
-    }
-
-    if (showAssetOverlay && assets.data) {
-      for (const asset of assets.data) {
-        const facility = facilityById.get(asset.siteId);
-        const latStr = asset.latitude ?? facility?.latitude ?? null;
-        const lngStr = asset.longitude ?? facility?.longitude ?? null;
-        const lat = parseCoord(latStr);
-        const lng = parseCoord(lngStr);
-        if (lat == null || lng == null) continue;
-
-        const position = { lat, lng };
-        const marker = new google.maps.Marker({
-          position,
-          map,
-          title: asset.name,
-          icon: {
-            path: google.maps.SymbolPath.CIRCLE,
-            scale: 6,
-            fillColor: ASSET_OVERLAY_COLOUR,
-            fillOpacity: 0.9,
-            strokeColor: "#ffffff",
-            strokeWeight: 1.5,
-          },
-          zIndex: 50,
-        });
-        assetMarkersRef.current.push(marker);
-      }
-    }
-
-    if (facilitiesWithValidCoords > 0) {
-      map.fitBounds(bounds);
-      if (facilitiesWithValidCoords === 1) map.setZoom(12);
-    } else {
-      map.setCenter({ ...DEFAULT_MAP_CENTER });
-      map.setZoom(DEFAULT_MAP_ZOOM_COUNTRY);
-    }
-  }, [mapData.data, showAssetOverlay, assets.data, selectedFacilityType, highlightPolylines]);
-
-  const renderMap = useCallback(() => {
-    if (viewMode === "network") renderNetworkMap();
-    else renderAssetsMap();
-  }, [viewMode, renderNetworkMap, renderAssetsMap]);
-
-  const handleMapReady = useCallback(
-    (googleMap: google.maps.Map) => {
-      mapRef.current = googleMap;
-      if (!infoWindowRef.current) {
-        infoWindowRef.current = new google.maps.InfoWindow();
-      }
-      if (!mapListenersAttachedRef.current && viewMode === "assets") {
-        infoWindowRef.current.addListener("closeclick", () => {
-          resetPolylines();
-          setActiveFacilityId(null);
-          setActiveFacilityPhoto(null);
-        });
-        googleMap.addListener("click", () => {
-          infoWindowRef.current?.close();
-          resetPolylines();
-          setActiveFacilityId(null);
-          setActiveFacilityPhoto(null);
-        });
-        mapListenersAttachedRef.current = true;
-      }
-      renderMap();
-    },
-    [renderMap, resetPolylines, viewMode]
+    [startShimmer, overlay]
   );
 
   useEffect(() => {
-    if (mapRef.current) renderMap();
-  }, [renderMap]);
+    if (mapMock) controllerRef.current = mockRef.current;
+  });
 
+  // Read only QA hook: current zoom, so smoke tests can check selection never zooms.
   useEffect(() => {
-    if (!searchQuery.trim() || viewMode !== "network") return;
-    const match = filteredNetwork.find((f) => facilityPosition(f));
-    if (match && mapRef.current) {
-      const pos = facilityPosition(match);
-      if (pos) {
-        setHighlightId(match.id);
-        mapRef.current.panTo(pos);
-        mapRef.current.setZoom(10);
-      }
+    const w = window as Window & { __assetMapZoom?: () => number | undefined };
+    w.__assetMapZoom = () => controllerRef.current?.getZoom();
+    return () => {
+      delete w.__assetMapZoom;
+    };
+  }, []);
+
+  // Keep the overlay in sync. Updates markers in place; never refits.
+  useEffect(() => {
+    if (!overlay) return;
+    overlay.update({
+      facilities: all,
+      visibleIds,
+      layer,
+      scheme,
+      selectedId,
+      hoveredId,
+      lines,
+      empty: isEmpty,
+      touch,
+    });
+  }, [overlay, all, visibleIds, layer, scheme, selectedId, hoveredId, lines, isEmpty, touch, mapEpoch]);
+
+  // First load: fit all located facilities once, with panel padding.
+  useEffect(() => {
+    if (fittedRef.current || !mapQuery.data || !frameStable) return;
+    if (!mapMock && !mapRef.current) return;
+    const points = filtered.map(facilityPosition).filter((p): p is google.maps.LatLngLiteral => Boolean(p));
+    const fallback = all.map(facilityPosition).filter((p): p is google.maps.LatLngLiteral => Boolean(p));
+    fittedRef.current = true;
+    const target = points.length ? points : fallback;
+    if (target.length) controllerRef.current?.fitTo(target, fitInsetsFor(selectedIdRef.current != null));
+  }, [mapQuery.data, mapEpoch, mapMock, filtered, all, fitInsetsFor, frameStable]);
+
+  // Restore ?facility= once data arrives.
+  const restoredRef = useRef(false);
+  useEffect(() => {
+    if (restoredRef.current || !mapQuery.data) return;
+    restoredRef.current = true;
+    const f = findByUrlKey(all, initial.facility);
+    if (f) select(f.id, null);
+  }, [mapQuery.data, all, initial.facility, select]);
+
+  // URL sync (replaceState, so it doesn't spam history).
+  useEffect(() => {
+    if (!restoredRef.current && initial.facility) return;
+    const search = buildMapSearch({
+      layer,
+      lines,
+      filters,
+      facility: selected ? facilityUrlKey(selected) : null,
+      mapMock,
+    });
+    const url = `${window.location.pathname}${search}${window.location.hash}`;
+    if (url !== `${window.location.pathname}${window.location.search}${window.location.hash}`) {
+      window.history.replaceState(window.history.state, "", url);
     }
-  }, [searchQuery, filteredNetwork, viewMode]);
+  }, [layer, lines, filters, selected, mapMock, initial.facility, mapQuery.data]);
 
-  if (isLoading) return <PageLoader />;
+  // Esc closes the drawer and returns focus to the opener.
+  useEffect(() => {
+    if (selectedId == null) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || e.defaultPrevented) return;
+      const target = e.target;
+      if (target instanceof Element && target.closest("[role='menu'],[data-radix-popper-content-wrapper]")) return;
+      clear({ restoreFocus: true });
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selectedId, clear]);
 
-  const totalFacilities =
-    viewMode === "network" ? (networkData.data?.length ?? 0) : (mapData.data?.length ?? 0);
-  const facilitiesWithCoords =
-    viewMode === "network"
-      ? (networkData.data?.filter((f) => facilityPosition(f) != null).length ?? 0)
-      : (mapData.data?.filter((f) => facilityPosition(f) != null).length ?? 0);
+  /* ---------------- actions ---------------- */
+  const toggleTier = (tier: ReadinessTier) =>
+    setFilters((f) => ({ ...f, tiers: f.tiers.includes(tier) ? f.tiers.filter((t) => t !== tier) : [...f.tiers, tier] }));
+  const toggleType = (type: FacilityType) =>
+    setFilters((f) => ({ ...f, types: f.types.includes(type) ? f.types.filter((t) => t !== type) : [...f.types, type] }));
+  const toggleOffline = () => setFilters((f) => ({ ...f, offlineOnly: !f.offlineOnly }));
+  const toggleNoLocation = () => {
+    setFilters((f) => ({ ...f, noLocationOnly: !f.noLocationOnly }));
+    if (isMobile) setListSnap("half");
+    if (isTablet) setRailOpen(true);
+  };
+  const clearFilters = () => {
+    setFilters(EMPTY_FILTERS);
+    setSearchText("");
+  };
+  const onSearchEnter = () => {
+    const now = { ...filters, q: searchText };
+    const first = sortFacilities(all.filter((f) => matchesFilters(f, now)), sort)[0];
+    setFilters(now);
+    if (first) select(first.id, null);
+  };
+  const fitAll = () => {
+    const pts = (filtered.length ? filtered : all).map(facilityPosition).filter((p): p is google.maps.LatLngLiteral => Boolean(p));
+    if (pts.length) controllerRef.current?.fitTo(pts, fitInsetsFor(selectedId != null));
+  };
+  const changeStyle = (style: MapStyle) => {
+    setMapStyle(style);
+    controllerRef.current?.setStyle(style);
+  };
+  const selectFromList = (id: number, opener: HTMLElement | null) => {
+    select(id, opener);
+    if (isTablet) setRailOpen(false);
+    if (isMobile) setDetailSnap("half");
+  };
+
+  // Move focus into the drawer when it opens from the list or a pin.
+  useEffect(() => {
+    if (selectedId != null) drawerRef.current?.focus({ preventScroll: true });
+  }, [selectedId]);
+
+  /* ---------------- render ---------------- */
+  const colorScheme: MapColorScheme = scheme === "dark" ? "DARK" : "LIGHT";
+  const drawerOpen = Boolean(selected);
+  const panelProps = {
+    layer,
+    scheme,
+    loading: mapQuery.isLoading,
+    all,
+    filtered,
+    tierCounts,
+    typeCounts,
+    filters,
+    searchText,
+    onSearchText: setSearchText,
+    onSearchEnter,
+    onToggleTier: toggleTier,
+    onToggleType: toggleType,
+    onToggleOffline: toggleOffline,
+    onToggleNoLocation: toggleNoLocation,
+    onClearFilters: clearFilters,
+    sort,
+    onSort: (s: ListSort) => setSortByLayer((prev) => ({ ...prev, [layer]: s })),
+    selectedId,
+    onSelect: selectFromList,
+    statsLimited,
+  };
+
+  const drawer = selected ? (
+    <FacilityDrawer
+      ref={drawerRef}
+      facility={selected}
+      detail={detailQuery.data}
+      detailLoading={detailQuery.isLoading}
+      scheme={scheme}
+      onClose={() => clear({ restoreFocus: true })}
+      onSelectFacility={(id) => select(id, null)}
+      variant={isMobile ? "sheet" : "drawer"}
+      className="h-full"
+    />
+  ) : null;
+
+  const controlsRight = drawerOpen && !isMobile ? GAP + (isDesktop ? DRAWER_W : TABLET_DRAWER_W) + GAP : GAP;
 
   return (
-    <div className="space-y-4">
-      <PageHeader
-        icon={MapIcon}
-        title="Asset Map"
-        subtitle="Geographic view of facilities — network stock readiness or asset overlay"
-      />
+    <div className="-mx-3 -mt-3 flex h-[calc(100dvh-136px)] min-h-[480px] flex-col gap-3 sm:mx-0 sm:mt-0 sm:h-[calc(100dvh-152px)] sm:min-h-[520px] md:h-[calc(100dvh-88px)]">
+      <style>{SHIMMER_CSS}</style>
+      <header className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1 max-sm:sr-only">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold leading-8 tracking-tight">Asset Map</h1>
+          <p className={cn("text-sm", mutedText)}>Where each facility is, how ready its stock is, and where its assets are.</p>
+        </div>
+        {freshness ? (
+          <p className={cn("text-xs tabular-nums", mutedText)} data-testid="asset-map-freshness">
+            Stock data as of {freshness}
+          </p>
+        ) : null}
+      </header>
 
-      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as MapViewMode)}>
-        <TabsList>
-          <TabsTrigger value="network" data-testid="asset-map-network-tab">
-            Facility Network
-          </TabsTrigger>
-          <TabsTrigger value="assets" data-testid="asset-map-assets-tab">
-            Assets
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+      <div
+        ref={frameRef}
+        data-testid="asset-map-panel"
+        className="relative min-h-0 flex-1 overflow-hidden border-b border-[#E5E7EB] bg-[#ECEEF1] dark:border-[#26364A] dark:bg-[#121B28] sm:rounded-2xl sm:border"
+      >
+        {/* Map layer */}
+        {mapError ? (
+          <div data-testid="asset-map-facility-fallback" className="absolute inset-0 bg-[#F3F4F6] dark:bg-[#0F1724]">
+            <div
+              className="absolute flex justify-center"
+              style={isMobile ? { left: 16, right: 16, top: 16 + 52 + 8 } : { left: insetsFor(false).left, right: GAP, top: 72 }}
+            >
+              <MapErrorCard message={mapError} />
+            </div>
+          </div>
+        ) : mapMock ? (
+          <MockMapCanvas
+            ref={mockRef}
+            facilities={all}
+            visibleIds={visibleIds}
+            layer={layer}
+            scheme={scheme}
+            selectedId={selectedId}
+            hoveredId={hoveredId}
+            lines={lines}
+            empty={isEmpty}
+            insets={insetsFor(false)}
+            onSelect={callbacks.onSelect}
+            onHover={callbacks.onHover}
+            onBackgroundClick={callbacks.onBackgroundClick}
+          />
+        ) : (
+          <MapView
+            className="absolute inset-0 h-full min-h-0 bg-transparent"
+            initialCenter={{ ...DEFAULT_MAP_CENTER }}
+            initialZoom={DEFAULT_MAP_ZOOM_COUNTRY}
+            colorScheme={colorScheme}
+            gestureHandling="greedy"
+            disableDefaultUI
+            options={isMobile ? MOBILE_MAP_OPTIONS : MAP_OPTIONS}
+            onMapReady={onMapReady}
+            onLoadError={setMapError}
+            onTilesLoaded={stopShimmer}
+            errorDisplay="none"
+          />
+        )}
 
-      <div className="flex flex-wrap items-end gap-4">
-        <div className="relative min-w-[200px] flex-1">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search facility name or code…"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-            data-testid="asset-map-search"
+        {!mapError ? <TileShimmer active={tilesLoading} /> : null}
+
+        {/* Empty state: 35% scrim plus a card in the free area */}
+        {isEmpty && !mapError ? (
+          <>
+            <div className="pointer-events-none absolute inset-0 z-[2] bg-[#FAFAF7]/35 dark:bg-[#0F1724]/35" aria-hidden="true" />
+            <div
+              className="pointer-events-none absolute z-[5] flex items-center justify-center"
+              style={{
+                left: insetsFor(drawerOpen).left,
+                right: insetsFor(drawerOpen).right,
+                top: insetsFor(drawerOpen).top,
+                bottom: insetsFor(drawerOpen).bottom,
+              }}
+            >
+              <EmptyMapCard summary={filterSummary(filters)} onClear={clearFilters} />
+            </div>
+          </>
+        ) : null}
+
+        {/* Desktop panel */}
+        {isDesktop ? (
+          <FacilityPanel
+            {...panelProps}
+            className={cn(surfaceClass, "absolute z-10 overflow-hidden")}
+            style={{ left: GAP, top: GAP, bottom: BOTTOM_INSET, width: PANEL_W }}
+          />
+        ) : null}
+
+        {/* Tablet rail */}
+        {isTablet ? (
+          <>
+            <div
+              className={cn(surfaceClass, "absolute z-10 flex flex-col items-center gap-1 py-2")}
+              style={{ left: GAP, top: GAP, width: RAIL_W }}
+            >
+              <RailButton label="Search facilities" onClick={() => setRailOpen(true)}>
+                <Search className="h-4 w-4" />
+              </RailButton>
+              <RailButton label="Filters" onClick={() => setRailOpen(true)} badge={filters.tiers.length + filters.types.length || undefined}>
+                <ListFilter className="h-4 w-4" />
+              </RailButton>
+              <RailButton label="Facility list" onClick={() => setRailOpen(true)}>
+                <ListIcon className="h-4 w-4" />
+              </RailButton>
+            </div>
+            {railOpen ? (
+              <div
+                className={cn(surfaceClass, "absolute z-30 flex flex-col overflow-hidden")}
+                style={{ left: GAP, top: GAP, bottom: BOTTOM_INSET, width: PANEL_W }}
+              >
+                <div className="flex items-center justify-end px-2 pt-2">
+                  <button
+                    type="button"
+                    aria-label="Close facility list"
+                    onClick={() => setRailOpen(false)}
+                    className={cn("grid h-9 w-9 place-items-center rounded-lg hover:bg-[#F3F4F6] dark:hover:bg-[#1E2B3C]", focusRing)}
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                <FacilityPanel {...panelProps} className="min-h-0 flex-1" />
+              </div>
+            ) : null}
+          </>
+        ) : null}
+
+        {/* Layer bar and notice chip */}
+        <div
+          className="pointer-events-none absolute z-10 flex flex-col items-start gap-2"
+          style={
+            isMobile
+              ? { left: GAP, right: GAP, top: GAP }
+              : { left: isDesktop ? GAP + PANEL_W + GAP : GAP + RAIL_W + GAP, top: GAP }
+          }
+        >
+          <LayerBar
+            layer={layer}
+            onLayer={setLayer}
+            lines={lines}
+            onLines={setLines}
+            compact={isMobile}
+            className={cn("pointer-events-auto", isMobile && "w-full")}
+          />
+          <NoLocationChip
+            count={noLocationCount}
+            active={filters.noLocationOnly}
+            onShow={toggleNoLocation}
+            className="pointer-events-auto"
           />
         </div>
 
-        <div className="space-y-1">
-          <Label className="text-sm font-medium">Facility type</Label>
-          <Select value={selectedFacilityType} onValueChange={setSelectedFacilityType}>
-            <SelectTrigger className="w-[180px]" data-testid="asset-map-facility-type">
-              <SelectValue placeholder="All Types" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
-              {FACILITY_TYPE_VALUES.map((type) => (
-                <SelectItem key={type} value={type}>
-                  {FACILITY_LABELS[type]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {/* Map controls */}
+        {!mapError && !(isMobile && drawerOpen) ? (
+          <MapControls
+            touch={touch}
+            onZoomIn={() => controllerRef.current?.zoomBy(1)}
+            onZoomOut={() => controllerRef.current?.zoomBy(-1)}
+            onFit={fitAll}
+            style={mapStyle}
+            onStyle={changeStyle}
+            fullscreenTarget={frameRef}
+            className="absolute z-10 transition-[right] duration-200 motion-reduce:transition-none"
+            positionStyle={{ right: controlsRight, bottom: isMobile ? snapHeight(listSnap, frameHeight) + 12 : BOTTOM_INSET }}
+          />
+        ) : null}
 
-        {viewMode === "network" ? (
-          <>
-            <div className="space-y-1">
-              <Label className="text-sm font-medium">Status</Label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[140px]" data-testid="asset-map-status-filter">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-sm font-medium">Stock readiness</Label>
-              <Select
-                value={stockFilter}
-                onValueChange={(v) => setStockFilter(v as StockTier)}
-              >
-                <SelectTrigger className="w-[160px]" data-testid="asset-map-stock-filter">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="adequate">Adequate (≥75%)</SelectItem>
-                  <SelectItem value="partial">Partial (50–74%)</SelectItem>
-                  <SelectItem value="low">Low (&lt;50%)</SelectItem>
-                  <SelectItem value="none">No data</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </>
-        ) : (
-          <div className="flex items-center gap-2 pb-1">
-            <Switch
-              id="show-assets"
-              checked={showAssetOverlay}
-              onCheckedChange={setShowAssetOverlay}
-              data-testid="asset-map-show-assets"
-            />
-            <Label htmlFor="show-assets" className="cursor-pointer text-sm font-medium">
-              Show Assets
-            </Label>
+        {/* Drawer */}
+        {drawer && !isMobile ? (
+          <div
+            className={cn(surfaceClass, "absolute z-20 overflow-hidden")}
+            style={{ right: GAP, top: GAP, bottom: BOTTOM_INSET, width: isDesktop ? DRAWER_W : TABLET_DRAWER_W }}
+          >
+            {drawer}
           </div>
-        )}
+        ) : null}
 
-        <div className="ml-auto flex flex-wrap items-center gap-2 pb-1">
-          <span className="text-sm text-muted-foreground">
-            {viewMode === "network" ? filteredNetwork.length : facilitiesWithCoords} of{" "}
-            {totalFacilities} facilities
-            {viewMode === "network" ? " shown" : " mapped"}
-          </span>
-        </div>
+        {/* Mobile sheets */}
+        {isMobile ? (
+          drawer ? (
+            <BottomSheet
+              snap={detailSnap}
+              onSnap={setDetailSnap}
+              frameHeight={frameHeight}
+              half={Math.min(500, frameHeight - 80)}
+              label="Facility details"
+              testId="asset-map-detail-sheet"
+            >
+              {drawer}
+            </BottomSheet>
+          ) : (
+            <BottomSheet snap={listSnap} onSnap={setListSnap} frameHeight={frameHeight} label="Facility list" testId="asset-map-list-sheet">
+              <FacilityPanel {...panelProps} variant="sheet" showTypeChips={false} className="min-h-0 flex-1" />
+            </BottomSheet>
+          )
+        ) : null}
       </div>
-
-      <div
-        className="min-h-[600px] w-full overflow-hidden rounded-lg border bg-muted/30"
-        data-testid="asset-map-panel"
-      >
-        <MapView
-          initialCenter={{ ...DEFAULT_MAP_CENTER }}
-          initialZoom={DEFAULT_MAP_ZOOM_COUNTRY}
-          onMapReady={handleMapReady}
-          onLoadError={setMapLoadError}
-        />
-      </div>
-      {mapLoadError ? (
-        <div
-          className="rounded-lg border bg-card p-4"
-          data-testid="asset-map-facility-fallback"
-        >
-          <p className="mb-3 text-sm font-medium">{mapLoadError}</p>
-          <p className="mb-3 text-sm text-muted-foreground">
-            Facility list is still available below.
-          </p>
-          <ul className="max-h-80 space-y-2 overflow-auto text-sm">
-            {(viewMode === "network" ? filteredNetwork : (mapData.data ?? [])).map((facility) => (
-              <li key={facility.id} className="flex items-center justify-between gap-3 border-b pb-2 last:border-0">
-                <Link href={appPath(`/facilities/${facility.id}`)} className="font-medium text-primary underline">
-                  {facility.name}
-                </Link>
-                <span className="text-muted-foreground">
-                  {FACILITY_LABELS[facility.facilityType]}
-                  {"isActive" in facility ? (facility.isActive ? " · Active" : " · Offline") : ""}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-
-      <div className="flex flex-wrap items-center gap-4 text-sm">
-        {viewMode === "network" ? (
-          <>
-            <div className="flex items-center gap-2">
-              <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: STOCK_COLOURS.adequate }} />
-              <span>Adequate (≥75%)</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: STOCK_COLOURS.partial }} />
-              <span>Partial</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: STOCK_COLOURS.low }} />
-              <span>Low stock</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: STOCK_COLOURS.offline }} />
-              <span>Inactive / no data</span>
-            </div>
-          </>
-        ) : (
-          FACILITY_TYPE_VALUES.map((type) => (
-            <div key={type} className="flex items-center gap-2">
-              <span
-                className="inline-block h-3 w-3 rounded-full"
-                style={{ backgroundColor: FACILITY_COLOURS[type] }}
-              />
-              <span>{FACILITY_LABELS[type]}</span>
-            </div>
-          ))
-        )}
-      </div>
-
-      <Dialog
-        open={selectedNetworkFacility != null}
-        onOpenChange={(open) => {
-          if (!open) setSelectedNetworkFacility(null);
-        }}
-      >
-        <DialogContent>
-          {selectedNetworkFacility ? (
-            <>
-              <DialogHeader>
-                <DialogTitle>{selectedNetworkFacility.name}</DialogTitle>
-                <DialogDescription>
-                  {selectedNetworkFacility.code ? `${selectedNetworkFacility.code} · ` : ""}
-                  {FACILITY_LABELS[selectedNetworkFacility.facilityType]}
-                  {!selectedNetworkFacility.isActive ? " · Inactive" : ""}
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-2 text-sm">
-                {(selectedNetworkFacility.address || selectedNetworkFacility.city) && (
-                  <p>
-                    {[selectedNetworkFacility.address, selectedNetworkFacility.city, selectedNetworkFacility.state]
-                      .filter(Boolean)
-                      .join(", ")}
-                  </p>
-                )}
-                <p>
-                  Stock readiness:{" "}
-                  <strong>
-                    {selectedNetworkFacility.stockScorePercent != null
-                      ? `${selectedNetworkFacility.stockScorePercent}%`
-                      : "—"}
-                  </strong>{" "}
-                  ({selectedNetworkFacility.adequateCards}/{selectedNetworkFacility.totalCards} cards
-                  adequate)
-                </p>
-                {selectedNetworkFacility.lastMovementDate ? (
-                  <p className="text-muted-foreground">
-                    Last movement: {selectedNetworkFacility.lastMovementDate}
-                  </p>
-                ) : null}
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setSelectedNetworkFacility(null)}>
-                  Close
-                </Button>
-                <Button asChild>
-                  <Link href={appPath(`/facilities/${selectedNetworkFacility.id}`)}>
-                    View Full Details
-                  </Link>
-                </Button>
-              </DialogFooter>
-            </>
-          ) : null}
-        </DialogContent>
-      </Dialog>
     </div>
+  );
+}
+
+function RailButton({
+  label,
+  onClick,
+  badge,
+  children,
+}: {
+  label: string;
+  onClick: () => void;
+  badge?: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={badge ? `${label} (${badge} on)` : label}
+      title={label}
+      onClick={onClick}
+      className={cn("relative grid h-11 w-11 place-items-center rounded-[10px] hover:bg-[#F3F4F6] dark:hover:bg-[#1E2B3C]", focusRing)}
+    >
+      {children}
+      {badge ? (
+        <span className="absolute right-1 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-[#0B2545] px-1 text-[10px] font-semibold text-white dark:bg-[#E6EAF0] dark:text-[#0F1724]">
+          {badge}
+        </span>
+      ) : null}
+    </button>
   );
 }
