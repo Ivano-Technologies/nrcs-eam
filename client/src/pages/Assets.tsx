@@ -1349,27 +1349,7 @@ export default function Assets() {
       <ModuleFiltersCard
         filterRow={
           <>
-            {isAdmin ? (
-              <Button
-                className="h-9 shrink-0"
-                variant="secondary"
-                disabled={backfillCoordinatesMutation.isPending}
-                onClick={() => backfillCoordinatesMutation.mutate()}
-                data-testid="asset-sync-coordinates-from-facilities-btn"
-              >
-                {backfillCoordinatesMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Syncing…
-                  </>
-                ) : (
-                  <>
-                    <MapPin className="mr-2 h-4 w-4" />
-                    Sync coordinates from facilities
-                  </>
-                )}
-              </Button>
-            ) : null}
+
             <ModuleFilterSearch
               data-testid="asset-search-input"
               placeholder="Search description, code, serial…"
@@ -1428,7 +1408,7 @@ export default function Assets() {
         }
         toolbarStart={<ViewToggle value={viewMode} onChange={setViewMode} />}
         toolbarEnd={
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 md:justify-end">
             <Button
               className="h-9"
               variant="outline"
@@ -1459,6 +1439,27 @@ export default function Assets() {
                   Add asset
                 </Button>
               </>
+            ) : null}
+            {isAdmin ? (
+              <Button
+                className="h-9"
+                variant="outline"
+                disabled={backfillCoordinatesMutation.isPending}
+                onClick={() => backfillCoordinatesMutation.mutate()}
+                data-testid="asset-sync-coordinates-from-facilities-btn"
+              >
+                {backfillCoordinatesMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Syncing…
+                  </>
+                ) : (
+                  <>
+                    <MapPin className="mr-2 h-4 w-4" />
+                    Sync coordinates from facilities
+                  </>
+                )}
+              </Button>
             ) : null}
             {isAdmin ? (
               <Button
