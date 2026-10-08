@@ -3,13 +3,15 @@
  * Markers live in a Map<id, entry> and are updated in place (content, zIndex, map=null to
  * hide). Nothing here ever calls fitBounds or setZoom; selection only pans (see useMapSelection).
  */
-import { pinTier, type MapScheme } from "@/lib/facilityMapHelpers";
+import type { MapScheme } from "@/lib/facilityMapHelpers";
 import { quadraticCurve } from "./curves";
 import { GLYPH_SIZE } from "./glyphs";
 import {
-  facilityAriaLabel,
+  facilityAriaLabelFor,
   facilityPosition,
-  tooltipText,
+  pinTierFor,
+  tooltipTextFor,
+  type PinMode,
   type MapFacility,
   type MapLayer,
 } from "./model";
@@ -27,6 +29,8 @@ export type OverlayState = {
   /** Filters match nothing: draw every located facility as a faint dot. */
   empty: boolean;
   touch: boolean;
+  /** Pin colouring. Defaults to readiness (Asset Map); the Facilities map uses status. */
+  pinMode?: PinMode;
 };
 
 export type OverlayCallbacks = {
@@ -196,7 +200,7 @@ export class AssetMapOverlay {
         entry.key = desired.key;
       }
       m.gmpClickable = desired.clickable;
-      m.title = desired.clickable ? facilityAriaLabel(f) : "";
+      m.title = desired.clickable ? facilityAriaLabelFor(f, state.pinMode) : "";
       m.zIndex = desired.zIndex;
       m.collisionBehavior = desired.collision;
       if (m.map !== map) m.map = map;
@@ -245,13 +249,15 @@ export class AssetMapOverlay {
         collision: g.CollisionBehavior.REQUIRED,
       };
     }
-    const tier = pinTier(f);
+    const status = s.pinMode === "status";
+    const tier = pinTierFor(f, s.pinMode);
     const isHq = f.facilityType === "national_headquarters";
-    const lowPriority = (tier === "good" || tier === "none") && !isHq && !selected;
+    // Status mode shows every facility, so no pin is allowed to hide behind another.
+    const lowPriority = !status && (tier === "good" || tier === "none") && !isHq && !selected;
     return {
-      key: `pin:${s.scheme}:${f.facilityType}:${tier}:${selected}:${hovered}:${s.touch}`,
+      key: `pin:${s.scheme}:${f.facilityType}:${tier}:${status}:${selected}:${hovered}:${s.touch}`,
       build: () =>
-        buildPinContent({ type: f.facilityType, tier, scheme: s.scheme, selected, hovered, touch: s.touch }),
+        buildPinContent({ type: f.facilityType, tier, scheme: s.scheme, selected, hovered, touch: s.touch, solidOffline: status }),
       clickable: true,
       zIndex: selected ? 1000 : hovered ? 900 : isHq ? 10 : TIER_Z[tier] ?? 1,
       collision: lowPriority
@@ -281,7 +287,7 @@ export class AssetMapOverlay {
         return current;
       }
       const label = current ?? make();
-      const t = tooltipText(f);
+      const t = tooltipTextFor(f, s.pinMode);
       const detail = s.layer === "assets" ? `${f.assetCount ?? 0} assets` : t.detail;
       label.content = buildLabelContent(t.name, detail, t.tier, s.scheme, this.labelLift(f, s));
       label.position = pos;

@@ -14,10 +14,14 @@ import { buildGlyphSvg, GLYPH_SIZE, type GlyphColours } from "./glyphs";
 import { MAP_TOKENS } from "./tokens";
 import { bubbleRadius, formatCount } from "./model";
 
-export function glyphColours(tier: PinTier, scheme: MapScheme): GlyphColours {
+export function glyphColours(tier: PinTier, scheme: MapScheme, solidOffline = false): GlyphColours {
   const t = MAP_TOKENS[scheme];
-  const offline = tier === "offline";
   const colour = READINESS_COLOURS[scheme][tier];
+  if (solidOffline && tier === "offline") {
+    // Facilities map: inactive pins are solid grey with a white outline.
+    return { fill: colour, stroke: "#FFFFFF", inner: "#FFFFFF", ring: colour };
+  }
+  const offline = tier === "offline";
   return {
     fill: offline ? t.surface : colour,
     stroke: offline ? colour : t.pinStroke,
@@ -33,6 +37,8 @@ export type PinOptions = {
   selected: boolean;
   hovered: boolean;
   touch: boolean;
+  /** Render offline pins solid (Facilities map status mode) instead of hollow. */
+  solidOffline?: boolean;
 };
 
 /** Facility pin: shape by type, fill by readiness, ≥24px hit target (44px on touch). */
@@ -70,7 +76,7 @@ export function buildPinContent(o: PinOptions): HTMLDivElement {
     } satisfies Partial<CSSStyleDeclaration>);
     wrap.appendChild(halo);
   }
-  const svg = buildGlyphSvg(o.type, glyphColours(o.tier, o.scheme), k);
+  const svg = buildGlyphSvg(o.type, glyphColours(o.tier, o.scheme, o.solidOffline), k);
   svg.style.filter = "drop-shadow(0 1px 1.5px rgba(15,23,42,0.35))";
   svg.style.position = "relative";
   wrap.appendChild(svg);
