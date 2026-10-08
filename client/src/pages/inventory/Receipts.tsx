@@ -134,7 +134,7 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
       />
 
       <div
-        className="frozen-table-wrap sticky-first-col overflow-x-auto rounded-md border"
+        className="frozen-table-wrap sticky-first-col rounded-md border"
         style={
           {
             "--col1-width": "170px",

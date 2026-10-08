@@ -149,7 +149,7 @@ export default function MonthlyWarehouseReport() {
         </Button>
       </div>
 
-      <div className="frozen-table-wrap sticky-first-col overflow-x-auto rounded-md border">
+      <div className="frozen-table-wrap sticky-first-col rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>

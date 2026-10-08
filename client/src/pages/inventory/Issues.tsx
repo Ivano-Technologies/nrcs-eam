@@ -109,7 +109,7 @@ export default function Issues({ embedInShell = false }: { embedInShell?: boolea
       />
 
       <div
-        className="frozen-table-wrap sticky-first-col overflow-x-auto rounded-md border"
+        className="frozen-table-wrap sticky-first-col rounded-md border"
         style={
           {
             "--col1-width": "150px",

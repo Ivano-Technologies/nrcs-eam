@@ -86,7 +86,7 @@ export default function BinCardDetail() {
       <div className="flex justify-end">
         <MobileColumnsToggle isMobile={isMobile} showAll={showAll} onToggle={setShowAll} />
       </div>
-      <div className="frozen-table-wrap sticky-first-col overflow-x-auto rounded-md border">
+      <div className="frozen-table-wrap sticky-first-col rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>

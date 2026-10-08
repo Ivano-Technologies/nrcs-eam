@@ -334,6 +334,35 @@ html.dark {
     z-index: 25;
   }
 
+  /* Double header: the first group cell spans several columns, so it only pins to the top. */
+  .frozen-table-wrap.sticky-first-col.frozen-table-double-header table thead tr:nth-child(1) th:first-child {
+    left: auto;
+    box-shadow: none;
+  }
+
+  /* Row number plus name pinned together: the second column starts at --col1-width. */
+  .frozen-table-wrap.sticky-lead-cols table thead th:nth-child(-n + 2),
+  .frozen-table-wrap.sticky-lead-cols table tbody td:nth-child(-n + 2) {
+    position: sticky;
+    z-index: 15;
+    background-color: var(--color-background-primary);
+  }
+  .frozen-table-wrap.sticky-lead-cols table thead th:nth-child(1),
+  .frozen-table-wrap.sticky-lead-cols table tbody td:nth-child(1) {
+    left: 0;
+    width: var(--col1-width);
+    min-width: var(--col1-width);
+    max-width: var(--col1-width);
+  }
+  .frozen-table-wrap.sticky-lead-cols table thead th:nth-child(2),
+  .frozen-table-wrap.sticky-lead-cols table tbody td:nth-child(2) {
+    left: var(--col1-width);
+    box-shadow: 1px 0 0 0 var(--color-border);
+  }
+  .frozen-table-wrap.sticky-lead-cols table thead th:nth-child(-n + 2) {
+    z-index: 25;
+  }
+
   /**
    * NRCS-style double header: row1 (group) + row2 (columns) must stack with no gap.
    * Row2 `top` must equal row1 total height or body rows show between them while scrolling.

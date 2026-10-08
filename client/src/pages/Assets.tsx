@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Plus, Download, Upload, Edit2, Trash2, MapPin, Package } from "lucide-react";
+import { Loader2, Plus, Download, Upload, Edit2, Trash2, MapPin, Package, Landmark } from "lucide-react";
 import { useLocation } from "wouter";
 import {
   AlertDialog,
@@ -42,6 +42,7 @@ import { usePermissions } from "@/_core/hooks/usePermissions";
 import { calculateDepreciatedValue } from "@/lib/depreciation";
 import { appPath } from "@/lib/routes";
 import { formatDate as formatDisplayDate, formatEmpty, formatNaira } from "@/lib/format";
+import { HtmlTableEmptyState } from "@/components/ui/EmptyState";
 import { cn } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ViewToggle } from "@/components/ViewToggle";
@@ -1521,7 +1522,7 @@ export default function Assets() {
           <TableLoader className="py-8" />
         ) : (
           <div
-            className="frozen-table-wrap frozen-table-double-header frozen-table-wrap-page-scroll"
+            className="frozen-table-wrap frozen-table-double-header frozen-table-wrap-page-scroll sticky-first-col"
             style={
               {
                 "--col1-width": "4rem",
@@ -1562,14 +1563,12 @@ export default function Assets() {
               </thead>
               <tbody>
                 {rows.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={canEditAssets ? 26 : 25}
-                      className="px-4 py-12 text-center text-muted-foreground"
-                    >
-                      No rows match filters
-                    </td>
-                  </tr>
+                  <HtmlTableEmptyState
+                    colSpan={canEditAssets ? 26 : 25}
+                    icon={Landmark}
+                    title="No assets match these filters"
+                    body="Assets appear here once they are added to the register or match the filters."
+                  />
                 ) : (
                   rows.map((row: (typeof rows)[number], i: number) => {
                     const rs = row.registerStatus as string;
@@ -1631,9 +1630,9 @@ export default function Assets() {
                         <td className="px-2 py-1">{row.yearAcquiredRegister ?? year ?? EM_DASH}</td>
                         <td className="px-2 py-1">{row.acquiredNewOrUsed?.trim() || row.acquisitionCondition?.trim() || EM_DASH}</td>
                         <td className="px-2 py-1">{row.currentStatus?.trim() || statusLabel}</td>
-                        <td className="px-2 py-1">{assigned || EM_DASH}</td>
+                        <td className="px-2 py-1 min-w-[12rem] whitespace-normal">{assigned || EM_DASH}</td>
                         <td className="px-2 py-1">{row.department?.trim() || EM_DASH}</td>
-                        <td className="px-2 py-1 max-w-[12rem] truncate" title={loc}>{row.currentLocation?.trim() || loc || EM_DASH}</td>
+                        <td className="px-2 py-1 min-w-[12rem] whitespace-normal">{row.currentLocation?.trim() || loc || EM_DASH}</td>
                         <td className="px-2 py-1">{row.conditionRegister?.trim() || cond || EM_DASH}</td>
                         <td className="px-2 py-1">{formatDate(row.lastPhysicalCheck || row.lastCheckedAt)}</td>
                         <td className="px-2 py-1">{row.checkConductedBy?.trim() || row.checkedBy?.trim() || EM_DASH}</td>
