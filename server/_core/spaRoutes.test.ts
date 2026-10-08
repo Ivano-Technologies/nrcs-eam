@@ -73,7 +73,6 @@ describe("SPA route allowlist stays in sync", () => {
 describe("legacy QR label redirect (/assets/<id> -> /app/assets/<id>)", () => {
   it.each([
     ["/assets/1015", "/app/assets/1015"],
-    ["/assets/1015/", "/app/assets/1015"],
     ["/assets/7", "/app/assets/7"],
   ])("forwards %s to %s", (from, to) => {
     expect(legacyAssetRedirectTarget(from)).toBe(to);
@@ -86,6 +85,7 @@ describe("legacy QR label redirect (/assets/<id> -> /app/assets/<id>)", () => {
     "/assets/123.js",
     "/assets/1015.png",
     "/assets/1015/edit",
+    "/assets/1015/",
     "/assets/donors",
     "/assets/",
     "/app/assets/1015",

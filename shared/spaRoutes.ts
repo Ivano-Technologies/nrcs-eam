@@ -45,9 +45,10 @@ export function assetDetailPath(assetId: number | string): string {
 /**
  * Old QR labels encoded `/assets/<id>` (asset ids are integers). Those URLs are forwarded with
  * a permanent redirect to `/app/assets/<id>`. Digits only, so Vite's hashed bundle files under
- * `/assets/` (always `name-hash.ext`) can never match. Mirrors the `redirects` entry in vercel.json.
+ * `/assets/` (always `name-hash.ext`) can never match. Exactly mirrors the `redirects` entry in
+ * vercel.json (no trailing slash variant; labels never had one).
  */
-export const LEGACY_ASSET_PATH = /^\/assets\/(\d+)\/?$/;
+export const LEGACY_ASSET_PATH = /^\/assets\/(\d+)$/;
 
 /** Redirect target for a legacy `/assets/<id>` path, or null when the path is anything else. */
 export function legacyAssetRedirectTarget(pathname: string): string | null {
