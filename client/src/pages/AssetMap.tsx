@@ -519,7 +519,7 @@ export default function AssetMap() {
               className="absolute flex justify-center"
               style={isMobile ? { left: GAP, right: GAP, top: 128 } : { left: insetsFor(false).left, right: GAP, top: 132 }}
             >
-              <MapErrorCard message={mapError} />
+              <MapErrorCard message={mapError} listBelow={!dataError} />
             </div>
           </div>
         ) : mapMock ? (

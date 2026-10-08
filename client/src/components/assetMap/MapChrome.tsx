@@ -301,12 +301,23 @@ export function EmptyMapCard({ summary, onClear, className }: { summary: string;
   );
 }
 
-export function MapErrorCard({ message, className }: { message: string; className?: string }) {
+export function MapErrorCard({
+  message,
+  className,
+  listBelow = true,
+}: {
+  message: string;
+  className?: string;
+  /** False when the facility data also failed, so the card doesn't promise a list. */
+  listBelow?: boolean;
+}) {
   return (
     <div role="alert" data-testid="asset-map-error" className={cn(surfaceClass, "flex max-w-[420px] gap-3 p-4 text-[13px]", className)}>
       <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[#B91C1C] dark:text-[#F87171]" aria-hidden="true" />
       <div>
-        <p className="font-semibold">The map couldn&apos;t load. Facilities are listed below.</p>
+        <p className="font-semibold">
+          {listBelow ? "The map couldn't load. Facilities are listed below." : "The map couldn't load."}
+        </p>
         {message ? <p className={cn("mt-1", mutedText)}>{message}</p> : null}
       </div>
     </div>

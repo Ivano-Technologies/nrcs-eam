@@ -375,6 +375,8 @@ describe("facility data fails to load", () => {
     expect(error.textContent).not.toMatch(/[\u2013\u2014]/);
     expect(screen.queryByText(/facilities ·/)).not.toBeInTheDocument();
     expect(screen.queryByText("No facilities match")).not.toBeInTheDocument();
+    // No zero counts that look like real data.
+    expect(within(screen.getByTestId("asset-map-facility-type")).queryByText("0")).not.toBeInTheDocument();
 
     fireEvent.click(within(error).getByRole("button", { name: "Retry" }));
     expect(query.refetch).toHaveBeenCalledTimes(1);

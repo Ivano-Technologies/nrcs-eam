@@ -377,7 +377,7 @@ export function FacilityPanel(props: FacilityPanelProps) {
                   >
                     <TypeGlyph type={t} scheme={scheme} neutral={pressed ? "chipOn" : "chip"} size={14} />
                     {TYPE_CHIP_LABELS[t]}
-                    <span className={chipCountText}>{typeCounts[t] ?? 0}</span>
+                    {loading || loadError ? null : <span className={chipCountText}>{typeCounts[t] ?? 0}</span>}
                   </button>
                 );
               })}
