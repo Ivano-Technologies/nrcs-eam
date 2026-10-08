@@ -1,8 +1,10 @@
 import { trpc } from "@/lib/trpc";
 import { useRoute } from "wouter";
 import { PrintableStockCard } from "@/lib/document-printing/PrintableStockCard";
+import { useFullBleed } from "@/lib/fullBleed";
 
 export default function StockCardPrint() {
+  useFullBleed(true);
   const [, params] = useRoute("/app/inventory/tracking/stock-cards/:id/print");
   const id = Number(params?.id ?? 0);
   const card = trpc.inventoryV2.stockCards.get.useQuery({ id }, { enabled: id > 0 });
