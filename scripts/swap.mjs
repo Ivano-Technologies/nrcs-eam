@@ -2,7 +2,7 @@
 /**
  * NRCS EAM — Blue/Green Swap Automation
  *
- * Changes the GitHub repository default branch (main ↔ blue). Vercel automatically
+ * Changes the GitHub repository default branch (main ↔ dev; `dev` was formerly `blue`). Vercel automatically
  * treats the GitHub default branch as the production branch, so all production domains
  * (nrcseam.techivano.com, www, eam.redcrossnigeria.org) pick up the new branch without
  * any domain-level API calls.
@@ -66,7 +66,8 @@ if (!GITHUB_TOKEN) {
 // ---------------------------------------------------------------------------
 
 const PROD_DOMAIN    = "nrcseam.techivano.com";
-const STAGING_DOMAIN = "blue.nrcseam.techivano.com";
+const STAGING_DOMAIN = "blue.nrcseam.techivano.com"; // hostname kept from the former `blue` branch
+const STAGING_BRANCH = "dev";
 const GH_API         = "https://api.github.com";
 const VERCEL_API     = "https://api.vercel.com";
 
@@ -137,15 +138,15 @@ try {
 }
 
 const prodBranch    = repo.default_branch;           // current production branch
-const newProdBranch = prodBranch === "main" ? "blue" : "main";
+const newProdBranch = prodBranch === "main" ? STAGING_BRANCH : "main";
 
 console.log("Current state detected:");
 console.log(`  🟢 Production: ${PROD_DOMAIN} → ${prodBranch}  (GitHub default branch)`);
-console.log(`  🔵 Staging:    ${STAGING_DOMAIN} → blue  (permanent)`);
+console.log(`  🔵 Staging:    ${STAGING_DOMAIN} → ${STAGING_BRANCH}  (permanent)`);
 console.log("");
 console.log("Swap will result in:");
 console.log(`  🟢 Production: ${PROD_DOMAIN} → ${newProdBranch}`);
-console.log(`  🔵 Staging:    ${STAGING_DOMAIN} → blue  (unchanged)`);
+console.log(`  🔵 Staging:    ${STAGING_DOMAIN} → ${STAGING_BRANCH}  (unchanged)`);
 console.log("");
 
 // ---------------------------------------------------------------------------
@@ -213,7 +214,7 @@ if (deploymentMd !== null) {
     `| Branch | URL | Role |\n` +
     `|--------|-----|------|\n` +
     `| \`${newProdBranch}\` | \`${PROD_DOMAIN}\` | 🟢 Production |\n` +
-    `| \`blue\` | \`${STAGING_DOMAIN}\` | 🔵 Staging |`;
+    `| \`${STAGING_BRANCH}\` | \`${STAGING_DOMAIN}\` | 🔵 Staging |`;
 
   if (!tableRegex.test(deploymentMd)) {
     console.warn("  ⚠  Could not locate Current state table in DEPLOYMENT.md — skipping file update");
@@ -226,7 +227,7 @@ if (deploymentMd !== null) {
       } catch { /* fall through */ }
 
       execSync("git add DEPLOYMENT.md", { cwd: ROOT });
-      execSync(`git commit -m "ops: blue/green swap — ${newProdBranch} is now production"`, { cwd: ROOT });
+      execSync(`git commit -m "ops: production swap — ${newProdBranch} is now production"`, { cwd: ROOT });
       execSync(`git push origin ${currentGitBranch}`, { cwd: ROOT, stdio: "inherit" });
       console.log("  ✓ DEPLOYMENT.md updated and pushed");
     } catch (gitErr) {
@@ -242,8 +243,8 @@ if (deploymentMd !== null) {
 console.log(`
 ✅  Swap complete.
     Production: ${PROD_DOMAIN} → ${newProdBranch}
-    Staging:    ${STAGING_DOMAIN} → blue (permanent)
+    Staging:    ${STAGING_DOMAIN} → ${STAGING_BRANCH} (permanent)
 
-ℹ  blue.nrcseam.techivano.com always serves the 'blue' branch.
+ℹ  ${STAGING_DOMAIN} always serves the '${STAGING_BRANCH}' branch.
    After this swap, begin new feature work on '${prodBranch}' to diverge staging from production.
 `);

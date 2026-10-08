@@ -2,10 +2,10 @@
 
 ## 1. Overview
 
-The system uses a blue/green deployment strategy. Two branches are always live simultaneously:
+The system uses two long-lived branches (production + soak). Both are always live simultaneously:
 
 - `main` — currently serving production traffic at `nrcseam.techivano.com`
-- `blue` — currently serving staging traffic at `blue.nrcseam.techivano.com`
+- `dev` — soak/staging branch, served at `blue.nrcseam.techivano.com` (the hostname is kept from when this branch was named `blue`)
 
 All new features, dependency updates, and experimental changes are developed and tested on whichever branch is currently staging. The live branch is treated as read-only until the next swap.
 
@@ -16,7 +16,7 @@ All new features, dependency updates, and experimental changes are developed and
 | Branch | URL | Role |
 |--------|-----|------|
 | `main` | `nrcseam.techivano.com` | 🟢 Production |
-| `blue` | `blue.nrcseam.techivano.com` | 🔵 Staging / testing |
+| `dev` | `blue.nrcseam.techivano.com` | 🔵 Staging / testing |
 
 **Update this table every time a swap is performed.**
 
@@ -26,17 +26,17 @@ All new features, dependency updates, and experimental changes are developed and
 
 ```bash
 # Always work on whichever branch is currently staging.
-# Assuming blue is currently staging:
+# `dev` is the soak (staging) branch:
 
-git checkout blue
-git pull origin blue
+git checkout dev
+git pull origin dev
 
 # Make changes, commit, push
 git add .
 git commit -m "feat: description of change"
-git push origin blue
+git push origin dev
 
-# blue.nrcseam.techivano.com auto-deploys via Vercel.
+# blue.nrcseam.techivano.com auto-deploys from `dev` via Vercel.
 # Test thoroughly before initiating a swap.
 ```
 
@@ -48,13 +48,13 @@ Never commit directly to the live branch. It must remain stable at all times.
 
 Before swapping staging to production, complete every step below in order.
 
-### Sync `blue` into `main` before swapping to production
+### Sync `dev` into `main` before swapping to production
 
-`main` is the production branch (GitHub default → Vercel production). If it lags `blue`, security fixes and feature work on staging are not deployed. **Merge staging into `main` before running `pnpm swap` or promoting to production.**
+`main` is the production branch (GitHub default → Vercel production). If it lags `dev`, security fixes and feature work on staging are not deployed. **Merge staging into `main` before running `pnpm swap` or promoting to production.**
 
 ```bash
 git checkout main
-git merge blue --no-ff -m "merge(blue→main): sync staging fixes to production"
+git merge dev --no-ff -m "merge(dev→main): sync staging fixes to production"
 git push origin main
 ```
 
@@ -64,7 +64,7 @@ Wait for the Vercel `main` production deployment to finish building successfully
 
 Verify all of the following on the staging URL (`blue.nrcseam.techivano.com`):
 
-- [ ] `blue → main` merge completed and Vercel production build succeeded
+- [ ] `dev → main` merge completed and Vercel production build succeeded
 - [ ] Login and authentication works
 - [ ] Dashboard KPIs load correctly (Active Facilities, Total Asset Value)
 - [ ] Asset register loads and displays data
@@ -78,13 +78,13 @@ Verify all of the following on the staging URL (`blue.nrcseam.techivano.com`):
 
 The swap reassigns the production domain from one branch to the other. This takes approximately 60 seconds and causes zero downtime.
 
-**IMPORTANT:** Complete the `blue → main` merge in Section 4 before running `pnpm swap`. Skipping this step leaves production on an outdated build.
+**IMPORTANT:** Complete the `dev → main` merge in Section 4 before running `pnpm swap`. Skipping this step leaves production on an outdated build.
 
 ### Via Vercel dashboard
 
 1. Go to `vercel.com/techivano/nrcs-eam/settings/domains`
 2. Click **Edit** on `nrcseam.techivano.com`
-3. Change the branch assignment from `main` to `blue` (or vice versa) — **Save**
+3. Change the branch assignment from `main` to `dev` (or vice versa) — **Save**
 4. Click **Edit** on `blue.nrcseam.techivano.com`
 5. Change the branch assignment to the former production branch — **Save**
 6. Update the **Current state** table in this document to reflect the new roles
@@ -213,7 +213,7 @@ Check `vite.config.ts` or `public/manifest.webmanifest` for any hardcoded domain
 
 ---
 
-### Phase 4 — Blue/green on the official domain
+### Phase 4 — Production + staging on the official domain
 
 Once the cutover is complete, add a staging subdomain for the official domain alongside the existing `blue.nrcseam.techivano.com`:
 
@@ -222,11 +222,11 @@ Once the cutover is complete, add a staging subdomain for the official domain al
 | URL | Branch | Role |
 |-----|--------|------|
 | `eam.redcrossnigeria.org` | `main` | 🟢 Production |
-| `staging.eam.redcrossnigeria.org` | `blue` | 🔵 Staging |
+| `staging.eam.redcrossnigeria.org` | `dev` | 🔵 Staging |
 | `nrcseam.techivano.com` | redirects to production | 🔀 Legacy redirect |
-| `blue.nrcseam.techivano.com` | `blue` | 🔵 Staging (legacy) |
+| `blue.nrcseam.techivano.com` | `dev` | 🔵 Staging (legacy) |
 
-Add `staging.eam.redcrossnigeria.org` using the same process as Phase 1 above, assigning it to the `blue` branch.
+Add `staging.eam.redcrossnigeria.org` using the same process as Phase 1 above, assigning it to the `dev` branch.
 
 ---
 
@@ -235,7 +235,7 @@ Add `staging.eam.redcrossnigeria.org` using the same process as Phase 1 above, a
 After the cutover is complete:
 1. Update the **Current state** table in Section 2 to reflect the new primary domain
 2. Update the **Swap procedure** in Section 5 to reference `eam.redcrossnigeria.org`
-3. Commit the updated `DEPLOYMENT.md` to both `main` and `blue`
+3. Commit the updated `DEPLOYMENT.md` to both `main` and `dev`
 
 ---
 
