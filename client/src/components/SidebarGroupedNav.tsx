@@ -51,9 +51,10 @@ function navBadgeValue(
 }
 
 import { useEffect, useMemo, useState } from "react";
+import { SIDEBAR_RAIL_WIDTH } from "@/lib/sidebarWidth";
 
 const STORAGE_KEY = "sidebar-nav-groups-open-v1";
-const NARROW_PX = 80;
+const NARROW_PX = SIDEBAR_RAIL_WIDTH;
 
 /** Stable `data-testid` for Playwright (sidebar navigation). */
 export function sidebarNavTestId(path: string): string {

@@ -38,14 +38,12 @@ import { ConnectivityIndicator } from "./ConnectivityIndicator";
 import { RoleSwitcher } from "./dashboard/RoleSwitcher";
 import { DashboardRolePreviewProvider } from "./dashboard/rolePreviewContext";
 import type { UserRole } from "./dashboard/types";
+import { SIDEBAR_FULL_WIDTH, SIDEBAR_RAIL_WIDTH, snapSidebarWidth } from "@/lib/sidebarWidth";
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
-const DEFAULT_WIDTH = 360;
-const MIN_WIDTH = 80;
-const MAX_WIDTH = 480;
 const PRESET_WIDTHS = {
-  narrow: 80,
-  wide: 360,
+  narrow: SIDEBAR_RAIL_WIDTH,
+  wide: SIDEBAR_FULL_WIDTH,
 };
 
 export default function DashboardLayout({
@@ -57,13 +55,13 @@ export default function DashboardLayout({
   const { data: userPrefs } = trpc.userPreferences.get.useQuery(undefined, { enabled: !!user });
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem(SIDEBAR_WIDTH_KEY);
-    return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
+    return snapSidebarWidth(saved ? parseInt(saved, 10) : SIDEBAR_FULL_WIDTH);
   });
 
   // Sync sidebar width with user preferences from backend
   useEffect(() => {
     if (userPrefs?.sidebarWidth) {
-      setSidebarWidth(userPrefs.sidebarWidth);
+      setSidebarWidth(snapSidebarWidth(userPrefs.sidebarWidth));
     }
   }, [userPrefs]);
 
@@ -129,6 +127,7 @@ function DashboardLayoutContent({
   const { state } = useSidebar();
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
+  const dragWidthRef = useRef<number | null>(null);
   const menuItems = flattenNavItems(user?.role);
   const activeMenuItem =
     menuItems.find((item) => item.path === location) ??
@@ -194,14 +193,18 @@ function DashboardLayoutContent({
       if (!isResizing) return;
 
       const sidebarLeft = sidebarRef.current?.getBoundingClientRect().left ?? 0;
-      const newWidth = e.clientX - sidebarLeft;
-      if (newWidth >= MIN_WIDTH && newWidth <= MAX_WIDTH) {
-        setSidebarWidth(newWidth);
-      }
+      // Snap while dragging: the sidebar is either the full width or the icon rail, never in between.
+      const snapped = snapSidebarWidth(e.clientX - sidebarLeft);
+      dragWidthRef.current = snapped;
+      setSidebarWidth(snapped);
     };
 
     const handleMouseUp = () => {
       setIsResizing(false);
+      if (user && dragWidthRef.current != null) {
+        updatePrefsMutation.mutate({ sidebarWidth: dragWidthRef.current });
+      }
+      dragWidthRef.current = null;
     };
 
     if (isResizing) {
@@ -264,25 +267,25 @@ function DashboardLayoutContent({
                 </button>
               </div>
             ) : (
-              <div className="flex items-center gap-3 px-3 transition-all w-full">
+              <div className="flex items-center gap-2 px-2 transition-all w-full">
                 <div className="min-w-0 flex-1">
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Link href={appPath("/")}>
-                        <div className="flex items-center gap-3 min-w-0 rounded-md px-1 py-1 transition-opacity hover:opacity-80 cursor-pointer">
+                        <div className="flex items-center gap-2 min-w-0 rounded-md px-1 py-1 transition-opacity hover:opacity-80 cursor-pointer">
                           <img
                             src="/nrcs-logo-source.png"
                             alt="Nigerian Red Cross Society"
-                            className="h-12 w-12 shrink-0"
+                            className="h-10 w-10 shrink-0"
                           />
-                          <div className="flex flex-col min-w-0">
+                          <div className="flex flex-col min-w-0 gap-0.5">
                             <span
-                              className="font-bold text-[15px] text-sidebar-foreground truncate"
+                              className="font-bold text-sm leading-tight text-sidebar-foreground"
                               data-testid="sidebar-org-name"
                             >
                               Nigerian Red Cross Society
                             </span>
-                            <span className="text-[14px] text-sidebar-foreground/70 truncate">
+                            <span className="text-xs leading-tight text-sidebar-foreground/70">
                               Enterprise Asset Management
                             </span>
                           </div>
