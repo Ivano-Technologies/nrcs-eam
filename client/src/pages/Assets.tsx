@@ -930,7 +930,7 @@ export default function Assets() {
                   </p>
                 ) : null}
                 <div className="grid gap-4 py-4">
-                  <h3 className="text-sm font-semibold text-[#1a2332]">Item Details</h3>
+                  <h3 className="text-sm font-semibold text-[#1a2332] dark:text-[#E6EAF0]">Item Details</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Item Type *</Label>
@@ -1021,7 +1021,7 @@ export default function Assets() {
                       placeholder="Full item description"
                     />
                   </div>
-                  <h3 className="mt-2 text-sm font-semibold text-[#1a2332]">Item Code</h3>
+                  <h3 className="mt-2 text-sm font-semibold text-[#1a2332] dark:text-[#E6EAF0]">Item Code</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Branch Code</Label>
@@ -1042,7 +1042,7 @@ export default function Assets() {
                       <Input id="assetTag" value={generatedAssetCodePreview} readOnly className="font-semibold" />
                     </div>
                   </div>
-                  <h3 className="mt-2 text-sm font-semibold text-[#1a2332]">Financial Value</h3>
+                  <h3 className="mt-2 text-sm font-semibold text-[#1a2332] dark:text-[#E6EAF0]">Financial Value</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="serialNumber">Serial / Product No.</Label>
@@ -1120,7 +1120,7 @@ export default function Assets() {
                       )}
                     </div>
                   </div>
-                  <h3 className="mt-2 text-sm font-semibold text-[#1a2332]">Purchase / Acquisition Information</h3>
+                  <h3 className="mt-2 text-sm font-semibold text-[#1a2332] dark:text-[#E6EAF0]">Purchase / Acquisition Information</h3>
                   <div className="space-y-2">
                     <Label>Method of Acquisition</Label>
                     <Select
@@ -1244,7 +1244,7 @@ export default function Assets() {
                       </Select>
                     </div>
                   </div>
-                  <h3 className="mt-2 text-sm font-semibold text-[#1a2332]">Assigned To</h3>
+                  <h3 className="mt-2 text-sm font-semibold text-[#1a2332] dark:text-[#E6EAF0]">Assigned To</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Assigned To</Label>
@@ -1271,7 +1271,7 @@ export default function Assets() {
                       placeholder="Building, floor, room"
                     />
                   </div>
-                  <h3 className="mt-2 text-sm font-semibold text-[#1a2332]">Condition</h3>
+                  <h3 className="mt-2 text-sm font-semibold text-[#1a2332] dark:text-[#E6EAF0]">Condition</h3>
                   <div className="space-y-2">
                     <Label>Condition</Label>
                     <Select
@@ -1887,7 +1887,7 @@ export default function Assets() {
               </div>
               {canEditAssets ? (
                 <>
-                  <h3 className="text-sm font-semibold text-[#1a2332]">Item details (register)</h3>
+                  <h3 className="text-sm font-semibold text-[#1a2332] dark:text-[#E6EAF0]">Item details (register)</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Register item type</Label>
@@ -1966,7 +1966,7 @@ export default function Assets() {
                       />
                     </div>
                   </div>
-                  <h3 className="text-sm font-semibold text-[#1a2332]">Acquisition</h3>
+                  <h3 className="text-sm font-semibold text-[#1a2332] dark:text-[#E6EAF0]">Acquisition</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2 md:col-span-2">
                       <Label>Method of acquisition</Label>
@@ -2032,7 +2032,7 @@ export default function Assets() {
                       </Select>
                     </div>
                   </div>
-                  <h3 className="text-sm font-semibold text-[#1a2332]">Condition (register)</h3>
+                  <h3 className="text-sm font-semibold text-[#1a2332] dark:text-[#E6EAF0]">Condition (register)</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Current status</Label>
@@ -2101,7 +2101,7 @@ export default function Assets() {
                       />
                     </div>
                   </div>
-                  <h3 className="text-sm font-semibold text-[#1a2332]">Admin</h3>
+                  <h3 className="text-sm font-semibold text-[#1a2332] dark:text-[#E6EAF0]">Admin</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2 md:col-span-2">
                       <Label>Remarks (register)</Label>
@@ -2125,7 +2125,7 @@ export default function Assets() {
                       />
                     </div>
                   </div>
-                  <h3 className="text-sm font-semibold text-[#1a2332]">Map coordinates (optional)</h3>
+                  <h3 className="text-sm font-semibold text-[#1a2332] dark:text-[#E6EAF0]">Map coordinates (optional)</h3>
                   <p className="text-xs text-muted-foreground">
                     Leave blank to inherit from the selected facility on save (via server). Enter values to
                     override.
@@ -2146,7 +2146,7 @@ export default function Assets() {
                       />
                     </div>
                   </div>
-                  <h3 className="text-sm font-semibold text-[#1a2332]">Financial (register)</h3>
+                  <h3 className="text-sm font-semibold text-[#1a2332] dark:text-[#E6EAF0]">Financial (register)</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Actual Unit Value (NGN)</Label>

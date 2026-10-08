@@ -4,12 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 export default function PrivacyPolicy() {
   return (
     <PublicPageChrome>
-    <div className="container mx-auto py-8 max-w-4xl pt-16">
+    <div className="container mx-auto max-w-4xl pb-8">
       <Card>
         <CardHeader>
           <CardTitle className="text-3xl">Privacy Policy</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Last Updated: {new Date().toLocaleDateString()}
+            Last updated 8 October 2026
           </p>
         </CardHeader>
         <CardContent className="prose prose-sm max-w-none dark:prose-invert">
@@ -73,7 +73,7 @@ export default function PrivacyPolicy() {
             </p>
             <ul className="list-disc list-inside text-muted-foreground space-y-2 ml-4">
               <li><strong>Within the Organization:</strong> With authorized NRCS personnel who need access to perform their duties</li>
-              <li><strong>Service Providers:</strong> With trusted third-party service providers who assist in system operations (cloud hosting, etc.)</li>
+              <li><strong>Service Providers:</strong> With trusted external service providers who assist in system operations (cloud hosting, etc.)</li>
               <li><strong>Legal Requirements:</strong> When required by law, court order, or government regulations</li>
               <li><strong>Protection of Rights:</strong> To protect the rights, property, or safety of NRCS, our users, or others</li>
             </ul>
@@ -84,7 +84,7 @@ export default function PrivacyPolicy() {
             <p className="text-muted-foreground mb-4">
               We retain your personal information for as long as necessary to fulfill the purposes outlined in this 
               Privacy Policy, unless a longer retention period is required or permitted by law. Asset and financial 
-              records are retained according to organizational record-keeping policies and legal requirements.
+              records are retained according to organizational record retention policies and legal requirements.
             </p>
           </section>
 
@@ -142,9 +142,8 @@ export default function PrivacyPolicy() {
             </p>
             <div className="bg-muted p-4 rounded-lg">
               <p className="font-medium">Nigerian Red Cross Society</p>
-              <p className="text-sm text-muted-foreground">Data Protection Officer / IT Department</p>
-              <p className="text-sm text-muted-foreground">Email: privacy@redcrossnigeria.org</p>
-              <p className="text-sm text-muted-foreground">Phone: [Contact Number]</p>
+              <p className="text-sm text-muted-foreground">Data Protection Officer, IT Department</p>
+              <p className="text-sm text-muted-foreground">Contact your NRCS system administrator</p>
             </div>
           </section>
 
@@ -156,14 +155,6 @@ export default function PrivacyPolicy() {
               maintaining compliance with all relevant regulations.
             </p>
           </section>
-
-          <div className="mt-8 p-4 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg">
-            <p className="text-sm text-amber-900 dark:text-amber-100">
-              <strong>Note:</strong> This is a template document. Please have your legal team and Data Protection 
-              Officer review and customize this content to ensure full compliance with NDPR, organizational policies, 
-              and specific data handling practices.
-            </p>
-          </div>
         </CardContent>
       </Card>
     </div>

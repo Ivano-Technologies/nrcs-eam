@@ -53,7 +53,7 @@ export function AuthSubtitle({ children, className }: { children: React.ReactNod
 /** Footer line — 13px, light gray. */
 export function AuthFooterNote({ children }: { children: React.ReactNode }) {
   return (
-    <p className="mt-8 text-[13px] leading-relaxed text-[#9ca3af] dark:text-gray-500">{children}</p>
+    <p className="mt-8 text-[13px] leading-relaxed text-[#6B7280] dark:text-gray-400">{children}</p>
   );
 }
 
@@ -66,14 +66,15 @@ export function AuthBrandLogo({ className }: { className?: string }) {
   );
 }
 
-/** Inputs on glass surfaces — light frosted fill for contrast. */
+/** Auth inputs: solid fill and a 3:1 border so fields read as fields on the glass card. */
 export const authInputClass = cn(
-  "h-12 rounded-[10px] text-[15px] bg-white/50 border-white/40 placeholder:text-gray-500",
-  "dark:bg-white/10 dark:border-white/20 dark:text-white dark:placeholder:text-white/50"
+  "h-12 rounded-[10px] bg-white border border-[#8A8F98] text-[15px] placeholder:text-gray-500",
+  "focus-visible:border-[#C8102E] focus-visible:ring-2 focus-visible:ring-[#C8102E]/30",
+  "dark:bg-white/10 dark:border-white/40 dark:text-white dark:placeholder:text-white/60"
 );
 
 /** Primary CTA — full width, red, elevated shadow (conversion anchor). */
 export const authPrimaryButtonClass = cn(
   "mt-7 w-full min-h-[48px] rounded-[10px] px-7 py-3.5 text-[15px] font-semibold text-white",
-  "bg-[#ef4444] shadow-[0_8px_20px_rgba(239,68,68,0.25)] transition-colors hover:bg-red-600"
+  "bg-[#C8102E] shadow-[0_8px_20px_rgba(200,16,46,0.25)] transition-colors hover:bg-[#A50D26]"
 );
