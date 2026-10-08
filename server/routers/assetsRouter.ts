@@ -68,6 +68,9 @@ import {
   registerStatusZodEnum,
 } from "../assetRegister";
 import { nanoid } from "nanoid";
+
+/** Upper bound for ids in one bulk request (the register page size tops out at 100). */
+const BULK_MAX_IDS = 500;
 import { generateSupabaseCompliantTempPassword } from "../tempPassword";
 import { DASHBOARD_NAV } from "../../shared/dashboardNav";
 import { FACILITY_TYPE_VALUES, type FacilityType } from "../../shared/facilities";
@@ -646,49 +649,100 @@ export const assetsRouter = router({
         return { success: true };
       }),
 
+    /**
+     * Bulk delete (manager/admin). Each id is checked for existence and facility access, then deleted and
+     * audited one by one so a single failure does not block the rest.
+     */
     bulkDelete: managerOrAdminProcedure
-      .input(z.object({ ids: z.array(z.number()) }))
+      .input(z.object({ ids: z.array(z.number().int().positive()).min(1).max(BULK_MAX_IDS) }))
       .mutation(async ({ input, ctx }) => {
         let deleted = 0;
-        for (const id of input.ids) {
+        const failedIds: number[] = [];
+        for (const id of Array.from(new Set(input.ids))) {
           try {
+            const existing = await db.getAssetById(id);
+            if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Asset not found." });
+            assertRecordFacilityAccess(ctx.user, existing.siteId);
             await db.deleteAsset(id);
             await db.createAuditLog({
               userId: ctx.user.id,
               action: "bulk_delete_asset",
               entityType: "asset",
               entityId: id,
+              changes: JSON.stringify({ assetTag: existing.assetTag ?? null, name: existing.name ?? null }),
             });
             deleted++;
           } catch (error) {
+            failedIds.push(id);
             console.error(`Failed to delete asset ${id}:`, error);
           }
         }
-        return { deleted, total: input.ids.length };
+        return { deleted, total: input.ids.length, failedIds };
       }),
 
+    /** Bulk lifecycle status (legacy `status` column). Kept for API compatibility. */
     bulkUpdateStatus: managerOrAdminProcedure
       .input(z.object({
-        ids: z.array(z.number()),
+        ids: z.array(z.number().int().positive()).min(1).max(BULK_MAX_IDS),
         status: z.enum(["operational", "maintenance", "repair", "retired", "disposed"]),
       }))
       .mutation(async ({ input, ctx }) => {
         let updated = 0;
-        for (const id of input.ids) {
+        const failedIds: number[] = [];
+        for (const id of Array.from(new Set(input.ids))) {
           try {
+            const existing = await db.getAssetById(id);
+            if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Asset not found." });
+            assertRecordFacilityAccess(ctx.user, existing.siteId);
             await db.updateAsset(id, { status: input.status });
             await db.createAuditLog({
               userId: ctx.user.id,
               action: "bulk_update_asset_status",
               entityType: "asset",
               entityId: id,
-              changes: JSON.stringify({ status: input.status }),
+              changes: JSON.stringify({ from: existing.status ?? null, to: input.status }),
             });
             updated++;
           } catch (error) {
+            failedIds.push(id);
             console.error(`Failed to update asset ${id}:`, error);
           }
         }
-        return { updated, total: input.ids.length };
+        return { updated, total: input.ids.length, failedIds };
+      }),
+
+    /**
+     * Bulk register status (the Status column on the asset register). Writes `registerStatus` and keeps the
+     * legacy `status` in step, the same way `assets.update` does.
+     */
+    bulkUpdateRegisterStatus: managerOrAdminProcedure
+      .input(z.object({
+        ids: z.array(z.number().int().positive()).min(1).max(BULK_MAX_IDS),
+        registerStatus: registerStatusZodEnum,
+      }))
+      .mutation(async ({ input, ctx }) => {
+        let updated = 0;
+        const failedIds: number[] = [];
+        const legacy = legacyStatusFromRegister(input.registerStatus);
+        for (const id of Array.from(new Set(input.ids))) {
+          try {
+            const existing = await db.getAssetById(id);
+            if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Asset not found." });
+            assertRecordFacilityAccess(ctx.user, existing.siteId);
+            await db.updateAsset(id, { registerStatus: input.registerStatus, status: legacy } as Record<string, unknown>);
+            await db.createAuditLog({
+              userId: ctx.user.id,
+              action: "bulk_update_asset_register_status",
+              entityType: "asset",
+              entityId: id,
+              changes: JSON.stringify({ from: existing.registerStatus ?? null, to: input.registerStatus }),
+            });
+            updated++;
+          } catch (error) {
+            failedIds.push(id);
+            console.error(`Failed to update asset ${id}:`, error);
+          }
+        }
+        return { updated, total: input.ids.length, failedIds };
       }),
   });

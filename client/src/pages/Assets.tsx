@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Plus, Download, Upload, Edit2, Trash2, MapPin, Package, Landmark, Calculator } from "lucide-react";
+import { Loader2, Plus, Download, Upload, Edit2, Trash2, MapPin, Package, Landmark, Calculator, FilterX } from "lucide-react";
 import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { useLocation } from "wouter";
 import {
@@ -38,6 +38,11 @@ import {
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { BulkActionsToolbar } from "@/components/BulkActionsToolbar";
+import { useAssetRegisterUrlState } from "@/hooks/useAssetRegisterUrlState";
+import { ASSET_REGISTER_SORT_KEYS, type AssetRegisterSortKey } from "@/lib/assetRegisterUrlState";
+import { downloadCsv, toCsv, type CsvCell } from "@/lib/csv";
 import { toast } from "sonner";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { calculateDepreciatedValue } from "@/lib/depreciation";
@@ -112,6 +117,19 @@ const REGISTER_LABELS: Record<string, string> = {
 
 /** Optional register columns stay blank when empty (no dash placeholders). */
 const EM_DASH = "";
+
+/** Register statuses offered by the bulk "Set status" action (`assets.bulkUpdateRegisterStatus`). */
+const BULK_REGISTER_STATUS_OPTIONS = [
+  "in_use",
+  "in_store",
+  "under_maintenance",
+  "out_of_order",
+  "to_be_disposed",
+  "beyond_repair",
+  "disposed",
+] as const;
+type BulkRegisterStatus = (typeof BULK_REGISTER_STATUS_OPTIONS)[number];
+const assetCount = (n: number) => `${n} asset${n === 1 ? "" : "s"}`;
 const REGISTER_TABLE_COLUMN_ORDER = [
   "S.No","Item Type","Item Category","Sub Item Category","Item Description","Branch Code","Category Code","NUM","Asset Code",
   "Serial Number","Actual Unit Value","Depreciated Value","Method of Acquisition","Acquisition Detail","Project Ref","Year Acquired",
@@ -173,73 +191,43 @@ function registerStatusFromCurrentStatus(status: string): string {
   }
 }
 
-type SortKey =
-  | "itemType"
-  | "categoryName"
-  | "subCategory"
-  | "name"
-  | "assetTag"
-  | "serialNumber"
-  | "acquisitionCost"
-  | "currentDepreciatedValue"
-  | "acquisitionMethod"
-  | "projectRef"
-  | "yearAcquired"
-  | "acquisitionCondition"
-  | "registerStatus"
-  | "assignedToName"
-  | "department"
-  | "siteName"
-  | "physicalCondition"
-  | "lastCheckedAt"
-  | "notes"
-  | "createdAt";
+type SortKey = AssetRegisterSortKey;
 
-const SORTABLE: Set<string> = new Set([
-  "itemType",
-  "categoryName",
-  "subCategory",
-  "name",
-  "assetTag",
-  "serialNumber",
-  "acquisitionCost",
-  "currentDepreciatedValue",
-  "acquisitionMethod",
-  "projectRef",
-  "yearAcquired",
-  "acquisitionCondition",
-  "registerStatus",
-  "assignedToName",
-  "department",
-  "siteName",
-  "physicalCondition",
-  "lastCheckedAt",
-  "notes",
-  "createdAt",
-]);
+const SORTABLE: Set<string> = new Set(ASSET_REGISTER_SORT_KEYS);
 
 export default function Assets() {
-  const [location, setLocation] = useLocation();
+  const [, setLocation] = useLocation();
   const { canEditAssets, isAdmin } = usePermissions();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [siteFilter, setSiteFilter] = useState<string>("all");
-  const [itemTypeFilter, setItemTypeFilter] = useState<string>("all");
-  const [sortBy, setSortBy] = useState<SortKey>("createdAt");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
-  const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState<string>("50");
+  /** Filters, sort and pagination live in the URL (see useAssetRegisterUrlState). */
+  const {
+    state: {
+      search: searchTerm,
+      status: statusFilter,
+      category: categoryFilter,
+      site: siteFilter,
+      itemType: itemTypeFilter,
+      sortBy,
+      sortDir,
+      page,
+      pageSize,
+    },
+    setSearchTerm,
+    setStatusFilter,
+    setCategoryFilter,
+    setSiteFilter,
+    setItemTypeFilter,
+    setPageSize,
+    setPage,
+    setSort,
+    clearFilters,
+  } = useAssetRegisterUrlState();
+  const hasActiveFilters =
+    searchTerm.trim() !== "" ||
+    statusFilter !== "all" ||
+    categoryFilter !== "all" ||
+    siteFilter !== "all" ||
+    itemTypeFilter !== "all";
   const [viewMode, setViewMode] = useViewMode("assets", "table");
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const qs = new URLSearchParams(window.location.search);
-    const sid = qs.get("siteId");
-    if (sid && !Number.isNaN(Number(sid))) {
-      setSiteFilter(sid);
-    }
-  }, [location]);
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingAsset, setEditingAsset] = useState<any>(null);
@@ -321,10 +309,6 @@ export default function Assets() {
       document.title = "NRCS Enterprise Asset Management System";
     };
   }, []);
-
-  useEffect(() => {
-    setPage(0);
-  }, [searchTerm, statusFilter, categoryFilter, siteFilter, itemTypeFilter, pageSize]);
 
   const handleDownloadTemplate = async () => {
     try {
@@ -479,6 +463,63 @@ export default function Assets() {
     },
     onError: (error: { message?: string }) => {
       toast.error(`Failed to delete: ${error.message}`);
+    },
+  });
+
+  /** Selected asset ids on the current page (cleared whenever the visible page/filters change). */
+  const selectionKey = JSON.stringify(listInput);
+  const [selection, setSelection] = useState<{ key: string; ids: Set<number> }>(() => ({
+    key: selectionKey,
+    ids: new Set(),
+  }));
+  /** A selection made under different filters/page is discarded rather than acted on invisibly. */
+  const selectedIds = useMemo(
+    () => (selection.key === selectionKey ? selection.ids : new Set<number>()),
+    [selection, selectionKey]
+  );
+  const setSelectedIds = (update: Set<number> | ((prev: Set<number>) => Set<number>)) =>
+    setSelection((prev) => {
+      const current = prev.key === selectionKey ? prev.ids : new Set<number>();
+      return { key: selectionKey, ids: typeof update === "function" ? update(current) : update };
+    });
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkStatusTarget, setBulkStatusTarget] = useState<BulkRegisterStatus | null>(null);
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const bulkDeleteSelectedMutation = trpc.assets.bulkDelete.useMutation({
+    onSuccess: (res) => {
+      if (res.deleted === res.total) {
+        toast.success(`Deleted ${assetCount(res.deleted)}`);
+      } else if (res.deleted === 0) {
+        toast.error(`No assets were deleted. They may be linked to other records.`);
+      } else {
+        toast.warning(`Deleted ${res.deleted} of ${assetCount(res.total)}. ${res.total - res.deleted} could not be deleted.`);
+      }
+      setBulkDeleteOpen(false);
+      clearSelection();
+      refetch();
+    },
+    onError: (error: { message?: string }) => {
+      toast.error(`Could not delete the selected assets: ${error.message}`);
+    },
+  });
+
+  const bulkUpdateStatusMutation = trpc.assets.bulkUpdateRegisterStatus.useMutation({
+    onSuccess: (res, vars) => {
+      const label = (REGISTER_LABELS[vars.registerStatus] ?? formatEnumLabel(vars.registerStatus)).toLowerCase();
+      if (res.updated === res.total) {
+        toast.success(`Status set to ${label} for ${assetCount(res.updated)}`);
+      } else if (res.updated === 0) {
+        toast.error(`No assets were updated.`);
+      } else {
+        toast.warning(`Status set to ${label} for ${res.updated} of ${assetCount(res.total)}.`);
+      }
+      setBulkStatusTarget(null);
+      clearSelection();
+      refetch();
+    },
+    onError: (error: { message?: string }) => {
+      toast.error(`Could not update the status: ${error.message}`);
     },
   });
 
@@ -906,16 +947,93 @@ export default function Assets() {
   const toggleSort = (key: SortKey) => {
     if (!SORTABLE.has(key)) return;
     if (sortBy === key) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+      setSort(key, sortDir === "asc" ? "desc" : "asc");
     } else {
-      setSortBy(key);
-      setSortDir("asc");
+      setSort(key, "asc");
     }
   };
 
   const rows = registerData?.rows ?? [];
   const total = registerData?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / limit));
+
+  const pageIds = rows.map((r) => r.id);
+  const selectedOnPage = pageIds.filter((id) => selectedIds.has(id));
+  const allOnPageSelected = pageIds.length > 0 && selectedOnPage.length === pageIds.length;
+  const someOnPageSelected = selectedOnPage.length > 0 && !allOnPageSelected;
+  const selectedCount = selectedOnPage.length;
+  const bulkPending = bulkDeleteSelectedMutation.isPending || bulkUpdateStatusMutation.isPending;
+
+  const toggleRowSelected = (id: number, checked: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  };
+
+  const togglePageSelected = (checked: boolean) => {
+    setSelectedIds(checked ? new Set(pageIds) : new Set());
+  };
+
+  const handleExportSelected = () => {
+    const selectedRows = rows
+      .map((row, i) => ({ row, sNo: offset + i + 1 }))
+      .filter(({ row }) => selectedIds.has(row.id));
+    if (!selectedRows.length) return;
+    const csvRows: CsvCell[][] = selectedRows.map(({ row, sNo }) => {
+      const rs = row.registerStatus as string;
+      const desc = row.description?.trim() ? `${row.name}: ${row.description}` : row.name;
+      const unit =
+        row.actualUnitValue != null
+          ? Number(row.actualUnitValue)
+          : row.acquisitionCost != null
+            ? Number(row.acquisitionCost)
+            : null;
+      const dep =
+        row.depreciatedValue != null
+          ? Number(row.depreciatedValue)
+          : row.currentDepreciatedValue != null
+            ? Number(row.currentDepreciatedValue)
+            : row.currentValue != null
+              ? Number(row.currentValue)
+              : null;
+      const year = row.acquisitionDate ? new Date(row.acquisitionDate).getFullYear() : null;
+      const loc = [row.siteName, row.location].filter(Boolean).join(" / ");
+      const lastCheck = row.lastPhysicalCheck || row.lastCheckedAt;
+      return [
+        sNo,
+        row.registerItemType ?? (row.itemType === "inventory" ? "Inventory" : "Asset"),
+        row.itemCategory?.trim() || row.categoryName?.trim() || "",
+        row.subItemCategory?.trim() || row.subCategory?.trim() || "",
+        row.itemDescription?.trim() || desc || "",
+        row.branchCode?.trim() || "",
+        row.itemCategoryCode?.trim() || "",
+        row.assetNum ?? "",
+        row.assetCode?.trim() || row.assetTag?.trim() || "",
+        row.serialNumber?.trim() || "",
+        unit != null && Number.isFinite(unit) ? unit : "",
+        dep != null && Number.isFinite(dep) ? dep : "",
+        row.acquisitionMethod?.trim() || "",
+        row.acquisitionOtherDetail?.trim() || "",
+        row.projectRef?.trim() || "",
+        row.yearAcquiredRegister ?? year ?? "",
+        row.acquiredNewOrUsed?.trim() || row.acquisitionCondition?.trim() || "",
+        row.currentStatus?.trim() || REGISTER_LABELS[rs] || rs || "",
+        row.assignedToName?.trim() || row.assignedUserName?.trim() || "",
+        row.department?.trim() || "",
+        row.currentLocation?.trim() || loc || "",
+        row.conditionRegister?.trim() || row.physicalCondition?.trim() || "",
+        lastCheck ? formatDate(lastCheck) : "",
+        row.checkConductedBy?.trim() || row.checkedBy?.trim() || "",
+        row.remarksRegister?.trim() || row.notes?.trim() || "",
+      ];
+    });
+    const stamp = new Date().toISOString().slice(0, 10);
+    downloadCsv(toCsv(REGISTER_TABLE_COLUMN_ORDER, csvRows), `asset_register_selected_${stamp}.csv`);
+    toast.success(`Exported ${assetCount(csvRows.length)} to CSV`);
+  };
 
 
   const sortIndicator = (key: SortKey) => {
@@ -1437,6 +1555,17 @@ export default function Assets() {
                 <SelectItem value="inventory">Inventory</SelectItem>
               </SelectContent>
             </Select>
+            {hasActiveFilters ? (
+              <Button
+                className="h-9"
+                variant="ghost"
+                onClick={clearFilters}
+                data-testid="asset-clear-filters-btn"
+              >
+                <FilterX className="mr-2 h-4 w-4" />
+                Clear filters
+              </Button>
+            ) : null}
           </>
         }
         count={`${total} ${total === 1 ? "asset" : "assets"}`}
@@ -1506,15 +1635,36 @@ export default function Assets() {
       ) : null}
 
       {viewMode === "card" ? (
+        <div className="space-y-3">
+        {rows.length > 0 ? (
+          <label className="flex w-fit cursor-pointer items-center gap-2 text-sm text-muted-foreground">
+            <Checkbox
+              data-testid="asset-select-all"
+              checked={allOnPageSelected ? true : someOnPageSelected ? "indeterminate" : false}
+              onCheckedChange={(v) => togglePageSelected(v === true)}
+            />
+            Select all on this page
+          </label>
+        ) : null}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3" data-testid="asset-list-cards">
           {rows.map((row) => (
             <Card size="sm"
               key={row.id}
-              className="cursor-pointer"
+              className={cn("cursor-pointer", selectedIds.has(row.id) && "ring-2 ring-primary")}
               onClick={() => setLocation(appPath(`/assets/${row.id}`))}
             >
               <CardHeader>
-                <CardTitle className="text-base">{row.name}</CardTitle>
+                <div className="flex items-start gap-3">
+                  <div onClick={(e) => e.stopPropagation()} className="pt-0.5">
+                    <Checkbox
+                      aria-label={`Select ${row.assetCode?.trim() || row.assetTag?.trim() || row.name}`}
+                      data-testid={`asset-select-${row.id}`}
+                      checked={selectedIds.has(row.id)}
+                      onCheckedChange={(v) => toggleRowSelected(row.id, v === true)}
+                    />
+                  </div>
+                  <CardTitle className="text-base">{row.name}</CardTitle>
+                </div>
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
                 <p className="text-muted-foreground">{row.assetTag?.trim() || EM_DASH}</p>
@@ -1539,6 +1689,7 @@ export default function Assets() {
             </Card>
           ))}
         </div>
+        </div>
       ) : (
       <div data-testid="asset-list-table" className="rounded-md border bg-card overflow-x-auto overflow-y-visible px-2 md:px-3">
         {isLoading ? (
@@ -1559,6 +1710,7 @@ export default function Assets() {
             >
               <thead className="bg-background">
                 <tr className="border-b bg-muted/40">
+                  <th className="px-2 py-1 w-10 min-w-10" aria-hidden />
                   <th className="px-2 py-1 text-center" colSpan={5}>Item details</th>
                   <th className="px-2 py-1 text-center" colSpan={4}>Item code</th>
                   <th className="px-2 py-1 text-center" colSpan={2}>Financial value</th>
@@ -1568,6 +1720,15 @@ export default function Assets() {
                   {canEditAssets ? <th className="px-2 py-1" /> : null}
                 </tr>
                 <tr className="border-b">
+                  <th className="px-2 py-1.5 w-10 min-w-10 bg-background">
+                    <Checkbox
+                      aria-label="Select all assets on this page"
+                      data-testid="asset-select-all"
+                      disabled={rows.length === 0}
+                      checked={allOnPageSelected ? true : someOnPageSelected ? "indeterminate" : false}
+                      onCheckedChange={(v) => togglePageSelected(v === true)}
+                    />
+                  </th>
                   {REGISTER_TABLE_COLUMN_ORDER.map((header, index) => (
                     <th
                       key={header}
@@ -1587,7 +1748,7 @@ export default function Assets() {
               <tbody>
                 {rows.length === 0 ? (
                   <HtmlTableEmptyState
-                    colSpan={canEditAssets ? 26 : 25}
+                    colSpan={canEditAssets ? 27 : 26}
                     icon={Landmark}
                     title="No assets match these filters"
                   />
@@ -1613,7 +1774,12 @@ export default function Assets() {
                       row.description?.trim() ? `${row.name}: ${row.description}` : row.name;
                     const statusLabel = REGISTER_LABELS[rs] ?? rs;
                     const cond = row.physicalCondition?.trim() || "";
-                    const rowBgClass = i % 2 === 1 ? "bg-muted/30" : "bg-background";
+                    const isSelected = selectedIds.has(row.id);
+                    const rowBgClass = isSelected
+                      ? "bg-primary/10"
+                      : i % 2 === 1
+                        ? "bg-muted/30"
+                        : "bg-background";
 
                     return (
                       <tr
@@ -1623,8 +1789,20 @@ export default function Assets() {
                           "border-b cursor-pointer hover:bg-muted/50",
                           rowBgClass
                         )}
+                        aria-selected={isSelected}
                         onClick={() => setLocation(appPath(`/assets/${row.id}`))}
                       >
+                        <td
+                          className={cn("px-2 py-1 w-10 min-w-10", rowBgClass)}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Checkbox
+                            aria-label={`Select ${row.assetCode?.trim() || row.assetTag?.trim() || row.name}`}
+                            data-testid={`asset-select-${row.id}`}
+                            checked={isSelected}
+                            onCheckedChange={(v) => toggleRowSelected(row.id, v === true)}
+                          />
+                        </td>
                         <td className={cn("px-2 py-1 w-16 min-w-16", rowBgClass)}>{offset + i + 1}</td>
                         <td className={cn("px-2 py-1 w-32 min-w-32", rowBgClass)}>
                           {row.registerItemType ?? (row.itemType === "inventory" ? "Inventory" : "Asset")}
@@ -2313,6 +2491,119 @@ export default function Assets() {
         </AlertDialogContent>
       </AlertDialog>
 
+      <BulkActionsToolbar
+        selectedCount={selectedCount}
+        itemLabel="assets"
+        onClearSelection={clearSelection}
+        onExport={handleExportSelected}
+        onDelete={canEditAssets ? () => setBulkDeleteOpen(true) : undefined}
+        disabled={bulkPending}
+      >
+        {canEditAssets ? (
+          <Select
+            value=""
+            disabled={bulkPending}
+            onValueChange={(v) => setBulkStatusTarget(v as BulkRegisterStatus)}
+          >
+            <SelectTrigger
+              className="h-8 w-[190px] bg-secondary text-secondary-foreground"
+              data-testid="bulk-actions-status"
+              aria-label="Set status for selected assets"
+            >
+              <SelectValue placeholder="Set status" />
+            </SelectTrigger>
+            <SelectContent className="z-[60]">
+              {BULK_REGISTER_STATUS_OPTIONS.map((o) => (
+                <SelectItem key={o} value={o}>
+                  {REGISTER_LABELS[o] ?? formatEnumLabel(o)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : null}
+      </BulkActionsToolbar>
+
+      <AlertDialog
+        open={bulkDeleteOpen}
+        onOpenChange={(open) => {
+          if (!open && !bulkDeleteSelectedMutation.isPending) setBulkDeleteOpen(false);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Delete {assetCount(selectedCount)}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes the selected assets from the register. Each deletion is recorded in the
+              audit log. You cannot undo this.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkDeleteSelectedMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              data-testid="asset-bulk-delete-confirm"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={bulkDeleteSelectedMutation.isPending || selectedCount === 0}
+              onClick={(e) => {
+                e.preventDefault();
+                bulkDeleteSelectedMutation.mutate({ ids: selectedOnPage });
+              }}
+            >
+              {bulkDeleteSelectedMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting…
+                </>
+              ) : (
+                `Delete ${selectedCount}`
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={bulkStatusTarget !== null}
+        onOpenChange={(open) => {
+          if (!open && !bulkUpdateStatusMutation.isPending) setBulkStatusTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Set status to {bulkStatusTarget ? (REGISTER_LABELS[bulkStatusTarget] ?? formatEnumLabel(bulkStatusTarget)).toLowerCase() : ""} for{" "}
+              {assetCount(selectedCount)}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This changes the status shown on the register and on each asset&apos;s detail page. Each change is
+              recorded in the audit log.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkUpdateStatusMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              data-testid="asset-bulk-status-confirm"
+              disabled={bulkUpdateStatusMutation.isPending || selectedCount === 0 || bulkStatusTarget === null}
+              onClick={(e) => {
+                e.preventDefault();
+                if (bulkStatusTarget) {
+                  bulkUpdateStatusMutation.mutate({ ids: selectedOnPage, registerStatus: bulkStatusTarget });
+                }
+              }}
+            >
+              {bulkUpdateStatusMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Updating…
+                </>
+              ) : (
+                "Update status"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
