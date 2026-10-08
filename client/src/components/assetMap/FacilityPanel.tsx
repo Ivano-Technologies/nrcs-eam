@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { AlertTriangle, ChevronDown, ListFilter, RotateCw, Search, SearchX, X } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronUp, ListFilter, RotateCw, Search, SearchX, X } from "lucide-react";
 import type { FacilityType } from "@shared/facilities";
 import {
   ASSET_STATUS_COLOURS,
@@ -71,6 +71,13 @@ export type FacilityPanelProps = {
   variant?: "panel" | "sheet";
   /** Mobile: type chips live behind a Filters button. */
   showTypeChips?: boolean;
+  /**
+   * Desktop: the panel is collapsed to the compact card while the drawer is open. It stays mounted
+   * (hidden and inert) so filters, legend and list scroll come back exactly as they were.
+   */
+  concealed?: boolean;
+  /** Desktop, narrow map with the drawer open and the panel expanded: collapse it back to the card. */
+  onCollapse?: () => void;
   className?: string;
   style?: React.CSSProperties;
 };
@@ -103,6 +110,8 @@ export function FacilityPanel(props: FacilityPanelProps) {
     onRetry,
     variant = "panel",
     showTypeChips = true,
+    concealed = false,
+    onCollapse,
     className,
     style,
   } = props;
@@ -185,15 +194,34 @@ export function FacilityPanel(props: FacilityPanelProps) {
           {filters.types.length ? <span className="tabular-nums">({filters.types.length})</span> : null}
         </button>
       ) : null}
+      {onCollapse ? (
+        <button
+          type="button"
+          onClick={onCollapse}
+          aria-label="Collapse to the search card"
+          title="Collapse to the search card"
+          data-testid="asset-map-panel-collapse"
+          className={cn(
+            "grid h-10 w-10 shrink-0 place-items-center rounded-[10px] hover:bg-[#F3F4F6] dark:hover:bg-[#1E2B3C]",
+            focusRing
+          )}
+        >
+          <ChevronUp className="h-4 w-4" />
+        </button>
+      ) : null}
     </div>
   );
 
   return (
     <section
       aria-label="Facilities"
-      className={cn("flex min-h-0 flex-col", className)}
+      className={cn("flex min-h-0 flex-col", concealed && "invisible", className)}
       style={style}
       data-variant={variant}
+      data-testid={variant === "panel" ? "asset-map-facility-panel" : undefined}
+      data-concealed={concealed || undefined}
+      aria-hidden={concealed || undefined}
+      inert={concealed}
     >
       {variant === "panel" ? searchBlock : null}
 
@@ -213,7 +241,7 @@ export function FacilityPanel(props: FacilityPanelProps) {
         </div>
       ) : null}
 
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain" data-panel-scroll="">
         {/* Summary */}
         <div className="border-b border-[#E5E7EB] px-4 pb-3.5 dark:border-[#26364A]">
           {loading ? (
@@ -647,6 +675,88 @@ function FacilityList({
  * Shown when the facility data request fails. Distinct from the empty state ("No facilities
  * match"): it says the data didn't load and offers Retry, which refetches.
  */
+/**
+ * Desktop, narrow map with the drawer open: the panel collapses to this card (search, counts and an
+ * expand chevron) so the map between it and the drawer stays usable.
+ */
+export function CompactFacilityCard({
+  ref,
+  searchText,
+  onSearchText,
+  onSearchEnter,
+  count,
+  onMap,
+  onExpand,
+  className,
+  style,
+}: {
+  ref?: React.Ref<HTMLElement>;
+  searchText: string;
+  onSearchText: (q: string) => void;
+  onSearchEnter: () => void;
+  /** Facilities matching the current search and filters. */
+  count: number;
+  /** Of those, how many have a location on the map. */
+  onMap: number;
+  onExpand: () => void;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  return (
+    <section
+      ref={ref}
+      aria-label="Facilities"
+      data-testid="asset-map-compact-panel"
+      className={cn("p-2.5", className)}
+      style={style}
+    >
+      <div className="flex items-center gap-1.5">
+        <label className="relative min-w-0 flex-1">
+          <span className="sr-only">Search facilities or codes</span>
+          <Search className={cn("pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2", mutedText)} />
+          <input
+            type="search"
+            value={searchText}
+            onChange={(e) => onSearchText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                onSearchEnter();
+              }
+            }}
+            placeholder="Search facilities"
+            data-testid="asset-map-compact-search"
+            className={cn(
+              "h-10 w-full rounded-[10px] border border-[#8A8F98] bg-white pl-8 pr-2 text-sm text-[#111827] placeholder:text-[#62626C] dark:border-[#64768E] dark:bg-[#0F1724] dark:text-[#E6EAF0] dark:placeholder:text-[#A3AEBD]",
+              "focus-visible:border-[#C8102E] focus-visible:ring-2 focus-visible:ring-[#C8102E]/30 focus-visible:outline-none"
+            )}
+          />
+        </label>
+        <button
+          type="button"
+          onClick={onExpand}
+          aria-expanded={false}
+          aria-label="Show filters and the facility list"
+          title="Show filters and the facility list"
+          data-testid="asset-map-panel-expand"
+          className={cn(
+            "grid h-10 w-9 shrink-0 place-items-center rounded-[10px] hover:bg-[#F3F4F6] dark:hover:bg-[#1E2B3C]",
+            focusRing
+          )}
+        >
+          <ChevronDown className="h-4 w-4" />
+        </button>
+      </div>
+      <p className="mt-2 px-1 text-[13px]" data-testid="asset-map-compact-counts">
+        <span className="font-semibold tabular-nums">{formatCount(count)}</span>{" "}
+        <span className={mutedText}>
+          {count === 1 ? "facility" : "facilities"} · <span className="tabular-nums">{formatCount(onMap)}</span> on the map
+        </span>
+      </p>
+    </section>
+  );
+}
+
 export function DataLoadError({
   onRetry,
   retrying = false,
