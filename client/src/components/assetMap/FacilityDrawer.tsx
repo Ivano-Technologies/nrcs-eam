@@ -92,11 +92,13 @@ export type FacilityDrawerProps = {
   onClose: () => void;
   onSelectFacility: (id: number) => void;
   variant?: "drawer" | "sheet";
+  /** Facilities map: a 28px fade at the bottom of the scrolling body, above the footer. */
+  bottomFade?: boolean;
   className?: string;
 };
 
 export const FacilityDrawer = forwardRef<HTMLDivElement, FacilityDrawerProps>(function FacilityDrawer(
-  { facility: f, detail, detailLoading, scheme, onClose, onSelectFacility, variant = "drawer", className },
+  { facility: f, detail, detailLoading, scheme, onClose, onSelectFacility, variant = "drawer", bottomFade = false, className },
   ref
 ) {
   const tier = pinTier(f);
@@ -173,161 +175,170 @@ export const FacilityDrawer = forwardRef<HTMLDivElement, FacilityDrawerProps>(fu
         </div>
       </div>
 
-      <div
-        data-testid="asset-map-drawer-body"
-        className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4"
-        // Phones: let the last row scroll fully clear of the app's bottom nav. Tablet and desktop unchanged.
-        style={variant === "sheet" ? { paddingBottom: `calc(1rem + ${MOBILE_BOTTOM_NAV_CLEARANCE})` } : undefined}
-      >
-        {/* Stock readiness */}
-        <section aria-label="Stock readiness" className="flex items-center gap-4 border-b border-[#E5E7EB] pb-4 dark:border-[#26364A]">
-          {tier !== "none" && tier !== "offline" && f.stockScorePercent != null ? (
-            <>
-              <Gauge percent={f.stockScorePercent} tier={tier} scheme={scheme} />
+      <div className="relative flex min-h-0 flex-1 flex-col">
+        <div
+          data-testid="asset-map-drawer-body"
+          className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4"
+          // Phones: let the last row scroll fully clear of the app's bottom nav. Tablet and desktop unchanged.
+          style={variant === "sheet" ? { paddingBottom: `calc(1rem + ${MOBILE_BOTTOM_NAV_CLEARANCE})` } : undefined}
+        >
+          {/* Stock readiness */}
+          <section aria-label="Stock readiness" className="flex items-center gap-4 border-b border-[#E5E7EB] pb-4 dark:border-[#26364A]">
+            {tier !== "none" && tier !== "offline" && f.stockScorePercent != null ? (
+              <>
+                <Gauge percent={f.stockScorePercent} tier={tier} scheme={scheme} />
+                <div className="text-[13px]">
+                  <h3 className="text-sm font-semibold">Stock readiness</h3>
+                  <p className={cn("mt-1", mutedText)}>
+                    {formatCount(f.adequateCards)} of {formatCount(f.totalCards)} stock cards adequate
+                  </p>
+                  {lastMovement ? <p className={mutedText}>Last stock movement {lastMovement}</p> : null}
+                </div>
+              </>
+            ) : (
               <div className="text-[13px]">
                 <h3 className="text-sm font-semibold">Stock readiness</h3>
                 <p className={cn("mt-1", mutedText)}>
-                  {formatCount(f.adequateCards)} of {formatCount(f.totalCards)} stock cards adequate
+                  {f.isActive ? "No stock cards with a minimum level yet." : "This facility is offline."}
                 </p>
-                {lastMovement ? <p className={mutedText}>Last stock movement {lastMovement}</p> : null}
+                {f.isActive ? (
+                  <Link
+                    href={appPath("/inventory/stock-overview")}
+                    className={cn("mt-1 inline-block font-medium hover:underline", linkText, focusRing)}
+                  >
+                    Stock settings
+                  </Link>
+                ) : null}
               </div>
-            </>
-          ) : (
-            <div className="text-[13px]">
-              <h3 className="text-sm font-semibold">Stock readiness</h3>
-              <p className={cn("mt-1", mutedText)}>
-                {f.isActive ? "No stock cards with a minimum level yet." : "This facility is offline."}
-              </p>
-              {f.isActive ? (
-                <Link
-                  href={appPath("/inventory/stock-overview")}
-                  className={cn("mt-1 inline-block font-medium hover:underline", linkText, focusRing)}
+            )}
+          </section>
+
+          {/* At a glance */}
+          <section aria-labelledby={`${titleId}-glance`}>
+            <h3 id={`${titleId}-glance`} className="mb-2 text-[13px] font-semibold">
+              At a glance
+            </h3>
+            <div className="grid grid-cols-2 gap-2">
+              {statsVisible && f.assetCount != null ? (
+                <StatTile label="Assets" value={formatCount(f.assetCount)}>
+                  {f.assetsByStatus && f.assetCount > 0 ? (
+                    <>
+                      <span className="mt-1.5 flex h-1.5 overflow-hidden rounded-full bg-[#E9ECF0] dark:bg-[#24344A]" aria-hidden="true">
+                        {(["inUse", "maintenance", "retired"] as const).map((k) => (
+                          <span key={k} style={{ width: `${(f.assetsByStatus![k] / f.assetCount!) * 100}%`, background: statusColours[k] }} />
+                        ))}
+                      </span>
+                      <p className={cn("mt-1.5 text-xs", mutedText)}>
+                        {f.assetsByStatus.inUse} in use · {f.assetsByStatus.maintenance} in maintenance · {f.assetsByStatus.retired} retired
+                      </p>
+                    </>
+                  ) : null}
+                </StatTile>
+              ) : null}
+              {statsVisible ? (
+                <StatTile
+                  label="Book value"
+                  value={detail?.bookValue != null ? formatNaira(detail.bookValue) : detailLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-label="Loading" /> : "Not available"}
                 >
-                  Stock settings
-                </Link>
+                  <p className={cn("mt-1 text-xs", mutedText)}>Operational assets</p>
+                </StatTile>
+              ) : null}
+              <StatTile label="Inventory items" value={formatCount(f.inventoryCount)}>
+                <p className={cn("mt-1 text-xs", mutedText)}>Recorded at this facility</p>
+              </StatTile>
+              {statsVisible ? (
+                <StatTile
+                  label="Open work orders"
+                  value={detail?.openWorkOrders != null ? formatCount(detail.openWorkOrders) : detailLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-label="Loading" /> : "Not available"}
+                >
+                  {detail?.overdueWorkOrders != null ? (
+                    <p className={cn("mt-1 text-xs", mutedText)}>{detail.overdueWorkOrders} overdue</p>
+                  ) : null}
+                </StatTile>
               ) : null}
             </div>
-          )}
-        </section>
+            {!statsVisible ? (
+              <p className={cn("mt-2 rounded-[10px] bg-[#F3F4F6] p-3 text-xs dark:bg-[#1E2B3C]", mutedText)} data-testid="asset-map-drawer-stats-hidden">
+                Asset counts, book value and work orders are shown for your own facility only.
+              </p>
+            ) : null}
+          </section>
 
-        {/* At a glance */}
-        <section aria-labelledby={`${titleId}-glance`}>
-          <h3 id={`${titleId}-glance`} className="mb-2 text-[13px] font-semibold">
-            At a glance
-          </h3>
-          <div className="grid grid-cols-2 gap-2">
-            {statsVisible && f.assetCount != null ? (
-              <StatTile label="Assets" value={formatCount(f.assetCount)}>
-                {f.assetsByStatus && f.assetCount > 0 ? (
-                  <>
-                    <span className="mt-1.5 flex h-1.5 overflow-hidden rounded-full bg-[#E9ECF0] dark:bg-[#24344A]" aria-hidden="true">
-                      {(["inUse", "maintenance", "retired"] as const).map((k) => (
-                        <span key={k} style={{ width: `${(f.assetsByStatus![k] / f.assetCount!) * 100}%`, background: statusColours[k] }} />
-                      ))}
-                    </span>
-                    <p className={cn("mt-1.5 text-xs", mutedText)}>
-                      {f.assetsByStatus.inUse} in use · {f.assetsByStatus.maintenance} in maintenance · {f.assetsByStatus.retired} retired
-                    </p>
-                  </>
-                ) : null}
-              </StatTile>
-            ) : null}
-            {statsVisible ? (
-              <StatTile
-                label="Book value"
-                value={detail?.bookValue != null ? formatNaira(detail.bookValue) : detailLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-label="Loading" /> : "Not available"}
-              >
-                <p className={cn("mt-1 text-xs", mutedText)}>Operational assets</p>
-              </StatTile>
-            ) : null}
-            <StatTile label="Inventory items" value={formatCount(f.inventoryCount)}>
-              <p className={cn("mt-1 text-xs", mutedText)}>Recorded at this facility</p>
-            </StatTile>
-            {statsVisible ? (
-              <StatTile
-                label="Open work orders"
-                value={detail?.openWorkOrders != null ? formatCount(detail.openWorkOrders) : detailLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-label="Loading" /> : "Not available"}
-              >
-                {detail?.overdueWorkOrders != null ? (
-                  <p className={cn("mt-1 text-xs", mutedText)}>{detail.overdueWorkOrders} overdue</p>
-                ) : null}
-              </StatTile>
-            ) : null}
-          </div>
-          {!statsVisible ? (
-            <p className={cn("mt-2 rounded-[10px] bg-[#F3F4F6] p-3 text-xs dark:bg-[#1E2B3C]", mutedText)} data-testid="asset-map-drawer-stats-hidden">
-              Asset counts, book value and work orders are shown for your own facility only.
-            </p>
-          ) : null}
-        </section>
-
-        {/* Contact and location */}
-        <section aria-labelledby={`${titleId}-contact`} className="text-[13px]">
-          <h3 id={`${titleId}-contact`} className="mb-2 text-[13px] font-semibold">
-            Contact and location
-          </h3>
-          <dl className="divide-y divide-[#E5E7EB] dark:divide-[#26364A]">
-            <div className="flex justify-between gap-3 py-2">
-              <dt className={mutedText}>Contact</dt>
-              <dd className="text-right font-medium">{detail?.contactPerson || (detailLoading ? "" : "Not recorded")}</dd>
-            </div>
-            <div className="flex justify-between gap-3 py-2">
-              <dt className={mutedText}>Phone</dt>
-              <dd className="text-right font-medium">
-                {detail?.contactPhone ? (
-                  <a href={`tel:${detail.contactPhone.replace(/[^\d+]/g, "")}`} className={cn("hover:underline", linkText, focusRing)}>
-                    {detail.contactPhone}
-                  </a>
-                ) : detailLoading ? (
-                  ""
-                ) : (
-                  "Not recorded"
-                )}
-              </dd>
-            </div>
-            {detail?.parentFacility ? (
+          {/* Contact and location */}
+          <section aria-labelledby={`${titleId}-contact`} className="text-[13px]">
+            <h3 id={`${titleId}-contact`} className="mb-2 text-[13px] font-semibold">
+              Contact and location
+            </h3>
+            <dl className="divide-y divide-[#E5E7EB] dark:divide-[#26364A]">
               <div className="flex justify-between gap-3 py-2">
-                <dt className={mutedText}>Reports to</dt>
+                <dt className={mutedText}>Contact</dt>
+                <dd className="text-right font-medium">{detail?.contactPerson || (detailLoading ? "" : "Not recorded")}</dd>
+              </div>
+              <div className="flex justify-between gap-3 py-2">
+                <dt className={mutedText}>Phone</dt>
                 <dd className="text-right font-medium">
-                  <button
-                    type="button"
-                    onClick={() => onSelectFacility(detail.parentFacility!.id)}
-                    data-testid="asset-map-parent-facility-link"
-                    className={cn("text-right hover:underline", linkText, focusRing)}
-                  >
-                    {detail.parentFacility.name}
-                  </button>
+                  {detail?.contactPhone ? (
+                    <a href={`tel:${detail.contactPhone.replace(/[^\d+]/g, "")}`} className={cn("hover:underline", linkText, focusRing)}>
+                      {detail.contactPhone}
+                    </a>
+                  ) : detailLoading ? (
+                    ""
+                  ) : (
+                    "Not recorded"
+                  )}
                 </dd>
               </div>
-            ) : null}
-            <div className="flex items-center justify-between gap-3 py-2">
-              <dt className={mutedText}>Coordinates</dt>
-              <dd className="flex items-center gap-1.5 text-right font-medium tabular-nums">
-                {coords ? (
-                  <>
-                    {coords}
+              {detail?.parentFacility ? (
+                <div className="flex justify-between gap-3 py-2">
+                  <dt className={mutedText}>Reports to</dt>
+                  <dd className="text-right font-medium">
                     <button
                       type="button"
-                      onClick={copyCoords}
-                      aria-label={copied ? "Coordinates copied" : "Copy coordinates"}
-                      className={cn("grid h-7 w-7 place-items-center rounded-md hover:bg-[#F3F4F6] dark:hover:bg-[#1E2B3C]", focusRing)}
+                      onClick={() => onSelectFacility(detail.parentFacility!.id)}
+                      data-testid="asset-map-parent-facility-link"
+                      className={cn("text-right hover:underline", linkText, focusRing)}
                     >
-                      {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                      {detail.parentFacility.name}
                     </button>
-                  </>
-                ) : (
-                  <Link
-                    href={appPath(`/facilities/${f.id}`)}
-                    data-testid="asset-map-add-location"
-                    className={cn("hover:underline", linkText, focusRing)}
-                  >
-                    No location yet. Add it
-                  </Link>
-                )}
-              </dd>
-            </div>
-          </dl>
-        </section>
+                  </dd>
+                </div>
+              ) : null}
+              <div className="flex items-center justify-between gap-3 py-2">
+                <dt className={mutedText}>Coordinates</dt>
+                <dd className="flex items-center gap-1.5 text-right font-medium tabular-nums">
+                  {coords ? (
+                    <>
+                      {coords}
+                      <button
+                        type="button"
+                        onClick={copyCoords}
+                        aria-label={copied ? "Coordinates copied" : "Copy coordinates"}
+                        className={cn("grid h-7 w-7 place-items-center rounded-md hover:bg-[#F3F4F6] dark:hover:bg-[#1E2B3C]", focusRing)}
+                      >
+                        {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                      </button>
+                    </>
+                  ) : (
+                    <Link
+                      href={appPath(`/facilities/${f.id}`)}
+                      data-testid="asset-map-add-location"
+                      className={cn("hover:underline", linkText, focusRing)}
+                    >
+                      No location yet. Add it
+                    </Link>
+                  )}
+                </dd>
+              </div>
+            </dl>
+          </section>
+        </div>
+        {bottomFade ? (
+          <div
+            aria-hidden="true"
+            data-testid="facility-drawer-fade"
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-7 bg-gradient-to-t from-white to-transparent dark:from-[#162130]"
+          />
+        ) : null}
       </div>
 
       {/* Sticky footer */}

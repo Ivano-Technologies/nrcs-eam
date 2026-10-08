@@ -46,3 +46,13 @@ export function parseFacilityTypeFromSearch(search: string): FacilityType | unde
   }
   return undefined;
 }
+
+/** Route segment for a type picked in the toolbar (the inverse of `segmentToListFilter`). */
+export function typeToSegment(type: FacilityType | "all"): FacilitiesSegment {
+  if (type === "all") return "all";
+  if (type === "national_headquarters") return "national-hq";
+  if (type === "branch") return "branches";
+  if (type === "division") return "divisions";
+  if (type === "clinic") return "clinics";
+  return "warehouses";
+}
