@@ -1,5 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
-import { formatEmpty } from "@/lib/format";
+import { formatDateTime, formatEmpty } from "@/lib/format";
 import PageHeader from "@/components/ui/PageHeader";
 import TableLoader from "@/components/ui/TableLoader";
 import { Badge } from "@/components/ui/badge";
@@ -292,7 +292,7 @@ export default function Users() {
       </div>
 
       <div
-        className="frozen-table-wrap sticky-first-col overflow-x-auto rounded-md border"
+        className="frozen-table-wrap sticky-first-col rounded-md border"
         style={
           {
             "--col1-width": "180px",
@@ -305,10 +305,10 @@ export default function Users() {
         >
           <TableHeader className="bg-background">
             <TableRow>
-              <TableHead className="bg-background">Name</TableHead>
-              <TableHead className={cn("max-w-[220px] truncate bg-background", mobileSecondaryCol(showAllColumns))}>Email</TableHead>
+              <TableHead className="min-w-[12rem] bg-background">Name</TableHead>
+              <TableHead className={cn("bg-background", mobileSecondaryCol(showAllColumns))}>Email</TableHead>
               <TableHead className="bg-background">Role</TableHead>
-              <TableHead className={cn("max-w-[200px] truncate", mobileSecondaryCol(showAllColumns))}>Facility</TableHead>
+              <TableHead className={cn("min-w-[12rem]", mobileSecondaryCol(showAllColumns))}>Facility</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className={cn("whitespace-nowrap text-muted-foreground", mobileSecondaryCol(showAllColumns))}>Last sign in</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -320,17 +320,17 @@ export default function Users() {
               const facilityName = (u as { facilityName?: string | null }).facilityName ?? null;
               return (
                 <TableRow key={u.id} data-testid={`user-row-${u.id}`}>
-                  <TableCell className="font-medium bg-background">{formatEmpty(u.name)}</TableCell>
-                  <TableCell className={cn("max-w-[220px] truncate bg-background", mobileSecondaryCol(showAllColumns))}>{u.email || ""}</TableCell>
+                  <TableCell className="min-w-[12rem] whitespace-normal font-medium bg-background">{formatEmpty(u.name)}</TableCell>
+                  <TableCell className={cn("bg-background", mobileSecondaryCol(showAllColumns))}>{u.email || ""}</TableCell>
                   <TableCell className="bg-background">
                     <Badge className={roleBadgeClass(u.role)} variant="secondary">
                       {roleLabel(u.role)}
                     </Badge>
                   </TableCell>
-                  <TableCell className={cn("max-w-[200px] truncate", mobileSecondaryCol(showAllColumns))}>{formatEmpty(facilityName)}</TableCell>
+                  <TableCell className={cn("min-w-[12rem] whitespace-normal", mobileSecondaryCol(showAllColumns))}>{formatEmpty(facilityName)}</TableCell>
                   <TableCell>{statusLabel(st)}</TableCell>
                   <TableCell className={cn("whitespace-nowrap text-muted-foreground text-sm", mobileSecondaryCol(showAllColumns))}>
-                    {u.lastSignedIn ? new Date(u.lastSignedIn).toLocaleString() : ""}
+                    {formatDateTime(u.lastSignedIn)}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">

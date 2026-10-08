@@ -552,7 +552,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
             </div>
           ) : (
             <div
-              className="frozen-table-wrap rounded-md border px-2 md:px-3"
+              className="frozen-table-wrap sticky-first-col rounded-md border px-2 md:px-3"
               style={
                 {
                   "--col1-width": "120px",
@@ -566,17 +566,17 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                 <thead className="bg-background">
                   <tr className="border-b">
                     <th className="w-[120px] min-w-[120px] border-r bg-background px-2 py-2 text-left">
-                      Item Code
+                      Item code
                     </th>
-                    <th className="w-[200px] min-w-[200px] border-r bg-background px-2 py-2 text-left">
+                    <th className="min-w-[12rem] border-r bg-background px-2 py-2 text-left">
                       Location
                     </th>
-                    <th className="w-[240px] min-w-[240px] max-w-[240px] border-r bg-background px-2 py-2 text-left">
-                      Item Name
+                    <th className="min-w-[12rem] border-r bg-background px-2 py-2 text-left">
+                      Item name
                     </th>
                     <th className="px-2 py-2 text-left">Category</th>
                     <th className="px-2 py-2 text-left">Program</th>
-                    <th className="px-2 py-2 text-right">On Hand</th>
+                    <th className="px-2 py-2 text-right">On hand</th>
                     <th className="px-2 py-2 text-left">Unit</th>
                     <th className="px-2 py-2 text-right">Min</th>
                     <th className="px-2 py-2 text-right">Max</th>
@@ -601,10 +601,10 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                       <td className="w-[120px] min-w-[120px] border-r bg-background px-2 py-2">
                         {row.itemCode}
                       </td>
-                      <td className="w-[200px] min-w-[200px] truncate border-r bg-background px-2 py-2">
+                      <td className="min-w-[12rem] whitespace-normal border-r bg-background px-2 py-2">
                         {row.warehouseName}
                       </td>
-                      <td className="w-[240px] min-w-[240px] max-w-[240px] truncate border-r bg-background px-2 py-2">
+                      <td className="min-w-[12rem] whitespace-normal border-r bg-background px-2 py-2">
                         <span className="inline-flex items-center gap-1">
                           {row.itemName}
                           {row.itemCategory == null ? (
@@ -630,11 +630,11 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                           {row.category}
                         </Badge>
                       </td>
-                      <td className="px-2 py-2 text-right">{row.quantityOnHand}</td>
+                      <td className="px-2 py-2 text-right tabular-nums">{row.quantityOnHand}</td>
                       <td className="px-2 py-2">{row.unitOfMeasure}</td>
-                      <td className="px-2 py-2 text-right">{row.minLevel}</td>
-                      <td className="px-2 py-2 text-right">{row.maxLevel ?? ""}</td>
-                      <td className="px-2 py-2 text-right">{row.safetyStockLevel ?? ""}</td>
+                      <td className="px-2 py-2 text-right tabular-nums">{row.minLevel}</td>
+                      <td className="px-2 py-2 text-right tabular-nums">{row.maxLevel ?? ""}</td>
+                      <td className="px-2 py-2 text-right tabular-nums">{row.safetyStockLevel ?? ""}</td>
                       <td className="px-2 py-2">
                         <Badge
                           variant="outline"
@@ -652,7 +652,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                           data-testid="ved-badge"
                           data-ved={row.vedClassification ?? "desirable"}
                         >
-                          {row.vedClassification ?? "desirable"}
+                          {formatEnumLabel(row.vedClassification ?? "desirable")}
                         </Badge>
                       </td>
                     </tr>
@@ -758,7 +758,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge variant="secondary">{row.category}</Badge>
                       <Badge variant="outline" className={cn("border", vedClass(row.vedClassification))}>
-                        {row.vedClassification ?? "desirable"}
+                        {formatEnumLabel(row.vedClassification ?? "desirable")}
                       </Badge>
                       {row.hasExpiry ? <Badge variant="outline">Expiry</Badge> : null}
                       {row.coldChainRequired ? <Badge variant="outline">Cold Chain</Badge> : null}
@@ -777,7 +777,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
             </div>
           ) : (
           <div
-            className="frozen-table-wrap rounded-md border"
+            className="frozen-table-wrap sticky-first-col rounded-md border"
             style={
               {
                 "--col1-width": "140px",
@@ -791,13 +791,13 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
               <thead className="bg-muted/60">
                 <tr className="border-b">
                   <th className="px-2 py-2 text-left">Code</th>
-                  <th className="px-2 py-2 text-left">Name</th>
+                  <th className="min-w-[12rem] px-2 py-2 text-left">Name</th>
                   <th className="px-2 py-2 text-left">Category</th>
                   <th className="px-2 py-2 text-left">Subcategory</th>
                   <th className="px-2 py-2 text-left">Unit</th>
                   <th className="px-2 py-2 text-left">VED</th>
-                  <th className="px-2 py-2 text-left">Has Expiry</th>
-                  <th className="px-2 py-2 text-left">Cold Chain</th>
+                  <th className="px-2 py-2 text-left">Has expiry</th>
+                  <th className="px-2 py-2 text-left">Cold chain</th>
                   <th className="px-2 py-2 text-left">Active</th>
                 </tr>
               </thead>
@@ -810,7 +810,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                     onClick={() => setSelectedCatalogue(row)}
                   >
                     <td className="px-2 py-2">{row.itemCode}</td>
-                    <td className="px-2 py-2">{row.name}</td>
+                    <td className="min-w-[12rem] whitespace-normal px-2 py-2">{row.name}</td>
                     <td className="px-2 py-2">{row.category}</td>
                     <td className="px-2 py-2">{row.subcategory ?? ""}</td>
                     <td className="px-2 py-2">{row.unitOfMeasure}</td>
@@ -821,7 +821,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                         data-testid="ved-badge"
                         data-ved={row.vedClassification ?? "desirable"}
                       >
-                        {row.vedClassification ?? "desirable"}
+                        {formatEnumLabel(row.vedClassification ?? "desirable")}
                       </Badge>
                     </td>
                     <td className="px-2 py-2">{row.hasExpiry ? "Yes" : "No"}</td>

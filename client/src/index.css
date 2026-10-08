@@ -301,6 +301,11 @@ html.dark {
     overflow-y: visible;
   }
 
+  /* One scroll container per table: the shadcn Table wrapper must not add a second scroller. */
+  .frozen-table-wrap [data-slot="table-container"] {
+    overflow: visible;
+  }
+
   .frozen-table-wrap > table {
     display: table;
     width: 100%;
