@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { EmptyState, HtmlTableEmptyState } from "@/components/ui/EmptyState";
+import { formatEnumLabel } from "@/lib/format";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
@@ -156,6 +158,11 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
 
       {viewMode === "card" ? (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {!list.isLoading && (list.data ?? []).length === 0 ? (
+            <Card className="col-span-full">
+              <EmptyState icon={ClipboardListIcon} title="No requisitions yet" body="Requisitions appear here once a branch requests stock." />
+            </Card>
+          ) : null}
           {(list.data ?? []).map((row) => (
             <Card key={row.id} data-testid={`req-row-${row.reqNumber}`}>
               <CardContent className="space-y-2 p-4">
@@ -164,7 +171,7 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
                   <Badge data-testid="req-priority-badge" data-priority={row.priority ?? "routine"} variant={priorityVariant(row.priority ?? undefined) as any}>{row.priority}</Badge>
                 </div>
                 <p className="font-semibold">{row.title}</p>
-                <p className="text-xs text-muted-foreground">{row.status}</p>
+                <p className="text-xs text-muted-foreground">{formatEnumLabel(row.status)}</p>
               </CardContent>
             </Card>
           ))}
@@ -322,6 +329,14 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
                   </td>
                 </tr>
               ))}
+              {!list.isLoading && (list.data ?? []).length === 0 ? (
+                <HtmlTableEmptyState
+                  colSpan={7}
+                  icon={ClipboardListIcon}
+                  title="No requisitions yet"
+                  body="Requisitions appear here once a branch requests stock."
+                />
+              ) : null}
             </tbody>
           </table>
         </div>

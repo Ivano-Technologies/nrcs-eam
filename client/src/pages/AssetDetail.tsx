@@ -32,7 +32,7 @@ import { toast } from "sonner";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import AssetDepreciation from "@/components/AssetDepreciation";
 import { AssetMaintenanceTimeline } from "@/components/AssetMaintenanceTimeline";
-import { formatNaira } from "@/lib/format";
+import { formatEnumLabel, formatNaira } from "@/lib/format";
 import { calculateDepreciatedValue } from "@/lib/depreciation";
 import {
   CONDITION_OPTIONS,
@@ -468,7 +468,7 @@ export default function AssetDetail() {
             </h1>
             <p className="text-muted-foreground mt-1">{asset.assetTag}</p>
           </div>
-          <Badge className={getStatusColor(asset.status)}>{asset.status}</Badge>
+          <Badge className={getStatusColor(asset.status)}>{formatEnumLabel(asset.status)}</Badge>
           {(asset as { notVerifiedCampaignName?: string | null }).notVerifiedCampaignName ? (
             <Badge variant="destructive" data-testid="asset-not-verified-badge">
               Not verified in {(asset as { notVerifiedCampaignName?: string }).notVerifiedCampaignName}
@@ -486,11 +486,11 @@ export default function AssetDetail() {
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Basic Information</CardTitle>
+            <CardTitle>Basic information</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Asset Tag</p>
+              <p className="text-sm font-medium text-muted-foreground">Asset tag</p>
               <p className="text-base">{asset.assetTag}</p>
             </div>
             <div>
@@ -505,16 +505,21 @@ export default function AssetDetail() {
             )}
             <div>
               <p className="text-sm font-medium text-muted-foreground">Status</p>
-              <Badge className={getStatusColor(asset.status)}>{asset.status}</Badge>
+              <Badge className={getStatusColor(asset.status)}>{formatEnumLabel(asset.status)}</Badge>
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Technical Details</CardTitle>
+            <CardTitle>Technical details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {!asset.manufacturer && !asset.model && !asset.serialNumber && !asset.location ? (
+              <p className="text-sm text-muted-foreground" data-testid="asset-technical-empty">
+                No technical details recorded.
+              </p>
+            ) : null}
             {asset.manufacturer && (
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Manufacturer</p>
@@ -529,7 +534,7 @@ export default function AssetDetail() {
             )}
             {asset.serialNumber && (
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Serial Number</p>
+                <p className="text-sm font-medium text-muted-foreground">Serial number</p>
                 <p className="text-base">{asset.serialNumber}</p>
               </div>
             )}
@@ -547,12 +552,12 @@ export default function AssetDetail() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Financial Information</CardTitle>
+            <CardTitle>Financial information</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {asset.acquisitionDate && (
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Acquisition Date</p>
+                <p className="text-sm font-medium text-muted-foreground">Acquisition date</p>
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
                   <p className="text-base">{new Date(asset.acquisitionDate).toLocaleDateString()}</p>
@@ -561,7 +566,7 @@ export default function AssetDetail() {
             )}
             {asset.acquisitionCost && (
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Acquisition Cost</p>
+                <p className="text-sm font-medium text-muted-foreground">Acquisition cost</p>
                 <div className="flex items-center gap-2">
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
                   <p className="text-base">{formatNaira(parseFloat(asset.acquisitionCost))}</p>
@@ -570,7 +575,7 @@ export default function AssetDetail() {
             )}
             {asset.currentValue && (
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Current Value</p>
+                <p className="text-sm font-medium text-muted-foreground">Current value</p>
                 <div className="flex items-center gap-2">
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
                   <p className="text-base">{formatNaira(parseFloat(asset.currentValue))}</p>
@@ -585,7 +590,7 @@ export default function AssetDetail() {
             )}
             {asset.warrantyExpiry && (
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Warranty Expiry</p>
+                <p className="text-sm font-medium text-muted-foreground">Warranty expiry</p>
                 <p className="text-base">{new Date(asset.warrantyExpiry).toLocaleDateString()}</p>
               </div>
             )}
@@ -595,7 +600,7 @@ export default function AssetDetail() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>QR Code</CardTitle>
+              <CardTitle>QR code</CardTitle>
               {!asset.qrCode && canEdit && (
                 <Button
                   size="sm"
@@ -682,7 +687,7 @@ export default function AssetDetail() {
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <ImageIcon className="h-5 w-5" />
-              Asset Photos
+              Asset photos
             </CardTitle>
             {canEdit && (
               <div>
@@ -786,7 +791,7 @@ export default function AssetDetail() {
             <CardHeader className="py-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <CardTitle className="text-base">Edit History</CardTitle>
+                  <CardTitle className="text-base">Edit history</CardTitle>
                   <CardDescription>
                     Register edits with field-level diffs (visible to Admin and Manager).
                   </CardDescription>
@@ -969,7 +974,7 @@ export default function AssetDetail() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-serialNumber">Serial Number</Label>
+                <Label htmlFor="edit-serialNumber">Serial number</Label>
                 <Input
                   id="edit-serialNumber"
                   value={editForm.serialNumber}

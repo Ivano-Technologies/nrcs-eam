@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { HtmlTableEmptyState } from "@/components/ui/EmptyState";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -6,6 +7,7 @@ import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { Loader2, Upload } from "lucide-react";
 import PageHeader from "@/components/ui/PageHeader";
+import { formatEnumLabel } from "@/lib/format";
 import { appPath } from "@/lib/routes";
 
 export default function ImportDraftsPage({ embedInShell = false }: { embedInShell?: boolean } = {}) {
@@ -56,7 +58,7 @@ export default function ImportDraftsPage({ embedInShell = false }: { embedInShel
                 <tr>
                   <th className="px-2 py-2 text-left">Source</th>
                   <th className="px-2 py-2 text-left">Type</th>
-                  <th className="px-2 py-2 text-left">Rows</th>
+                  <th className="px-2 py-2 text-right">Rows</th>
                   <th className="px-2 py-2 text-left">Validation</th>
                   <th className="px-2 py-2 text-left">Status</th>
                   <th className="px-2 py-2 text-left">Actions</th>
@@ -65,15 +67,16 @@ export default function ImportDraftsPage({ embedInShell = false }: { embedInShel
               <tbody>
                 {(drafts.data ?? []).map((draft) => (
                   <tr key={draft.id} className="border-t">
-                    <td className="px-2 py-2">{draft.source}</td>
-                    <td className="px-2 py-2">{draft.documentType}</td>
-                    <td className="px-2 py-2">{draft.rowCount}</td>
-                    <td className="px-2 py-2">{draft.validationStatus}</td>
-                    <td className="px-2 py-2">{draft.status}</td>
+                    <td className="px-2 py-2">{formatEnumLabel(draft.source)}</td>
+                    <td className="px-2 py-2">{formatEnumLabel(draft.documentType)}</td>
+                    <td className="px-2 py-2 text-right tabular-nums">{draft.rowCount}</td>
+                    <td className="px-2 py-2">{formatEnumLabel(draft.validationStatus)}</td>
+                    <td className="px-2 py-2">{formatEnumLabel(draft.status)}</td>
                     <td className="px-2 py-2 space-x-2">
                       <Button size="sm" variant="outline" onClick={() => setSelectedId(draft.id)}>Edit</Button>
                       <Button
                         size="sm"
+                        variant="outline"
                         disabled={finalize.isPending && finalize.variables?.id === draft.id}
                         onClick={() => finalize.mutate({ id: draft.id })}
                       >
@@ -104,6 +107,14 @@ export default function ImportDraftsPage({ embedInShell = false }: { embedInShel
                     </td>
                   </tr>
                 ))}
+                {!drafts.isLoading && (drafts.data ?? []).length === 0 ? (
+                  <HtmlTableEmptyState
+                    colSpan={6}
+                    icon={Upload}
+                    title="No import drafts yet"
+                    body="Import drafts appear here once a file is imported."
+                  />
+                ) : null}
               </tbody>
             </table>
           </div>

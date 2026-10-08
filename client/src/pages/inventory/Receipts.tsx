@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { HtmlTableEmptyState } from "@/components/ui/EmptyState";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -245,6 +246,14 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
                 </td>
               </tr>
             ))}
+            {!receipts.isLoading && (receipts.data ?? []).length === 0 ? (
+              <HtmlTableEmptyState
+                colSpan={7}
+                icon={PackageCheckIcon}
+                title="No receipts yet"
+                body="Receipts appear here once a GRN is posted."
+              />
+            ) : null}
           </tbody>
         </table>
       </div>

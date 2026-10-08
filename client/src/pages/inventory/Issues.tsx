@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { HtmlTableEmptyState } from "@/components/ui/EmptyState";
 import { formatDate } from "@/lib/format";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -147,6 +148,14 @@ export default function Issues({ embedInShell = false }: { embedInShell?: boolea
                 <td className="px-2 py-2">{statusBadge(row.status)}</td>
               </tr>
             ))}
+            {!waybills.isLoading && (waybills.data ?? []).length === 0 ? (
+              <HtmlTableEmptyState
+                colSpan={7}
+                icon={TruckIcon}
+                title="No waybills yet"
+                body="Waybills appear here once stock is dispatched from a warehouse."
+              />
+            ) : null}
           </tbody>
         </table>
       </div>

@@ -1,4 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { TableEmptyState } from "@/components/ui/EmptyState";
 import { formatDate } from "@/lib/format";
 import { InsuranceRegisterContent } from "@/pages/compliance/InsuranceRegister";
 import PageHeader from "@/components/ui/PageHeader";
@@ -40,7 +41,7 @@ type VehicleRow = inferRouterOutputs<AppRouter>["complianceTracking"]["vehicles"
 type GeneratorRow = inferRouterOutputs<AppRouter>["complianceTracking"]["generators"]["list"][number];
 type BuildingRow = inferRouterOutputs<AppRouter>["complianceTracking"]["buildings"]["list"][number];
 type DonorRow = inferRouterOutputs<AppRouter>["complianceTracking"]["donor"]["list"][number];
-import { Loader2, Plus, ShieldCheck } from "lucide-react";
+import { Building2, FileText, Loader2, Plus, ShieldCheck, Truck, Zap } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
@@ -241,14 +242,11 @@ export default function ComplianceRegister() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <PageHeader
-          icon={ShieldCheck}
-          title="Compliance register"
-          subtitle="Vehicle, generator, building safety, donor reporting, and insurance compliance"
-          className="mb-0"
-        />
-      </div>
+      <PageHeader
+        icon={ShieldCheck}
+        title="Compliance register"
+        subtitle="Vehicle, generator, building safety, donor reporting and insurance compliance"
+      />
 
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
@@ -393,6 +391,14 @@ export default function ComplianceRegister() {
                       ) : null}
                     </TableRow>
                   ))}
+                  {(vehicles ?? []).length === 0 ? (
+                    <TableEmptyState
+                      colSpan={9 + (canEdit ? 1 : 0)}
+                      icon={Truck}
+                      title="No vehicle records yet"
+                      body="Vehicle records appear here once a vehicle is added to the register."
+                    />
+                  ) : null}
                 </TableBody>
               </Table>
             </CardContent>
@@ -456,6 +462,14 @@ export default function ComplianceRegister() {
                       ) : null}
                     </TableRow>
                   ))}
+                  {(generators ?? []).length === 0 ? (
+                    <TableEmptyState
+                      colSpan={9 + (canEdit ? 1 : 0)}
+                      icon={Zap}
+                      title="No generator records yet"
+                      body="Generator records appear here once a generator record is added."
+                    />
+                  ) : null}
                 </TableBody>
               </Table>
             </CardContent>
@@ -517,6 +531,14 @@ export default function ComplianceRegister() {
                       ) : null}
                     </TableRow>
                   ))}
+                  {(buildings ?? []).length === 0 ? (
+                    <TableEmptyState
+                      colSpan={8 + (canEdit ? 1 : 0)}
+                      icon={Building2}
+                      title="No safety certificates yet"
+                      body="Safety certificates appear here once a certificate is added."
+                    />
+                  ) : null}
                 </TableBody>
               </Table>
             </CardContent>
@@ -576,6 +598,14 @@ export default function ComplianceRegister() {
                       ) : null}
                     </TableRow>
                   ))}
+                  {(donorRows ?? []).length === 0 ? (
+                    <TableEmptyState
+                      colSpan={7 + (canEdit ? 1 : 0)}
+                      icon={FileText}
+                      title="No donor reports yet"
+                      body="Donor reports appear here once a donor report is added."
+                    />
+                  ) : null}
                 </TableBody>
               </Table>
             </CardContent>
