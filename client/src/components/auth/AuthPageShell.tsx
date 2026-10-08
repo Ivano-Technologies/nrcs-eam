@@ -22,12 +22,12 @@ export function AuthHeroLayout({
 /** @deprecated Use `AuthHeroLayout` — alias for migration clarity */
 export const AuthCard = AuthHeroLayout;
 
-/** Hero title — 34px, bold; `mt-2` (8px) after logo. */
+/** Hero title: one size everywhere (`text-2xl`), bold; `mt-2` (8px) after logo. */
 export function AuthTitle({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
     <h1
       className={cn(
-        "mt-2 text-[34px] font-bold leading-tight tracking-tight text-gray-900 dark:text-gray-100",
+        "mt-2 text-2xl font-bold leading-tight tracking-tight text-gray-900 dark:text-gray-100",
         className
       )}
     >

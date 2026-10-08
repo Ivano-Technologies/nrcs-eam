@@ -124,7 +124,7 @@ export default function ResetPassword() {
     <AuthPageLayout>
       <GlassCard className="text-center">
         <AuthBrandLogo />
-        <AuthTitle>Reset Password</AuthTitle>
+        <AuthTitle>Reset your password</AuthTitle>
         <AuthSubtitle className="text-center">
           Nigerian Red Cross Society
           <br />

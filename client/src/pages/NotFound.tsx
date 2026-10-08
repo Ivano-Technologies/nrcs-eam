@@ -1,55 +1,50 @@
-import { PublicPageChrome } from "@/components/PublicPageChrome";
+import { AuthPageLayout } from "@/components/auth/AuthPageLayout";
+import { GlassCard } from "@/components/auth/GlassCard";
+import { AuthBrandLogo, AuthSubtitle, AuthTitle, authPrimaryButtonClass } from "@/components/auth/AuthPageShell";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { AlertCircle, Home } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Home } from "lucide-react";
 import { useLocation } from "wouter";
 
-export default function NotFound() {
-  const [, setLocation] = useLocation();
+const NOT_FOUND_TITLE = "Page not found";
+const NOT_FOUND_BODY = "The page you are looking for does not exist or has moved.";
+const NOT_FOUND_ACTION = "Back to home";
 
-  const handleGoHome = () => {
-    setLocation("/");
-  };
+function NotFoundCard({ homePath }: { homePath: string }) {
+  const [, setLocation] = useLocation();
+  return (
+    <GlassCard className="text-center" data-testid="not-found">
+      <AuthBrandLogo />
+      <p className="text-sm font-semibold uppercase tracking-wide text-[#C8102E] dark:text-[#F87171]">404</p>
+      <AuthTitle>{NOT_FOUND_TITLE}</AuthTitle>
+      <AuthSubtitle className="text-center">{NOT_FOUND_BODY}</AuthSubtitle>
+      <Button type="button" onClick={() => setLocation(homePath)} className={cn(authPrimaryButtonClass)}>
+        <Home className="mr-2 h-4 w-4" aria-hidden />
+        {NOT_FOUND_ACTION}
+      </Button>
+    </GlassCard>
+  );
+}
+
+/**
+ * On brand 404. Public routes get the auth page layout (gradient, theme toggle, credit);
+ * inside the signed in app it renders just the card within the app shell.
+ */
+export default function NotFound() {
+  const [location] = useLocation();
+  const inApp = location === "/app" || location.startsWith("/app/");
+
+  if (inApp) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center py-8">
+        <NotFoundCard homePath="/app" />
+      </div>
+    );
+  }
 
   return (
-    <PublicPageChrome className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-[#232323] dark:to-[#2a2a2a]">
-    <div className="flex-1 w-full flex items-center justify-center pt-16">
-      <Card className="w-full max-w-lg mx-4 shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-        <CardContent className="pt-8 pb-8 text-center">
-          <div className="flex justify-center mb-6">
-            <div className="relative">
-              <div className="absolute inset-0 bg-red-100 rounded-full animate-pulse" />
-              <AlertCircle className="relative h-16 w-16 text-red-500" />
-            </div>
-          </div>
-
-          <h1 className="text-4xl font-bold text-slate-900 mb-2">404</h1>
-
-          <h2 className="text-xl font-semibold text-slate-700 mb-4">
-            Page Not Found
-          </h2>
-
-          <p className="text-slate-600 mb-8 leading-relaxed">
-            Sorry, the page you are looking for doesn't exist.
-            <br />
-            It may have been moved or deleted.
-          </p>
-
-          <div
-            id="not-found-button-group"
-            className="flex flex-col sm:flex-row gap-3 justify-center"
-          >
-            <Button
-              onClick={handleGoHome}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
-            >
-              <Home className="w-4 h-4 mr-2" />
-              Go Home
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-    </PublicPageChrome>
+    <AuthPageLayout>
+      <NotFoundCard homePath="/" />
+    </AuthPageLayout>
   );
 }

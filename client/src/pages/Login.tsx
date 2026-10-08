@@ -135,7 +135,7 @@ export default function Login() {
     <AuthPageLayout>
       <GlassCard className="text-center">
         <AuthBrandLogo />
-        <AuthTitle className="text-[23.8px]">Log in to NRCS EAM</AuthTitle>
+        <AuthTitle>Sign in to NRCS EAM</AuthTitle>
 
         <form onSubmit={handleSubmit} className="mt-8 w-full space-y-4 text-left">
           {errorMessage && (
@@ -151,7 +151,7 @@ export default function Login() {
 
           <div className="space-y-2">
             <Label htmlFor="email" className="text-[15px] text-gray-800 dark:text-gray-200">
-              Email Address
+              Email address
             </Label>
             <Input
               id="email"
@@ -189,7 +189,7 @@ export default function Login() {
             {loginMutation.isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Signing in...
+                Signing in…
               </>
             ) : (
               "Sign in"
@@ -205,7 +205,7 @@ export default function Login() {
             {passwordResetMutation.isPending ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Sending reset link...
+                Sending reset link…
               </>
             ) : (
               "Forgot password?"
@@ -215,7 +215,7 @@ export default function Login() {
           <p className="pt-2 text-center text-sm text-gray-600 dark:text-gray-400">
             Don&apos;t have an account?{" "}
             <Link href="/signup" className="font-medium text-[#C8102E] hover:underline dark:text-[#F87171]">
-              Request Access
+              Request access
             </Link>
           </p>
         </form>

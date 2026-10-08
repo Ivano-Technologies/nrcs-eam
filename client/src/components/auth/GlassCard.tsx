@@ -6,9 +6,10 @@ import { useEffect, useState } from "react";
 interface GlassCardProps {
   children: React.ReactNode;
   className?: string;
+  "data-testid"?: string;
 }
 
-export function GlassCard({ children, className }: GlassCardProps) {
+export function GlassCard({ children, className, "data-testid": testId }: GlassCardProps) {
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -29,6 +30,7 @@ export function GlassCard({ children, className }: GlassCardProps) {
   return (
     <div
       style={glassStyle}
+      data-testid={testId}
       className={cn("w-full max-w-md mx-auto rounded-3xl p-8 md:p-10", className)}
     >
       {children}
