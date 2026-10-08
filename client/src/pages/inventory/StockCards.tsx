@@ -40,7 +40,7 @@ export default function StockCards({ embedInShell = false }: Props = {}) {
         filterRow={
           <>
             <ModuleFilterSearch
-              placeholder="Search item, CTN, donor code..."
+              placeholder="Search item, CTN, donor code…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />

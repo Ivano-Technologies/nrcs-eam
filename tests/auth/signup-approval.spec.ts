@@ -37,7 +37,7 @@ test.describe.skip("signup approval flow (live)", () => {
     await page.getByLabel("Email Address").fill(unique);
     await page.getByLabel("Designation").fill("Officer");
     await page.getByLabel("Department").fill("Logistics");
-    await page.getByRole("button", { name: "Request Access" }).click();
+    await page.getByRole("button", { name: "Request access" }).click();
 
     const successLocator = page
       .getByTestId("signup-success-message")

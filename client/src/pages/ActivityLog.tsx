@@ -75,7 +75,7 @@ export default function ActivityLog() {
             <div className="relative md:col-span-2">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search action, resource, details, or user..."
+                placeholder="Search action, resource, details, or user…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -84,7 +84,7 @@ export default function ActivityLog() {
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="User name/email..."
+                placeholder="User name/email…"
                 value={userQuery}
                 onChange={(e) => {
                   setUserQuery(e.target.value);

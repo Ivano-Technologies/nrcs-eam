@@ -96,7 +96,7 @@ export default function DepreciationSchedule() {
                 )}
               </Button>
             ) : null}
-            <Button variant="default" disabled={exportExcel.isPending} onClick={() => exportExcel.mutate({})}>
+            <Button variant="outline" disabled={exportExcel.isPending} onClick={() => exportExcel.mutate({})}>
               {exportExcel.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -105,7 +105,7 @@ export default function DepreciationSchedule() {
               ) : (
                 <>
                   <FileSpreadsheet className="mr-2 h-4 w-4" />
-                  Export Excel
+                  Export to Excel
                 </>
               )}
             </Button>

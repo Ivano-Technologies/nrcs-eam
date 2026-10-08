@@ -63,7 +63,7 @@ export default function BinCardDetail() {
                 Closing…
               </>
             ) : (
-              "Close Bin Card"
+              "Close bin card"
             )}
           </Button>
         ) : (

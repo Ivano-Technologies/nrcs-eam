@@ -290,7 +290,7 @@ export default function Assets() {
   const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
-    document.title = "Asset Register | NRCS EAM";
+    document.title = "Asset register | NRCS EAM";
     return () => {
       document.title = "NRCS Enterprise Asset Management System";
     };
@@ -1337,10 +1337,10 @@ export default function Assets() {
                     {createAssetMutation.isPending ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Creating...
+                        Creating…
                       </>
                     ) : (
-                      "Create Asset"
+                      "Create asset"
                     )}
                   </Button>
                 </DialogFooter>
@@ -1376,7 +1376,7 @@ export default function Assets() {
             ) : null}
             <ModuleFilterSearch
               data-testid="asset-search-input"
-              placeholder="Search description, code, serial..."
+              placeholder="Search description, code, serial…"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -1460,14 +1460,14 @@ export default function Assets() {
                 </label>
                 <Button className="h-9" onClick={() => setIsCreateDialogOpen(true)} data-testid="asset-create-btn">
                   <Plus className="mr-2 h-4 w-4" />
-                  Add Asset
+                  Add asset
                 </Button>
               </>
             ) : null}
             {isAdmin ? (
               <Button
                 className="h-9"
-                variant="secondary"
+                variant="outline"
                 disabled={recalculateDepreciationMutation.isPending}
                 onClick={() => recalculateDepreciationMutation.mutate()}
                 data-testid="asset-recalculate-depreciation-btn"
@@ -1478,7 +1478,7 @@ export default function Assets() {
                     Recalculating…
                   </>
                 ) : (
-                  "Recalculate All Depreciation"
+                  "Recalculate all depreciation"
                 )}
               </Button>
             ) : null}
@@ -1724,7 +1724,7 @@ export default function Assets() {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit Asset</DialogTitle>
+            <DialogTitle>Edit asset</DialogTitle>
             <DialogDescription>Update asset register fields</DialogDescription>
           </DialogHeader>
           {editingAsset && (
@@ -2262,10 +2262,10 @@ export default function Assets() {
               {updateAssetMutation.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
+                  Saving…
                 </>
               ) : (
-                "Save Changes"
+                "Save changes"
               )}
             </Button>
           </DialogFooter>

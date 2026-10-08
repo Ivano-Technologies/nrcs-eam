@@ -161,7 +161,7 @@ export default function MobileWorkOrders() {
                         quickStatusUpdate(wo.id, "in_progress");
                       }}
                     >
-                      Start Work
+                      Start work
                     </Button>
                   </div>
                 )}

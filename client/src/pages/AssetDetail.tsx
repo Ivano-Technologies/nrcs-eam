@@ -449,7 +449,7 @@ export default function AssetDetail() {
         <p className="text-xl text-muted-foreground">Asset not found</p>
         <Button onClick={() => setLocation("/app/assets")} className="mt-4">
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Asset Register
+          Back to asset register
         </Button>
       </div>
     );
@@ -478,7 +478,7 @@ export default function AssetDetail() {
         {canEdit && (
           <Button data-testid="asset-detail-edit-btn" onClick={handleEdit}>
             <Edit className="mr-2 h-4 w-4" />
-            Edit Asset
+            Edit asset
           </Button>
         )}
       </div>
@@ -610,7 +610,7 @@ export default function AssetDetail() {
                   ) : (
                     <>
                       <QrCode className="mr-2 h-4 w-4" />
-                      Generate QR Code
+                      Generate QR code
                     </>
                   )}
                 </Button>
@@ -646,7 +646,7 @@ export default function AssetDetail() {
                     className="flex-1"
                     onClick={() => window.print()}
                   >
-                    Print Label
+                    Print label
                   </Button>
                 </div>
                 <p className="text-sm text-muted-foreground text-center">
@@ -703,12 +703,12 @@ export default function AssetDetail() {
                   {uploadingPhoto ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Uploading...
+                      Uploading…
                     </>
                   ) : (
                     <>
                       <Upload className="mr-2 h-4 w-4" />
-                      Upload Photo
+                      Upload photo
                     </>
                   )}
                 </Button>
@@ -751,7 +751,7 @@ export default function AssetDetail() {
               </p>
               {canEdit && (
                 <p className="text-xs text-muted-foreground mt-1">
-                  Click "Upload Photo" to add images
+                  Click "Upload photo" to add images
                 </p>
               )}
             </div>
@@ -898,7 +898,7 @@ export default function AssetDetail() {
               {uploadingPhoto ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Uploading...
+                  Uploading…
                 </>
               ) : (
                 `Upload ${pendingFiles.length} Photo(s)`
@@ -911,7 +911,7 @@ export default function AssetDetail() {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col gap-0 p-6">
           <DialogHeader>
-            <DialogTitle>Edit Asset</DialogTitle>
+            <DialogTitle>Edit asset</DialogTitle>
             <DialogDescription>
               Update operational fields and the full NRCS register record (Admin / Manager).
             </DialogDescription>
@@ -1411,10 +1411,10 @@ export default function AssetDetail() {
               {updateAssetMutation.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Updating...
+                  Updating…
                 </>
               ) : (
-                "Update Asset"
+                "Update asset"
               )}
             </Button>
           </DialogFooter>

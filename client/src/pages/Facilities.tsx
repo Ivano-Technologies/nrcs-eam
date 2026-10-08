@@ -513,10 +513,10 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
                 {createMutation.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
+                    Saving…
                   </>
                 ) : (
-                  "Create Facility"
+                  "Create facility"
                 )}
               </Button>
             </DialogFooter>

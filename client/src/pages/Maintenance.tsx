@@ -92,7 +92,7 @@ export default function Maintenance() {
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button><Plus className="mr-2 h-4 w-4" />Add Schedule</Button>
+            <Button><Plus className="mr-2 h-4 w-4" />Add schedule</Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
@@ -117,7 +117,7 @@ export default function Maintenance() {
                     id="description"
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Describe the maintenance tasks..."
+                    placeholder="Describe the maintenance tasks…"
                     rows={3}
                   />
                 </div>
@@ -213,7 +213,7 @@ export default function Maintenance() {
                     id="taskTemplate"
                     value={formData.taskTemplate}
                     onChange={(e) => setFormData({ ...formData, taskTemplate: e.target.value })}
-                    placeholder="Enter tasks, one per line..."
+                    placeholder="Enter tasks, one per line…"
                     rows={4}
                   />
                 </div>
@@ -227,10 +227,10 @@ export default function Maintenance() {
                   {createMutation.isPending ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creating...
+                      Creating…
                     </>
                   ) : (
-                    "Create Schedule"
+                    "Create schedule"
                   )}
                 </Button>
               </div>

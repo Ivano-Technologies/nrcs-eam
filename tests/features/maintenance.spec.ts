@@ -38,7 +38,7 @@ test.describe("Maintenance module (live)", () => {
 
     await page.getByTestId("sidebar-nav-work-orders").click();
     await expect(page).toHaveURL(/\/app\/work-orders/, { timeout: 30_000 });
-    await expect(page.getByRole("heading", { name: /^Work Orders$/ })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("heading", { name: /^Work orders$/ })).toBeVisible({ timeout: 30_000 });
 
     await page.goto("/app");
     await expect(page.getByRole("heading", { name: /^Dashboard$/i })).toBeVisible({ timeout: 30_000 });

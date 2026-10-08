@@ -180,7 +180,7 @@ export default function Transfers({ embedInShell = false }: { embedInShell?: boo
           </Select>
           {isManagerOrAdmin ? (
             <Button className="ml-auto" data-testid="new-transfer-btn" onClick={() => setOpen(true)}>
-              New Transfer
+              New transfer
             </Button>
           ) : null}
         </CardContent>
@@ -214,7 +214,7 @@ export default function Transfers({ embedInShell = false }: { embedInShell?: boo
                   <td className="px-2 py-2">{transfer.toWarehouseId ?? "—"}</td>
                   <td className="px-2 py-2 space-x-2">
                     {isAdmin && transfer.status === "pending_approval" ? (
-                      <Button size="sm" disabled={isApproving} onClick={() => approveMutation.mutate(ref)}>
+                      <Button variant="outline" size="sm" disabled={isApproving} onClick={() => approveMutation.mutate(ref)}>
                         {isApproving ? (
                           <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -227,6 +227,7 @@ export default function Transfers({ embedInShell = false }: { embedInShell?: boo
                     ) : null}
                     {isStaffOrAbove && transfer.status === "approved" ? (
                       <Button
+                        variant="outline"
                         size="sm"
                         data-testid={`dispatch-transfer-${transfer.documentNumber}`}
                         disabled={isDispatching}
@@ -244,6 +245,7 @@ export default function Transfers({ embedInShell = false }: { embedInShell?: boo
                     ) : null}
                     {isStaffOrAbove && transfer.status === "dispatched" ? (
                       <Button
+                        variant="outline"
                         size="sm"
                         data-testid={`receive-transfer-${transfer.documentNumber}`}
                         disabled={isReceiving}
@@ -269,7 +271,7 @@ export default function Transfers({ embedInShell = false }: { embedInShell?: boo
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>New Transfer</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>New transfer</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <Label>From Warehouse</Label>
             <Select value={fromWarehouseId} onValueChange={setFromWarehouseId}>

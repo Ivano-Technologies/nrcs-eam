@@ -29,7 +29,7 @@ export default function BinCards({ embedInShell = false }: Props = {}) {
     <div className="space-y-4">
       {embedInShell ? <h2 className="text-2xl font-bold">Bin Cards</h2> : null}
       <ModuleFiltersCard
-        filterRow={<ModuleFilterSearch placeholder="Search bin cards..." value={search} onChange={(e) => setSearch(e.target.value)} />}
+        filterRow={<ModuleFilterSearch placeholder="Search bin cards…" value={search} onChange={(e) => setSearch(e.target.value)} />}
         toolbarStart={<ViewToggle value={viewMode} onChange={setViewMode} />}
       />
       {viewMode === "card" ? (

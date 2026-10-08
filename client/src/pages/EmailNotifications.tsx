@@ -64,12 +64,12 @@ export default function EmailNotifications() {
           <DialogTrigger asChild>
             <Button data-testid="email-compose-trigger">
               <Mail className="mr-2 h-4 w-4" />
-              Compose Email
+              Compose email
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>Compose Email Notification</DialogTitle>
+              <DialogTitle>Compose email Notification</DialogTitle>
               <DialogDescription>Send a custom email to selected users</DialogDescription>
             </DialogHeader>
 
@@ -107,7 +107,7 @@ export default function EmailNotifications() {
                 <Label>Subject</Label>
                 <Input
                   data-testid="email-subject-input"
-                  placeholder="Email subject..."
+                  placeholder="Email subject…"
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
                 />
@@ -117,7 +117,7 @@ export default function EmailNotifications() {
                 <Label>Message Body</Label>
                 <Textarea
                   data-testid="email-body-input"
-                  placeholder="Email message..."
+                  placeholder="Email message…"
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
                   rows={8}
@@ -136,12 +136,12 @@ export default function EmailNotifications() {
                   {sendMutation.isPending ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Sending...
+                      Sending…
                     </>
                   ) : (
                     <>
                       <Send className="mr-2 h-4 w-4" />
-                      Send Email
+                      Send email
                     </>
                   )}
                 </Button>

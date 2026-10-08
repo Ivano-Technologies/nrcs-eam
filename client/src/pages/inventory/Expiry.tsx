@@ -107,6 +107,7 @@ export default function Expiry({ embedInShell = false }: { embedInShell?: boolea
                       <td className="px-2 py-2">
                         {isManagerOrAdmin ? (
                           <Button
+                            variant="outline"
                             size="sm"
                             disabled={markExpired.isPending && markExpired.variables?.batchId === row.batchId}
                             onClick={() => markExpired.mutate({ batchId: row.batchId })}

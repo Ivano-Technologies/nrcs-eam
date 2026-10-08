@@ -76,7 +76,7 @@ export function FieldDashboard({ metrics: metricsProp, metricsFailed, onRetry }:
         <Button asChild size="lg" className="gap-2">
           <Link href={`${appPath("/inventory/requisitions")}?new=1`}>
             <PackagePlus className="h-5 w-5" />
-            New Requisition
+            New requisition
           </Link>
         </Button>
       </div>

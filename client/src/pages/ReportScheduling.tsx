@@ -182,7 +182,7 @@ export default function ReportScheduling() {
         />
         <Button onClick={() => setIsCreateDialogOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
-          New Schedule
+          New schedule
         </Button>
       </div>
 
@@ -193,7 +193,7 @@ export default function ReportScheduling() {
             <p className="text-muted-foreground">No scheduled reports yet. Create your first schedule to get started.</p>
             <Button type="button" onClick={() => setIsCreateDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
-              New Schedule
+              New schedule
             </Button>
           </CardContent>
         </Card>
@@ -261,7 +261,7 @@ export default function ReportScheduling() {
       }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingSchedule ? "Edit Schedule" : "Create New Schedule"}</DialogTitle>
+            <DialogTitle>{editingSchedule ? "Edit Schedule" : "Create New schedule"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>

@@ -245,7 +245,7 @@ export default function MobileWorkOrderDetail() {
                     Saving…
                   </>
                 ) : (
-                  "Start Work"
+                  "Start work"
                 )}
               </Button>
             )}
@@ -266,7 +266,7 @@ export default function MobileWorkOrderDetail() {
                   ) : (
                     <>
                       <Camera className="mr-2 h-4 w-4" />
-                      Take Photo
+                      Take photo
                     </>
                   )}
                 </Button>
@@ -297,7 +297,7 @@ export default function MobileWorkOrderDetail() {
                   ) : (
                     <>
                       <CheckCircle2 className="mr-2 h-4 w-4" />
-                      Mark Complete
+                      Mark complete
                     </>
                   )}
                 </Button>
@@ -398,7 +398,7 @@ export default function MobileWorkOrderDetail() {
             <Textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Enter work notes, findings, or updates..."
+              placeholder="Enter work notes, findings, or updates…"
               rows={4}
               className="text-base"
             />
@@ -416,7 +416,7 @@ export default function MobileWorkOrderDetail() {
               ) : (
                 <>
                   <MessageSquare className="mr-2 h-4 w-4" />
-                  Save Notes
+                  Save notes
                 </>
               )}
             </Button>

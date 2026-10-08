@@ -147,7 +147,7 @@ export function InsuranceRegisterContent({ embedded = false }: { embedded?: bool
                 ) : (
                   <>
                     <FileSpreadsheet className="mr-2 h-4 w-4" />
-                    Export
+                    Export to Excel
                   </>
                 )}
               </Button>
@@ -169,7 +169,7 @@ export function InsuranceRegisterContent({ embedded = false }: { embedded?: bool
               ) : (
                 <>
                   <FileSpreadsheet className="mr-2 h-4 w-4" />
-                  Export
+                  Export to Excel
                 </>
               )}
             </Button>

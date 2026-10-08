@@ -118,7 +118,7 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
         }
         toolbarEnd={
           <>
-            <Button variant="outline">Export</Button>
+            <Button variant="outline">Export to Excel</Button>
             <Button variant="outline">Template</Button>
             <Button variant="outline" onClick={() => setLocation(appPath("/inventory/import"))}>
               Import
@@ -216,7 +216,7 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
                     {downloadPdfMutation.isPending ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Generating...
+                        Generating…
                       </>
                     ) : (
                       "Download PDF"
@@ -315,7 +315,7 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
                   setLines((p) => [...p, { catalogueId: "", ctnId: "", quantity: "", batchNumber: "", expiryDate: "", notes: "" }])
                 }
               >
-                Add Line
+                Add line
               </Button>
             </div>
             <div className="flex justify-end gap-2">

@@ -62,7 +62,7 @@ export default function Distributions({ embedInShell = false }: { embedInShell?:
           <Input placeholder="Incident" className="w-[220px]" value={incident} onChange={(e) => setIncident(e.target.value)} />
           <Input placeholder="Location" className="w-[220px]" value={location} onChange={(e) => setLocation(e.target.value)} />
           <ViewToggle value={viewMode} onChange={setViewMode} />
-          <Button data-testid="new-dist-btn" className="ml-auto" onClick={() => setOpen(true)}>New Distribution</Button>
+          <Button data-testid="new-dist-btn" className="ml-auto" onClick={() => setOpen(true)}>New distribution</Button>
         </CardContent>
       </Card>
       {viewMode === "card" ? (
@@ -120,7 +120,7 @@ export default function Distributions({ embedInShell = false }: { embedInShell?:
                       {downloadPdfMutation.isPending ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Generating...
+                          Generating…
                         </>
                       ) : (
                         "Download PDF"
@@ -136,7 +136,7 @@ export default function Distributions({ embedInShell = false }: { embedInShell?:
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
-          <DialogHeader><DialogTitle>New Distribution</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>New distribution</DialogTitle></DialogHeader>
           <div className="grid gap-3">
             <Label>Waybill</Label>
             <Select value={waybillId} onValueChange={setWaybillId}>

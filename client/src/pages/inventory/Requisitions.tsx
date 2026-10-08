@@ -150,7 +150,7 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
           </Select>
           <Input className="w-[240px]" placeholder="Search requisitions" value={search} onChange={(e) => setSearch(e.target.value)} />
           <ViewToggle value={viewMode} onChange={setViewMode} />
-          <Button data-testid="new-req-btn" className="ml-auto" onClick={() => setOpen(true)}>New Requisition</Button>
+          <Button data-testid="new-req-btn" className="ml-auto" onClick={() => setOpen(true)}>New requisition</Button>
         </CardContent>
       </Card>
 
@@ -222,7 +222,7 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
                       {downloadPdfMutation.isPending ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Generating...
+                          Generating…
                         </>
                       ) : (
                         "Download PDF"
@@ -230,6 +230,7 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
                     </Button>
                     {row.status === "draft" ? (
                       <Button
+                        variant="outline"
                         size="sm"
                         disabled={submitMutation.isPending && submitMutation.variables?.requisitionId === row.id}
                         onClick={() => submitMutation.mutate({ requisitionId: row.id })}
@@ -246,6 +247,7 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
                     ) : null}
                     {row.status === "submitted" ? (
                       <Button
+                        variant="outline"
                         size="sm"
                         data-testid="req-approve-branch-btn"
                         disabled={approveBranchMutation.isPending && approveBranchMutation.variables?.requisitionId === row.id}
@@ -263,6 +265,7 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
                     ) : null}
                     {row.status === "branch_approved" && isAdmin ? (
                       <Button
+                        variant="outline"
                         size="sm"
                         data-testid="req-approve-hq-btn"
                         disabled={approveHqMutation.isPending && approveHqMutation.variables?.requisitionId === row.id}
@@ -280,6 +283,7 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
                     ) : null}
                     {row.status === "hq_approved" ? (
                       <Button
+                        variant="outline"
                         size="sm"
                         disabled={fulfillMutation.isPending && fulfillMutation.variables?.requisitionId === row.id}
                         onClick={() => void handleFulfill(row.id)}
@@ -368,7 +372,7 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
                 <Input placeholder="Notes" value={line.notes} onChange={(e) => setLines((prev) => prev.map((x, i) => (i === idx ? { ...x, notes: e.target.value } : x)))} />
               </div>
             ))}
-            <Button variant="outline" onClick={() => setLines((p) => [...p, { catalogueId: "", quantity: "", urgency: "routine", notes: "" }])}>Add Item</Button>
+            <Button variant="outline" onClick={() => setLines((p) => [...p, { catalogueId: "", quantity: "", urgency: "routine", notes: "" }])}>Add item</Button>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
               <Button

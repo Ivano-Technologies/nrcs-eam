@@ -242,7 +242,7 @@ export default function FacilityDetail() {
           {photosQuery.isLoading ? (
             <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Loading photos...</span>
+              <span>Loading photos…</span>
             </div>
           ) : photosQuery.data?.length === 0 ? (
             <p className="text-sm text-muted-foreground py-4 text-center">
@@ -353,7 +353,7 @@ export default function FacilityDetail() {
             )}
           </section>
           <section>
-            <h3 className="mb-1 font-medium">Recent Work Orders</h3>
+            <h3 className="mb-1 font-medium">Recent work orders</h3>
             {recentWorkOrders.length === 0 ? "No recent work orders." : (
               <ul className="space-y-1">
                 {recentWorkOrders.map((w) => (

@@ -320,7 +320,7 @@ function DashboardLayoutContent({
                   <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-[20px] w-[20px] text-muted-foreground" />
                   <input
                     type="text"
-                    placeholder="Search menu..."
+                    placeholder="Search menu…"
                     aria-label="Search menu"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}

@@ -311,7 +311,7 @@ export default function Reports() {
               },
               {
                 id: "excel",
-                label: "Export Excel",
+                label: "Export to Excel",
                 onSelect: () => downloadCsv(tableRows as any[], `report-${selectedReport}.xlsx.csv`),
               },
               {

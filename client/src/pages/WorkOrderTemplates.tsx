@@ -171,7 +171,7 @@ export default function WorkOrderTemplates() {
         />
         <Button onClick={() => setIsCreateDialogOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
-          New Template
+          New template
         </Button>
       </div>
 
@@ -242,7 +242,7 @@ export default function WorkOrderTemplates() {
       }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingTemplate ? "Edit Template" : "Create New Template"}</DialogTitle>
+            <DialogTitle>{editingTemplate ? "Edit template" : "Create new template"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -350,7 +350,7 @@ export default function WorkOrderTemplates() {
                 </>
               ) : (
                 <>
-                  {editingTemplate ? "Update" : "Create"} Template
+                  {editingTemplate ? "Update template" : "Create template"}
                 </>
               )}
             </Button>

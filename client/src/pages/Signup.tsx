@@ -156,10 +156,10 @@ export default function Signup() {
             {signupMutation.isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Submitting...
+                Submitting…
               </>
             ) : (
-              "Request Access"
+              "Request access"
             )}
           </Button>
 

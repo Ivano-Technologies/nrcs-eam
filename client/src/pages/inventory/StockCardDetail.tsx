@@ -85,7 +85,7 @@ export default function StockCardDetail() {
               Saving…
             </>
           ) : (
-            "Add Stock Check"
+            "Add stock check"
           )}
         </Button>
       </div>

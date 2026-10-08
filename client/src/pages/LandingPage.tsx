@@ -57,7 +57,7 @@ export default function LandingPage() {
           Enterprise Asset Management System
         </AuthSubtitle>
         <Button asChild className={authPrimaryButtonClass}>
-          <Link href="/login">Sign In</Link>
+          <Link href="/login">Sign in</Link>
         </Button>
         <AuthFooterNote>Authorized personnel only.</AuthFooterNote>
       </GlassCard>

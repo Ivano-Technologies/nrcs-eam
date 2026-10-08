@@ -116,7 +116,7 @@ export default function WorkOrders() {
           <DialogTrigger asChild>
             <Button data-testid="work-order-create-btn">
               <Plus className="mr-2 h-4 w-4" />
-              Create Work Order
+              Create work order
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -153,7 +153,7 @@ export default function WorkOrders() {
                   id="description"
                   value={newWorkOrder.description}
                   onChange={(e) => setNewWorkOrder({ ...newWorkOrder, description: e.target.value })}
-                  placeholder="Detailed work order description..."
+                  placeholder="Detailed work order description…"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -248,10 +248,10 @@ export default function WorkOrders() {
                 {createWorkOrderMutation.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating...
+                    Creating…
                   </>
                 ) : (
-                  "Create Work Order"
+                  "Create work order"
                 )}
               </Button>
             </DialogFooter>

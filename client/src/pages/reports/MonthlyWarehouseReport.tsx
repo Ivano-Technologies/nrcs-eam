@@ -72,7 +72,7 @@ export default function MonthlyWarehouseReport() {
           </div>
           <div className="flex items-end gap-2">
             <Button onClick={() => reportQuery.refetch()} disabled={!canQuery}>
-              Generate Report
+              Generate report
             </Button>
           </div>
         </div>
@@ -100,7 +100,7 @@ export default function MonthlyWarehouseReport() {
             },
             {
               id: "excel",
-              label: excelMutation.isPending ? "Exporting Excel…" : "Export Excel",
+              label: excelMutation.isPending ? "Exporting…" : "Export to Excel",
               disabled: !canQuery || excelMutation.isPending,
               onSelect: () => {
                 void (async () => {

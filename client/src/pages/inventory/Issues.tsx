@@ -103,7 +103,7 @@ export default function Issues({ embedInShell = false }: { embedInShell?: boolea
         toolbarStart={
           <MobileColumnsToggle isMobile={isMobile} showAll={showAll} onToggle={setShowAll} />
         }
-        toolbarEnd={<Button data-testid="new-waybill-btn" onClick={() => setLocation("/app/inventory/issues/new")}>New Waybill</Button>}
+        toolbarEnd={<Button data-testid="new-waybill-btn" onClick={() => setLocation("/app/inventory/issues/new")}>New waybill</Button>}
       />
 
       <div
