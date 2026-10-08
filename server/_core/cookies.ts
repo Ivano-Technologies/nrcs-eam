@@ -28,10 +28,10 @@ function isPublicSuffixCookieDomain(value: string): boolean {
 
 /**
  * Derive the parent domain (e.g. ".techivano.com") from the incoming hostname so
- * session cookies are shared across all subdomains of the production domain.
+ * session cookies are shared across all subdomains — production and blue staging alike.
  *
+ * blue.nrcseam.techivano.com  →  .techivano.com
  * nrcseam.techivano.com       →  .techivano.com
- * www.nrcseam.techivano.com   →  .techivano.com
  * *.vercel.app / localhost    →  undefined  (host-only; browsers reject public suffixes)
  *
  * Override at any time by setting SESSION_COOKIE_DOMAIN in Vercel env vars.
