@@ -3,7 +3,7 @@ import { useFullBleed } from "@/lib/fullBleed";
 import { formatEmpty } from "@/lib/format";
 import { useLocation } from "wouter";
 import type { FacilitiesSegment } from "@/lib/facilityRoutes";
-import { parseFacilityTypeFromSearch, segmentToListFilter } from "@/lib/facilityRoutes";
+import { parseFacilityTypeFromSearch, segmentToListFilter, typeToSegment } from "@/lib/facilityRoutes";
 import { trpc } from "@/lib/trpc";
 import PageLoader from "@/components/ui/PageLoader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,12 +44,16 @@ import {
   type FacilityType,
 } from "@shared/facilities";
 import { cn } from "@/lib/utils";
-import { MapView } from "@/components/Map";
-import { DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM_COUNTRY } from "@/lib/mapDefaults";
-import { Download, Edit2, Loader2, Plus, Save, Trash2, Upload, X } from "lucide-react";
-import { ViewToggle } from "@/components/ViewToggle";
+import { Edit2, Loader2, Save, Trash2, X } from "lucide-react";
 import { CardQrCode } from "@/components/CardQrCode";
-import { ModuleFiltersCard, ModuleFilterSearch } from "@/components/ModuleFiltersCard";
+import { FacilitiesToolbar } from "@/components/facilities/FacilitiesToolbar";
+import { FacilitiesMap } from "@/components/facilities/FacilitiesMap";
+import {
+  facilityCounts,
+  filterFacilityRows,
+  siteHasLocation,
+  type FacilityStatusFilter,
+} from "@/lib/facilitiesList";
 import { useBulkImportFileInput } from "@/hooks/useBulkImportFileInput";
 import { useIsMobile } from "@/hooks/useMobile";
 
@@ -136,8 +140,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
     setViewOverride(mode);
     if (mode === "table" || mode === "card") setStoredViewMode(mode);
   };
-  const [typeFilter, setTypeFilter] = useState<string>("all"); // only used when segment === "all"
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<FacilityStatusFilter>("all");
   const [stateFilter, setStateFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("name");
@@ -148,14 +151,17 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
   const [editingId, setEditingId] = useState<number | null>(null);
   const [createForm, setCreateForm] = useState<FacilityForm>(emptyForm());
   const [editForm, setEditForm] = useState<FacilityForm>(emptyForm());
-  const [map, setMap] = useState<google.maps.Map | null>(null);
-  const [markers, setMarkers] = useState<google.maps.Marker[]>([]);
 
   const { data: allSites, isLoading, refetch } = trpc.sites.list.useQuery(undefined, {
     staleTime: 120_000,
   });
 
-  const effectiveTypeFilter = lockedFacilityType ?? (typeFilter === "all" ? "all" : typeFilter);
+  // The type select drives the route (/facilities/<segment>), so links and the sidebar stay in step.
+  const effectiveTypeFilter: FacilityType | "all" = lockedFacilityType ?? "all";
+  const onTypeChange = (type: FacilityType | "all") => {
+    const search = typeof window !== "undefined" ? window.location.search : "";
+    setLocation(appPath(`/facilities/${typeToSegment(type)}`) + search);
+  };
 
   const facilities = useMemo(() => {
     const rows = allSites ?? [];
@@ -233,18 +239,25 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
     }
   }, [location]);
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return (facilities ?? []).filter((f) => {
-      if (effectiveTypeFilter !== "all" && f.facilityType !== effectiveTypeFilter) return false;
-      if (statusFilter === "active" && !f.isActive) return false;
-      if (statusFilter === "inactive" && f.isActive) return false;
-      if (stateFilter !== "all" && (f.state ?? "") !== stateFilter) return false;
-      if (!q) return true;
-      const hay = `${f.code ?? ""} ${f.name} ${f.address ?? ""}`.toLowerCase();
-      return hay.includes(q);
-    });
-  }, [facilities, search, stateFilter, statusFilter, effectiveTypeFilter]);
+  const filtered = useMemo(
+    () =>
+      filterFacilityRows(facilities ?? [], {
+        type: effectiveTypeFilter,
+        state: stateFilter,
+        status: statusFilter,
+        q: search,
+      }),
+    [facilities, search, stateFilter, statusFilter, effectiveTypeFilter]
+  );
+  const counts = useMemo(() => facilityCounts(filtered), [filtered]);
+  const visibleIds = useMemo(() => new Set(filtered.map((f) => f.id)), [filtered]);
+  const noLocationRows = useMemo(
+    () =>
+      filtered
+        .filter((f) => !siteHasLocation(f))
+        .map((f) => ({ id: f.id, name: f.name, code: f.code, state: f.state })),
+    [filtered]
+  );
 
   const sorted = useMemo(() => {
     const rows = [...filtered];
@@ -280,35 +293,6 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
       window.localStorage.setItem("viewMode_facilities", storedViewMode);
     }
   }, [storedViewMode]);
-
-  useEffect(() => {
-    if (!map) return;
-    markers.forEach((m) => m.setMap(null));
-    const next: google.maps.Marker[] = [];
-    const bounds = new google.maps.LatLngBounds();
-    (facilities ?? []).forEach((f) => {
-      if (!f.latitude || !f.longitude) return;
-      const position = { lat: parseFloat(f.latitude), lng: parseFloat(f.longitude) };
-      const marker = new google.maps.Marker({
-        map,
-        position,
-        title: f.name,
-      });
-      marker.addListener("click", () => setLocation(appPath(`/facilities/${f.id}`)));
-      next.push(marker);
-      bounds.extend(position);
-    });
-    setMarkers(next);
-    if (next.length > 0) {
-      map.fitBounds(bounds);
-      if (next.length === 1) {
-        map.setZoom(12);
-      }
-    } else {
-      map.setCenter(DEFAULT_MAP_CENTER);
-      map.setZoom(DEFAULT_MAP_ZOOM_COUNTRY);
-    }
-  }, [facilities, map, setLocation]);
 
   const sort = (k: SortKey) => {
     if (sortKey === k) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -396,95 +380,32 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
 
   return (
     <div className="space-y-4">
-      <ModuleFiltersCard
-        filterRow={
-          <>
-            <ModuleFilterSearch
-              placeholder="Search name, code, address"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            {lockedFacilityType == null ? (
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="h-9 w-[170px]">
-                  <SelectValue placeholder="Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All types</SelectItem>
-                  {FACILITY_TYPE_VALUES.map((t) => (
-                    <SelectItem key={t} value={t}>
-                      {FACILITY_TYPE_LABELS[t]}s
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : null}
-            <Select value={stateFilter} onValueChange={setStateFilter}>
-              <SelectTrigger className="h-9 w-[170px]">
-                <SelectValue placeholder="State" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All states</SelectItem>
-                {stateOptions.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {s}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="h-9 w-[170px]">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
-          </>
-        }
-        toolbarStart={
-          <>
-            <ViewToggle value={viewMode} onChange={setViewMode} showMap />
-          </>
-        }
-        toolbarEnd={
-          <>
-            <Button
-              className="h-9"
-              variant="outline"
-              onClick={async () => {
-                const res = await exportQuery.refetch();
-                if (res.data) downloadBase64(res.data.data, res.data.filename);
-              }}
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Export to Excel
-            </Button>
-            <Button
-              className="h-9"
-              variant="outline"
-              onClick={async () => {
-                const res = await templateQuery.refetch();
-                if (res.data) downloadBase64(res.data.data, res.data.filename);
-              }}
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Template
-            </Button>
-            <label className="inline-flex cursor-pointer">
-              <Button className="h-9" asChild variant="outline">
-                <span>
-                  <Upload className="mr-2 h-4 w-4" />
-                  Import
-                </span>
-              </Button>
-              <input {...facilitiesImportFile.inputProps} />
-            </label>
-          </>
-        }
+      <FacilitiesToolbar
+        search={search}
+        onSearch={setSearch}
+        type={effectiveTypeFilter}
+        onType={onTypeChange}
+        state={stateFilter}
+        states={stateOptions}
+        onState={setStateFilter}
+        status={statusFilter}
+        onStatus={setStatusFilter}
+        counts={counts}
+        view={viewMode}
+        onView={setViewMode}
+        compact={isMobile}
+        onExport={async () => {
+          const res = await exportQuery.refetch();
+          if (res.data) downloadBase64(res.data.data, res.data.filename);
+        }}
+        onTemplate={async () => {
+          const res = await templateQuery.refetch();
+          if (res.data) downloadBase64(res.data.data, res.data.filename);
+        }}
+        onImport={() => document.getElementById(facilitiesImportFile.inputId)?.click()}
+        importBusy={facilitiesImportFile.isBusy}
       />
+      <input {...facilitiesImportFile.inputProps} aria-label="Import facilities from Excel" data-testid="facilities-import-input" />
 
       {canEditFacilities && (
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
@@ -526,9 +447,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
       )}
 
       {viewMode === "map" ? (
-        <Card>
-          <CardContent className="pt-6"><MapView onMapReady={setMap} /></CardContent>
-        </Card>
+        <FacilitiesMap visibleIds={visibleIds} noLocation={noLocationRows} />
       ) : viewMode === "card" ? (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3" data-testid="sites-list">
           {pageRows.map((f) => (
@@ -716,6 +635,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
         </Card>
       )}
 
+      {viewMode !== "map" ? (
       <div className="flex items-center justify-between">
         <div className="text-sm text-muted-foreground">{sorted.length} facilities</div>
         <div className="flex items-center gap-2">
@@ -733,6 +653,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
           <Button variant="outline" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>Next</Button>
         </div>
       </div>
+      ) : null}
     </div>
   );
 }

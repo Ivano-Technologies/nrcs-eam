@@ -299,6 +299,28 @@ export function tooltipText(f: MapFacility): { name: string; detail: string; tie
   return { name: f.name, detail, tier };
 }
 
+/** How pins are coloured: Asset Map uses readiness, the Facilities map uses status. */
+export type PinMode = "readiness" | "status";
+
+/** Status colouring: active facilities use the good token, inactive ones the offline grey. */
+export function statusTier(f: MapFacility): PinTier {
+  return f.isActive ? "good" : "offline";
+}
+
+export function pinTierFor(f: MapFacility, mode: PinMode = "readiness"): PinTier {
+  return mode === "status" ? statusTier(f) : pinTier(f);
+}
+
+export function facilityAriaLabelFor(f: MapFacility, mode: PinMode = "readiness"): string {
+  if (mode !== "status") return facilityAriaLabel(f);
+  return `${f.name}, ${TYPE_LABELS[f.facilityType]}, ${f.isActive ? "active" : "inactive"}`;
+}
+
+export function tooltipTextFor(f: MapFacility, mode: PinMode = "readiness"): { name: string; detail: string; tier: PinTier } {
+  if (mode !== "status") return tooltipText(f);
+  return { name: f.name, detail: f.isActive ? "Active" : "Inactive", tier: statusTier(f) };
+}
+
 /** Bubble radius for the Assets layer: 4.5 + 1.45·√count px. */
 export function bubbleRadius(count: number): number {
   return 4.5 + 1.45 * Math.sqrt(Math.max(0, count));
