@@ -451,7 +451,7 @@ export default function AssetMap() {
           <div data-testid="asset-map-facility-fallback" className="absolute inset-0 bg-[#F3F4F6] dark:bg-[#0F1724]">
             <div
               className="absolute flex justify-center"
-              style={isMobile ? { left: 16, right: 16, top: 16 + 52 + 8 } : { left: insetsFor(false).left, right: GAP, top: 72 }}
+              style={isMobile ? { left: GAP, right: GAP, top: 128 } : { left: insetsFor(false).left, right: GAP, top: 132 }}
             >
               <MapErrorCard message={mapError} />
             </div>
