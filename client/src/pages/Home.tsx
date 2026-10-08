@@ -481,11 +481,11 @@ export default function Home() {
 
         {bundleError ? (
 
-          <div className="mb-4 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-600 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300">
+          <div data-testid="dashboard-error-banner" className="mb-4 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300">
 
             Some dashboard data could not be loaded. Values shown may be incomplete.{" "}
 
-            <button type="button" onClick={() => void refetchBundle()} className="ml-2 underline">
+            <button type="button" onClick={() => void refetchBundle()} className="ml-2 font-medium underline" data-testid="dashboard-error-retry">
 
               Retry
 

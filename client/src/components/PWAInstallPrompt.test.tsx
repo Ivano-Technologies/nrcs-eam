@@ -56,3 +56,14 @@ describe("PWA install prompt gating (Wave A7)", () => {
     expect(screen.queryByRole("button", { name: "Later" })).not.toBeInTheDocument();
   });
 });
+
+describe("PWA install popup position (Wave B, 390)", () => {
+  it("sits above the mobile bottom nav and returns to the corner from md up", async () => {
+    const { PWA_POPUP_POSITION_CLASS } = await import("./PWAInstallPrompt");
+    expect(PWA_POPUP_POSITION_CLASS).toContain("bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))]");
+    expect(PWA_POPUP_POSITION_CLASS).toContain("inset-x-3");
+    expect(PWA_POPUP_POSITION_CLASS).toContain("md:bottom-4");
+    expect(PWA_POPUP_POSITION_CLASS).toContain("md:right-4");
+    expect(PWA_POPUP_POSITION_CLASS).not.toMatch(/(^| )bottom-4( |$)/);
+  });
+});
