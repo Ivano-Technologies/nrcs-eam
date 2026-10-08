@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
+import PageHeader from "@/components/ui/PageHeader";
+import { ClipboardList as ClipboardListIcon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -115,7 +117,7 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
     <div className="space-y-4">
       {!embedInShell ? (
         <>
-          <h1 className="text-3xl font-bold">Requisitions</h1>
+          <PageHeader icon={ClipboardListIcon} title="Order fulfillment" />
           <InventorySecondaryNav />
         </>
       ) : null}

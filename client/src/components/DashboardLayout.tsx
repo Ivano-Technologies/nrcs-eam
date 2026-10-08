@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 import { NotificationCenter } from "./NotificationCenter";
 import Footer from "./Footer";
+import { PageShell } from "@/components/ui/PageShell";
 import { ThemeToggle } from "./ui/ThemeToggle";
 import { SidebarGroupedNav } from "./SidebarGroupedNav";
 import { MobileBottomNav } from "./MobileBottomNav";
@@ -376,7 +377,7 @@ function DashboardLayoutContent({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem asChild>
-                  <Link href={appPath("/dashboard-settings")} className="cursor-pointer">
+                  <Link href={appPath("/settings")} className="cursor-pointer">
                     <User className="mr-2 h-4 w-4" />
                     <span>Profile</span>
                   </Link>
@@ -448,9 +449,9 @@ function DashboardLayoutContent({
         )}
         <main
           data-testid="app-page-main"
-          className={cn("flex-1 overflow-x-clip p-3 sm:p-4", isMobile && "pb-20")}
+          className={cn("flex-1 overflow-x-clip", isMobile && "pb-20")}
         >
-          {children}
+          <PageShell>{children}</PageShell>
         </main>
         <Footer className={isMobile ? "pb-16" : undefined} />
         {isMobile ? (

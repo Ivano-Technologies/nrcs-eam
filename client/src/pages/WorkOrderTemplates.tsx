@@ -161,7 +161,7 @@ export default function WorkOrderTemplates() {
   if (isLoading) return <PageLoader />;
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
         <PageHeader
           icon={Files}

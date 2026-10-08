@@ -3,6 +3,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
+import PageHeader from "@/components/ui/PageHeader";
+import { CalendarClock as CalendarClockIcon } from "lucide-react";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -65,7 +67,7 @@ export default function Expiry({ embedInShell = false }: { embedInShell?: boolea
     <div className="space-y-4">
       {!embedInShell ? (
         <>
-          <h1 className="text-3xl font-bold">Expiry Tracking</h1>
+          <PageHeader icon={CalendarClockIcon} title="Expiry tracking" />
           <InventorySecondaryNav />
         </>
       ) : null}

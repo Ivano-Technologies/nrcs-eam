@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Upload } from "lucide-react";
+import PageHeader from "@/components/ui/PageHeader";
 import { useBulkImportFileInput } from "@/hooks/useBulkImportFileInput";
 
 type DocType = "grn" | "waybill" | "monthly_report" | "stock_card";
@@ -61,12 +62,16 @@ export default function ImportPage({ embedInShell = false }: { embedInShell?: bo
   return (
     <div className="space-y-4">
       {!embedInShell ? (
-        <>
-          <h1 className="text-3xl font-bold">Import Pipeline</h1>
+        <div>
+          <PageHeader
+            icon={Upload}
+            title="Import"
+            subtitle="Bring GRNs, waybills, monthly reports and stock cards in from Excel or typed PDF as drafts."
+          />
           <InventorySecondaryNav />
-        </>
+        </div>
       ) : (
-        <h2 className="text-2xl font-bold">Import Pipeline</h2>
+        <h2 className="text-2xl font-bold">Import</h2>
       )}
 
       <Card>

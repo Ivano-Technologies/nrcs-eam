@@ -227,7 +227,7 @@ export default function DashboardSettings() {
       setNewPassword("");
       setConfirmPassword("");
       if (typeof window !== "undefined" && window.location.search.includes("changePassword=required")) {
-        window.history.replaceState(null, "", appPath("/dashboard-settings"));
+        window.history.replaceState(null, "", appPath("/settings"));
       }
     },
     onError: (e) => toast.error(e.message),

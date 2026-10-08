@@ -54,7 +54,7 @@ export default function Login() {
         return;
       }
       if (data.mustChangePasswordOnLogin) {
-        setLocation(`${appPath("/dashboard-settings")}?changePassword=required`);
+        setLocation(`${appPath("/settings")}?changePassword=required`);
         return;
       }
       setLocation(appPath("/"));

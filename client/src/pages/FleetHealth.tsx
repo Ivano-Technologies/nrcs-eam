@@ -66,7 +66,7 @@ export default function FleetHealth() {
 
   return (
     <ManagerFinanceGate>
-      <div className="container mx-auto space-y-6 p-4 md:p-6" data-testid="fleet-health-page">
+      <div className="space-y-6" data-testid="fleet-health-page">
         <PageHeader
           title="Fleet health"
           subtitle="Depreciation, maintenance predictions, and operational alerts for HQ weekly review."

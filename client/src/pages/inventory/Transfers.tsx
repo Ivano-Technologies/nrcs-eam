@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
+import PageHeader from "@/components/ui/PageHeader";
+import { ArrowLeftRight as ArrowLeftRightIcon } from "lucide-react";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { toast } from "sonner";
 import { Loader2, Plus, Trash2 } from "lucide-react";
@@ -160,7 +162,7 @@ export default function Transfers({ embedInShell = false }: { embedInShell?: boo
     <div className="space-y-4">
       {!embedInShell ? (
         <>
-          <h1 className="text-3xl font-bold">Transfers</h1>
+          <PageHeader icon={ArrowLeftRightIcon} title="Transfers" />
           <InventorySecondaryNav />
         </>
       ) : null}

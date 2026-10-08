@@ -19,6 +19,7 @@ import {
   SIDEBAR_GROUPS_ADMIN,
   SIDEBAR_STANDALONE_MID,
   SIDEBAR_TOP,
+  activeNavPath,
   groupIdForPath,
   type AppNavGroup,
   type AppNavItem,
@@ -161,20 +162,24 @@ export function SidebarGroupedNav({
     return items.filter((i) => !i.adminOnly || isAdmin);
   }, [searchQuery, isAdmin]);
 
+  /** Exactly one lit leaf: exact match first, then the closest parent route. */
+  const activePath = useMemo(() => {
+    const all = [
+      ...SIDEBAR_TOP,
+      ...SIDEBAR_GROUPS.flatMap((g) => filterByRole(g.items)),
+      ...SIDEBAR_STANDALONE_MID,
+      ...SIDEBAR_GROUPS_ADMIN.filter((g) => !g.adminOnly || isAdmin).flatMap((g) => g.items),
+      ...SIDEBAR_BOTTOM,
+    ].map((i) => i.path);
+    return activeNavPath(location, all, [
+      { path: INVENTORY_TRACKING_SIDEBAR_PATH, matches: locationMatchesInventoryTracking },
+    ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location, isAdmin, isManagerOrAdmin]);
+
   const renderItemButton = (item: AppNavItem, subsectionIndex?: number) => {
     const base = item.path.replace(/\/$/, "") || "/";
-    const loc = location.replace(/\/$/, "") || "/";
-    const importBase = appPath("/inventory/import").replace(/\/$/, "") || "/";
-    let isActive = loc === base || (base !== "/app" && loc.startsWith(base + "/"));
-    if (
-      !isActive &&
-      base === INVENTORY_TRACKING_SIDEBAR_PATH &&
-      locationMatchesInventoryTracking(loc) &&
-      !loc.startsWith(`${importBase}/`) &&
-      loc !== importBase
-    ) {
-      isActive = true;
-    }
+    const isActive = activePath === base;
     const badge = item.navCountBadge ? navBadgeValue(sidebarCounts ?? undefined, item.navCountBadge) : undefined;
     const TrailIcon = subsectionIndex != null ? SIDEBAR_LEAF_TRAIL_ICON : null;
     return (
@@ -217,8 +222,10 @@ export function SidebarGroupedNav({
         aria-label={g.label}
         title={isNarrow ? g.label : undefined}
         className={cn(
-          "flex w-full items-center gap-2 rounded-md border border-transparent px-2 py-1.5 text-left text-[15px] font-normal text-white transition-[background-color,color,transform] duration-200",
-          "bg-sidebar-accent/40 hover:bg-sidebar-accent/70 active:scale-[0.99] motion-reduce:active:scale-100",
+          "flex w-full items-center gap-2 rounded-md border border-transparent px-2 py-1.5 text-left text-[15px] text-white transition-[background-color,color,transform] duration-200",
+          // Groups show open state (chevron + bold label) but never the active fill.
+          "bg-transparent hover:bg-sidebar-accent/50 active:scale-[0.99] motion-reduce:active:scale-100",
+          open ? "font-semibold" : "font-normal",
           isNarrow && "justify-center px-0"
         )}
         aria-expanded={open}

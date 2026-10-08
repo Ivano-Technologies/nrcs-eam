@@ -165,7 +165,7 @@ ${updateForm.notes}`
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
-      <div className="max-w-2xl mx-auto space-y-6">
+      <div className="max-w-3xl space-y-6">
         {/* Header */}
         <PageHeader
           icon={QrCode}

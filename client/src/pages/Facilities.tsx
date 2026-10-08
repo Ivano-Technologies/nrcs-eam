@@ -481,12 +481,6 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
               </Button>
               <input {...facilitiesImportFile.inputProps} />
             </label>
-            {canEditFacilities ? (
-              <Button className="h-9" onClick={() => setIsCreateOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Facility
-              </Button>
-            ) : null}
           </>
         }
       />
@@ -495,7 +489,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogContent className="max-w-3xl">
             <DialogHeader>
-              <DialogTitle>Add Facility</DialogTitle>
+              <DialogTitle>Add facility</DialogTitle>
               <DialogDescription>Create a new facility record</DialogDescription>
             </DialogHeader>
             <FacilityFormFields

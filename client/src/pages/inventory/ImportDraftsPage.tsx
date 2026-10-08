@@ -4,7 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Upload } from "lucide-react";
+import PageHeader from "@/components/ui/PageHeader";
+import { appPath } from "@/lib/routes";
 
 export default function ImportDraftsPage({ embedInShell = false }: { embedInShell?: boolean } = {}) {
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -34,12 +36,17 @@ export default function ImportDraftsPage({ embedInShell = false }: { embedInShel
   return (
     <div className="space-y-4">
       {!embedInShell ? (
-        <>
-          <h1 className="text-3xl font-bold">Import Drafts Inbox</h1>
+        <div>
+          <PageHeader
+            icon={Upload}
+            title="Import drafts"
+            subtitle="Review imported drafts and post them when they are ready."
+            back={{ label: "Import", href: appPath("/inventory/import") }}
+          />
           <InventorySecondaryNav />
-        </>
+        </div>
       ) : (
-        <h2 className="text-2xl font-bold">Import Drafts Inbox</h2>
+        <h2 className="text-2xl font-bold">Import drafts</h2>
       )}
       <Card>
         <CardContent className="pt-4">

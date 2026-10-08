@@ -37,26 +37,25 @@ export function FacilitiesShell({
     appPath("/facilities/new") + (addType ? `?type=${encodeURIComponent(addType)}` : "");
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <PageHeader
-          icon={Building2}
-          title="Facilities Management"
-          subtitle="Centralized management of NRCS facilities, infrastructure, occupancy, and operational maintenance activities."
-          className="mb-0"
-        />
-        {canEditFacilities ? (
-          <Button className="h-9 shrink-0" asChild>
-            <Link href={newHref} className="inline-flex items-center">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Facility
-            </Link>
-          </Button>
-        ) : null}
-      </div>
+    <div>
+      <PageHeader
+        icon={Building2}
+        title="Facilities"
+        subtitle="Centralized management of NRCS facilities, infrastructure, occupancy and operational maintenance activities."
+        actions={
+          canEditFacilities ? (
+            <Button className="h-9 shrink-0" asChild>
+              <Link href={newHref} className="inline-flex items-center">
+                <Plus className="mr-2 h-4 w-4" />
+                Add facility
+              </Link>
+            </Button>
+          ) : null
+        }
+      />
 
       {showTabs ? (
-        <div className="flex flex-wrap gap-2 border-b border-border pb-2">
+        <div className="mb-5 flex flex-wrap gap-2 border-b border-border pb-2">
           {TABS.map((t) => {
             const href = appPath(t.path);
             const loc = location.replace(/\/$/, "") || "/";

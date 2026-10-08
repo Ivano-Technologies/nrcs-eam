@@ -239,7 +239,7 @@ export default function ComplianceRegister() {
   };
 
   return (
-    <div className="container mx-auto space-y-6 p-6">
+    <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <PageHeader
           icon={ShieldCheck}

@@ -6,6 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
+import PageHeader from "@/components/ui/PageHeader";
+import { PackageCheck as PackageCheckIcon } from "lucide-react";
 import { toast } from "sonner";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { Badge } from "@/components/ui/badge";
@@ -79,7 +81,7 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
     <div className="space-y-4">
       {!embedInShell ? (
         <>
-          <h1 className="text-3xl font-bold">Receipts (GRN)</h1>
+          <PageHeader icon={PackageCheckIcon} title="Receiving" />
           <InventorySecondaryNav />
         </>
       ) : null}

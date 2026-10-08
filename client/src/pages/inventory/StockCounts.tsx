@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
+import PageHeader from "@/components/ui/PageHeader";
+import { ClipboardCheck as ClipboardCheckIcon } from "lucide-react";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -67,7 +69,7 @@ export default function StockCounts({ embedInShell = false }: { embedInShell?: b
     <div className="space-y-4">
       {!embedInShell ? (
         <>
-          <h1 className="text-3xl font-bold">Stock Counts</h1>
+          <PageHeader icon={ClipboardCheckIcon} title="Stock counts" />
           <InventorySecondaryNav />
         </>
       ) : null}

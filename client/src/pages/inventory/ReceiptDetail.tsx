@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
+import PageHeader from "@/components/ui/PageHeader";
+import { appPath } from "@/lib/routes";
 import { GrnLineItemsTable, type GrnLineItem } from "@/components/wms/GrnLineItemsTable";
 import { SignatureBlock, type SignatureValue } from "@/components/wms/SignatureBlock";
 import { CtnInlineCreator } from "@/components/wms/CtnInlineCreator";
@@ -284,7 +286,7 @@ export default function ReceiptDetail() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-3xl font-bold">{savedId ? "GRN Detail" : "New GRN"}</h1>
+        <PageHeader title={savedId ? "GRN detail" : "New GRN"} back={{ label: "Receiving", href: appPath("/inventory/receipts") }} />
         <InventorySecondaryNav />
       </div>
 

@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
+import PageHeader from "@/components/ui/PageHeader";
+import { Boxes as BoxesIcon } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -45,7 +47,7 @@ export default function Kits({ embedInShell = false }: { embedInShell?: boolean 
     <div className="space-y-4">
       {!embedInShell ? (
         <>
-          <h1 className="text-3xl font-bold">Kits</h1>
+          <PageHeader icon={BoxesIcon} title="Kits" />
           <InventorySecondaryNav />
         </>
       ) : null}

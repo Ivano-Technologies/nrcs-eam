@@ -4,7 +4,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import PageLoader from "@/components/ui/PageLoader";
 import { appPath } from "@/lib/routes";
 import { lazy, Suspense } from "react";
-import { Redirect, Route, Switch, useRoute } from "wouter";
+import { Redirect, Route, Switch, useRoute, useSearch } from "wouter";
 
 const ActivityLog = lazy(() => import("@/pages/ActivityLog"));
 const ComplianceRegister = lazy(() => import("@/pages/Administration/ComplianceRegister"));
@@ -151,6 +151,12 @@ const Welcome = lazy(() => import("@/pages/Welcome"));
 const WorkOrderDetail = lazy(() => import("@/pages/WorkOrderDetail"));
 const WorkOrders = lazy(() => import("@/pages/WorkOrders"));
 const WorkOrderTemplates = lazy(() => import("@/pages/WorkOrderTemplates"));
+
+/** Old Settings URL: keep bookmarks and `?changePassword=required` working. */
+function LegacySettingsRedirect() {
+  const search = useSearch();
+  return <Redirect to={`${appPath("/settings")}${search ? `?${search}` : ""}`} replace />;
+}
 
 function ProtectedSectionSuspenseFallback() {
   return (
@@ -351,7 +357,8 @@ function ProtectedAppSectionRoutes() {
             <Route path="/app/reports/wms/expiry" component={WmsExpiryReport} />
             <Route path="/app/report-scheduling" component={ReportScheduling} />
             <Route path="/app/email-notifications" component={EmailNotifications} />
-            <Route path="/app/dashboard-settings" component={DashboardSettings} />
+            <Route path="/app/settings" component={DashboardSettings} />
+            <Route path="/app/dashboard-settings" component={LegacySettingsRedirect} />
             <Route component={NotFound} />
           </Switch>
         </DashboardLayout>

@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
+import PageHeader from "@/components/ui/PageHeader";
+import { ArrowLeftRight as ArrowLeftRightIcon } from "lucide-react";
 
 export default function Movements({ embedInShell = false }: { embedInShell?: boolean } = {}) {
   const [warehouseId, setWarehouseId] = useState("all");
@@ -53,10 +55,10 @@ export default function Movements({ embedInShell = false }: { embedInShell?: boo
   return (
     <div className="space-y-4">
       {embedInShell ? (
-        <h2 className="text-2xl font-bold">Inventory Movements</h2>
+        <h2 className="text-2xl font-bold">Inventory movements</h2>
       ) : (
         <>
-          <h1 className="text-3xl font-bold">Inventory Movements</h1>
+          <PageHeader icon={ArrowLeftRightIcon} title="Inventory movements" />
           <InventorySecondaryNav />
         </>
       )}

@@ -57,7 +57,7 @@ export default function PendingUsers() {
   const processed = pendingUsers?.filter((u) => u.status !== "pending") || [];
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="space-y-6">
       <div data-testid="pending-users-heading">
         <PageHeader
           icon={UserCheck}

@@ -11,6 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { SignatureBlock, type SignatureValue } from "@/components/wms/SignatureBlock";
 import { CtnInlineCreator } from "@/components/wms/CtnInlineCreator";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
+import PageHeader from "@/components/ui/PageHeader";
+import { appPath } from "@/lib/routes";
 import { formatNaira } from "@/lib/format";
 import { toast } from "sonner";
 import { Loader2, AlertTriangle } from "lucide-react";
@@ -308,7 +310,7 @@ export default function WaybillDetail() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-3xl font-bold">{waybillId ? "Waybill Detail" : "New Waybill"}</h1>
+        <PageHeader title={waybillId ? "Waybill detail" : "New waybill"} back={{ label: "Shipping and tracking", href: appPath("/inventory/issues") }} />
         <InventorySecondaryNav />
       </div>
 

@@ -2,7 +2,9 @@ import { useMemo, useState } from "react";
 import { useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import PageLoader from "@/components/ui/PageLoader";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import PageHeader from "@/components/ui/PageHeader";
+import { formatEmpty } from "@/lib/format";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -141,19 +143,20 @@ export default function FacilityDetail() {
 
   return (
     <div className="space-y-4">
-      <Card>
-        <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-2 space-y-0">
-          <CardTitle className="flex flex-wrap items-center gap-2">
+      <PageHeader
+        back={{ label: "Facilities", href: appPath("/facilities/all") }}
+        title={
+          <span className="flex flex-wrap items-center gap-2">
             {facility.name}
-            <Badge variant="outline">{FACILITY_TYPE_LABELS[facility.facilityType]}</Badge>
-          </CardTitle>
-          <CardDescription
-            className="mt-1 text-sm text-muted-foreground max-w-2xl line-clamp-2 sm:line-clamp-none"
-            title={FACILITY_TYPE_DESCRIPTIONS[facility.facilityType]}
-          >
-            {FACILITY_TYPE_DESCRIPTIONS[facility.facilityType]}
-          </CardDescription>
-          {isManagerOrAdmin ? (
+            <Badge variant="outline" className="text-sm font-medium">
+              {FACILITY_TYPE_LABELS[facility.facilityType]}
+            </Badge>
+          </span>
+        }
+        subtitle={FACILITY_TYPE_DESCRIPTIONS[facility.facilityType]}
+        actions={
+          <>
+            {isManagerOrAdmin ? (
             <Button
               type="button"
               variant="outline"
@@ -173,16 +176,22 @@ export default function FacilityDetail() {
                 </>
               )}
             </Button>
-          ) : null}
+            ) : null}
+          </>
+        }
+      />
+      <Card>
+        <CardHeader>
+          <CardTitle>Facility details</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-2 text-sm md:grid-cols-2">
-          <p><span className="font-medium">Code:</span> {facility.code ?? "—"}</p>
+          <p><span className="font-medium">Code:</span> {formatEmpty(facility.code)}</p>
           <p><span className="font-medium">Status:</span> {facility.isActive ? "Active" : "Inactive"}</p>
-          <p className="md:col-span-2"><span className="font-medium">Address:</span> {facility.address ?? "—"}</p>
-          <p><span className="font-medium">State:</span> {facility.state ?? "—"}</p>
-          <p><span className="font-medium">Postal code:</span> {facility.postalCode ?? "—"}</p>
-          <p><span className="font-medium">Contact:</span> {facility.contactPerson ?? "—"}</p>
-          <p><span className="font-medium">Phone:</span> {facility.contactPhone ?? "—"}</p>
+          <p className="md:col-span-2"><span className="font-medium">Address:</span> {formatEmpty(facility.address)}</p>
+          <p><span className="font-medium">State:</span> {formatEmpty(facility.state)}</p>
+          <p><span className="font-medium">Postal code:</span> {formatEmpty(facility.postalCode)}</p>
+          <p><span className="font-medium">Contact:</span> {formatEmpty(facility.contactPerson)}</p>
+          <p><span className="font-medium">Phone:</span> {formatEmpty(facility.contactPhone)}</p>
           <div className="md:col-span-2">
             <a
               className="text-primary underline-offset-4 hover:underline"
@@ -192,7 +201,7 @@ export default function FacilityDetail() {
               target="_blank"
               rel="noreferrer"
             >
-              View on Map
+              View on Google Maps
             </a>
           </div>
         </CardContent>

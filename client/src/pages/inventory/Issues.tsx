@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
+import PageHeader from "@/components/ui/PageHeader";
+import { Truck as TruckIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ModuleFiltersCard, ModuleFilterSearch } from "@/components/ModuleFiltersCard";
 import { useMobileTableColumns, MobileColumnsToggle, mobileSecondaryCol } from "@/hooks/useMobileTableColumns";
@@ -56,7 +58,7 @@ export default function Issues({ embedInShell = false }: { embedInShell?: boolea
     <div className="space-y-4">
       {!embedInShell ? (
         <>
-          <h1 className="text-3xl font-bold">Issues (Waybills)</h1>
+          <PageHeader icon={TruckIcon} title="Shipping and tracking" />
           <InventorySecondaryNav />
         </>
       ) : null}

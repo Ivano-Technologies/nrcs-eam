@@ -3,7 +3,7 @@ import { DashboardLayoutSkeleton } from "@/components/DashboardLayoutSkeleton";
 import { appPath } from "@/lib/routes";
 import { Redirect, useLocation } from "wouter";
 
-const CHANGE_PASSWORD_SETTINGS = `${appPath("/dashboard-settings")}?changePassword=required`;
+const CHANGE_PASSWORD_SETTINGS = `${appPath("/settings")}?changePassword=required`;
 
 export default function ProtectedRoute({
   children,
