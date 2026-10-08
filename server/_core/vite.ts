@@ -4,6 +4,7 @@ import { type Server } from "http";
 import { nanoid } from "nanoid";
 import path from "path";
 import { createServer as createViteServer } from "vite";
+import { isKnownSpaPath } from "../../shared/spaRoutes";
 import viteConfig from "../../vite.config";
 
 export async function setupVite(app: Express, server: Server) {
@@ -70,6 +71,8 @@ export function serveStatic(app: Express) {
       res.status(404).type("application/json").json({ error: "Not found" });
       return;
     }
+    // Unknown client paths still get the SPA shell (it renders NotFound) but with a real 404.
+    if (!isKnownSpaPath(req.path)) res.status(404);
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }
