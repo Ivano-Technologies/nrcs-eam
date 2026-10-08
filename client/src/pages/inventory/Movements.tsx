@@ -1,10 +1,13 @@
 import { useMemo, useState } from "react";
+import { DATE_INPUT_HINT, formatDateTime } from "@/lib/format";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
+import PageHeader from "@/components/ui/PageHeader";
+import { ArrowLeftRight as ArrowLeftRightIcon } from "lucide-react";
 
 export default function Movements({ embedInShell = false }: { embedInShell?: boolean } = {}) {
   const [warehouseId, setWarehouseId] = useState("all");
@@ -53,10 +56,10 @@ export default function Movements({ embedInShell = false }: { embedInShell?: boo
   return (
     <div className="space-y-4">
       {embedInShell ? (
-        <h2 className="text-2xl font-bold">Inventory Movements</h2>
+        <h2 className="text-2xl font-bold">Inventory movements</h2>
       ) : (
         <>
-          <h1 className="text-3xl font-bold">Inventory Movements</h1>
+          <PageHeader icon={ArrowLeftRightIcon} title="Inventory movements" />
           <InventorySecondaryNav />
         </>
       )}
@@ -86,8 +89,9 @@ export default function Movements({ embedInShell = false }: { embedInShell?: boo
               <SelectItem value="transfer_in">Transfer In</SelectItem>
             </SelectContent>
           </Select>
-          <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-[180px]" />
-          <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-[180px]" />
+          <Input type="date" aria-label="From date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-[180px]" />
+          <Input type="date" aria-label="To date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-[180px]" />
+          <span className="text-xs text-muted-foreground">Dates use {DATE_INPUT_HINT}</span>
           <Button variant="outline" className="ml-auto" onClick={exportCsv}>Export to Excel</Button>
         </CardContent>
       </Card>
@@ -108,14 +112,14 @@ export default function Movements({ embedInShell = false }: { embedInShell?: boo
           <tbody>
             {(movements.data ?? []).map((row) => (
               <tr key={row.id} className="border-b">
-                <td className="px-2 py-2">{row.createdAt ? new Date(row.createdAt).toLocaleString() : "—"}</td>
+                <td className="px-2 py-2">{row.createdAt ? formatDateTime(row.createdAt) : ""}</td>
                 <td className="px-2 py-2">{row.movementType}</td>
                 <td className="px-2 py-2">{row.itemCode} - {row.itemName}</td>
-                <td className="px-2 py-2">{row.fromWarehouseId ?? "—"}</td>
-                <td className="px-2 py-2">{row.toWarehouseId ?? "—"}</td>
+                <td className="px-2 py-2">{row.fromWarehouseId ?? ""}</td>
+                <td className="px-2 py-2">{row.toWarehouseId ?? ""}</td>
                 <td className="px-2 py-2 text-right">{row.quantityChange}</td>
                 <td className="px-2 py-2 text-right">{row.balanceAfter}</td>
-                <td className="px-2 py-2">{row.documentNumber ?? "—"}</td>
+                <td className="px-2 py-2">{row.documentNumber ?? ""}</td>
               </tr>
             ))}
           </tbody>

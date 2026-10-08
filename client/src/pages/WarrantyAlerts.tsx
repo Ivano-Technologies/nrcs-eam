@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatDate } from "@/lib/format";
 import { trpc } from "@/lib/trpc";
 import PageLoader from "@/components/ui/PageLoader";
 import PageHeader from "@/components/ui/PageHeader";
@@ -42,7 +43,7 @@ export default function WarrantyAlerts() {
       <div className="flex items-center justify-between">
         <PageHeader
           icon={ShieldAlert}
-          title="Warranty Alerts"
+          title="Warranty alerts"
           subtitle="Monitor asset warranties and receive expiration alerts"
           className="mb-0"
         />
@@ -86,7 +87,7 @@ export default function WarrantyAlerts() {
                     <p className="text-sm text-muted-foreground">Warranty Expiry</p>
                     <p className="font-medium flex items-center gap-2">
                       <Calendar className="h-4 w-4" />
-                      {new Date(asset.warrantyExpiry!).toLocaleDateString()}
+                      {formatDate(asset.warrantyExpiry!)}
                     </p>
                   </div>
                 </div>
@@ -104,7 +105,7 @@ export default function WarrantyAlerts() {
                   ) : (
                     <>
                       <Mail className="mr-2 h-4 w-4" />
-                      Send Alert Email
+                      Send alert email
                     </>
                   )}
                 </Button>

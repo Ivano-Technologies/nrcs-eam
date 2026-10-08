@@ -1,4 +1,6 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { TableEmptyState } from "@/components/ui/EmptyState";
+import { DateHint, formatDate } from "@/lib/format";
 import { InsuranceRegisterContent } from "@/pages/compliance/InsuranceRegister";
 import PageHeader from "@/components/ui/PageHeader";
 import { Badge } from "@/components/ui/badge";
@@ -39,7 +41,7 @@ type VehicleRow = inferRouterOutputs<AppRouter>["complianceTracking"]["vehicles"
 type GeneratorRow = inferRouterOutputs<AppRouter>["complianceTracking"]["generators"]["list"][number];
 type BuildingRow = inferRouterOutputs<AppRouter>["complianceTracking"]["buildings"]["list"][number];
 type DonorRow = inferRouterOutputs<AppRouter>["complianceTracking"]["donor"]["list"][number];
-import { Loader2, Plus, ShieldCheck } from "lucide-react";
+import { Building2, FileText, Loader2, Plus, ShieldCheck, Truck, Zap } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
@@ -239,15 +241,12 @@ export default function ComplianceRegister() {
   };
 
   return (
-    <div className="container mx-auto space-y-6 p-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <PageHeader
-          icon={ShieldCheck}
-          title="Compliance Tracking"
-          subtitle="Vehicle, generator, building safety, donor reporting, and insurance compliance"
-          className="mb-0"
-        />
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        icon={ShieldCheck}
+        title="Compliance register"
+        subtitle="Vehicle, generator, building safety, donor reporting and insurance compliance"
+      />
 
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
@@ -281,7 +280,7 @@ export default function ComplianceRegister() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Non-compliant / overdue</CardTitle>
+            <CardTitle className="text-sm">Not compliant or overdue</CardTitle>
           </CardHeader>
           <CardContent>
             <p className={cn(KPI_VALUE_CLASS, (summary?.nonCompliantCount ?? 0) > 0 && "text-red-600")}>
@@ -346,10 +345,10 @@ export default function ComplianceRegister() {
                       <TableCell>{r.description}</TableCell>
                       <TableCell>{r.branch}</TableCell>
                       <TableCell>{r.plateNumber}</TableCell>
-                      <TableCell>{r.roadWorthinessExpiry ?? "—"}</TableCell>
-                      <TableCell>{r.insuranceExpiry ?? "—"}</TableCell>
-                      <TableCell>{r.licenceExpiry ?? "—"}</TableCell>
-                      <TableCell>{r.lastInspectionDate ?? "—"}</TableCell>
+                      <TableCell>{formatDate(r.roadWorthinessExpiry)}</TableCell>
+                      <TableCell>{formatDate(r.insuranceExpiry)}</TableCell>
+                      <TableCell>{formatDate(r.licenceExpiry)}</TableCell>
+                      <TableCell>{formatDate(r.lastInspectionDate)}</TableCell>
                       <TableCell>{docBadge(r.status)}</TableCell>
                       {canEdit ? (
                         <TableCell className="space-x-1">
@@ -392,6 +391,14 @@ export default function ComplianceRegister() {
                       ) : null}
                     </TableRow>
                   ))}
+                  {(vehicles ?? []).length === 0 ? (
+                    <TableEmptyState
+                      colSpan={9 + (canEdit ? 1 : 0)}
+                      icon={Truck}
+                      title="No vehicle records yet"
+                      body="Vehicle records appear here once a vehicle is added to the register."
+                    />
+                  ) : null}
                 </TableBody>
               </Table>
             </CardContent>
@@ -428,11 +435,11 @@ export default function ComplianceRegister() {
                       <TableCell>{r.assetCode}</TableCell>
                       <TableCell>{r.description}</TableCell>
                       <TableCell>{r.branch}</TableCell>
-                      <TableCell>{r.lastServiceDate ?? "—"}</TableCell>
-                      <TableCell>{r.nextServiceDue ?? "—"}</TableCell>
-                      <TableCell>{r.serviceProvider ?? "—"}</TableCell>
-                      <TableCell>{r.runningHoursAtService ?? "—"}</TableCell>
-                      <TableCell>{r.safetyCertExpiry ?? "—"}</TableCell>
+                      <TableCell>{formatDate(r.lastServiceDate)}</TableCell>
+                      <TableCell>{r.nextServiceDue ?? ""}</TableCell>
+                      <TableCell>{r.serviceProvider ?? ""}</TableCell>
+                      <TableCell>{r.runningHoursAtService ?? ""}</TableCell>
+                      <TableCell>{formatDate(r.safetyCertExpiry)}</TableCell>
                       <TableCell>{generatorBadge(r.status)}</TableCell>
                       {canEdit ? (
                         <TableCell>
@@ -455,6 +462,14 @@ export default function ComplianceRegister() {
                       ) : null}
                     </TableRow>
                   ))}
+                  {(generators ?? []).length === 0 ? (
+                    <TableEmptyState
+                      colSpan={9 + (canEdit ? 1 : 0)}
+                      icon={Zap}
+                      title="No generator records yet"
+                      body="Generator records appear here once a generator record is added."
+                    />
+                  ) : null}
                 </TableBody>
               </Table>
             </CardContent>
@@ -492,8 +507,8 @@ export default function ComplianceRegister() {
                       <TableCell>{r.certificateType}</TableCell>
                       <TableCell>{r.issuingAuthority}</TableCell>
                       <TableCell>{r.certificateNumber}</TableCell>
-                      <TableCell>{r.issueDate ?? "—"}</TableCell>
-                      <TableCell>{r.expiryDate ?? "—"}</TableCell>
+                      <TableCell>{formatDate(r.issueDate)}</TableCell>
+                      <TableCell>{formatDate(r.expiryDate)}</TableCell>
                       <TableCell>{docBadge(r.status)}</TableCell>
                       {canEdit ? (
                         <TableCell>
@@ -516,6 +531,14 @@ export default function ComplianceRegister() {
                       ) : null}
                     </TableRow>
                   ))}
+                  {(buildings ?? []).length === 0 ? (
+                    <TableEmptyState
+                      colSpan={8 + (canEdit ? 1 : 0)}
+                      icon={Building2}
+                      title="No safety certificates yet"
+                      body="Safety certificates appear here once a certificate is added."
+                    />
+                  ) : null}
                 </TableBody>
               </Table>
             </CardContent>
@@ -552,7 +575,7 @@ export default function ComplianceRegister() {
                       <TableCell>{r.assetOrFacility}</TableCell>
                       <TableCell>{r.reportType}</TableCell>
                       <TableCell>{r.dueDate}</TableCell>
-                      <TableCell>{r.submittedDate ?? "—"}</TableCell>
+                      <TableCell>{formatDate(r.submittedDate)}</TableCell>
                       <TableCell>{donorBadge(r.status)}</TableCell>
                       {canEdit ? (
                         <TableCell>
@@ -575,6 +598,14 @@ export default function ComplianceRegister() {
                       ) : null}
                     </TableRow>
                   ))}
+                  {(donorRows ?? []).length === 0 ? (
+                    <TableEmptyState
+                      colSpan={7 + (canEdit ? 1 : 0)}
+                      icon={FileText}
+                      title="No donor reports yet"
+                      body="Donor reports appear here once a donor report is added."
+                    />
+                  ) : null}
                 </TableBody>
               </Table>
             </CardContent>
@@ -606,25 +637,25 @@ export default function ComplianceRegister() {
               value={vehicleForm.plateNumber}
               onChange={(e) => setVehicleForm((f) => ({ ...f, plateNumber: e.target.value }))}
             />
-            <Label>Road worthiness expiry</Label>
+            <Label>Road worthiness expiry <DateHint /></Label>
             <Input
               type="date"
               value={vehicleForm.roadWorthinessExpiry}
               onChange={(e) => setVehicleForm((f) => ({ ...f, roadWorthinessExpiry: e.target.value }))}
             />
-            <Label>Insurance expiry</Label>
+            <Label>Insurance expiry <DateHint /></Label>
             <Input
               type="date"
               value={vehicleForm.insuranceExpiry}
               onChange={(e) => setVehicleForm((f) => ({ ...f, insuranceExpiry: e.target.value }))}
             />
-            <Label>Licence expiry</Label>
+            <Label>Licence expiry <DateHint /></Label>
             <Input
               type="date"
               value={vehicleForm.licenceExpiry}
               onChange={(e) => setVehicleForm((f) => ({ ...f, licenceExpiry: e.target.value }))}
             />
-            <Label>Last inspection</Label>
+            <Label>Last inspection <DateHint /></Label>
             <Input
               type="date"
               value={vehicleForm.lastInspectionDate}
@@ -680,7 +711,7 @@ export default function ComplianceRegister() {
               value={genForm.assetCode}
               onChange={(e) => setGenForm((f) => ({ ...f, assetCode: e.target.value }))}
             />
-            <Label>Next service due</Label>
+            <Label>Next service due <DateHint /></Label>
             <Input
               type="date"
               value={genForm.nextServiceDue}
@@ -757,7 +788,7 @@ export default function ComplianceRegister() {
                 ))}
               </SelectContent>
             </Select>
-            <Label>Expiry date</Label>
+            <Label>Expiry date <DateHint /></Label>
             <Input
               type="date"
               value={buildingForm.expiryDate}
@@ -829,13 +860,13 @@ export default function ComplianceRegister() {
                 ))}
               </SelectContent>
             </Select>
-            <Label>Due date</Label>
+            <Label>Due date <DateHint /></Label>
             <Input
               type="date"
               value={donorForm.dueDate}
               onChange={(e) => setDonorForm((f) => ({ ...f, dueDate: e.target.value }))}
             />
-            <Label>Submitted date</Label>
+            <Label>Submitted date <DateHint /></Label>
             <Input
               type="date"
               value={donorForm.submittedDate}

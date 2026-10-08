@@ -9,7 +9,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { ListFilter, List as ListIcon, Search, X } from "lucide-react";
 import type { FacilityType } from "@shared/facilities";
 import { MapView, mapLoadErrorMessage, type MapColorScheme } from "@/components/Map";
-import { DataLoadError, FacilityPanel } from "@/components/assetMap/FacilityPanel";
+import { CompactFacilityCard, DataLoadError, FacilityPanel } from "@/components/assetMap/FacilityPanel";
 import { FacilityDrawer } from "@/components/assetMap/FacilityDrawer";
 import { EmptyMapCard, LayerBar, MapControls, MapErrorCard, NoLocationChip, TileShimmer } from "@/components/assetMap/MapChrome";
 import { MockMapCanvas } from "@/components/assetMap/MockMapCanvas";
@@ -39,16 +39,26 @@ import {
   type MapLayer,
 } from "@/lib/assetMap/model";
 import { useMapSelection, type Insets } from "@/lib/assetMap/useMapSelection";
+import { useFullBleed } from "@/lib/fullBleed";
+import {
+  COMPACT_PANEL_W,
+  DRAWER_W,
+  MAP_GAP as GAP,
+  PANEL_W,
+  collapsedLayerBarPlacement,
+  desktopLeftInset,
+  isNarrowMap,
+  mobileEmptyCardBox,
+  showMobileEmptyCard,
+  withLabelRoom,
+} from "@/lib/assetMap/layout";
 import type { ReadinessTier } from "@/lib/facilityMapHelpers";
 import { DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM_COUNTRY } from "@/lib/mapDefaults";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 
-const PANEL_W = 360;
-const DRAWER_W = 368;
 const TABLET_DRAWER_W = 360;
 const RAIL_W = 56;
-const GAP = 16;
 /** Leaves Google's logo and attribution visible below floating panels. */
 const BOTTOM_INSET = 40;
 
@@ -85,9 +95,10 @@ function readInitialUrl() {
   return parseMapSearch(window.location.search);
 }
 
-/** Element height, plus whether it has held still for 250ms (layout settles after mount). */
-function useElementHeight(ref: React.RefObject<HTMLElement | null>): { height: number; stable: boolean } {
+/** Element size, plus whether it has held still for 250ms (layout settles after mount). */
+function useElementSize(ref: React.RefObject<HTMLElement | null>): { width: number; height: number; stable: boolean } {
   const [h, setH] = useState(0);
+  const [w, setW] = useState(0);
   const [stable, setStable] = useState(false);
   useLayoutEffect(() => {
     const el = ref.current;
@@ -95,6 +106,7 @@ function useElementHeight(ref: React.RefObject<HTMLElement | null>): { height: n
     let timer = 0;
     const update = () => {
       setH(el.clientHeight);
+      setW(el.clientWidth);
       setStable(false);
       window.clearTimeout(timer);
       timer = window.setTimeout(() => setStable(true), 250);
@@ -108,10 +120,29 @@ function useElementHeight(ref: React.RefObject<HTMLElement | null>): { height: n
       window.clearTimeout(timer);
     };
   }, [ref]);
-  return { height: h, stable };
+  return { width: w, height: h, stable };
+}
+
+/** Width and height of an element (or its first child) that may mount later (0 until it exists). */
+function useOptionalSize<T extends HTMLElement>(firstChild = false): [(el: T | null) => void, { width: number; height: number }] {
+  const [host, setEl] = useState<T | null>(null);
+  const [size, setSize] = useState({ width: 0, height: 0 });
+  useLayoutEffect(() => {
+    const el = firstChild ? (host?.firstElementChild as HTMLElement | null | undefined) : host;
+    if (!el) return;
+    const update = () =>
+      setSize((s) => (s.width === el.offsetWidth && s.height === el.offsetHeight ? s : { width: el.offsetWidth, height: el.offsetHeight }));
+    update();
+    if (typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [host, firstChild]);
+  return [setEl, size];
 }
 
 export default function AssetMap() {
+  useFullBleed(true);
   const [initial] = useState(readInitialUrl);
   const mapMock = initial.mapMock;
   const scheme = useMapScheme();
@@ -175,8 +206,16 @@ export default function AssetMap() {
 
   /* ---------------- geometry ---------------- */
   const frameRef = useRef<HTMLDivElement>(null);
-  const { height: frameHeight, stable: frameStable } = useElementHeight(frameRef);
+  const { width: frameWidth, height: frameHeight, stable: frameStable } = useElementSize(frameRef);
   const drawerRef = useRef<HTMLDivElement>(null);
+  /** Desktop: the panel and an open drawer would leave under 480px of map, so the panel collapses. */
+  const narrowMap = isDesktop && isNarrowMap(frameWidth);
+  /** The user expanded the compact card while the drawer is open. Resets when the drawer closes. */
+  const [panelExpanded, setPanelExpanded] = useState(false);
+  const panelCollapsedFor = useCallback(
+    (drawerOpen: boolean) => drawerOpen && narrowMap && !panelExpanded,
+    [narrowMap, panelExpanded]
+  );
 
   const insetsFor = useCallback(
     (drawerOpen: boolean): Insets => {
@@ -186,12 +225,18 @@ export default function AssetMap() {
           : snapHeight(listSnap, frameHeight);
         return { top: 16 + 52 + (noLocationCount > 0 ? 48 : 0), right: 16, bottom: sheet, left: 16 };
       }
-      const left = isDesktop ? GAP + PANEL_W + GAP : GAP + RAIL_W + GAP;
+      const left = isDesktop ? desktopLeftInset(panelCollapsedFor(drawerOpen)) : GAP + RAIL_W + GAP;
       const right = drawerOpen ? GAP + (isDesktop ? DRAWER_W : TABLET_DRAWER_W) + GAP : GAP + 48;
       return { top: 72, right, bottom: BOTTOM_INSET, left };
     },
-    [isMobile, isDesktop, frameHeight, detailSnap, listSnap, noLocationCount]
+    [isMobile, isDesktop, frameHeight, detailSnap, listSnap, noLocationCount, panelCollapsedFor]
   );
+
+  /** Insets for panning a selected pin into view. With the panel collapsed, the pin's label must fit too. */
+  const panInsets = useCallback((): Insets => {
+    const base = insetsFor(true);
+    return panelCollapsedFor(true) ? withLabelRoom(base, frameWidth) : base;
+  }, [insetsFor, panelCollapsedFor, frameWidth]);
 
   /** Fitting may let the notice chip overlap the far north on phones, as in the mockup. */
   const fitInsetsFor = useCallback(
@@ -210,10 +255,10 @@ export default function AssetMap() {
   const mockRef = useRef<MapController | null>(null);
 
   const byIdRef = useRef(byId);
-  const insetsRef = useRef(insetsFor);
+  const panInsetsRef = useRef(panInsets);
   useLayoutEffect(() => {
     byIdRef.current = byId;
-    insetsRef.current = insetsFor;
+    panInsetsRef.current = panInsets;
   });
   const ensureVisible = useCallback((id: number) => {
     const f = byIdRef.current.get(id);
@@ -222,11 +267,13 @@ export default function AssetMap() {
     // Wait a frame so the drawer insets are current; this only ever pans.
     window.requestAnimationFrame(() => {
       if (mapErrorRef.current) return;
-      controllerRef.current?.ensureVisible(pos, insetsRef.current(true));
+      controllerRef.current?.ensureVisible(pos, panInsetsRef.current());
     });
   }, []);
   const { selectedId, select, clear } = useMapSelection({ ensureVisible });
   const selected = selectedId != null ? byId.get(selectedId) : undefined;
+  // Closing the drawer always brings back the full panel; the next narrow drawer starts collapsed.
+  if (selectedId == null && panelExpanded) setPanelExpanded(false);
 
   const detailQuery = trpc.sites.mapFacilityDetail.useQuery(
     { id: selectedId ?? 0 },
@@ -446,6 +493,25 @@ export default function AssetMap() {
     if (selectedId != null) drawerRef.current?.focus({ preventScroll: true });
   }, [selectedId]);
 
+  /* ---------------- collapsed panel (desktop, narrow map, drawer open) ---------------- */
+  const [compactCardRef, compactCardSize] = useOptionalSize<HTMLElement>();
+  const [layerBarRef, layerBarSize] = useOptionalSize<HTMLDivElement>(true);
+  const [controlsRef, controlsSize] = useOptionalSize<HTMLDivElement>();
+  const panelHostRef = useRef<HTMLDivElement>(null);
+  const savedPanelScroll = useRef<number | null>(null);
+  const panelCollapsed = isDesktop && panelCollapsedFor(Boolean(selected));
+  // The panel stays mounted (hidden) while collapsed. Remember its list scroll and put it back on restore.
+  useLayoutEffect(() => {
+    const scroller = panelHostRef.current?.querySelector<HTMLElement>("[data-panel-scroll]");
+    if (!scroller) return;
+    if (panelCollapsed) {
+      if (savedPanelScroll.current == null) savedPanelScroll.current = scroller.scrollTop;
+    } else if (savedPanelScroll.current != null) {
+      scroller.scrollTop = savedPanelScroll.current;
+      savedPanelScroll.current = null;
+    }
+  }, [panelCollapsed]);
+
   /* ---------------- render ---------------- */
   const colorScheme: MapColorScheme = scheme === "dark" ? "DARK" : "LIGHT";
   const drawerOpen = Boolean(selected);
@@ -492,8 +558,19 @@ export default function AssetMap() {
 
   const controlsRight = drawerOpen && !isMobile ? GAP + (isDesktop ? DRAWER_W : TABLET_DRAWER_W) + GAP : GAP;
 
+  const layerBarPlacement = panelCollapsed
+    ? collapsedLayerBarPlacement({ frameWidth, layerBarWidth: layerBarSize.width, compactCardHeight: compactCardSize.height })
+    : null;
+  const layerBarStyle: React.CSSProperties = isMobile
+    ? { left: GAP, right: GAP, top: GAP }
+    : layerBarPlacement?.mode === "centred"
+      ? { left: layerBarPlacement.left, width: layerBarPlacement.width, top: GAP }
+      : layerBarPlacement
+        ? { left: layerBarPlacement.left, top: layerBarPlacement.top }
+        : { left: isDesktop ? GAP + PANEL_W + GAP : GAP + RAIL_W + GAP, top: GAP };
+
   return (
-    <div className="-mx-3 -mt-3 flex h-[calc(100dvh-136px)] min-h-[480px] flex-col gap-3 sm:mx-0 sm:mt-0 sm:h-[calc(100dvh-152px)] sm:min-h-[520px] md:h-[calc(100dvh-88px)]">
+    <div className="-mx-4 -mb-6 -mt-6 flex h-[calc(100dvh-136px)] min-h-[480px] flex-col gap-3 sm:-mx-2 sm:-my-2 sm:h-[calc(100dvh-152px)] sm:min-h-[520px] md:h-[calc(100dvh-88px)]">
       <style>{SHIMMER_CSS}</style>
       <header className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1 max-sm:sr-only">
         <div className="min-w-0">
@@ -556,31 +633,63 @@ export default function AssetMap() {
 
         {!mapError ? <TileShimmer active={tilesLoading} /> : null}
 
-        {/* Empty state: 35% scrim plus a card in the free area */}
+        {/* Empty state: 35% scrim plus a card in the free area. Phones: the card only with the list sheet at peek. */}
         {isEmpty && !mapError ? (
           <>
             <div className="pointer-events-none absolute inset-0 z-[2] bg-[#FAFAF7]/35 dark:bg-[#0F1724]/35" aria-hidden="true" />
+            {!isMobile || showMobileEmptyCard(listSnap, drawerOpen) ? (
             <div
               className="pointer-events-none absolute z-[5] flex items-center justify-center"
-              style={{
-                left: insetsFor(drawerOpen).left,
-                right: insetsFor(drawerOpen).right,
-                top: insetsFor(drawerOpen).top,
-                bottom: insetsFor(drawerOpen).bottom,
-              }}
+              data-testid="asset-map-empty-area"
+              style={
+                isMobile
+                  ? mobileEmptyCardBox({
+                      controlsRight,
+                      controlsWidth: controlsSize.width,
+                      peekHeight: snapHeight("peek", frameHeight),
+                    })
+                  : {
+                      left: insetsFor(drawerOpen).left,
+                      right: insetsFor(drawerOpen).right,
+                      top: insetsFor(drawerOpen).top,
+                      bottom: insetsFor(drawerOpen).bottom,
+                    }
+              }
             >
-              <EmptyMapCard summary={filterSummary(filters)} onClear={clearFilters} />
+              <EmptyMapCard
+                summary={filterSummary(filters)}
+                onClear={clearFilters}
+                className={isMobile ? "w-full max-w-none" : undefined}
+              />
             </div>
+            ) : null}
           </>
         ) : null}
 
         {/* Desktop panel */}
         {isDesktop ? (
-          <FacilityPanel
-            {...panelProps}
-            className={cn(surfaceClass, "absolute z-10 overflow-hidden")}
-            style={{ left: GAP, top: GAP, bottom: BOTTOM_INSET, width: PANEL_W }}
-          />
+          <div ref={panelHostRef} className="contents">
+            <FacilityPanel
+              {...panelProps}
+              concealed={panelCollapsed}
+              onCollapse={narrowMap && drawerOpen && panelExpanded ? () => setPanelExpanded(false) : undefined}
+              className={cn(surfaceClass, "absolute z-10 overflow-hidden")}
+              style={{ left: GAP, top: GAP, bottom: BOTTOM_INSET, width: PANEL_W }}
+            />
+            {panelCollapsed ? (
+              <CompactFacilityCard
+                ref={compactCardRef}
+                searchText={searchText}
+                onSearchText={setSearchText}
+                onSearchEnter={onSearchEnter}
+                count={filtered.length}
+                onMap={onMapCount}
+                onExpand={() => setPanelExpanded(true)}
+                className={cn(surfaceClass, "absolute z-10")}
+                style={{ left: GAP, top: GAP, width: COMPACT_PANEL_W }}
+              />
+            ) : null}
+          </div>
         ) : null}
 
         {/* Tablet rail */}
@@ -630,12 +739,14 @@ export default function AssetMap() {
 
         {/* Layer bar and notice chip */}
         <div
-          className="pointer-events-none absolute z-10 flex flex-col items-start gap-2"
-          style={
-            isMobile
-              ? { left: GAP, right: GAP, top: GAP }
-              : { left: isDesktop ? GAP + PANEL_W + GAP : GAP + RAIL_W + GAP, top: GAP }
-          }
+          ref={layerBarRef}
+          data-testid="asset-map-layer-bar"
+          data-placement={layerBarPlacement?.mode ?? "besidePanel"}
+          className={cn(
+            "pointer-events-none absolute z-10 flex flex-col gap-2",
+            layerBarPlacement?.mode === "centred" ? "items-center" : "items-start"
+          )}
+          style={layerBarStyle}
         >
           <LayerBar
             layer={layer}
@@ -656,6 +767,7 @@ export default function AssetMap() {
         {/* Map controls */}
         {!mapError && !(isMobile && drawerOpen) ? (
           <MapControls
+            ref={controlsRef}
             touch={touch}
             onZoomIn={() => controllerRef.current?.zoomBy(1)}
             onZoomOut={() => controllerRef.current?.zoomBy(-1)}

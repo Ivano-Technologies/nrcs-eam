@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { formatEmpty, formatDate } from "@/lib/format";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useMobileTableColumns, MobileColumnsToggle, mobileSecondaryCol } from "@/hooks/useMobileTableColumns";
@@ -66,15 +67,15 @@ export default function StockCardDetail() {
 
       <div className="grid gap-3 rounded-md border p-4 md:grid-cols-2">
         <div><span className="text-muted-foreground">Description:</span> {card.data.card.description || card.data.card.itemName}</div>
-        <div><span className="text-muted-foreground">Item Code:</span> {card.data.card.itemCode || "—"}</div>
-        <div><span className="text-muted-foreground">Measure Unit:</span> {card.data.card.measureUnit || "—"}</div>
+        <div><span className="text-muted-foreground">Item Code:</span> {card.data.card.itemCode || ""}</div>
+        <div><span className="text-muted-foreground">Measure Unit:</span> {card.data.card.measureUnit || ""}</div>
         <div><span className="text-muted-foreground">CTN/Donor:</span> {card.data.card.ctnCode} / {card.data.card.donorCode}</div>
-        <div><span className="text-muted-foreground">Expiry Date:</span> {card.data.card.expiryDate || "—"}</div>
-        <div><span className="text-muted-foreground">Stock Minimum:</span> {card.data.card.stockMinimum ?? "—"}</div>
+        <div><span className="text-muted-foreground">Expiry Date:</span> {formatDate(card.data.card.expiryDate)}</div>
+        <div><span className="text-muted-foreground">Stock Minimum:</span> {card.data.card.stockMinimum ?? ""}</div>
       </div>
 
       <div className="grid gap-2 rounded-md border p-4 md:grid-cols-5">
-        <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+        <Input type="date" aria-label="Count date" value={date} onChange={(e) => setDate(e.target.value)} />
         <Input placeholder="Counted qty" value={countedQty} onChange={(e) => setCountedQty(e.target.value)} />
         <Input placeholder="Supervisor ID (for retroactive)" value={supervisorId} onChange={(e) => setSupervisorId(e.target.value)} />
         <Input placeholder="Notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
@@ -85,7 +86,7 @@ export default function StockCardDetail() {
               Saving…
             </>
           ) : (
-            "Add Stock Check"
+            "Add stock check"
           )}
         </Button>
       </div>
@@ -93,7 +94,7 @@ export default function StockCardDetail() {
       <div className="flex justify-end">
         <MobileColumnsToggle isMobile={isMobile} showAll={showAll} onToggle={setShowAll} />
       </div>
-      <div className="frozen-table-wrap sticky-first-col overflow-x-auto rounded-md border">
+      <div className="frozen-table-wrap sticky-first-col rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
@@ -113,15 +114,15 @@ export default function StockCardDetail() {
               <TableRow key={row.id}>
                 <TableCell>{row.date}</TableCell>
                 <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>
-                  {row.sourceType === "stock_check" ? "— STOCK CHECK" : row.documentRef || "—"}
+                  {row.sourceType === "stock_check" ? "Stock check" : row.documentRef || ""}
                 </TableCell>
-                <TableCell>{row.fromTo || "—"}</TableCell>
-                <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.createdByName || "—"}</TableCell>
+                <TableCell>{row.fromTo || ""}</TableCell>
+                <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{formatEmpty(row.createdByName)}</TableCell>
                 <TableCell className={cn("text-right", mobileSecondaryCol(showAllColumns))}>{row.quantityIn}</TableCell>
                 <TableCell className={cn("text-right", mobileSecondaryCol(showAllColumns))}>{row.quantityOut}</TableCell>
                 <TableCell className="text-right">{row.runningBalance}</TableCell>
-                <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.remarks || "—"}</TableCell>
-                <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.binCardId ?? "—"}</TableCell>
+                <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.remarks || ""}</TableCell>
+                <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.binCardId ?? ""}</TableCell>
               </TableRow>
             ))}
           </TableBody>

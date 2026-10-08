@@ -49,10 +49,10 @@ export function ModuleFiltersCard({
             )}
           >
             {toolbarStart != null ? (
-              <div className="flex flex-wrap items-center gap-2">{toolbarStart}</div>
+              <div className="flex shrink-0 flex-wrap items-center gap-2">{toolbarStart}</div>
             ) : null}
             {toolbarEnd != null ? (
-              <div className="flex flex-wrap items-center gap-2 md:ml-auto md:justify-end">{toolbarEnd}</div>
+              <div className="flex min-w-0 flex-wrap items-center gap-2 md:ml-auto md:justify-end">{toolbarEnd}</div>
             ) : null}
           </div>
         ) : null}

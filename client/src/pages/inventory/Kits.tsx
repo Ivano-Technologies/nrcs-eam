@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
+import PageHeader from "@/components/ui/PageHeader";
+import { Boxes as BoxesIcon } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -45,7 +47,7 @@ export default function Kits({ embedInShell = false }: { embedInShell?: boolean 
     <div className="space-y-4">
       {!embedInShell ? (
         <>
-          <h1 className="text-3xl font-bold">Kits</h1>
+          <PageHeader icon={BoxesIcon} title="Kits" />
           <InventorySecondaryNav />
         </>
       ) : null}
@@ -55,7 +57,7 @@ export default function Kits({ embedInShell = false }: { embedInShell?: boolean 
           <TabsTrigger value="operations">Kit Operations</TabsTrigger>
         </TabsList>
         <TabsContent value="catalogue" className="space-y-3">
-          {isManagerOrAdmin ? <Button onClick={() => setOpen(true)}>Add Kit</Button> : null}
+          {isManagerOrAdmin ? <Button onClick={() => setOpen(true)}>Add kit</Button> : null}
           <div className="rounded-md border">
             <table className="w-full text-sm">
               <thead className="bg-muted/50">
@@ -147,7 +149,7 @@ export default function Kits({ embedInShell = false }: { embedInShell?: boolean 
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
-          <DialogHeader><DialogTitle>Add Kit</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Add kit</DialogTitle></DialogHeader>
           <div className="grid gap-3">
             <Label>Kit Code</Label>
             <Input value={kitCode} onChange={(e) => setKitCode(e.target.value)} />
@@ -175,7 +177,7 @@ export default function Kits({ embedInShell = false }: { embedInShell?: boolean 
                 <Input placeholder="Qty" value={line.quantity} onChange={(e) => setComponents((prev) => prev.map((x, i) => (i === idx ? { ...x, quantity: e.target.value } : x)))} />
               </div>
             ))}
-            <Button variant="outline" onClick={() => setComponents((p) => [...p, { catalogueId: "", quantity: "" }])}>Add Component</Button>
+            <Button variant="outline" onClick={() => setComponents((p) => [...p, { catalogueId: "", quantity: "" }])}>Add component</Button>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
               <Button

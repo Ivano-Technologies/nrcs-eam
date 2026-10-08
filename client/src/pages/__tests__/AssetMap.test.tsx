@@ -186,6 +186,34 @@ describe("Asset Map (mapMock)", () => {
     expect(screen.getByRole("dialog", { name: `<img src=x onerror="alert(1)">Clinic` })).toBeInTheDocument();
   });
 
+  it("the facility link uses the map link token, never text-primary", async () => {
+    await renderPage("?mapMock=1");
+    fireEvent.click(screen.getByTestId("asset-map-row-KAN-001"));
+    const link = screen.getByTestId("asset-map-parent-facility-link");
+    expect(link).toHaveTextContent("National Headquarters");
+    expect(link.className).toContain("text-[#1E3A8A]");
+    expect(link.className).toContain("dark:text-[#93C5FD]");
+    expect(link.className).not.toMatch(/\btext-primary\b/);
+  });
+
+  it("search and the count are a fixed header; only the content below scrolls", async () => {
+    await renderPage("?mapMock=1");
+    const panel = screen.getByTestId("asset-map-facility-panel");
+    const header = within(panel).getByTestId("asset-map-panel-header");
+    const scroll = panel.querySelector("[data-panel-scroll]") as HTMLElement;
+    expect(within(header).getByTestId("asset-map-search")).toBeInTheDocument();
+    expect(within(header).getByTestId("asset-map-count")).toHaveTextContent("facilities");
+    expect(header.contains(scroll)).toBe(false);
+    expect(scroll.contains(within(panel).getByTestId("asset-map-count"))).toBe(false);
+    expect(within(scroll).getByTestId("asset-map-list")).toBeInTheDocument();
+    expect(within(scroll).getByText("Stock readiness")).toBeInTheDocument();
+  });
+
+  it("the offline pill never wraps", async () => {
+    await renderPage("?mapMock=1");
+    expect(screen.getAllByTestId("asset-map-status-filter")[0].className).toContain("whitespace-nowrap");
+  });
+
   it("Escape closes the drawer", async () => {
     await renderPage("?mapMock=1");
     fireEvent.click(screen.getByTestId("asset-map-row-KAN-001"));
@@ -226,3 +254,144 @@ describe("Asset Map (Google map path)", () => {
     expect(fakeMap.setZoom).not.toHaveBeenCalled();
   });
 });
+
+/** Gives every element a fixed clientWidth so the page sees a real frame width (jsdom reports 0). */
+function stubFrameWidth(width: number) {
+  const proto = HTMLElement.prototype;
+  const original = Object.getOwnPropertyDescriptor(proto, "clientWidth");
+  Object.defineProperty(proto, "clientWidth", { configurable: true, get: () => width });
+  return () => {
+    if (original) Object.defineProperty(proto, "clientWidth", original);
+  };
+}
+
+describe("Asset Map narrow desktop (drawer open, under 480px of free map)", () => {
+  let restore: () => void = () => {};
+  afterEach(() => restore());
+
+  it("collapses the panel to the compact card, centres the layer bar, and restores everything on close", async () => {
+    restore = stubFrameWidth(992);
+    await renderPage("?mapMock=1");
+    const panel = screen.getByTestId("asset-map-facility-panel");
+    const scroller = panel.querySelector<HTMLElement>("[data-panel-scroll]")!;
+    scroller.scrollTop = 140;
+    expect(screen.queryByTestId("asset-map-compact-panel")).not.toBeInTheDocument();
+    expect(screen.getByTestId("asset-map-layer-bar")).toHaveAttribute("data-placement", "besidePanel");
+
+    fireEvent.click(screen.getByTestId("asset-map-row-KAN-001"));
+    expect(screen.getByTestId("asset-map-drawer")).toBeInTheDocument();
+    const card = screen.getByTestId("asset-map-compact-panel");
+    expect(card).toHaveTextContent("6 facilities · 4 on the map");
+    expect(panel).toHaveAttribute("data-concealed", "true");
+    expect(panel).toHaveAttribute("aria-hidden", "true");
+    const bar = screen.getByTestId("asset-map-layer-bar");
+    expect(bar).toHaveAttribute("data-placement", "centred");
+    expect(bar.style.left).toBe("256px");
+    expect(bar.style.width).toBe("336px");
+
+    // Selecting scrolls the hidden list to the row; closing must put the scroll back.
+    scroller.scrollTop = 0;
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByTestId("asset-map-compact-panel")).not.toBeInTheDocument();
+    expect(panel).not.toHaveAttribute("data-concealed");
+    expect(scroller.scrollTop).toBe(140);
+    expect(screen.getByTestId("asset-map-layer-bar")).toHaveAttribute("data-placement", "besidePanel");
+  });
+
+  it("the chevron expands the full panel while the drawer stays open, and collapses it again", async () => {
+    restore = stubFrameWidth(992);
+    await renderPage("?mapMock=1");
+    fireEvent.click(screen.getByTestId("asset-map-row-KAN-001"));
+    fireEvent.click(screen.getByTestId("asset-map-panel-expand"));
+    expect(screen.queryByTestId("asset-map-compact-panel")).not.toBeInTheDocument();
+    expect(screen.getByTestId("asset-map-facility-panel")).not.toHaveAttribute("data-concealed");
+    expect(screen.getByTestId("asset-map-drawer")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("asset-map-panel-collapse"));
+    expect(screen.getByTestId("asset-map-compact-panel")).toBeInTheDocument();
+    // The next drawer after a close starts collapsed again.
+    fireEvent.click(screen.getByTestId("asset-map-panel-expand"));
+    fireEvent.keyDown(window, { key: "Escape" });
+    fireEvent.click(screen.getByTestId("asset-map-row-BOR-001"));
+    expect(screen.getByTestId("asset-map-compact-panel")).toBeInTheDocument();
+  });
+
+  it("the compact search filters the same list", async () => {
+    restore = stubFrameWidth(992);
+    await renderPage("?mapMock=1");
+    fireEvent.click(screen.getByTestId("asset-map-row-KAN-001"));
+    fireEvent.change(screen.getByTestId("asset-map-compact-search"), { target: { value: "Borno" } });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 250));
+    });
+    expect(screen.getByTestId("asset-map-compact-panel")).toHaveTextContent("1 facility · 1 on the map");
+    expect(screen.getByTestId("asset-map-search")).toHaveValue("Borno");
+  });
+
+  it("wide frames keep the full panel with the drawer open", async () => {
+    restore = stubFrameWidth(1632);
+    await renderPage("?mapMock=1");
+    fireEvent.click(screen.getByTestId("asset-map-row-KAN-001"));
+    expect(screen.queryByTestId("asset-map-compact-panel")).not.toBeInTheDocument();
+    expect(screen.getByTestId("asset-map-facility-panel")).not.toHaveAttribute("data-concealed");
+    expect(screen.getByTestId("asset-map-layer-bar")).toHaveAttribute("data-placement", "besidePanel");
+  });
+
+  it("pans (never zooms) so the pin and its label land between the compact card and the drawer", async () => {
+    restore = stubFrameWidth(992);
+    await renderPage("");
+    fakeMap.panBy.mockClear();
+    fireEvent.click(screen.getByTestId("asset-map-row-KAN-001"));
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 50));
+    });
+    // Map div is 1000 wide; Kano projects at x=900. Free area right edge: 1000 - (400 drawer + 100 label room) - 32.
+    expect(fakeMap.panBy).toHaveBeenCalledWith(900 - (1000 - 500 - 32), 0);
+    expect(fakeMap.setZoom).not.toHaveBeenCalled();
+    expect(fakeMap.fitBounds).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("Asset Map phone empty card", () => {
+  function setPhone() {
+    window.matchMedia = ((q: string) => ({
+      matches: q.includes("pointer: coarse"),
+      media: q,
+      addEventListener() {},
+      removeEventListener() {},
+    })) as unknown as typeof window.matchMedia;
+  }
+
+  it("hides the map empty card while the list sheet is above peek and shows it at peek", async () => {
+    setPhone();
+    await renderPage("?mapMock=1&types=clinic&tiers=low");
+    const sheet = screen.getByTestId("asset-map-list-sheet");
+    const handle = within(sheet).getByRole("button", { name: /Facility list: (expand|collapse)/ });
+    const tap = () => {
+      fireEvent.pointerDown(handle, { clientY: 500, pointerId: 1 });
+      fireEvent.pointerUp(handle, { clientY: 500, pointerId: 1 });
+    };
+    expect(sheet).toHaveAttribute("data-snap", "half");
+    expect(screen.queryByTestId("asset-map-empty")).not.toBeInTheDocument();
+    tap();
+    expect(sheet).toHaveAttribute("data-snap", "full");
+    expect(screen.queryByTestId("asset-map-empty")).not.toBeInTheDocument();
+    tap();
+    expect(sheet).toHaveAttribute("data-snap", "peek");
+    expect(screen.getByTestId("asset-map-empty")).toBeInTheDocument();
+    // The card box sits right of the 16px inset and left of the control column (width 0 in jsdom) plus 12.
+    const area = screen.getByTestId("asset-map-empty-area");
+    expect(area.style.left).toBe("16px");
+    expect(area.style.right).toBe(`${16 + 0 + 12}px`);
+    expect(area.style.bottom).toBe("96px");
+  });
+
+  it("with 0 matches the readiness bar is the empty neutral track", async () => {
+    setPhone();
+    const { container } = await renderPage("?mapMock=1&types=clinic&tiers=low");
+    expect(screen.getByTestId("asset-map-list-sheet")).toHaveTextContent("0 of 6 facilities match");
+    const track = container.querySelector("[data-testid=asset-map-list-sheet] .h-2.overflow-hidden.rounded-full");
+    expect(track).not.toBeNull();
+    expect(track!.children).toHaveLength(0);
+  });
+});
+

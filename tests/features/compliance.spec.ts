@@ -17,7 +17,7 @@ test.describe("Compliance register and activity log (live)", () => {
     await loginAsAdmin(page);
 
     await page.goto("/app/administration/compliance-register");
-    await expect(page.getByRole("heading", { name: /^Compliance Tracking$/ })).toBeVisible({
+    await expect(page.getByRole("heading", { name: /^Compliance register$/ })).toBeVisible({
       timeout: 60_000,
     });
     await expect(
@@ -26,7 +26,7 @@ test.describe("Compliance register and activity log (live)", () => {
     await expect(page).toHaveTitle(/NRCS Enterprise Asset Management System/i, { timeout: 15_000 });
 
     await page.goto("/app/administration/activity-log");
-    await expect(page.getByRole("heading", { name: /^Activity Log$/ })).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByRole("heading", { name: /^Activity log$/ })).toBeVisible({ timeout: 60_000 });
     await expect(page.getByText("Audit trail of user actions and system changes")).toBeVisible();
     await expect(page.getByText("Filters", { exact: true }).first()).toBeVisible();
 

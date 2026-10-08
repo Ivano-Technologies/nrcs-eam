@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
+import PageHeader from "@/components/ui/PageHeader";
+import { ClipboardCheck as ClipboardCheckIcon } from "lucide-react";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -67,7 +69,7 @@ export default function StockCounts({ embedInShell = false }: { embedInShell?: b
     <div className="space-y-4">
       {!embedInShell ? (
         <>
-          <h1 className="text-3xl font-bold">Stock Counts</h1>
+          <PageHeader icon={ClipboardCheckIcon} title="Stock counts" />
           <InventorySecondaryNav />
         </>
       ) : null}
@@ -92,7 +94,7 @@ export default function StockCounts({ embedInShell = false }: { embedInShell?: b
           </Select>
           {isStaffOrAbove ? (
             <Button data-testid="new-count-btn" className="ml-auto" onClick={() => { setOpen(true); setStep(1); }}>
-              New Count
+              New count
             </Button>
           ) : null}
         </CardContent>
@@ -119,6 +121,7 @@ export default function StockCounts({ embedInShell = false }: { embedInShell?: b
                 <td className="px-2 py-2 space-x-2">
                   {isStaffOrAbove && row.status === "in_progress" ? (
                     <Button
+                      variant="outline"
                       size="sm"
                       disabled={submitMutation.isPending && submitMutation.variables?.countId === row.id}
                       onClick={() => submitMutation.mutate({ countId: row.id })}
@@ -135,6 +138,7 @@ export default function StockCounts({ embedInShell = false }: { embedInShell?: b
                   ) : null}
                   {isManagerOrAdmin && row.status === "pending_review" ? (
                     <Button
+                      variant="outline"
                       size="sm"
                       disabled={approveMutation.isPending && approveMutation.variables?.countId === row.id}
                       onClick={() => approveMutation.mutate({ countId: row.id })}
@@ -158,7 +162,7 @@ export default function StockCounts({ embedInShell = false }: { embedInShell?: b
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-2xl">
-          <DialogHeader><DialogTitle>New Count Wizard</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>New count Wizard</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="flex gap-2">
               {[1, 2, 3, 4].map((s) => (
@@ -224,7 +228,7 @@ export default function StockCounts({ embedInShell = false }: { embedInShell?: b
                       Generating…
                     </>
                   ) : (
-                    "Generate Count Sheet"
+                    "Generate count sheet"
                   )}
                 </Button>
               </div>

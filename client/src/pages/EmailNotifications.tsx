@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatDateTime } from "@/lib/format";
 import { trpc } from "@/lib/trpc";
 import PageHeader from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -55,7 +56,7 @@ export default function EmailNotifications() {
       <div className="flex items-center justify-between">
         <PageHeader
           icon={Mail}
-          title="Email Notifications"
+          title="Email notifications"
           subtitle="Send custom email notifications to users"
           className="mb-0"
         />
@@ -64,12 +65,12 @@ export default function EmailNotifications() {
           <DialogTrigger asChild>
             <Button data-testid="email-compose-trigger">
               <Mail className="mr-2 h-4 w-4" />
-              Compose Email
+              Compose email
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>Compose Email Notification</DialogTitle>
+              <DialogTitle>Compose email Notification</DialogTitle>
               <DialogDescription>Send a custom email to selected users</DialogDescription>
             </DialogHeader>
 
@@ -107,7 +108,7 @@ export default function EmailNotifications() {
                 <Label>Subject</Label>
                 <Input
                   data-testid="email-subject-input"
-                  placeholder="Email subject..."
+                  placeholder="Email subject…"
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
                 />
@@ -117,7 +118,7 @@ export default function EmailNotifications() {
                 <Label>Message Body</Label>
                 <Textarea
                   data-testid="email-body-input"
-                  placeholder="Email message..."
+                  placeholder="Email message…"
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
                   rows={8}
@@ -136,12 +137,12 @@ export default function EmailNotifications() {
                   {sendMutation.isPending ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Sending...
+                      Sending…
                     </>
                   ) : (
                     <>
                       <Send className="mr-2 h-4 w-4" />
-                      Send Email
+                      Send email
                     </>
                   )}
                 </Button>
@@ -190,7 +191,7 @@ export default function EmailNotifications() {
                         Sent to: {email.recipientCount} {email.recipientType === "all" ? "users" : `${email.recipientRole}s`}
                       </span>
                       <span>•</span>
-                      <span>{new Date(email.sentAt).toLocaleString()}</span>
+                      <span>{formatDateTime(email.sentAt)}</span>
                     </div>
                   </div>
                 </div>

@@ -12,7 +12,7 @@ export default function BinCardPrint() {
   }
 
   if (data.isLoading) {
-    return <div className="p-6 text-sm text-muted-foreground">Loading bin card print view...</div>;
+    return <div className="p-6 text-sm text-muted-foreground">Loading bin card print view…</div>;
   }
 
   if (!data.data) {

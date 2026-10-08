@@ -9,7 +9,7 @@ export const SIDEBAR_NAV_ADMIN: { testId: string; path: string; shotSlug: string
   { testId: "sidebar-nav-scanner", path: "/app/scanner", shotSlug: "scanner" },
   { testId: "sidebar-nav-assets", path: "/app/assets", shotSlug: "assets" },
   { testId: "sidebar-nav-compliance-register", path: "/app/administration/compliance-register", shotSlug: "compliance-register" },
-  { testId: "sidebar-nav-dashboard-settings", path: "/app/dashboard-settings", shotSlug: "dashboard-settings" },
+  { testId: "sidebar-nav-settings", path: "/app/settings", shotSlug: "settings" },
   { testId: "sidebar-nav-email-notifications", path: "/app/email-notifications", shotSlug: "email-notifications" },
   { testId: "sidebar-nav-inventory", path: "/app/inventory", shotSlug: "inventory" },
   { testId: "sidebar-nav-maintenance", path: "/app/maintenance", shotSlug: "maintenance" },

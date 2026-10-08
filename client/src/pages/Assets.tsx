@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Plus, Download, Upload, Edit2, Trash2, MapPin, Package } from "lucide-react";
+import { Loader2, Plus, Download, Upload, Edit2, Trash2, MapPin, Package, Landmark } from "lucide-react";
 import { useLocation } from "wouter";
 import {
   AlertDialog,
@@ -41,7 +41,8 @@ import { toast } from "sonner";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { calculateDepreciatedValue } from "@/lib/depreciation";
 import { appPath } from "@/lib/routes";
-import { formatNaira } from "@/lib/format";
+import { DateHint, formatDate as formatDisplayDate, formatEmpty, formatNaira } from "@/lib/format";
+import { HtmlTableEmptyState } from "@/components/ui/EmptyState";
 import { cn } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ViewToggle } from "@/components/ViewToggle";
@@ -108,7 +109,8 @@ const REGISTER_LABELS: Record<string, string> = {
   beyond_repair: "Beyond Repair",
 };
 
-const EM_DASH = "—";
+/** Optional register columns stay blank when empty (no dash placeholders). */
+const EM_DASH = "";
 const REGISTER_TABLE_COLUMN_ORDER = [
   "S.No","Item Type","Item Category","Sub Item Category","Item Description","Branch Code","Category Code","NUM","Asset Code",
   "Serial Number","Actual Unit Value","Depreciated Value","Method of Acquisition","Acquisition Detail","Project Ref","Year Acquired",
@@ -121,13 +123,7 @@ function formatMoney(n: number | null | undefined): string {
 }
 
 function formatDate(d: Date | string | null | undefined): string {
-  if (!d) return EM_DASH;
-  const x = new Date(d);
-  if (Number.isNaN(x.getTime())) return EM_DASH;
-  const dd = String(x.getDate()).padStart(2, "0");
-  const mm = String(x.getMonth() + 1).padStart(2, "0");
-  const yyyy = x.getFullYear();
-  return `${dd}/${mm}/${yyyy}`;
+  return formatDisplayDate(d);
 }
 
 function registerStatusFromCurrentStatus(status: string): string {
@@ -290,7 +286,7 @@ export default function Assets() {
   const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
-    document.title = "Asset Register | NRCS EAM";
+    document.title = "Asset register | NRCS EAM";
     return () => {
       document.title = "NRCS Enterprise Asset Management System";
     };
@@ -903,7 +899,7 @@ export default function Assets() {
         <div data-testid="asset-register-heading">
           <PageHeader
             icon={Package}
-            title="Asset Register"
+            title="Asset register"
             subtitle="Centralized digital asset register for managing, tracking, and maintaining all NRCS assets across locations and departments."
             className="mb-0"
           />
@@ -921,7 +917,7 @@ export default function Assets() {
                 <DialogHeader>
                   <DialogTitle>Add New Asset</DialogTitle>
                   <DialogDescription>
-                    Create a register entry (asset tag is optional — auto-generated if empty)
+                    Create a register entry. Asset tag is optional. We create one if you leave it empty.
                   </DialogDescription>
                 </DialogHeader>
                 {createFormError ? (
@@ -1002,7 +998,7 @@ export default function Assets() {
                         <SelectValue placeholder="Select sub item category" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="__none__">—</SelectItem>
+                        <SelectItem value="__none__">None</SelectItem>
                         {SUB_ITEM_CATEGORIES.map((item) => (
                           <SelectItem key={item} value={item}>
                             {item}
@@ -1114,7 +1110,7 @@ export default function Assets() {
                           value={
                             computedCreateDepreciation != null
                               ? String(computedCreateDepreciation)
-                              : "— (set unit value, category, and year)"
+                              : "Set unit value, category and year to calculate"
                           }
                         />
                       )}
@@ -1136,7 +1132,7 @@ export default function Assets() {
                         <SelectValue placeholder="Select method" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="__none__">—</SelectItem>
+                        <SelectItem value="__none__">None</SelectItem>
                         {METHOD_OF_ACQUISITION_OPTIONS.map((m) => (
                           <SelectItem key={m} value={m}>
                             {m}
@@ -1177,7 +1173,7 @@ export default function Assets() {
                           <SelectValue placeholder="Select year" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="__none__">—</SelectItem>
+                          <SelectItem value="__none__">None</SelectItem>
                           {YEAR_ACQUIRED_OPTIONS.map((yearOption) => (
                             <SelectItem key={yearOption} value={yearOption}>
                               {yearOption}
@@ -1298,7 +1294,7 @@ export default function Assets() {
                     </Select>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Date of Last Physical Check</Label>
+                      <Label>Date of Last Physical Check <DateHint /></Label>
                       <Input
                         type="date"
                         value={newAsset.lastPhysicalCheck}
@@ -1337,10 +1333,10 @@ export default function Assets() {
                     {createAssetMutation.isPending ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Creating...
+                        Creating…
                       </>
                     ) : (
-                      "Create Asset"
+                      "Create asset"
                     )}
                   </Button>
                 </DialogFooter>
@@ -1353,30 +1349,10 @@ export default function Assets() {
       <ModuleFiltersCard
         filterRow={
           <>
-            {isAdmin ? (
-              <Button
-                className="h-9 shrink-0"
-                variant="secondary"
-                disabled={backfillCoordinatesMutation.isPending}
-                onClick={() => backfillCoordinatesMutation.mutate()}
-                data-testid="asset-sync-coordinates-from-facilities-btn"
-              >
-                {backfillCoordinatesMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Syncing…
-                  </>
-                ) : (
-                  <>
-                    <MapPin className="mr-2 h-4 w-4" />
-                    Sync coordinates from facilities
-                  </>
-                )}
-              </Button>
-            ) : null}
+
             <ModuleFilterSearch
               data-testid="asset-search-input"
-              placeholder="Search description, code, serial..."
+              placeholder="Search description, code, serial…"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -1432,7 +1408,7 @@ export default function Assets() {
         }
         toolbarStart={<ViewToggle value={viewMode} onChange={setViewMode} />}
         toolbarEnd={
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 md:justify-end">
             <Button
               className="h-9"
               variant="outline"
@@ -1460,14 +1436,35 @@ export default function Assets() {
                 </label>
                 <Button className="h-9" onClick={() => setIsCreateDialogOpen(true)} data-testid="asset-create-btn">
                   <Plus className="mr-2 h-4 w-4" />
-                  Add Asset
+                  Add asset
                 </Button>
               </>
             ) : null}
             {isAdmin ? (
               <Button
                 className="h-9"
-                variant="secondary"
+                variant="outline"
+                disabled={backfillCoordinatesMutation.isPending}
+                onClick={() => backfillCoordinatesMutation.mutate()}
+                data-testid="asset-sync-coordinates-from-facilities-btn"
+              >
+                {backfillCoordinatesMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Syncing…
+                  </>
+                ) : (
+                  <>
+                    <MapPin className="mr-2 h-4 w-4" />
+                    Sync coordinates from facilities
+                  </>
+                )}
+              </Button>
+            ) : null}
+            {isAdmin ? (
+              <Button
+                className="h-9"
+                variant="outline"
                 disabled={recalculateDepreciationMutation.isPending}
                 onClick={() => recalculateDepreciationMutation.mutate()}
                 data-testid="asset-recalculate-depreciation-btn"
@@ -1478,7 +1475,7 @@ export default function Assets() {
                     Recalculating…
                   </>
                 ) : (
-                  "Recalculate All Depreciation"
+                  "Recalculate all depreciation"
                 )}
               </Button>
             ) : null}
@@ -1501,12 +1498,12 @@ export default function Assets() {
                 <p className="text-muted-foreground">{row.assetTag?.trim() || EM_DASH}</p>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline">{row.itemType === "inventory" ? "Inventory" : "Asset"}</Badge>
-                  <Badge variant="secondary">{row.categoryName?.trim() || EM_DASH}</Badge>
+                  {row.categoryName?.trim() ? <Badge variant="secondary">{row.categoryName.trim()}</Badge> : null}
                   <Badge variant="outline" className={cn("text-xs font-normal", STATUS_BADGE[row.registerStatus as string] ?? "")}>
                     {REGISTER_LABELS[row.registerStatus as string] ?? row.registerStatus}
                   </Badge>
                 </div>
-                <p className="text-muted-foreground">{row.siteName || EM_DASH}</p>
+                <p className="text-muted-foreground">{formatEmpty(row.siteName)}</p>
                 <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
                   <CardQrCode
                     idValue={String(row.id)}
@@ -1526,7 +1523,7 @@ export default function Assets() {
           <TableLoader className="py-8" />
         ) : (
           <div
-            className="frozen-table-wrap frozen-table-double-header frozen-table-wrap-page-scroll"
+            className="frozen-table-wrap frozen-table-double-header frozen-table-wrap-page-scroll sticky-first-col"
             style={
               {
                 "--col1-width": "4rem",
@@ -1567,14 +1564,12 @@ export default function Assets() {
               </thead>
               <tbody>
                 {rows.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={canEditAssets ? 26 : 25}
-                      className="px-4 py-12 text-center text-muted-foreground"
-                    >
-                      No rows match filters
-                    </td>
-                  </tr>
+                  <HtmlTableEmptyState
+                    colSpan={canEditAssets ? 26 : 25}
+                    icon={Landmark}
+                    title="No assets match these filters"
+                    body="Assets appear here once they are added to the register or match the filters."
+                  />
                 ) : (
                   rows.map((row: (typeof rows)[number], i: number) => {
                     const rs = row.registerStatus as string;
@@ -1594,7 +1589,7 @@ export default function Assets() {
                       "";
                     const loc = [row.siteName, row.location].filter(Boolean).join(" / ");
                     const desc =
-                      row.description?.trim() ? `${row.name} — ${row.description}` : row.name;
+                      row.description?.trim() ? `${row.name}: ${row.description}` : row.name;
                     const statusLabel = REGISTER_LABELS[rs] ?? rs;
                     const cond = row.physicalCondition?.trim() || "";
                     const rowBgClass = i % 2 === 1 ? "bg-muted/30" : "bg-background";
@@ -1636,9 +1631,9 @@ export default function Assets() {
                         <td className="px-2 py-1">{row.yearAcquiredRegister ?? year ?? EM_DASH}</td>
                         <td className="px-2 py-1">{row.acquiredNewOrUsed?.trim() || row.acquisitionCondition?.trim() || EM_DASH}</td>
                         <td className="px-2 py-1">{row.currentStatus?.trim() || statusLabel}</td>
-                        <td className="px-2 py-1">{assigned || EM_DASH}</td>
+                        <td className="px-2 py-1 min-w-[12rem] whitespace-normal">{assigned || EM_DASH}</td>
                         <td className="px-2 py-1">{row.department?.trim() || EM_DASH}</td>
-                        <td className="px-2 py-1 max-w-[12rem] truncate" title={loc}>{row.currentLocation?.trim() || loc || EM_DASH}</td>
+                        <td className="px-2 py-1 min-w-[12rem] whitespace-normal">{row.currentLocation?.trim() || loc || EM_DASH}</td>
                         <td className="px-2 py-1">{row.conditionRegister?.trim() || cond || EM_DASH}</td>
                         <td className="px-2 py-1">{formatDate(row.lastPhysicalCheck || row.lastCheckedAt)}</td>
                         <td className="px-2 py-1">{row.checkConductedBy?.trim() || row.checkedBy?.trim() || EM_DASH}</td>
@@ -1724,7 +1719,7 @@ export default function Assets() {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit Asset</DialogTitle>
+            <DialogTitle>Edit asset</DialogTitle>
             <DialogDescription>Update asset register fields</DialogDescription>
           </DialogHeader>
           {editingAsset && (
@@ -2082,7 +2077,7 @@ export default function Assets() {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label>Last physical check</Label>
+                      <Label>Last physical check <DateHint /></Label>
                       <Input
                         type="date"
                         value={editingAsset.lastPhysicalCheck ?? ""}
@@ -2203,7 +2198,7 @@ export default function Assets() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Depreciation start date</Label>
+                      <Label>Depreciation start date <DateHint /></Label>
                       <Input
                         type="date"
                         value={editingAsset.depreciationStartDate ?? ""}
@@ -2241,7 +2236,7 @@ export default function Assets() {
                         value={
                           computedEditDepreciation != null
                             ? String(computedEditDepreciation)
-                            : "— (set unit value, category label, and year)"
+                            : "Set unit value, category label and year to calculate"
                         }
                       />
                     )}
@@ -2262,10 +2257,10 @@ export default function Assets() {
               {updateAssetMutation.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
+                  Saving…
                 </>
               ) : (
-                "Save Changes"
+                "Save changes"
               )}
             </Button>
           </DialogFooter>

@@ -1,6 +1,9 @@
 import { useState } from "react";
+import { DateHint, formatEmpty } from "@/lib/format";
 import { trpc } from "@/lib/trpc";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
+import PageHeader from "@/components/ui/PageHeader";
+import { HandHeart as HandHeartIcon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,7 +54,7 @@ export default function Distributions({ embedInShell = false }: { embedInShell?:
     <div className="space-y-4">
       {!embedInShell ? (
         <>
-          <h1 className="text-3xl font-bold">Distributions</h1>
+          <PageHeader icon={HandHeartIcon} title="Distributions" />
           <InventorySecondaryNav />
         </>
       ) : null}
@@ -60,7 +63,7 @@ export default function Distributions({ embedInShell = false }: { embedInShell?:
           <Input placeholder="Incident" className="w-[220px]" value={incident} onChange={(e) => setIncident(e.target.value)} />
           <Input placeholder="Location" className="w-[220px]" value={location} onChange={(e) => setLocation(e.target.value)} />
           <ViewToggle value={viewMode} onChange={setViewMode} />
-          <Button data-testid="new-dist-btn" className="ml-auto" onClick={() => setOpen(true)}>New Distribution</Button>
+          <Button data-testid="new-dist-btn" className="ml-auto" onClick={() => setOpen(true)}>New distribution</Button>
         </CardContent>
       </Card>
       {viewMode === "card" ? (
@@ -98,8 +101,8 @@ export default function Distributions({ embedInShell = false }: { embedInShell?:
                   <td className="px-2 py-2">{row.location}</td>
                   <td className="px-2 py-2">{row.beneficiaryCount ?? 0}</td>
                   <td className="px-2 py-2">{row.householdCount ?? 0}</td>
-                  <td className="px-2 py-2">{row.conductedBy ?? "—"}</td>
-                  <td className="px-2 py-2">{row.incidentReference ?? "—"}</td>
+                  <td className="px-2 py-2">{formatEmpty(row.conductedBy)}</td>
+                  <td className="px-2 py-2">{row.incidentReference ?? ""}</td>
                   <td className="px-2 py-2">
                     <Button
                       size="sm"
@@ -118,7 +121,7 @@ export default function Distributions({ embedInShell = false }: { embedInShell?:
                       {downloadPdfMutation.isPending ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Generating...
+                          Generating…
                         </>
                       ) : (
                         "Download PDF"
@@ -134,14 +137,14 @@ export default function Distributions({ embedInShell = false }: { embedInShell?:
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
-          <DialogHeader><DialogTitle>New Distribution</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>New distribution</DialogTitle></DialogHeader>
           <div className="grid gap-3">
             <Label>Waybill</Label>
             <Select value={waybillId} onValueChange={setWaybillId}>
               <SelectTrigger><SelectValue placeholder="Select dispatched waybill" /></SelectTrigger>
               <SelectContent>{(waybills.data ?? []).map((w) => <SelectItem key={w.id} value={String(w.id)}>{w.wbNumber}</SelectItem>)}</SelectContent>
             </Select>
-            <Label>Distribution Date</Label>
+            <Label>Distribution Date <DateHint /></Label>
             <Input type="date" value={distributionDate} onChange={(e) => setDistributionDate(e.target.value)} />
             <Label>Location</Label>
             <Input value={location} onChange={(e) => setLocation(e.target.value)} />

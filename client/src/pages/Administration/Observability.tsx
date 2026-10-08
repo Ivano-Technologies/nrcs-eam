@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { formatDateTime, formatEnumLabel } from "@/lib/format";
 import { useAuth } from "@/_core/hooks/useAuth";
 import PageHeader from "@/components/ui/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -73,7 +74,7 @@ export default function Observability() {
     refetchInterval: 60_000,
   });
 
-  const lastUpdated = useMemo(() => new Date().toLocaleTimeString(), [
+  const lastUpdated = useMemo(() => formatDateTime(new Date()), [
     pool.dataUpdatedAt,
     cache.dataUpdatedAt,
     dashboard.dataUpdatedAt,
@@ -105,7 +106,7 @@ export default function Observability() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <PageHeader
           icon={BarChart3}
-          title="System Observability"
+          title="System health"
           subtitle="Real-time pool, cache, and dashboard performance"
           className="mb-0"
         />
@@ -173,7 +174,7 @@ export default function Observability() {
                     .filter(([, v]) => v.hits + v.misses > 0)
                     .map(([prefix, v]) => (
                       <div key={prefix} className="flex justify-between">
-                        <span className="text-muted-foreground">{prefix}</span>
+                        <span className="text-muted-foreground">{formatEnumLabel(prefix)}</span>
                         <span>{v.hitRatePct}%</span>
                       </div>
                     ))
@@ -184,8 +185,8 @@ export default function Observability() {
 
         <Card className="lg:col-span-1">
           <CardHeader>
-            <CardTitle className="text-base">Last 10 Dashboard Loads</CardTitle>
-            <CardDescription>Wall-clock and tier breakdown</CardDescription>
+            <CardTitle className="text-base">Last 10 dashboard loads</CardTitle>
+            <CardDescription>Wall clock time and tier breakdown</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="mb-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
@@ -194,7 +195,7 @@ export default function Observability() {
               <span>p99: {dashboard.data?.p99Ms ?? 0} ms</span>
               <span>Timeouts: {dashboard.data?.timeoutRatePct ?? 0}%</span>
             </div>
-            <div className="frozen-table-wrap sticky-first-col overflow-x-auto">
+            <div className="frozen-table-wrap sticky-first-col">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -222,11 +223,11 @@ export default function Observability() {
                             {row.wallClockMs}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-xs">{row.tier1Ms ?? "—"}</TableCell>
-                        <TableCell className={cn("text-xs", mobileSecondaryCol(showAllColumns))}>{row.tier2Ms ?? "—"}</TableCell>
-                        <TableCell className={cn("text-xs", mobileSecondaryCol(showAllColumns))}>{row.tier3Ms ?? "—"}</TableCell>
+                        <TableCell className="text-xs">{row.tier1Ms ?? ""}</TableCell>
+                        <TableCell className={cn("text-xs", mobileSecondaryCol(showAllColumns))}>{row.tier2Ms ?? ""}</TableCell>
+                        <TableCell className={cn("text-xs", mobileSecondaryCol(showAllColumns))}>{row.tier3Ms ?? ""}</TableCell>
                         <TableCell className="text-xs">
-                          {timedOut ? "⚠️ timeout" : "✅"}
+                          {timedOut ? "Timed out" : "OK"}
                         </TableCell>
                       </TableRow>
                     );
@@ -249,7 +250,7 @@ export default function Observability() {
           <CardContent className="space-y-4">
             <div>
               <p className="mb-2 text-sm font-medium">Top tables by size</p>
-              <div className="frozen-table-wrap sticky-first-col overflow-x-auto">
+              <div className="frozen-table-wrap sticky-first-col">
               <Table>
                 <TableHeader>
                   <TableRow>

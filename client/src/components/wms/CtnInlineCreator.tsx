@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { DateHint } from "@/lib/format";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -53,7 +54,7 @@ export function CtnInlineCreator({
       notes: notes || undefined,
     });
     const item = wmsItems.find((x) => x.id === created.itemId);
-    onCreated({ id: created.id, label: `${created.ctnCode} — ${item?.itemCode ?? ""} ${item?.name ?? ""}` });
+    onCreated({ id: created.id, label: `${created.ctnCode} · ${item?.itemCode ?? ""} ${item?.name ?? ""}` });
     toast.success("CTN created and selected.");
     onOpenChange(false);
   };
@@ -78,7 +79,7 @@ export function CtnInlineCreator({
               <SelectContent>
                 {(donorsQuery.data ?? []).map((d: { id: number; code: string; name: string }) => (
                   <SelectItem key={d.id} value={String(d.id)}>
-                    {d.code} — {d.name}
+                    {d.code} · {d.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -100,18 +101,18 @@ export function CtnInlineCreator({
               <SelectContent>
                 {wmsItems.map((i) => (
                   <SelectItem key={i.id} value={String(i.id)}>
-                    {i.itemCode} — {i.name}
+                    {i.itemCode} · {i.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1">
-            <Label htmlFor="ctn-inline-received-date">Received date</Label>
+            <Label htmlFor="ctn-inline-received-date">Received date <DateHint /></Label>
             <Input id="ctn-inline-received-date" type="date" value={receivedDate} onChange={(e) => setReceivedDate(e.target.value)} />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="ctn-inline-expiry-date">Expiry date</Label>
+            <Label htmlFor="ctn-inline-expiry-date">Expiry date <DateHint /></Label>
             <Input id="ctn-inline-expiry-date" type="date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} />
           </div>
           <div className="space-y-1">

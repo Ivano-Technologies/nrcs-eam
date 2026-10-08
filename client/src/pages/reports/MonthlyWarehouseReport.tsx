@@ -41,7 +41,7 @@ export default function MonthlyWarehouseReport() {
     <div className="space-y-4">
       <PageHeader
         icon={CalendarDays}
-        title="Monthly Warehouse Report"
+        title="Monthly warehouse report"
         subtitle="Consolidated monthly warehouse performance and inventory reporting for the Nigerian Red Cross Society."
       />
 
@@ -72,7 +72,7 @@ export default function MonthlyWarehouseReport() {
           </div>
           <div className="flex items-end gap-2">
             <Button onClick={() => reportQuery.refetch()} disabled={!canQuery}>
-              Generate Report
+              Generate report
             </Button>
           </div>
         </div>
@@ -100,7 +100,7 @@ export default function MonthlyWarehouseReport() {
             },
             {
               id: "excel",
-              label: excelMutation.isPending ? "Exporting Excel…" : "Export Excel",
+              label: excelMutation.isPending ? "Exporting…" : "Export to Excel",
               disabled: !canQuery || excelMutation.isPending,
               onSelect: () => {
                 void (async () => {
@@ -149,7 +149,7 @@ export default function MonthlyWarehouseReport() {
         </Button>
       </div>
 
-      <div className="frozen-table-wrap sticky-first-col overflow-x-auto rounded-md border">
+      <div className="frozen-table-wrap sticky-first-col rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>

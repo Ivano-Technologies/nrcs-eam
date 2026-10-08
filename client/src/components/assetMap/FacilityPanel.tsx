@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { AlertTriangle, ChevronDown, ListFilter, RotateCw, Search, SearchX, X } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronUp, ListFilter, RotateCw, Search, SearchX, X } from "lucide-react";
 import type { FacilityType } from "@shared/facilities";
 import {
   ASSET_STATUS_COLOURS,
@@ -28,7 +28,7 @@ import {
 } from "@/lib/assetMap/model";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { chipBase, focusRing, mutedText, OfflineGlyph, ReadinessPill, TypeGlyph } from "./parts";
+import { chipBase, focusRing, mutedText, OfflineGlyph, ReadinessPill, TypeGlyph, linkText } from "./parts";
 
 const LEGEND_KEY = "nrcs-asset-map-legend-open";
 
@@ -71,6 +71,13 @@ export type FacilityPanelProps = {
   variant?: "panel" | "sheet";
   /** Mobile: type chips live behind a Filters button. */
   showTypeChips?: boolean;
+  /**
+   * Desktop: the panel is collapsed to the compact card while the drawer is open. It stays mounted
+   * (hidden and inert) so filters, legend and list scroll come back exactly as they were.
+   */
+  concealed?: boolean;
+  /** Desktop, narrow map with the drawer open and the panel expanded: collapse it back to the card. */
+  onCollapse?: () => void;
   className?: string;
   style?: React.CSSProperties;
 };
@@ -103,6 +110,8 @@ export function FacilityPanel(props: FacilityPanelProps) {
     onRetry,
     variant = "panel",
     showTypeChips = true,
+    concealed = false,
+    onCollapse,
     className,
     style,
   } = props;
@@ -126,7 +135,8 @@ export function FacilityPanel(props: FacilityPanelProps) {
   const offlineCount = all.filter((f) => !f.isActive).length;
   const onMap = filtered.filter(hasLocation).length;
   const active = hasActiveFilters(filters);
-  const totalForBar = READINESS_TIERS.reduce((s, t) => s + tierCounts[t], 0);
+  // With no matches the bar is the empty neutral track, not the tier mix of the other filters.
+  const totalForBar = filtered.length > 0 ? READINESS_TIERS.reduce((s, t) => s + tierCounts[t], 0) : 0;
 
   const assetTotals = useMemo(() => {
     let inUse = 0;
@@ -185,134 +195,168 @@ export function FacilityPanel(props: FacilityPanelProps) {
           {filters.types.length ? <span className="tabular-nums">({filters.types.length})</span> : null}
         </button>
       ) : null}
+      {onCollapse ? (
+        <button
+          type="button"
+          onClick={onCollapse}
+          aria-label="Collapse to the search card"
+          title="Collapse to the search card"
+          data-testid="asset-map-panel-collapse"
+          className={cn(
+            "grid h-10 w-10 shrink-0 place-items-center rounded-[10px] hover:bg-[#F3F4F6] dark:hover:bg-[#1E2B3C]",
+            focusRing
+          )}
+        >
+          <ChevronUp className="h-4 w-4" />
+        </button>
+      ) : null}
+    </div>
+  );
+
+  const noLocationChip = filters.noLocationOnly ? (
+    <div className="px-4 pb-3">
+      <span className="inline-flex h-8 items-center gap-1 rounded-full bg-[#0B2545] pl-3 pr-1 text-[13px] font-medium text-white dark:bg-[#E6EAF0] dark:text-[#0F1724]">
+        Facilities with no location
+        <button
+          type="button"
+          onClick={onToggleNoLocation}
+          aria-label="Stop showing only facilities with no location"
+          className={cn("grid h-7 w-7 place-items-center rounded-full hover:bg-white/15 dark:hover:bg-black/10", focusRing)}
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </span>
+    </div>
+  ) : null;
+
+  // Search plus the count: a fixed header in the desktop panel (only the content below scrolls).
+  const summaryBlock = (
+    <div className="border-b border-[#E5E7EB] px-4 pb-3.5 dark:border-[#26364A]">
+      {loading ? (
+        <div className="space-y-2">
+          <Skeleton className="h-6 w-48" />
+          <Skeleton className="h-2 w-full" />
+        </div>
+      ) : loadError ? (
+        <DataLoadError onRetry={onRetry} retrying={retrying} />
+      ) : layer === "facilities" ? (
+        <>
+          <div className="flex items-center justify-between gap-2">
+            <p className="min-w-0 text-sm" data-testid="asset-map-count">
+              {active ? (
+                <>
+                  <span className="text-[22px] font-semibold tabular-nums">{formatCount(filtered.length)}</span>{" "}
+                  <span className={mutedText}>
+                    {/* Under 400px the long form wraps beside the offline pill, so drop "facilities". */}
+                    <span className="max-[399px]:hidden">of {formatCount(all.length)} facilities match</span>
+                    <span className="min-[400px]:hidden">of {formatCount(all.length)} match</span>
+                    {" "}· {formatCount(onMap)} on the map
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="text-[22px] font-semibold tabular-nums">{formatCount(all.length)}</span>{" "}
+                  <span className={mutedText}>facilities · {formatCount(onMap)} on the map</span>
+                </>
+              )}
+            </p>
+            {offlineCount > 0 ? (
+              <button
+                type="button"
+                data-testid="asset-map-status-filter"
+                aria-pressed={filters.offlineOnly}
+                onClick={onToggleOffline}
+                title={filters.offlineOnly ? "Show all facilities" : "Show offline facilities only"}
+                className={cn(
+                  "inline-flex h-7 shrink-0 items-center whitespace-nowrap rounded-full border border-dashed border-[#8A8F98] px-2.5 text-xs font-medium tabular-nums dark:border-[#64768E]",
+                  "aria-pressed:border-solid aria-pressed:border-[#0B2545] aria-pressed:bg-[#0B2545] aria-pressed:text-white dark:aria-pressed:border-[#E6EAF0] dark:aria-pressed:bg-[#E6EAF0] dark:aria-pressed:text-[#0F1724]",
+                  focusRing
+                )}
+              >
+                {offlineCount} offline
+              </button>
+            ) : null}
+          </div>
+          <div className="mt-2 flex h-2 overflow-hidden rounded-full bg-[#E9ECF0] dark:bg-[#24344A]" aria-hidden="true">
+            {READINESS_TIERS.map((t) =>
+              tierCounts[t] > 0 && totalForBar > 0 ? (
+                <span
+                  key={t}
+                  style={{ width: `${(tierCounts[t] / totalForBar) * 100}%`, background: tierColours[t] }}
+                  className="h-full border-r-2 border-white last:border-r-0 dark:border-[#162130]"
+                />
+              ) : null
+            )}
+          </div>
+        </>
+      ) : (
+        <>
+          <p className="text-sm">
+            <span className="text-[22px] font-semibold tabular-nums">{formatCount(assetTotals.total)}</span>{" "}
+            <span className={mutedText}>
+              assets across {formatCount(assetTotals.facilities)}{" "}
+              {assetTotals.facilities === 1 ? "facility" : "facilities"}
+            </span>
+          </p>
+          <div className="mt-2 flex h-2 overflow-hidden rounded-full bg-[#E9ECF0] dark:bg-[#24344A]" aria-hidden="true">
+            {(["inUse", "maintenance", "retired"] as const).map((k) =>
+              assetTotals[k] > 0 ? (
+                <span
+                  key={k}
+                  style={{ width: `${(assetTotals[k] / Math.max(1, assetTotals.total)) * 100}%`, background: statusColours[k] }}
+                  className="h-full border-r-2 border-white last:border-r-0 dark:border-[#162130]"
+                />
+              ) : null
+            )}
+          </div>
+          <dl className="mt-2 grid grid-cols-3 gap-2 text-xs">
+            {(
+              [
+                ["inUse", "In use"],
+                ["maintenance", "In maintenance"],
+                ["retired", "Retired"],
+              ] as const
+            ).map(([k, label]) => (
+              <div key={k}>
+                <dt className={cn("flex items-center gap-1.5", mutedText)}>
+                  <span className="inline-block h-2 w-2 rounded-full" style={{ background: statusColours[k] }} />
+                  {label}
+                </dt>
+                <dd className="text-[15px] font-semibold tabular-nums">{formatCount(assetTotals[k])}</dd>
+              </div>
+            ))}
+          </dl>
+          {statsLimited ? (
+            <p className={cn("mt-2 text-xs", mutedText)}>You can see asset figures for your own facility only.</p>
+          ) : null}
+        </>
+      )}
     </div>
   );
 
   return (
     <section
       aria-label="Facilities"
-      className={cn("flex min-h-0 flex-col", className)}
+      className={cn("flex min-h-0 flex-col", concealed && "invisible", className)}
       style={style}
       data-variant={variant}
+      data-testid={variant === "panel" ? "asset-map-facility-panel" : undefined}
+      data-concealed={concealed || undefined}
+      aria-hidden={concealed || undefined}
+      inert={concealed}
     >
-      {variant === "panel" ? searchBlock : null}
-
-      {filters.noLocationOnly ? (
-        <div className="px-4 pb-3">
-          <span className="inline-flex h-8 items-center gap-1 rounded-full bg-[#0B2545] pl-3 pr-1 text-[13px] font-medium text-white dark:bg-[#E6EAF0] dark:text-[#0F1724]">
-            Facilities with no location
-            <button
-              type="button"
-              onClick={onToggleNoLocation}
-              aria-label="Stop showing only facilities with no location"
-              className={cn("grid h-7 w-7 place-items-center rounded-full hover:bg-white/15 dark:hover:bg-black/10", focusRing)}
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </span>
+      {variant === "panel" ? (
+        <div className="shrink-0" data-testid="asset-map-panel-header">
+          {searchBlock}
+          {noLocationChip}
+          {summaryBlock}
         </div>
       ) : null}
 
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-        {/* Summary */}
-        <div className="border-b border-[#E5E7EB] px-4 pb-3.5 dark:border-[#26364A]">
-          {loading ? (
-            <div className="space-y-2">
-              <Skeleton className="h-6 w-48" />
-              <Skeleton className="h-2 w-full" />
-            </div>
-          ) : loadError ? (
-            <DataLoadError onRetry={onRetry} retrying={retrying} />
-          ) : layer === "facilities" ? (
-            <>
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-sm">
-                  {active ? (
-                    <>
-                      <span className="text-[22px] font-semibold tabular-nums">{formatCount(filtered.length)}</span>{" "}
-                      <span className={mutedText}>
-                        of {formatCount(all.length)} facilities match · {formatCount(onMap)} on the map
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="text-[22px] font-semibold tabular-nums">{formatCount(all.length)}</span>{" "}
-                      <span className={mutedText}>facilities · {formatCount(onMap)} on the map</span>
-                    </>
-                  )}
-                </p>
-                {offlineCount > 0 ? (
-                  <button
-                    type="button"
-                    data-testid="asset-map-status-filter"
-                    aria-pressed={filters.offlineOnly}
-                    onClick={onToggleOffline}
-                    title={filters.offlineOnly ? "Show all facilities" : "Show offline facilities only"}
-                    className={cn(
-                      "inline-flex h-7 items-center rounded-full border border-dashed border-[#8A8F98] px-2.5 text-xs font-medium tabular-nums dark:border-[#64768E]",
-                      "aria-pressed:border-solid aria-pressed:border-[#0B2545] aria-pressed:bg-[#0B2545] aria-pressed:text-white dark:aria-pressed:border-[#E6EAF0] dark:aria-pressed:bg-[#E6EAF0] dark:aria-pressed:text-[#0F1724]",
-                      focusRing
-                    )}
-                  >
-                    {offlineCount} offline
-                  </button>
-                ) : null}
-              </div>
-              <div className="mt-2 flex h-2 overflow-hidden rounded-full bg-[#E9ECF0] dark:bg-[#24344A]" aria-hidden="true">
-                {READINESS_TIERS.map((t) =>
-                  tierCounts[t] > 0 && totalForBar > 0 ? (
-                    <span
-                      key={t}
-                      style={{ width: `${(tierCounts[t] / totalForBar) * 100}%`, background: tierColours[t] }}
-                      className="h-full border-r-2 border-white last:border-r-0 dark:border-[#162130]"
-                    />
-                  ) : null
-                )}
-              </div>
-            </>
-          ) : (
-            <>
-              <p className="text-sm">
-                <span className="text-[22px] font-semibold tabular-nums">{formatCount(assetTotals.total)}</span>{" "}
-                <span className={mutedText}>
-                  assets across {formatCount(assetTotals.facilities)}{" "}
-                  {assetTotals.facilities === 1 ? "facility" : "facilities"}
-                </span>
-              </p>
-              <div className="mt-2 flex h-2 overflow-hidden rounded-full bg-[#E9ECF0] dark:bg-[#24344A]" aria-hidden="true">
-                {(["inUse", "maintenance", "retired"] as const).map((k) =>
-                  assetTotals[k] > 0 ? (
-                    <span
-                      key={k}
-                      style={{ width: `${(assetTotals[k] / Math.max(1, assetTotals.total)) * 100}%`, background: statusColours[k] }}
-                      className="h-full border-r-2 border-white last:border-r-0 dark:border-[#162130]"
-                    />
-                  ) : null
-                )}
-              </div>
-              <dl className="mt-2 grid grid-cols-3 gap-2 text-xs">
-                {(
-                  [
-                    ["inUse", "In use"],
-                    ["maintenance", "In maintenance"],
-                    ["retired", "Retired"],
-                  ] as const
-                ).map(([k, label]) => (
-                  <div key={k}>
-                    <dt className={cn("flex items-center gap-1.5", mutedText)}>
-                      <span className="inline-block h-2 w-2 rounded-full" style={{ background: statusColours[k] }} />
-                      {label}
-                    </dt>
-                    <dd className="text-[15px] font-semibold tabular-nums">{formatCount(assetTotals[k])}</dd>
-                  </div>
-                ))}
-              </dl>
-              {statsLimited ? (
-                <p className={cn("mt-2 text-xs", mutedText)}>You can see asset figures for your own facility only.</p>
-              ) : null}
-            </>
-          )}
-        </div>
+      {variant === "sheet" ? noLocationChip : null}
+
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain" data-panel-scroll="">
+        {variant === "sheet" ? summaryBlock : null}
 
         {/* Readiness tiles (legend and filter) */}
         <div className="px-4 pt-3.5">
@@ -322,7 +366,7 @@ export function FacilityPanel(props: FacilityPanelProps) {
               <button
                 type="button"
                 onClick={onClearFilters}
-                className={cn("text-[13px] font-medium text-[#1E3A8A] hover:underline dark:text-[#93C5FD]", focusRing)}
+                className={cn("text-[13px] font-medium hover:underline", linkText, focusRing)}
               >
                 Clear filters
               </button>
@@ -647,6 +691,88 @@ function FacilityList({
  * Shown when the facility data request fails. Distinct from the empty state ("No facilities
  * match"): it says the data didn't load and offers Retry, which refetches.
  */
+/**
+ * Desktop, narrow map with the drawer open: the panel collapses to this card (search, counts and an
+ * expand chevron) so the map between it and the drawer stays usable.
+ */
+export function CompactFacilityCard({
+  ref,
+  searchText,
+  onSearchText,
+  onSearchEnter,
+  count,
+  onMap,
+  onExpand,
+  className,
+  style,
+}: {
+  ref?: React.Ref<HTMLElement>;
+  searchText: string;
+  onSearchText: (q: string) => void;
+  onSearchEnter: () => void;
+  /** Facilities matching the current search and filters. */
+  count: number;
+  /** Of those, how many have a location on the map. */
+  onMap: number;
+  onExpand: () => void;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  return (
+    <section
+      ref={ref}
+      aria-label="Facilities"
+      data-testid="asset-map-compact-panel"
+      className={cn("p-2.5", className)}
+      style={style}
+    >
+      <div className="flex items-center gap-1.5">
+        <label className="relative min-w-0 flex-1">
+          <span className="sr-only">Search facilities or codes</span>
+          <Search className={cn("pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2", mutedText)} />
+          <input
+            type="search"
+            value={searchText}
+            onChange={(e) => onSearchText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                onSearchEnter();
+              }
+            }}
+            placeholder="Search facilities"
+            data-testid="asset-map-compact-search"
+            className={cn(
+              "h-10 w-full rounded-[10px] border border-[#8A8F98] bg-white pl-8 pr-2 text-sm text-[#111827] placeholder:text-[#62626C] dark:border-[#64768E] dark:bg-[#0F1724] dark:text-[#E6EAF0] dark:placeholder:text-[#A3AEBD]",
+              "focus-visible:border-[#C8102E] focus-visible:ring-2 focus-visible:ring-[#C8102E]/30 focus-visible:outline-none"
+            )}
+          />
+        </label>
+        <button
+          type="button"
+          onClick={onExpand}
+          aria-expanded={false}
+          aria-label="Show filters and the facility list"
+          title="Show filters and the facility list"
+          data-testid="asset-map-panel-expand"
+          className={cn(
+            "grid h-10 w-9 shrink-0 place-items-center rounded-[10px] hover:bg-[#F3F4F6] dark:hover:bg-[#1E2B3C]",
+            focusRing
+          )}
+        >
+          <ChevronDown className="h-4 w-4" />
+        </button>
+      </div>
+      <p className="mt-2 px-1 text-[13px]" data-testid="asset-map-compact-counts">
+        <span className="font-semibold tabular-nums">{formatCount(count)}</span>{" "}
+        <span className={mutedText}>
+          {count === 1 ? "facility" : "facilities"} · <span className="tabular-nums">{formatCount(onMap)}</span> on the map
+        </span>
+      </p>
+    </section>
+  );
+}
+
 export function DataLoadError({
   onRetry,
   retrying = false,

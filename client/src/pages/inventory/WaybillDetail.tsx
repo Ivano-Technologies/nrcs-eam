@@ -11,7 +11,9 @@ import { Badge } from "@/components/ui/badge";
 import { SignatureBlock, type SignatureValue } from "@/components/wms/SignatureBlock";
 import { CtnInlineCreator } from "@/components/wms/CtnInlineCreator";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
-import { formatNaira } from "@/lib/format";
+import PageHeader from "@/components/ui/PageHeader";
+import { appPath } from "@/lib/routes";
+import { DateHint, formatDateTime, formatNaira } from "@/lib/format";
 import { toast } from "sonner";
 import { Loader2, AlertTriangle } from "lucide-react";
 
@@ -308,7 +310,7 @@ export default function WaybillDetail() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-3xl font-bold">{waybillId ? "Waybill Detail" : "New Waybill"}</h1>
+        <PageHeader title={waybillId ? "Waybill detail" : "New waybill"} back={{ label: "Shipping and tracking", href: appPath("/inventory/issues") }} />
         <InventorySecondaryNav />
       </div>
 
@@ -328,7 +330,7 @@ export default function WaybillDetail() {
               />
             </div>
             <div className="space-y-1">
-              <Label>Date</Label>
+              <Label>Date <DateHint /></Label>
               <Input type="date" value={header.date} onChange={(e) => setHeader((p) => ({ ...p, date: e.target.value }))} />
             </div>
             <div className="space-y-1">
@@ -479,7 +481,7 @@ export default function WaybillDetail() {
                       <div className="rounded border border-amber-500 bg-amber-50 p-2 text-xs text-amber-900 dark:bg-amber-950 dark:text-amber-100">
                         <div className="mb-1 flex items-center gap-1 font-medium">
                           <AlertTriangle className="h-3.5 w-3.5" />
-                          FEFO override — older stock skipped
+                          FEFO override: older stock skipped
                         </div>
                         <ul className="list-disc pl-4">
                           {(fefoWarnings[lineIdx] ?? []).map((w, i) => (
@@ -555,7 +557,7 @@ export default function WaybillDetail() {
                             }
                           />
                           <div className="flex h-9 items-center rounded border px-2 text-xs">
-                            Balance: {ctn?.currentBalance ?? "—"}
+                            Balance: {ctn?.currentBalance ?? ""}
                           </div>
                           <div className="flex h-9 items-center">
                             {expired ? <Badge variant="destructive">expired</Badge> : <Badge variant="secondary">valid</Badge>}
@@ -672,7 +674,7 @@ export default function WaybillDetail() {
                 const timestamp = (details.data?.copiesPrinted as Record<string, string | null> | undefined)?.[copy];
                 return (
                   <div key={copy} className="rounded border px-2 py-1">
-                    {timestamp ? `✔ ${copy}: ${new Date(timestamp).toLocaleString()}` : `○ ${copy}: unprinted`}
+                    {timestamp ? `✔ ${copy}: ${formatDateTime(timestamp)}` : `○ ${copy}: not printed`}
                   </div>
                 );
               })}

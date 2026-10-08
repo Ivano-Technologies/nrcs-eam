@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { DateHint, formatDateTime, formatEmpty } from "@/lib/format";
 import { useLocation, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
+import PageHeader from "@/components/ui/PageHeader";
+import { appPath } from "@/lib/routes";
 import { GrnLineItemsTable, type GrnLineItem } from "@/components/wms/GrnLineItemsTable";
 import { SignatureBlock, type SignatureValue } from "@/components/wms/SignatureBlock";
 import { CtnInlineCreator } from "@/components/wms/CtnInlineCreator";
@@ -172,7 +175,7 @@ export default function ReceiptDetail() {
     () =>
       (ctnList.data?.items ?? []).map((c) => ({
         id: c.id,
-        label: `${c.ctnCode} — ${c.itemCode} ${c.itemName}`,
+        label: `${c.ctnCode} · ${c.itemCode} ${c.itemName}`,
       })),
     [ctnList.data?.items]
   );
@@ -225,14 +228,14 @@ export default function ReceiptDetail() {
     if (!navigator.onLine) {
       if (savedId == null) {
         enqueueGrnOperation({ kind: "createDraft", payload: payload as unknown });
-        toast.info("GRN draft saved offline — will sync when you are back online.");
+        toast.info("GRN draft saved offline. It will sync when you are back online.");
       } else {
         enqueueGrnOperation({
           kind: "updateDraft",
           documentId: savedId,
           payload: payload as unknown,
         });
-        toast.info("GRN draft saved offline — will sync when you are back online.");
+        toast.info("GRN draft saved offline. It will sync when you are back online.");
       }
       setDirty(false);
       return;
@@ -284,7 +287,7 @@ export default function ReceiptDetail() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-3xl font-bold">{savedId ? "GRN Detail" : "New GRN"}</h1>
+        <PageHeader title={savedId ? "GRN detail" : "New GRN"} back={{ label: "Receiving", href: appPath("/inventory/receipts") }} />
         <InventorySecondaryNav />
       </div>
 
@@ -323,7 +326,7 @@ export default function ReceiptDetail() {
                 <Input id="grn-received-from" value={form.receivedFrom} onChange={(e) => { setForm((p) => ({ ...p, receivedFrom: e.target.value })); setDirty(true); }} />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="grn-date-of-arrival">Date of arrival</Label>
+                <Label htmlFor="grn-date-of-arrival">Date of arrival <DateHint /></Label>
                 <Input id="grn-date-of-arrival" type="date" value={form.dateOfArrival} onChange={(e) => { setForm((p) => ({ ...p, dateOfArrival: e.target.value })); setDirty(true); }} />
               </div>
               <div className="space-y-1">
@@ -442,7 +445,7 @@ export default function ReceiptDetail() {
                   const timestamp = (receiptQuery.data?.copiesPrinted as Record<string, string | null> | undefined)?.[copy];
                   return (
                     <div key={copy} className="rounded border px-2 py-1">
-                      {timestamp ? `✔ ${copy}: ${new Date(timestamp).toLocaleString()}` : `○ ${copy}: unprinted`}
+                      {timestamp ? `✔ ${copy}: ${formatDateTime(timestamp)}` : `○ ${copy}: not printed`}
                     </div>
                   );
                 })}
@@ -456,10 +459,10 @@ export default function ReceiptDetail() {
             <CardTitle>Live preview</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <div><span className="font-medium">GRN:</span> {form.grnNumber || "—"}</div>
-            <div><span className="font-medium">Location:</span> {warehouses.find((w) => String(w.id) === form.delegationLocationId)?.name ?? "—"}</div>
-            <div><span className="font-medium">Received from:</span> {form.receivedFrom || "—"}</div>
-            <div><span className="font-medium">Arrival:</span> {form.dateOfArrival || "—"}</div>
+            <div><span className="font-medium">GRN:</span> {form.grnNumber || ""}</div>
+            <div><span className="font-medium">Location:</span> {formatEmpty(warehouses.find((w) => String(w.id) === form.delegationLocationId)?.name)}</div>
+            <div><span className="font-medium">Received from:</span> {form.receivedFrom || ""}</div>
+            <div><span className="font-medium">Arrival:</span> {form.dateOfArrival || ""}</div>
             <div><span className="font-medium">Lines:</span> {lines.length}</div>
             <div><span className="font-medium">Status:</span> {savedId ? "draft/finalizable" : "new draft"}</div>
           </CardContent>

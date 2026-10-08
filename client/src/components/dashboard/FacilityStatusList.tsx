@@ -9,7 +9,7 @@ import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 
 function statusClass(status: "active" | "offline") {
-  if (status === "active") return "bg-green-100 text-green-700";
+  if (status === "active") return "bg-green-100 text-green-800";
   return "bg-slate-100 text-slate-700";
 }
 

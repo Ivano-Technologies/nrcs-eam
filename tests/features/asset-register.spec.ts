@@ -6,10 +6,10 @@ test.describe("Asset Register (live)", () => {
     await loginAsAdmin(page);
     await page.goto("/app/assets");
 
-    await expect(page.getByTestId("asset-register-heading")).toHaveText(/Asset Register/i, {
+    await expect(page.getByTestId("asset-register-heading")).toHaveText(/Asset register/i, {
       timeout: 60_000,
     });
-    await expect(page).toHaveTitle(/Asset Register/i, { timeout: 15_000 });
+    await expect(page).toHaveTitle(/Asset register/i, { timeout: 15_000 });
 
     await expect(page.getByTestId("asset-register-data-table")).toBeVisible({ timeout: 30_000 });
     await expect(page.getByRole("columnheader", { name: /Asset Code/i })).toBeVisible();

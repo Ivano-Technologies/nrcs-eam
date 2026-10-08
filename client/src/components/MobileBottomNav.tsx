@@ -22,6 +22,14 @@ import { cn } from "@/lib/utils";
 const PRIMARY_GROUP_IDS = ["assets", "facilities", "maintenance"] as const;
 type PrimaryGroupId = (typeof PRIMARY_GROUP_IDS)[number];
 
+/**
+ * Label size lives on the span: the global mobile rule in index.css forces
+ * `text-base` on every button under 768px, which made "Facilities" and
+ * "Maintenance" run into each other at 390px. `max-w-full truncate` keeps any
+ * future longer label inside its own fifth of the bar.
+ */
+const NAV_LABEL_CLASS = "block max-w-full truncate text-center text-[11px] leading-tight";
+
 const MORE_GROUP_IDS = new Set(["inventory", "reports", "administration", "settings"]);
 
 type MobileBottomNavProps = {
@@ -124,7 +132,7 @@ export function MobileBottomNav({ location, setLocation, userRole }: MobileBotto
               {dashboardItem ? (
                 <dashboardItem.icon className={cn("h-5 w-5", dashboardActive && "text-primary")} />
               ) : null}
-              <span className="truncate">Dashboard</span>
+              <span className={NAV_LABEL_CLASS}>Dashboard</span>
             </button>
           </li>
 
@@ -143,7 +151,7 @@ export function MobileBottomNav({ location, setLocation, userRole }: MobileBotto
                   )}
                 >
                   <group.icon className={cn("h-5 w-5", active && "text-primary")} />
-                  <span className="truncate">{group.label}</span>
+                  <span className={NAV_LABEL_CLASS}>{group.label}</span>
                 </button>
               </li>
             );
@@ -163,7 +171,7 @@ export function MobileBottomNav({ location, setLocation, userRole }: MobileBotto
               <MoreHorizontal
                 className={cn("h-5 w-5", (moreActive || sheet === "more") && "text-primary")}
               />
-              <span className="truncate">More</span>
+              <span className={NAV_LABEL_CLASS}>More</span>
             </button>
           </li>
         </ul>

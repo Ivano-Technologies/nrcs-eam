@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { HtmlTableEmptyState } from "@/components/ui/EmptyState";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -6,7 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Upload } from "lucide-react";
+import PageHeader from "@/components/ui/PageHeader";
+import { formatEnumLabel } from "@/lib/format";
+import { formatActivityDetails } from "@/lib/activityLog";
 import { useBulkImportFileInput } from "@/hooks/useBulkImportFileInput";
 
 type DocType = "grn" | "waybill" | "monthly_report" | "stock_card";
@@ -61,12 +65,16 @@ export default function ImportPage({ embedInShell = false }: { embedInShell?: bo
   return (
     <div className="space-y-4">
       {!embedInShell ? (
-        <>
-          <h1 className="text-3xl font-bold">Import Pipeline</h1>
+        <div>
+          <PageHeader
+            icon={Upload}
+            title="Import"
+            subtitle="Bring GRNs, waybills, monthly reports and stock cards in from Excel or typed PDF as drafts."
+          />
           <InventorySecondaryNav />
-        </>
+        </div>
       ) : (
-        <h2 className="text-2xl font-bold">Import Pipeline</h2>
+        <h2 className="text-2xl font-bold">Import</h2>
       )}
 
       <Card>
@@ -148,11 +156,21 @@ export default function ImportPage({ embedInShell = false }: { embedInShell?: bo
             {rows.map((row) => (
               <tr key={row.rowIndex} className={row.status === "error" ? "bg-red-50" : row.status === "warning" ? "bg-amber-50" : "bg-green-50"}>
                 <td className="px-2 py-2">{row.rowIndex}</td>
-                <td className="px-2 py-2 capitalize">{row.status}</td>
-                <td className="px-2 py-2">{(row.errors ?? []).join("; ") || "—"}</td>
-                <td className="px-2 py-2 text-xs">{JSON.stringify(row.data)}</td>
+                <td className="px-2 py-2">{formatEnumLabel(row.status)}</td>
+                <td className="px-2 py-2">{(row.errors ?? []).join("; ") || ""}</td>
+                <td className="max-w-[28rem] truncate px-2 py-2 text-xs" title={formatActivityDetails(JSON.stringify(row.data ?? {}))}>
+                  {formatActivityDetails(JSON.stringify(row.data ?? {}))}
+                </td>
               </tr>
             ))}
+            {rows.length === 0 ? (
+              <HtmlTableEmptyState
+                colSpan={4}
+                icon={Upload}
+                title="No rows yet"
+                body="Rows appear here once you upload a file to preview."
+              />
+            ) : null}
           </tbody>
         </table>
       </div>

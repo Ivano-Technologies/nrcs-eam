@@ -164,7 +164,7 @@ export default function DashboardSettings() {
         dataBase64,
       });
       setAvatarOverride(data.url);
-      toast.success("Photo uploaded — save to apply");
+      toast.success("Photo uploaded. Save to apply it.");
     } catch {
       toast.error("Upload failed");
     } finally {
@@ -190,7 +190,7 @@ export default function DashboardSettings() {
       return;
     }
     setAvatarOverride(raw);
-    toast.success("Photo URL applied — save to confirm");
+    toast.success("Photo URL applied. Save to confirm it.");
   };
 
   const saveProfile = () => {
@@ -227,7 +227,7 @@ export default function DashboardSettings() {
       setNewPassword("");
       setConfirmPassword("");
       if (typeof window !== "undefined" && window.location.search.includes("changePassword=required")) {
-        window.history.replaceState(null, "", appPath("/dashboard-settings"));
+        window.history.replaceState(null, "", appPath("/settings"));
       }
     },
     onError: (e) => toast.error(e.message),
@@ -373,11 +373,11 @@ export default function DashboardSettings() {
               <div className="grid gap-1 text-sm border-t pt-4">
                 <div>
                   <span className="text-muted-foreground">Email: </span>
-                  <span className="font-medium">{user?.email ?? "—"}</span>
+                  <span className="font-medium">{user?.email ?? ""}</span>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Role: </span>
-                  <span className="font-medium capitalize">{user?.role ?? "—"}</span>
+                  <span className="font-medium capitalize">{user?.role ?? ""}</span>
                 </div>
               </div>
             </div>

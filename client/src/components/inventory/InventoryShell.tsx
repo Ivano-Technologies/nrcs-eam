@@ -13,7 +13,7 @@ const TAB_DESCRIPTIONS: Partial<Record<InventoryShellTab, string>> = {
   "stock-overview":
     "Real-time visibility into inventory levels, stock movements, and warehouse availability.",
   tracking:
-    "Track stock movements, inter-warehouse transfers, periodic counts, expiry, kits, and warehouse activity.",
+    "Track stock movements, transfers between warehouses, periodic counts, expiry, kits and warehouse activity.",
   "ctn-registry":
     "Centralized registry for recording, monitoring, and validating consignment tracking numbers.",
   requisitions:
@@ -30,7 +30,7 @@ const TABS: { tab: InventoryShellTab; label: string; path: string }[] = [
   { tab: "ctn-registry", label: "CTN registry", path: "/inventory/ctn-registry" },
   { tab: "requisitions", label: "Order fulfillment", path: "/inventory/requisitions" },
   { tab: "receipts", label: "Receiving", path: "/inventory/receipts" },
-  { tab: "issues", label: "Shipping / Tracking", path: "/inventory/issues" },
+  { tab: "issues", label: "Shipping and tracking", path: "/inventory/issues" },
 ];
 
 function tabHref(path: string): string {
@@ -54,15 +54,14 @@ export function InventoryShell({ activeTab, children }: InventoryShellProps) {
   const locPath = (location.split("?")[0] || "/").replace(/\/$/, "") || "/";
 
   return (
-    <div className="space-y-5">
+    <div>
       <PageHeader
         icon={Boxes}
         title="Inventory"
         subtitle={TAB_DESCRIPTIONS[activeTab] ?? DEFAULT_SUBTITLE}
-        className="mb-0"
       />
 
-      <div className="flex flex-wrap gap-2 border-b border-border pb-2">
+      <div className="mb-5 flex flex-wrap gap-2 border-b border-border pb-2">
         {TABS.map((t) => {
           const href = tabHref(t.path);
           const active = isTabActive(t.tab, t.path, locPath);

@@ -19,7 +19,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatNaira } from "@/lib/format";
+import { formatDate, formatEmpty, formatNaira } from "@/lib/format";
+import { TableEmptyState } from "@/components/ui/EmptyState";
 import { KPI_VALUE_CLASS } from "@/lib/kpiTypography";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -72,11 +73,11 @@ export default function DepreciationSchedule() {
 
   return (
     <ManagerFinanceGate>
-      <div className="container mx-auto space-y-6 p-6">
+      <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <PageHeader
             icon={TrendingDown}
-            title="Depreciation Reporting"
+            title="Depreciation schedule"
             subtitle="Automated depreciation schedules and net book value reporting for organizational assets."
             className="mb-0"
           />
@@ -96,7 +97,7 @@ export default function DepreciationSchedule() {
                 )}
               </Button>
             ) : null}
-            <Button variant="default" disabled={exportExcel.isPending} onClick={() => exportExcel.mutate({})}>
+            <Button variant="outline" disabled={exportExcel.isPending} onClick={() => exportExcel.mutate({})}>
               {exportExcel.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -105,7 +106,7 @@ export default function DepreciationSchedule() {
               ) : (
                 <>
                   <FileSpreadsheet className="mr-2 h-4 w-4" />
-                  Export Excel
+                  Export to Excel
                 </>
               )}
             </Button>
@@ -174,14 +175,15 @@ export default function DepreciationSchedule() {
         </div>
 
         <Card>
-          <CardContent className="p-0 overflow-x-auto">
+          <CardContent className="p-0">
+            <div className="frozen-table-wrap sticky-first-col">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Code</TableHead>
-                  <TableHead>Asset</TableHead>
+                  <TableHead className="min-w-[12rem]">Asset</TableHead>
                   <TableHead>Category</TableHead>
-                  <TableHead>Facility</TableHead>
+                  <TableHead className="min-w-[12rem]">Facility</TableHead>
                   <TableHead>Acq. date</TableHead>
                   <TableHead className="text-right">Acq. cost</TableHead>
                   <TableHead className="text-right">Life (y)</TableHead>
@@ -194,23 +196,32 @@ export default function DepreciationSchedule() {
               <TableBody>
                 {pageRows.map((r) => (
                   <TableRow key={r.assetId}>
-                    <TableCell>{r.assetCode ?? "—"}</TableCell>
-                    <TableCell>{r.assetName}</TableCell>
+                    <TableCell>{r.assetCode ?? ""}</TableCell>
+                    <TableCell className="min-w-[12rem] whitespace-normal">{r.assetName}</TableCell>
                     <TableCell>{r.categoryName}</TableCell>
-                    <TableCell>{r.facilityName}</TableCell>
-                    <TableCell>{r.acquisitionDate ?? "—"}</TableCell>
-                    <TableCell className="text-right">{formatNaira(r.acquisitionCostNgn)}</TableCell>
-                    <TableCell className="text-right">{r.usefulLifeYears}</TableCell>
-                    <TableCell className="text-right">{formatNaira(r.annualDepreciationNgn)}</TableCell>
-                    <TableCell className="text-right">{formatNaira(r.accumulatedDepreciationNgn)}</TableCell>
-                    <TableCell className="text-right">{formatNaira(r.netBookValueNgn)}</TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="min-w-[12rem] whitespace-normal">{formatEmpty(r.facilityName)}</TableCell>
+                    <TableCell>{formatDate(r.acquisitionDate)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{formatNaira(r.acquisitionCostNgn)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{r.usefulLifeYears}</TableCell>
+                    <TableCell className="text-right tabular-nums">{formatNaira(r.annualDepreciationNgn)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{formatNaira(r.accumulatedDepreciationNgn)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{formatNaira(r.netBookValueNgn)}</TableCell>
+                    <TableCell className="text-right tabular-nums">
                       {r.fullyDepreciated ? <Badge variant="secondary">100%</Badge> : `${r.percentDepreciated}%`}
                     </TableCell>
                   </TableRow>
                 ))}
+                {pageRows.length === 0 ? (
+                  <TableEmptyState
+                    colSpan={11}
+                    icon={TrendingDown}
+                    title="No depreciation rows yet"
+                    body="Depreciation rows appear here once assets have a unit value, category and acquisition year."
+                  />
+                ) : null}
               </TableBody>
             </Table>
+            </div>
           </CardContent>
         </Card>
 

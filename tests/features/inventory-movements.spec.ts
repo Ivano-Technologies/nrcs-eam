@@ -63,7 +63,7 @@ test.describe("Inventory Phase 2 (live)", () => {
   test("Movements page shows all transactions", async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto("/app/inventory/movements");
-    await expect(page.getByRole("heading", { name: /Inventory Movements/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Inventory movements/i })).toBeVisible();
     await expect(page.locator("table")).toBeVisible();
     const rows = page.locator("table tbody tr");
     const hasRows = (await rows.count()) > 0;

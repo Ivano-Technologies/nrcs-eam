@@ -102,7 +102,7 @@ export default function Welcome() {
             <div>
               <h3 className="font-semibold text-lg mb-2">Register Your Assets</h3>
               <p className="text-muted-foreground">
-                Go to <strong>Asset Register</strong> and add your equipment, vehicles, or inventory items.
+                Go to <strong>Asset register</strong> and add your equipment, vehicles, or inventory items.
                 You can bulk upload assets using Excel templates or add them individually.
               </p>
             </div>
@@ -139,10 +139,10 @@ export default function Welcome() {
           <div className="grid gap-4 md:grid-cols-2 max-w-2xl mx-auto">
             <Button size="lg" onClick={() => setLocation(appPath("/facilities"))}>
               <Package className="mr-2 h-5 w-5" />
-              Add First Site
+              Add first site
             </Button>
             <Button size="lg" variant="outline" onClick={() => setLocation(appPath("/"))}>
-              View Dashboard
+              View dashboard
             </Button>
           </div>
           <p className="text-sm text-muted-foreground mt-8">

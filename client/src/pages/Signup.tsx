@@ -39,7 +39,7 @@ export default function Signup() {
       }
     },
     onError: (error) => {
-      setMessage({ type: "error", text: error.message || "Signup failed. Please try again." });
+      setMessage({ type: "error", text: error.message || "Request failed. Please try again." });
     },
   });
 
@@ -64,7 +64,7 @@ export default function Signup() {
     <AuthPageLayout>
       <GlassCard className="max-w-lg text-center">
         <AuthBrandLogo />
-        <AuthTitle className="text-[23.8px]">Create account</AuthTitle>
+        <AuthTitle>Request access</AuthTitle>
         <AuthSubtitle>To access the NRCS EAM system</AuthSubtitle>
 
         <form onSubmit={handleSubmit} className="mt-8 w-full space-y-4 text-left">
@@ -81,7 +81,7 @@ export default function Signup() {
 
           <div className="space-y-2">
             <Label htmlFor="name" className="text-[15px] text-gray-800 dark:text-gray-200">
-              Full Name
+              Full name
             </Label>
             <Input
               id="name"
@@ -98,7 +98,7 @@ export default function Signup() {
 
           <div className="space-y-2">
             <Label htmlFor="email" className="text-[15px] text-gray-800 dark:text-gray-200">
-              Email Address
+              Email address
             </Label>
             <Input
               id="email"
@@ -156,17 +156,17 @@ export default function Signup() {
             {signupMutation.isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Submitting...
+                Submitting…
               </>
             ) : (
-              "Request Access"
+              "Request access"
             )}
           </Button>
 
           <p className="pt-2 text-center text-sm text-gray-600 dark:text-gray-400">
             Already have an account?{" "}
             <Link href="/login" className="font-medium text-[#C8102E] hover:underline dark:text-[#F87171]">
-              Sign In
+              Sign in
             </Link>
           </p>
         </form>

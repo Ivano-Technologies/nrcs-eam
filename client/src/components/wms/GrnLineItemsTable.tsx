@@ -134,7 +134,7 @@ export function GrnLineItemsTable({
               </TableCell>
               <TableCell>
                 {line.receivedInGoodCondition ? (
-                  <span className="text-xs text-muted-foreground">—</span>
+                  null
                 ) : (
                   <Textarea
                     className="min-h-[38px] min-w-[220px]"

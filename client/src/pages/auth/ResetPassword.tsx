@@ -124,7 +124,7 @@ export default function ResetPassword() {
     <AuthPageLayout>
       <GlassCard className="text-center">
         <AuthBrandLogo />
-        <AuthTitle>Reset Password</AuthTitle>
+        <AuthTitle>Reset your password</AuthTitle>
         <AuthSubtitle className="text-center">
           Nigerian Red Cross Society
           <br />
@@ -132,7 +132,7 @@ export default function ResetPassword() {
         </AuthSubtitle>
 
         {state === "checking" && (
-          <p className="mt-6 text-sm text-gray-600 dark:text-gray-400">Validating your recovery link...</p>
+          <p className="mt-6 text-sm text-gray-600 dark:text-gray-400">Validating your recovery link…</p>
         )}
 
         {state === "invalid" && (
@@ -188,7 +188,7 @@ export default function ResetPassword() {
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Updating...
+                  Updating…
                 </>
               ) : (
                 "Set new password"

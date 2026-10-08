@@ -100,7 +100,7 @@ export function CardQrCode({
           <div className="rounded border bg-muted/50 p-2 text-xs break-all">{encodedText}</div>
           <div className="flex gap-2">
             <Button data-testid="qr-print-btn" onClick={printLabel}>
-              Print Label
+              Print label
             </Button>
             <Button variant="outline" onClick={downloadPng}>
               Download PNG

@@ -10,6 +10,9 @@ import { useMobileTableColumns, MobileColumnsToggle, mobileSecondaryCol } from "
 import { cn } from "@/lib/utils";
 import { Search, Activity } from "lucide-react";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { formatActivityAction, formatActivityDetails, formatActivityResource } from "@/lib/activityLog";
+import { DATE_INPUT_HINT, formatDateTime } from "@/lib/format";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export default function ActivityLog() {
   const { user } = useAuth();
@@ -51,8 +54,9 @@ export default function ActivityLog() {
     const searchLower = searchQuery.toLowerCase();
     return (
       log.action.toLowerCase().includes(searchLower) ||
-      (log.resource?.toLowerCase().includes(searchLower) ?? false) ||
-      (log.details?.toLowerCase().includes(searchLower) ?? false) ||
+      formatActivityAction(log.action).toLowerCase().includes(searchLower) ||
+      formatActivityResource(log.resource, log.userLabel).toLowerCase().includes(searchLower) ||
+      formatActivityDetails(log.details).toLowerCase().includes(searchLower) ||
       log.userLabel.toLowerCase().includes(searchLower)
     );
   });
@@ -61,21 +65,21 @@ export default function ActivityLog() {
     <div className="space-y-6">
       <PageHeader
         icon={Activity}
-        title="Activity Log"
+        title="Activity log"
         subtitle="Audit trail of user actions and system changes"
       />
 
       <Card>
         <CardHeader>
           <CardTitle>Filters</CardTitle>
-          <CardDescription>Filter by date range, user, action, entity type, and facility</CardDescription>
+          <CardDescription>Filter by date range, user, action, entity type and facility</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4">
             <div className="relative md:col-span-2">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search action, resource, details, or user..."
+                placeholder="Search action, resource, details, or user…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -84,7 +88,7 @@ export default function ActivityLog() {
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="User name/email..."
+                placeholder="User name or email…"
                 value={userQuery}
                 onChange={(e) => {
                   setUserQuery(e.target.value);
@@ -106,7 +110,7 @@ export default function ActivityLog() {
               <SelectContent>
                 <SelectItem value="all">All entity types</SelectItem>
                 <SelectItem value="asset">Assets</SelectItem>
-                <SelectItem value="work_order">Work Orders</SelectItem>
+                <SelectItem value="work_order">Work orders</SelectItem>
                 <SelectItem value="site">Facilities</SelectItem>
                 <SelectItem value="user">Users</SelectItem>
                 <SelectItem value="financial">Financial</SelectItem>
@@ -126,7 +130,7 @@ export default function ActivityLog() {
                 <SelectItem value="all">All actions</SelectItem>
                 {actionTypes.map((action) => (
                   <SelectItem key={action} value={action}>
-                    {action}
+                    {formatActivityAction(action)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -152,6 +156,8 @@ export default function ActivityLog() {
             </Select>
             <Input
               type="date"
+              aria-label="Start date"
+              aria-describedby="activity-date-hint"
               value={startDate}
               onChange={(e) => {
                 setStartDate(e.target.value);
@@ -160,6 +166,8 @@ export default function ActivityLog() {
             />
             <Input
               type="date"
+              aria-label="End date"
+              aria-describedby="activity-date-hint"
               value={endDate}
               onChange={(e) => {
                 setEndDate(e.target.value);
@@ -167,7 +175,8 @@ export default function ActivityLog() {
               }}
             />
           </div>
-          <div className="flex justify-end pt-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
+            <p id="activity-date-hint" className="text-xs text-muted-foreground">Dates use {DATE_INPUT_HINT}.</p>
             <MobileColumnsToggle isMobile={isMobile} showAll={showAll} onToggle={setShowAll} />
           </div>
         </CardContent>
@@ -179,7 +188,7 @@ export default function ActivityLog() {
         <Card>
           <CardContent className="pt-6">
             <div
-              className="frozen-table-wrap sticky-first-col overflow-x-auto"
+              className="frozen-table-wrap sticky-first-col"
               style={
                 {
                   "--col1-width": "200px",
@@ -202,13 +211,20 @@ export default function ActivityLog() {
                   {rows.map((log) => (
                     <TableRow key={log.id}>
                       <TableCell className="bg-background">
-                        {new Date(log.timestamp).toLocaleString()}
+                        {formatDateTime(log.timestamp)}
                       </TableCell>
                       <TableCell className="bg-background">{log.userLabel}</TableCell>
-                      <TableCell className="bg-background">{log.action}</TableCell>
-                      <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{log.resource}</TableCell>
-                      <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{log.details ?? "-"}</TableCell>
-                      <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{log.facilityName ?? "-"}</TableCell>
+                      <TableCell className="bg-background">{formatActivityAction(log.action)}</TableCell>
+                      <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{formatActivityResource(log.resource, log.userLabel)}</TableCell>
+                      <TableCell
+                        className={cn("max-w-[24rem] truncate", mobileSecondaryCol(showAllColumns))}
+                        title={formatActivityDetails(log.details) || undefined}
+                      >
+                        {formatActivityDetails(log.details)}
+                      </TableCell>
+                      <TableCell className={cn("min-w-[12rem] whitespace-normal", mobileSecondaryCol(showAllColumns))}>
+                        {log.facilityName ?? ""}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -241,9 +257,8 @@ export default function ActivityLog() {
         </Card>
       ) : (
         <Card>
-          <CardContent className="flex flex-col items-center justify-center h-64">
-            <Activity className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">No activity recorded yet.</p>
+          <CardContent className="p-0">
+            <EmptyState icon={Activity} title="No activity yet" body="Activity appears here once someone signs in or changes a record." />
           </CardContent>
         </Card>
       )}

@@ -1,4 +1,5 @@
 import { Input } from "@/components/ui/input";
+import { DateHint } from "@/lib/format";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -51,7 +52,7 @@ export function SignatureBlock({
           />
         </div>
         <div className="space-y-1">
-          <Label>Date</Label>
+          <Label>Date <DateHint /></Label>
           <Input
             className="h-9"
             type="date"
@@ -80,7 +81,7 @@ export function SignatureBlock({
         </div>
       ) : (
         <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-          Signature pad mode placeholder — default typed mode is active per current facility preference.
+          This facility uses typed signatures.
         </div>
       )}
     </div>
