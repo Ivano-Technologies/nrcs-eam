@@ -27,7 +27,7 @@ export function RequisitionsTable() {
       <CardHeader className="flex flex-row items-center justify-between gap-3">
         <CardTitle className="dashboard-section-title">Pending requisitions</CardTitle>
         <Link href={appPath("/inventory/requisitions")}>
-          <Button className="rounded-lg bg-[#EE1C25] font-semibold text-white hover:bg-[#c8151c] dark:bg-[#EE1C25] dark:text-white dark:hover:bg-[#c8151c]">
+          <Button className="rounded-lg font-semibold">
             Go to queue
           </Button>
         </Link>
@@ -51,7 +51,7 @@ export function RequisitionsTable() {
                     "mt-1",
                     KPI_VALUE_CLASS,
                     (data?.urgent ?? 0) > 0
-                      ? "text-[#DC2626] dark:text-[#EE1C25]"
+                      ? "text-[#C8102E] dark:text-[#F87171]"
                       : "text-[#1a2332] dark:text-[hsl(0_0%_95%)]"
                   )}
                 >

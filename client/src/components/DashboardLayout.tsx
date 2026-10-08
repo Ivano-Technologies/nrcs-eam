@@ -33,7 +33,6 @@ import { GlobalSearch } from "./GlobalSearch";
 import { flattenNavItems } from "@/config/appNav";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { Link } from "wouter";
-import { InstallPWABanner } from "./InstallPWABanner";
 import { ConnectivityIndicator } from "./ConnectivityIndicator";
 import { RoleSwitcher } from "./dashboard/RoleSwitcher";
 import { DashboardRolePreviewProvider } from "./dashboard/rolePreviewContext";
@@ -410,7 +409,6 @@ function DashboardLayoutContent({
       </div>
 
       <SidebarInset className="min-h-svh bg-background dark:bg-[#232323] transition-[margin,padding] duration-200 ease-in-out">
-        <InstallPWABanner />
         {isMobile && (
           <div className="flex border-b h-14 items-center justify-between bg-background/95 dark:bg-[#232323]/95 px-2 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
             <div className="flex items-center gap-2">
@@ -450,7 +448,7 @@ function DashboardLayoutContent({
         )}
         <main
           data-testid="app-page-main"
-          className={cn("flex-1 overflow-x-hidden p-3 sm:p-4", isMobile && "pb-20")}
+          className={cn("flex-1 overflow-x-clip p-3 sm:p-4", isMobile && "pb-20")}
         >
           {children}
         </main>

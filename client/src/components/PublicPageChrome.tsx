@@ -20,7 +20,8 @@ export function PublicPageChrome({
         className
       )}
     >
-      <div className="fixed top-4 right-4 z-50">
+      {/* Top row (in flow, not fixed) so the toggle never floats over page text while scrolling. */}
+      <div className="flex w-full justify-end p-4">
         <ThemeToggle />
       </div>
       <div className="flex flex-1 flex-col">{children}</div>

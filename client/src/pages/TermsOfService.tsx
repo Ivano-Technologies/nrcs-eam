@@ -4,12 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 export default function TermsOfService() {
   return (
     <PublicPageChrome>
-    <div className="container mx-auto py-8 max-w-4xl pt-16">
+    <div className="container mx-auto max-w-4xl pb-8">
       <Card>
         <CardHeader>
           <CardTitle className="text-3xl">Terms of Service</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Last Updated: {new Date().toLocaleDateString()}
+            Last updated 8 October 2026
           </p>
         </CardHeader>
         <CardContent className="prose prose-sm max-w-none dark:prose-invert">
@@ -108,17 +108,9 @@ export default function TermsOfService() {
             <div className="bg-muted p-4 rounded-lg">
               <p className="font-medium">Nigerian Red Cross Society</p>
               <p className="text-sm text-muted-foreground">IT Department</p>
-              <p className="text-sm text-muted-foreground">Email: it@redcrossnigeria.org</p>
+              <p className="text-sm text-muted-foreground">Contact your NRCS system administrator</p>
             </div>
           </section>
-
-          <div className="mt-8 p-4 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg">
-            <p className="text-sm text-amber-900 dark:text-amber-100">
-              <strong>Note:</strong> This is a template document. Please have your legal team review and 
-              customize this content to meet your organization's specific requirements and comply with 
-              applicable laws and regulations.
-            </p>
-          </div>
         </CardContent>
       </Card>
     </div>
