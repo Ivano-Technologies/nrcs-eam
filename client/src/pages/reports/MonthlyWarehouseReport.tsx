@@ -12,8 +12,10 @@ import { useMobileTableColumns, MobileColumnsToggle, mobileSecondaryCol } from "
 import { cn } from "@/lib/utils";
 import PageHeader from "@/components/ui/PageHeader";
 import { CalendarDays, Loader2 } from "lucide-react";
+import { useFullBleed } from "@/lib/fullBleed";
 
 export default function MonthlyWarehouseReport() {
+  useFullBleed(true);
   const [, setLocation] = useLocation();
   const { isMobile, showAllColumns, showAll, setShowAll } = useMobileTableColumns();
   const now = new Date();

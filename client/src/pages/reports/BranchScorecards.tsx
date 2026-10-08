@@ -22,9 +22,11 @@ import { ArrowDown, ArrowUp, FileDown, Loader2, Trophy } from "lucide-react";
 import { useMemo } from "react";
 import { Link } from "wouter";
 import { toast } from "sonner";
+import { useFullBleed } from "@/lib/fullBleed";
 
 export default function BranchScorecards() {
   const [viewMode, setViewMode] = useMobileDefaultViewMode("viewMode_branch_scorecards");
+  useFullBleed(viewMode === "table");
   const { data, isLoading } = trpc.branchScorecards.list.useQuery();
   const exportXlsx = trpc.branchScorecards.exportXlsx.useMutation({
     onSuccess: (r) => {

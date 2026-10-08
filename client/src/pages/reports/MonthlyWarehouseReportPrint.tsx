@@ -1,8 +1,10 @@
 import { useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { PrintableMonthlyReport } from "@/lib/document-printing/PrintableMonthlyReport";
+import { useFullBleed } from "@/lib/fullBleed";
 
 export default function MonthlyWarehouseReportPrint() {
+  useFullBleed(true);
   const [, params] = useRoute("/app/reports/wms/monthly-warehouse-report/print/:warehouseId/:year/:month");
   const warehouseId = Number(params?.warehouseId ?? 0);
   const year = Number(params?.year ?? 0);
