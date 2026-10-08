@@ -38,7 +38,7 @@ const detail = {
   statsVisible: true,
 };
 
-function renderDrawer(f: Record<string, unknown>, d: Record<string, unknown> | undefined) {
+function renderDrawer(f: Record<string, unknown>, d: Record<string, unknown> | undefined, variant: "drawer" | "sheet" = "drawer") {
   return render(
     <FacilityDrawer
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -49,6 +49,7 @@ function renderDrawer(f: Record<string, unknown>, d: Record<string, unknown> | u
       scheme="light"
       onClose={vi.fn()}
       onSelectFacility={vi.fn()}
+      variant={variant}
     />
   );
 }
@@ -82,5 +83,14 @@ describe("FacilityDrawer", () => {
     renderDrawer({ ...facility, stockScorePercent: null, totalCards: 0, adequateCards: 0 }, detail);
     expect(screen.getByText("No stock cards with a minimum level yet.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Stock settings" })).toBeInTheDocument();
+  });
+
+  it("pads the phone sheet body past the bottom nav, but not the desktop drawer", () => {
+    renderDrawer(facility, detail, "sheet");
+    expect(screen.getByTestId("asset-map-drawer-body").style.paddingBottom).toContain("80px");
+    expect(screen.getByTestId("asset-map-drawer-body").style.paddingBottom).toContain("safe-area-inset-bottom");
+    cleanup();
+    renderDrawer(facility, detail, "drawer");
+    expect(screen.getByTestId("asset-map-drawer-body").style.paddingBottom).toBe("");
   });
 });

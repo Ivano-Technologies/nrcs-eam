@@ -10,6 +10,13 @@ import { cn } from "@/lib/utils";
 export const surfaceClass =
   "rounded-[14px] border border-[#E5E7EB] bg-white text-[#111827] shadow-[0_1px_2px_rgba(15,23,42,.06),0_8px_24px_rgba(15,23,42,.10)] dark:border-[#26364A] dark:bg-[#162130] dark:text-[#E6EAF0] dark:shadow-[0_1px_2px_rgba(0,0,0,.30),0_8px_24px_rgba(0,0,0,.35)]";
 
+/**
+ * Clearance for the app's mobile bottom nav: DashboardLayout reserves `pb-20` (80px) for
+ * MobileBottomNav (`h-16` plus `env(safe-area-inset-bottom)` padding). There is no shared token,
+ * so this mirrors those values. Used only on phones (the facility sheet).
+ */
+export const MOBILE_BOTTOM_NAV_CLEARANCE = "calc(80px + env(safe-area-inset-bottom, 0px))";
+
 export const mutedText = "text-[#62626C] dark:text-[#A3AEBD]";
 
 export const focusRing =

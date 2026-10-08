@@ -36,7 +36,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { focusRing, mutedText, TypeGlyph } from "./parts";
+import { focusRing, MOBILE_BOTTOM_NAV_CLEARANCE, mutedText, TypeGlyph } from "./parts";
 
 function locationLine(f: MapFacility): string | null {
   const state = f.state?.trim();
@@ -173,7 +173,12 @@ export const FacilityDrawer = forwardRef<HTMLDivElement, FacilityDrawerProps>(fu
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4">
+      <div
+        data-testid="asset-map-drawer-body"
+        className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4"
+        // Phones: let the last row scroll fully clear of the app's bottom nav. Tablet and desktop unchanged.
+        style={variant === "sheet" ? { paddingBottom: `calc(1rem + ${MOBILE_BOTTOM_NAV_CLEARANCE})` } : undefined}
+      >
         {/* Stock readiness */}
         <section aria-label="Stock readiness" className="flex items-center gap-4 border-b border-[#E5E7EB] pb-4 dark:border-[#26364A]">
           {tier !== "none" && tier !== "offline" && f.stockScorePercent != null ? (
