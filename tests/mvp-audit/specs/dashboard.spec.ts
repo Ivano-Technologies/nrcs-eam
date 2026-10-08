@@ -62,7 +62,7 @@ test.describe("Dashboard (2b)", () => {
   });
 
   test("sidebar nav links navigate without error boundary", async ({ page }) => {
-    const search = page.locator('input[placeholder="Search menu..."]');
+    const search = page.locator('input[placeholder="Search menu…"]');
     if (await search.isVisible()) {
       await search.fill("");
     }

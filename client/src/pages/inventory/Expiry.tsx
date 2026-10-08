@@ -1,8 +1,11 @@
 import { useMemo, useState } from "react";
+import { formatDate } from "@/lib/format";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
+import PageHeader from "@/components/ui/PageHeader";
+import { CalendarClock as CalendarClockIcon } from "lucide-react";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -65,7 +68,7 @@ export default function Expiry({ embedInShell = false }: { embedInShell?: boolea
     <div className="space-y-4">
       {!embedInShell ? (
         <>
-          <h1 className="text-3xl font-bold">Expiry Tracking</h1>
+          <PageHeader icon={CalendarClockIcon} title="Expiry tracking" />
           <InventorySecondaryNav />
         </>
       ) : null}
@@ -98,13 +101,14 @@ export default function Expiry({ embedInShell = false }: { embedInShell?: boolea
                     <tr key={row.batchId} data-testid={`expiry-row-${row.batchId}`} className="border-b">
                       <td className="px-2 py-2">{row.itemCode} - {row.itemName}</td>
                       <td className="px-2 py-2">{row.warehouseName}</td>
-                      <td className="px-2 py-2">{row.batchNumber ?? "—"}</td>
-                      <td className="px-2 py-2">{row.expiryDate ? new Date(row.expiryDate).toLocaleDateString() : "—"}</td>
-                      <td className="px-2 py-2"><Badge variant={tone as any}>{days ?? "—"}</Badge></td>
+                      <td className="px-2 py-2">{row.batchNumber ?? ""}</td>
+                      <td className="px-2 py-2">{row.expiryDate ? formatDate(row.expiryDate) : ""}</td>
+                      <td className="px-2 py-2"><Badge variant={tone as any}>{days ?? ""}</Badge></td>
                       <td className="px-2 py-2">{row.quantity}</td>
                       <td className="px-2 py-2">
                         {isManagerOrAdmin ? (
                           <Button
+                            variant="outline"
                             size="sm"
                             disabled={markExpired.isPending && markExpired.variables?.batchId === row.batchId}
                             onClick={() => markExpired.mutate({ batchId: row.batchId })}
@@ -236,8 +240,8 @@ export default function Expiry({ embedInShell = false }: { embedInShell?: boolea
                           }
                         />
                       </td>
-                      <td className="px-2 py-2">{row.batchNumber ?? "—"}</td>
-                      <td className="px-2 py-2">{row.expiryDate ? String(row.expiryDate) : "—"}</td>
+                      <td className="px-2 py-2">{row.batchNumber ?? ""}</td>
+                      <td className="px-2 py-2">{row.expiryDate ? String(row.expiryDate) : ""}</td>
                       <td className="px-2 py-2">{row.quantity}</td>
                     </tr>
                   ))}

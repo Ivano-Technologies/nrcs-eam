@@ -40,7 +40,7 @@ test.describe("Email — Mailpit (2f)", () => {
     await page.setViewportSize({ width: 1280, height: 720 });
     await loginViaPassword(page);
     await page.goto("/app/email-notifications");
-    await expect(page.getByRole("heading", { name: "Email Notifications" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Email notifications" })).toBeVisible();
 
     await page.getByTestId("email-compose-trigger").click();
     await page.getByTestId("email-subject-input").fill("E2E notification subject");

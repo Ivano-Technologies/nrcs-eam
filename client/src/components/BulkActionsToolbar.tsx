@@ -30,7 +30,7 @@ export function BulkActionsToolbar({
         
         {onExport && (
           <Button
-            variant="secondary"
+            variant="outline"
             size="sm"
             onClick={onExport}
             className="gap-2"

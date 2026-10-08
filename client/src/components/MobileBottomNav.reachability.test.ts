@@ -49,6 +49,8 @@ describe("TASK-7.A mobile bottom nav reachability", () => {
     expect(groupIdForPath(appPath("/inventory/stock-overview"))).toBe("inventory");
     expect(groupIdForPath(appPath("/reports"))).toBe("reports");
     expect(groupIdForPath(appPath("/dashboard-settings"))).toBe("settings");
+    expect(groupIdForPath(appPath("/settings"))).toBe("settings");
+    expect(groupIdForPath(appPath("/settings/users"))).toBe("administration");
     expect(groupIdForPath(appPath("/"))).toBeNull();
   });
 });

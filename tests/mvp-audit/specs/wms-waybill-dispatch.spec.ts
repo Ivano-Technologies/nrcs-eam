@@ -51,7 +51,7 @@ test("WMS waybill create -> multi-CTN dispatch -> print copies", async ({ page }
   await page.getByRole("button", { name: "Save as Draft" }).click();
   // create() navigates to the detail route; toast can be missed during navigation.
   await page.waitForURL(/\/app\/inventory\/issues\/\d+/, { timeout: 30_000 });
-  await expect(page.getByRole("heading", { name: /Waybill Detail/i })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole("heading", { name: /Waybill detail/i })).toBeVisible({ timeout: 15_000 });
   // GET waybill hydrates header/lines/signatures; filling before that completes can be overwritten by useEffect.
   await expect(page.getByTestId("waybill-wb-number")).toHaveValue(new RegExp(`${suffix}$`), { timeout: 25_000 });
 

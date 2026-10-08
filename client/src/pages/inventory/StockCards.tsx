@@ -1,4 +1,5 @@
 import { ModuleFilterSearch, ModuleFiltersCard } from "@/components/ModuleFiltersCard";
+import { formatDate } from "@/lib/format";
 import { ViewToggle } from "@/components/ViewToggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -40,7 +41,7 @@ export default function StockCards({ embedInShell = false }: Props = {}) {
         filterRow={
           <>
             <ModuleFilterSearch
-              placeholder="Search item, CTN, donor code..."
+              placeholder="Search item, CTN, donor code…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -133,10 +134,10 @@ export default function StockCards({ embedInShell = false }: Props = {}) {
                   <TableCell>{row.donorCode}</TableCell>
                   <TableCell>{row.locationName}</TableCell>
                   <TableCell className="text-right tabular-nums">{row.currentBalance}</TableCell>
-                  <TableCell>{row.unit || "—"}</TableCell>
-                  <TableCell>{row.expiryDate || "—"}</TableCell>
-                  <TableCell>{row.minStockFlag ? "YES" : "—"}</TableCell>
-                  <TableCell>{row.lastMovementDate || "—"}</TableCell>
+                  <TableCell>{row.unit || ""}</TableCell>
+                  <TableCell>{formatDate(row.expiryDate)}</TableCell>
+                  <TableCell>{row.minStockFlag ? "YES" : ""}</TableCell>
+                  <TableCell>{formatDate(row.lastMovementDate)}</TableCell>
                 </TableRow>
               ))}
               {!cards.isLoading && rows.length === 0 ? (

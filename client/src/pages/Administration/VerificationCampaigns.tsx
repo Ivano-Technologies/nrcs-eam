@@ -1,4 +1,6 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { EmptyState, TableEmptyState } from "@/components/ui/EmptyState";
+import { DateHint, formatDateRange } from "@/lib/format";
 import PageHeader from "@/components/ui/PageHeader";
 import { ViewToggle } from "@/components/ViewToggle";
 import { Badge } from "@/components/ui/badge";
@@ -101,15 +103,16 @@ export default function VerificationCampaigns() {
       <PageHeader
         icon={ClipboardCheck}
         title="Verification campaigns"
-        subtitle="National asset verification drives — progress, discrepancies, and close-out."
+        subtitle="National asset verification drives, with progress, discrepancies and closure."
+        actions={
+          isAdmin ? (
+            <Button onClick={() => setCreateOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              New campaign
+            </Button>
+          ) : null
+        }
       />
-
-      {isAdmin ? (
-        <Button onClick={() => setCreateOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          New campaign
-        </Button>
-      ) : null}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
@@ -120,6 +123,14 @@ export default function VerificationCampaigns() {
           <CardContent>
             {viewMode === "card" ? (
               <div className="grid gap-3 md:grid-cols-2">
+                {(campaigns ?? []).length === 0 ? (
+                  <EmptyState
+                    className="col-span-full"
+                    icon={ClipboardCheck}
+                    title="No campaigns yet"
+                    body="Start a verification campaign to check assets in the field."
+                  />
+                ) : null}
                 {(campaigns ?? []).map((c) => (
                   <Card
                     key={c.id}
@@ -133,7 +144,7 @@ export default function VerificationCampaigns() {
                         {statusBadge(c.status)}
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        {new Date(c.startsAt).toLocaleDateString()} — {new Date(c.endsAt).toLocaleDateString()}
+                        {formatDateRange(c.startsAt, c.endsAt)}
                       </p>
                     </CardContent>
                   </Card>
@@ -156,13 +167,21 @@ export default function VerificationCampaigns() {
                     data-testid={`campaign-row-${c.id}`}
                     onClick={() => setSelectedId(c.id)}
                   >
-                    <TableCell>{c.name}</TableCell>
+                    <TableCell className="min-w-[12rem] whitespace-normal">{c.name}</TableCell>
                     <TableCell>{statusBadge(c.status)}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">
-                      {new Date(c.startsAt).toLocaleDateString()} — {new Date(c.endsAt).toLocaleDateString()}
+                      {formatDateRange(c.startsAt, c.endsAt)}
                     </TableCell>
                   </TableRow>
                 ))}
+                {(campaigns ?? []).length === 0 ? (
+                  <TableEmptyState
+                    colSpan={3}
+                    icon={ClipboardCheck}
+                    title="No campaigns yet"
+                    body="Start a verification campaign to check assets in the field."
+                  />
+                ) : null}
               </TableBody>
             </Table>
             )}
@@ -180,7 +199,7 @@ export default function VerificationCampaigns() {
                   </Button>
                 ) : null}
                 {selected.status === "active" ? (
-                  <Button size="sm" onClick={() => closeMutation.mutate({ id: selected.id })}>
+                  <Button size="sm" variant="outline" onClick={() => closeMutation.mutate({ id: selected.id })}>
                     Close campaign
                   </Button>
                 ) : null}
@@ -269,11 +288,11 @@ export default function VerificationCampaigns() {
               <Input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} />
             </div>
             <div className="space-y-1">
-              <Label>Starts</Label>
+              <Label>Starts <DateHint /></Label>
               <Input type="date" value={form.startsAt} onChange={(e) => setForm((p) => ({ ...p, startsAt: e.target.value }))} />
             </div>
             <div className="space-y-1">
-              <Label>Ends</Label>
+              <Label>Ends <DateHint /></Label>
               <Input type="date" value={form.endsAt} onChange={(e) => setForm((p) => ({ ...p, endsAt: e.target.value }))} />
             </div>
           </div>

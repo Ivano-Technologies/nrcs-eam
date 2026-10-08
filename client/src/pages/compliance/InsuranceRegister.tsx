@@ -28,7 +28,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { formatNaira } from "@/lib/format";
+import { DateHint, formatNaira } from "@/lib/format";
 import { KPI_VALUE_CLASS } from "@/lib/kpiTypography";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
@@ -109,7 +109,7 @@ export function InsuranceRegisterContent({ embedded = false }: { embedded?: bool
   });
 
   const content = (
-      <div className={embedded ? "space-y-6" : "container mx-auto space-y-6 p-6"}>
+      <div className={"space-y-6"}>
         {summary.expiring > 0 ? (
           <Card className="border-amber-300 bg-amber-50 dark:bg-amber-950/30">
             <CardContent className="flex items-center gap-3 py-4">
@@ -126,7 +126,7 @@ export function InsuranceRegisterContent({ embedded = false }: { embedded?: bool
         <div className="flex flex-col gap-4 sm:flex-row sm:justify-between">
           <PageHeader
             icon={Shield}
-            title="Insurance Register"
+            title="Insurance register"
             subtitle="Property, vehicle, equipment, and liability policies"
             className="mb-0"
           />
@@ -147,7 +147,7 @@ export function InsuranceRegisterContent({ embedded = false }: { embedded?: bool
                 ) : (
                   <>
                     <FileSpreadsheet className="mr-2 h-4 w-4" />
-                    Export
+                    Export to Excel
                   </>
                 )}
               </Button>
@@ -169,7 +169,7 @@ export function InsuranceRegisterContent({ embedded = false }: { embedded?: bool
               ) : (
                 <>
                   <FileSpreadsheet className="mr-2 h-4 w-4" />
-                  Export
+                  Export to Excel
                 </>
               )}
             </Button>
@@ -308,13 +308,13 @@ export function InsuranceRegisterContent({ embedded = false }: { embedded?: bool
                 value={form.annualPremiumNgn}
                 onChange={(e) => setForm((f) => ({ ...f, annualPremiumNgn: e.target.value }))}
               />
-              <Label>Policy start</Label>
+              <Label>Policy start <DateHint /></Label>
               <Input
                 type="date"
                 value={form.policyStart}
                 onChange={(e) => setForm((f) => ({ ...f, policyStart: e.target.value }))}
               />
-              <Label>Policy end</Label>
+              <Label>Policy end <DateHint /></Label>
               <Input
                 type="date"
                 value={form.policyEnd}

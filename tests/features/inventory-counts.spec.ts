@@ -46,7 +46,7 @@ test.describe("Inventory Phase 3 (live)", () => {
   test("Verify stock adjustment happened", async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto("/app/inventory/movements");
-    await expect(page.getByRole("heading", { name: /Inventory Movements/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Inventory movements/i })).toBeVisible();
     await expect(page.getByRole("button", { name: /Export to Excel/i })).toBeVisible();
     const movementRows = page.locator("table tbody tr");
     if ((await movementRows.count()) > 0) {

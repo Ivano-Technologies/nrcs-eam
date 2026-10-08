@@ -18,6 +18,11 @@ export const surfaceClass =
 export const MOBILE_BOTTOM_NAV_CLEARANCE = "calc(80px + env(safe-area-inset-bottom, 0px))";
 
 export const mutedText = "text-[#62626C] dark:text-[#A3AEBD]";
+/**
+ * Asset Map link token (spec `--link`): navy in light, light blue in dark. Links here never use
+ * `text-primary`, so they don't pick up Wave A's dark red text (#F87171 is for the one red action).
+ */
+export const linkText = "text-[#1E3A8A] dark:text-[#93C5FD]";
 
 export const focusRing =
   "outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C8102E] dark:focus-visible:outline-white";

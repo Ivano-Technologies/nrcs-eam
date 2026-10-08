@@ -25,7 +25,7 @@ test.describe("Assets CRUD (2c)", () => {
     const nameEdited = `${name} (edited)`;
 
     await page.goto("/app/assets");
-    await expect(page.getByRole("heading", { name: "Asset Register" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Asset register" })).toBeVisible();
 
     const createDialog = page.getByRole("dialog", { name: "Add New Asset" });
     await page.getByTestId("asset-create-btn").click();
@@ -66,11 +66,11 @@ test.describe("Assets CRUD (2c)", () => {
     await page.getByTestId("asset-search-input").fill(generatedTag);
     await page.getByTestId("asset-edit-btn").first().click();
     await page
-      .getByRole("dialog", { name: "Edit Asset" })
+      .getByRole("dialog", { name: "Edit asset" })
       .getByRole("textbox")
       .nth(1)
       .fill(nameEdited);
-    await page.getByRole("dialog", { name: "Edit Asset" }).getByTestId("asset-form-submit").click();
+    await page.getByRole("dialog", { name: "Edit asset" }).getByTestId("asset-form-submit").click();
     await expect(page.getByText("Asset updated successfully").first()).toBeVisible({ timeout: 60_000 });
     await page.goto("/app/assets");
     await page.getByTestId("asset-search-input").fill(generatedTag);

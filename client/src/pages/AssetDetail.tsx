@@ -32,7 +32,8 @@ import { toast } from "sonner";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import AssetDepreciation from "@/components/AssetDepreciation";
 import { AssetMaintenanceTimeline } from "@/components/AssetMaintenanceTimeline";
-import { formatNaira } from "@/lib/format";
+import { hasTechnicalDetails } from "@/lib/assetDetail";
+import { DateHint, formatDate, formatDateTime, formatEnumLabel, formatNaira } from "@/lib/format";
 import { calculateDepreciatedValue } from "@/lib/depreciation";
 import {
   CONDITION_OPTIONS,
@@ -72,7 +73,7 @@ function parseAssetEditChanges(raw: string | null | undefined): {
 }
 
 function formatAuditCell(v: unknown): string {
-  if (v === null || v === undefined) return "—";
+  if (v === null || v === undefined || v === "") return "None";
   if (typeof v === "object") return JSON.stringify(v);
   return String(v);
 }
@@ -449,7 +450,7 @@ export default function AssetDetail() {
         <p className="text-xl text-muted-foreground">Asset not found</p>
         <Button onClick={() => setLocation("/app/assets")} className="mt-4">
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Asset Register
+          Back to asset register
         </Button>
       </div>
     );
@@ -468,7 +469,7 @@ export default function AssetDetail() {
             </h1>
             <p className="text-muted-foreground mt-1">{asset.assetTag}</p>
           </div>
-          <Badge className={getStatusColor(asset.status)}>{asset.status}</Badge>
+          <Badge className={getStatusColor(asset.status)}>{formatEnumLabel(asset.status)}</Badge>
           {(asset as { notVerifiedCampaignName?: string | null }).notVerifiedCampaignName ? (
             <Badge variant="destructive" data-testid="asset-not-verified-badge">
               Not verified in {(asset as { notVerifiedCampaignName?: string }).notVerifiedCampaignName}
@@ -478,7 +479,7 @@ export default function AssetDetail() {
         {canEdit && (
           <Button data-testid="asset-detail-edit-btn" onClick={handleEdit}>
             <Edit className="mr-2 h-4 w-4" />
-            Edit Asset
+            Edit asset
           </Button>
         )}
       </div>
@@ -486,11 +487,11 @@ export default function AssetDetail() {
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Basic Information</CardTitle>
+            <CardTitle>Basic information</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Asset Tag</p>
+              <p className="text-sm font-medium text-muted-foreground">Asset tag</p>
               <p className="text-base">{asset.assetTag}</p>
             </div>
             <div>
@@ -505,14 +506,15 @@ export default function AssetDetail() {
             )}
             <div>
               <p className="text-sm font-medium text-muted-foreground">Status</p>
-              <Badge className={getStatusColor(asset.status)}>{asset.status}</Badge>
+              <Badge className={getStatusColor(asset.status)}>{formatEnumLabel(asset.status)}</Badge>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        {hasTechnicalDetails(asset) ? (
+        <Card data-testid="asset-technical-details">
           <CardHeader>
-            <CardTitle>Technical Details</CardTitle>
+            <CardTitle>Technical details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {asset.manufacturer && (
@@ -529,7 +531,7 @@ export default function AssetDetail() {
             )}
             {asset.serialNumber && (
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Serial Number</p>
+                <p className="text-sm font-medium text-muted-foreground">Serial number</p>
                 <p className="text-base">{asset.serialNumber}</p>
               </div>
             )}
@@ -544,24 +546,25 @@ export default function AssetDetail() {
             )}
           </CardContent>
         </Card>
+        ) : null}
 
         <Card>
           <CardHeader>
-            <CardTitle>Financial Information</CardTitle>
+            <CardTitle>Financial information</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {asset.acquisitionDate && (
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Acquisition Date</p>
+                <p className="text-sm font-medium text-muted-foreground">Acquisition date</p>
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <p className="text-base">{new Date(asset.acquisitionDate).toLocaleDateString()}</p>
+                  <p className="text-base">{formatDate(asset.acquisitionDate)}</p>
                 </div>
               </div>
             )}
             {asset.acquisitionCost && (
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Acquisition Cost</p>
+                <p className="text-sm font-medium text-muted-foreground">Acquisition cost</p>
                 <div className="flex items-center gap-2">
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
                   <p className="text-base">{formatNaira(parseFloat(asset.acquisitionCost))}</p>
@@ -570,7 +573,7 @@ export default function AssetDetail() {
             )}
             {asset.currentValue && (
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Current Value</p>
+                <p className="text-sm font-medium text-muted-foreground">Current value</p>
                 <div className="flex items-center gap-2">
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
                   <p className="text-base">{formatNaira(parseFloat(asset.currentValue))}</p>
@@ -585,8 +588,8 @@ export default function AssetDetail() {
             )}
             {asset.warrantyExpiry && (
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Warranty Expiry</p>
-                <p className="text-base">{new Date(asset.warrantyExpiry).toLocaleDateString()}</p>
+                <p className="text-sm font-medium text-muted-foreground">Warranty expiry</p>
+                <p className="text-base">{formatDate(asset.warrantyExpiry)}</p>
               </div>
             )}
           </CardContent>
@@ -595,7 +598,7 @@ export default function AssetDetail() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>QR Code</CardTitle>
+              <CardTitle>QR code</CardTitle>
               {!asset.qrCode && canEdit && (
                 <Button
                   size="sm"
@@ -610,7 +613,7 @@ export default function AssetDetail() {
                   ) : (
                     <>
                       <QrCode className="mr-2 h-4 w-4" />
-                      Generate QR Code
+                      Generate QR code
                     </>
                   )}
                 </Button>
@@ -646,7 +649,7 @@ export default function AssetDetail() {
                     className="flex-1"
                     onClick={() => window.print()}
                   >
-                    Print Label
+                    Print label
                   </Button>
                 </div>
                 <p className="text-sm text-muted-foreground text-center">
@@ -682,7 +685,7 @@ export default function AssetDetail() {
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <ImageIcon className="h-5 w-5" />
-              Asset Photos
+              Asset photos
             </CardTitle>
             {canEdit && (
               <div>
@@ -703,12 +706,12 @@ export default function AssetDetail() {
                   {uploadingPhoto ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Uploading...
+                      Uploading…
                     </>
                   ) : (
                     <>
                       <Upload className="mr-2 h-4 w-4" />
-                      Upload Photo
+                      Upload photo
                     </>
                   )}
                 </Button>
@@ -751,7 +754,7 @@ export default function AssetDetail() {
               </p>
               {canEdit && (
                 <p className="text-xs text-muted-foreground mt-1">
-                  Click "Upload Photo" to add images
+                  Click "Upload photo" to add images
                 </p>
               )}
             </div>
@@ -786,7 +789,7 @@ export default function AssetDetail() {
             <CardHeader className="py-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <CardTitle className="text-base">Edit History</CardTitle>
+                  <CardTitle className="text-base">Edit history</CardTitle>
                   <CardDescription>
                     Register edits with field-level diffs (visible to Admin and Manager).
                   </CardDescription>
@@ -811,7 +814,7 @@ export default function AssetDetail() {
                         <div key={entry.id} className="rounded-md border p-3 space-y-2">
                           <div className="flex flex-wrap justify-between gap-2 text-xs text-muted-foreground">
                             <span className="font-medium text-foreground">{entry.userLabel}</span>
-                            <span>{new Date(entry.timestamp).toLocaleString()}</span>
+                            <span>{formatDateTime(entry.timestamp)}</span>
                           </div>
                           {!parsed || parsed.changedFields.length === 0 ? (
                             <p className="text-xs text-muted-foreground">No field diff stored for this entry.</p>
@@ -898,7 +901,7 @@ export default function AssetDetail() {
               {uploadingPhoto ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Uploading...
+                  Uploading…
                 </>
               ) : (
                 `Upload ${pendingFiles.length} Photo(s)`
@@ -911,7 +914,7 @@ export default function AssetDetail() {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col gap-0 p-6">
           <DialogHeader>
-            <DialogTitle>Edit Asset</DialogTitle>
+            <DialogTitle>Edit asset</DialogTitle>
             <DialogDescription>
               Update operational fields and the full NRCS register record (Admin / Manager).
             </DialogDescription>
@@ -969,7 +972,7 @@ export default function AssetDetail() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-serialNumber">Serial Number</Label>
+                <Label htmlFor="edit-serialNumber">Serial number</Label>
                 <Input
                   id="edit-serialNumber"
                   value={editForm.serialNumber}
@@ -1260,7 +1263,7 @@ export default function AssetDetail() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Last physical check</Label>
+                <Label>Last physical check <DateHint /></Label>
                 <Input
                   type="date"
                   value={editForm.lastPhysicalCheck}
@@ -1362,7 +1365,7 @@ export default function AssetDetail() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Depreciation start</Label>
+                <Label>Depreciation start <DateHint /></Label>
                 <Input
                   type="date"
                   value={editForm.depreciationStartDate}
@@ -1396,7 +1399,7 @@ export default function AssetDetail() {
                   value={
                     computedEditDepreciation != null
                       ? String(computedEditDepreciation)
-                      : "— (set unit value, category, year)"
+                      : "Set unit value, category and year to calculate"
                   }
                 />
               )}
@@ -1411,10 +1414,10 @@ export default function AssetDetail() {
               {updateAssetMutation.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Updating...
+                  Updating…
                 </>
               ) : (
-                "Update Asset"
+                "Update asset"
               )}
             </Button>
           </DialogFooter>

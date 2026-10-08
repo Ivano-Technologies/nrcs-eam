@@ -40,7 +40,8 @@ function AvatarFallback({
     <AvatarPrimitive.Fallback
       data-slot="avatar-fallback"
       className={cn(
-        "bg-muted flex size-full items-center justify-center rounded-full",
+        // text-foreground: without it the initial inherits the sidebar text colour (#FCFCFC) and vanishes on bg-muted in light theme.
+        "bg-muted text-foreground flex size-full items-center justify-center rounded-full",
         className
       )}
       {...props}

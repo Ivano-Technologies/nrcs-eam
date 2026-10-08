@@ -1,4 +1,5 @@
 import { trpc } from "@/lib/trpc";
+import { DateHint, formatDate } from "@/lib/format";
 import PageHeader from "@/components/ui/PageHeader";
 import PageLoader from "@/components/ui/PageLoader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -92,7 +93,7 @@ export default function Maintenance() {
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button><Plus className="mr-2 h-4 w-4" />Add Schedule</Button>
+            <Button><Plus className="mr-2 h-4 w-4" />Add schedule</Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
@@ -117,7 +118,7 @@ export default function Maintenance() {
                     id="description"
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Describe the maintenance tasks..."
+                    placeholder="Describe the maintenance tasks…"
                     rows={3}
                   />
                 </div>
@@ -169,7 +170,7 @@ export default function Maintenance() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="nextDue">Next Due Date *</Label>
+                  <Label htmlFor="nextDue">Next Due Date * <DateHint /></Label>
                   <Input
                     id="nextDue"
                     type="date"
@@ -213,7 +214,7 @@ export default function Maintenance() {
                     id="taskTemplate"
                     value={formData.taskTemplate}
                     onChange={(e) => setFormData({ ...formData, taskTemplate: e.target.value })}
-                    placeholder="Enter tasks, one per line..."
+                    placeholder="Enter tasks, one per line…"
                     rows={4}
                   />
                 </div>
@@ -227,10 +228,10 @@ export default function Maintenance() {
                   {createMutation.isPending ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creating...
+                      Creating…
                     </>
                   ) : (
-                    "Create Schedule"
+                    "Create schedule"
                   )}
                 </Button>
               </div>
@@ -246,7 +247,7 @@ export default function Maintenance() {
             <div className="space-y-3">
               {upcoming.map((s) => (
                 <div key={s.id} className="flex items-center justify-between border-b pb-3 last:border-0">
-                  <div><p className="font-medium">{s.name}</p><p className="text-sm text-muted-foreground">Due: {new Date(s.nextDue).toLocaleDateString()}</p></div>
+                  <div><p className="font-medium">{s.name}</p><p className="text-sm text-muted-foreground">Due: {formatDate(s.nextDue)}</p></div>
                   <Badge>{s.frequency}</Badge>
                 </div>
               ))}

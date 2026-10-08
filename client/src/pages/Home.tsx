@@ -246,7 +246,7 @@ export default function Home() {
 
               title="Dashboard"
 
-              subtitle="Field view — your branch only"
+              subtitle="Field view. Your branch only."
 
               className="mb-0"
 
@@ -327,7 +327,17 @@ export default function Home() {
 
       value: metrics?.activeFacilities.value ?? 0,
 
-      sub: `of ${metrics?.activeFacilities.total ?? 0} · ${metrics?.activeFacilities.offline ?? 0} offline`,
+      sub: (
+        <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span>of {metrics?.activeFacilities.total ?? 0}</span>
+          {(metrics?.activeFacilities.offline ?? 0) > 0 ? (
+            <span className="inline-flex items-center gap-1.5" data-testid="kpi-facilities-offline">
+              <span className="h-2 w-2 rounded-full bg-amber-500" aria-hidden />
+              {metrics?.activeFacilities.offline} offline
+            </span>
+          ) : null}
+        </span>
+      ),
 
       icon: MapPin,
 
@@ -471,11 +481,11 @@ export default function Home() {
 
         {bundleError ? (
 
-          <div className="mb-4 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-600 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300">
+          <div data-testid="dashboard-error-banner" className="mb-4 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300">
 
             Some dashboard data could not be loaded. Values shown may be incomplete.{" "}
 
-            <button type="button" onClick={() => void refetchBundle()} className="ml-2 underline">
+            <button type="button" onClick={() => void refetchBundle()} className="ml-2 font-medium underline" data-testid="dashboard-error-retry">
 
               Retry
 

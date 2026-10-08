@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
+import { EmptyState, HtmlTableEmptyState } from "@/components/ui/EmptyState";
+import { formatEnumLabel } from "@/lib/format";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
+import PageHeader from "@/components/ui/PageHeader";
+import { ClipboardList as ClipboardListIcon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -115,7 +119,7 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
     <div className="space-y-4">
       {!embedInShell ? (
         <>
-          <h1 className="text-3xl font-bold">Requisitions</h1>
+          <PageHeader icon={ClipboardListIcon} title="Order fulfillment" />
           <InventorySecondaryNav />
         </>
       ) : null}
@@ -148,12 +152,17 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
           </Select>
           <Input className="w-[240px]" placeholder="Search requisitions" value={search} onChange={(e) => setSearch(e.target.value)} />
           <ViewToggle value={viewMode} onChange={setViewMode} />
-          <Button data-testid="new-req-btn" className="ml-auto" onClick={() => setOpen(true)}>New Requisition</Button>
+          <Button data-testid="new-req-btn" className="ml-auto" onClick={() => setOpen(true)}>New requisition</Button>
         </CardContent>
       </Card>
 
       {viewMode === "card" ? (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {!list.isLoading && (list.data ?? []).length === 0 ? (
+            <Card className="col-span-full">
+              <EmptyState icon={ClipboardListIcon} title="No requisitions yet" body="Requisitions appear here once a branch requests stock." />
+            </Card>
+          ) : null}
           {(list.data ?? []).map((row) => (
             <Card key={row.id} data-testid={`req-row-${row.reqNumber}`}>
               <CardContent className="space-y-2 p-4">
@@ -162,7 +171,7 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
                   <Badge data-testid="req-priority-badge" data-priority={row.priority ?? "routine"} variant={priorityVariant(row.priority ?? undefined) as any}>{row.priority}</Badge>
                 </div>
                 <p className="font-semibold">{row.title}</p>
-                <p className="text-xs text-muted-foreground">{row.status}</p>
+                <p className="text-xs text-muted-foreground">{formatEnumLabel(row.status)}</p>
               </CardContent>
             </Card>
           ))}
@@ -220,7 +229,7 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
                       {downloadPdfMutation.isPending ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Generating...
+                          Generating…
                         </>
                       ) : (
                         "Download PDF"
@@ -228,6 +237,7 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
                     </Button>
                     {row.status === "draft" ? (
                       <Button
+                        variant="outline"
                         size="sm"
                         disabled={submitMutation.isPending && submitMutation.variables?.requisitionId === row.id}
                         onClick={() => submitMutation.mutate({ requisitionId: row.id })}
@@ -244,6 +254,7 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
                     ) : null}
                     {row.status === "submitted" ? (
                       <Button
+                        variant="outline"
                         size="sm"
                         data-testid="req-approve-branch-btn"
                         disabled={approveBranchMutation.isPending && approveBranchMutation.variables?.requisitionId === row.id}
@@ -261,6 +272,7 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
                     ) : null}
                     {row.status === "branch_approved" && isAdmin ? (
                       <Button
+                        variant="outline"
                         size="sm"
                         data-testid="req-approve-hq-btn"
                         disabled={approveHqMutation.isPending && approveHqMutation.variables?.requisitionId === row.id}
@@ -278,6 +290,7 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
                     ) : null}
                     {row.status === "hq_approved" ? (
                       <Button
+                        variant="outline"
                         size="sm"
                         disabled={fulfillMutation.isPending && fulfillMutation.variables?.requisitionId === row.id}
                         onClick={() => void handleFulfill(row.id)}
@@ -316,6 +329,14 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
                   </td>
                 </tr>
               ))}
+              {!list.isLoading && (list.data ?? []).length === 0 ? (
+                <HtmlTableEmptyState
+                  colSpan={7}
+                  icon={ClipboardListIcon}
+                  title="No requisitions yet"
+                  body="Requisitions appear here once a branch requests stock."
+                />
+              ) : null}
             </tbody>
           </table>
         </div>
@@ -366,7 +387,7 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
                 <Input placeholder="Notes" value={line.notes} onChange={(e) => setLines((prev) => prev.map((x, i) => (i === idx ? { ...x, notes: e.target.value } : x)))} />
               </div>
             ))}
-            <Button variant="outline" onClick={() => setLines((p) => [...p, { catalogueId: "", quantity: "", urgency: "routine", notes: "" }])}>Add Item</Button>
+            <Button variant="outline" onClick={() => setLines((p) => [...p, { catalogueId: "", quantity: "", urgency: "routine", notes: "" }])}>Add item</Button>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
               <Button

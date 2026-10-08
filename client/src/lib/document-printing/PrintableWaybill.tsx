@@ -16,12 +16,12 @@ export function PrintableWaybill({ waybill, copyType = "white" }: PrintableWaybi
       showWatermark
     >
       <div className="grid grid-cols-2 gap-2 text-xs">
-        <div><strong>Number (Numero):</strong> {waybill?.wbNumber ?? "—"}</div>
-        <div><strong>Date:</strong> {waybill?.date ?? "—"}</div>
-        <div><strong>Warehouse (Entrepot):</strong> {waybill?.warehouseId ?? "—"}</div>
+        <div><strong>Number (Numero):</strong> {waybill?.wbNumber ?? ""}</div>
+        <div><strong>Date:</strong> {waybill?.date ?? ""}</div>
+        <div><strong>Warehouse (Entrepot):</strong> {waybill?.warehouseId ?? ""}</div>
         <div><strong>Type:</strong> WAYBILL / DELIVERY NOTE</div>
-        <div><strong>Destination / Beneficiary:</strong> {waybill?.destinationBeneficiary ?? "—"}</div>
-        <div><strong>Transport Data:</strong> {waybill?.meansOfTransport ?? "—"}</div>
+        <div><strong>Destination / Beneficiary:</strong> {waybill?.destinationBeneficiary ?? ""}</div>
+        <div><strong>Transport Data:</strong> {waybill?.meansOfTransport ?? ""}</div>
       </div>
 
       <table className="mt-4 w-full border-collapse text-[11px]">
@@ -37,14 +37,14 @@ export function PrintableWaybill({ waybill, copyType = "white" }: PrintableWaybi
             <tr key={line.id}>
               <td className="border border-black px-1 py-1">{line.itemDescription}</td>
               <td className="border border-black px-1 py-1">
-                {line.ctnSources?.map((src: any) => `CTN ${src.ctnId}`).join(", ") || "—"}
+                {line.ctnSources?.map((src: any) => `CTN ${src.ctnId}`).join(", ") || ""}
               </td>
               <td className="border border-black px-1 py-1">{line.nbOfUnits}</td>
-              <td className="border border-black px-1 py-1">{line.unitType ?? "—"}</td>
-              <td className="border border-black px-1 py-1">{line.weightKg ?? "—"}</td>
-              <td className="border border-black px-1 py-1">{line.volumeM3 ?? "—"}</td>
-              <td className="border border-black px-1 py-1">{line.requisitionLineId ?? "—"}</td>
-              <td className="border border-black px-1 py-1">{line.remarks ?? "—"}</td>
+              <td className="border border-black px-1 py-1">{line.unitType ?? ""}</td>
+              <td className="border border-black px-1 py-1">{line.weightKg ?? ""}</td>
+              <td className="border border-black px-1 py-1">{line.volumeM3 ?? ""}</td>
+              <td className="border border-black px-1 py-1">{line.requisitionLineId ?? ""}</td>
+              <td className="border border-black px-1 py-1">{line.remarks ?? ""}</td>
             </tr>
           ))}
         </tbody>
@@ -53,20 +53,20 @@ export function PrintableWaybill({ waybill, copyType = "white" }: PrintableWaybi
       <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
         <div className="min-h-28 border border-black p-2">
           <div className="font-semibold">Loaded by (Charge par)</div>
-          <div>Name: {waybill?.loadedByName ?? "—"}</div>
-          <div>Function: {waybill?.loadedByFunction ?? "—"}</div>
-          <div>Date: {waybill?.loadedByDate ?? "—"}</div>
+          <div>Name: {waybill?.loadedByName ?? ""}</div>
+          <div>Function: {waybill?.loadedByFunction ?? ""}</div>
+          <div>Date: {waybill?.loadedByDate ?? ""}</div>
         </div>
         <div className="min-h-28 border border-black p-2">
           <div className="font-semibold">Transported by (Transporte par)</div>
-          <div>Name: {waybill?.transportedByName ?? "—"}</div>
-          <div>Function: {waybill?.transportedByFunction ?? "—"}</div>
-          <div>Date: {waybill?.transportedByDate ?? "—"}</div>
+          <div>Name: {waybill?.transportedByName ?? ""}</div>
+          <div>Function: {waybill?.transportedByFunction ?? ""}</div>
+          <div>Date: {waybill?.transportedByDate ?? ""}</div>
         </div>
       </div>
 
       <div className="mt-3 text-xs">
-        <strong>Comments (Commentaires):</strong> {waybill?.comments ?? "—"}
+        <strong>Comments (Commentaires):</strong> {waybill?.comments ?? ""}
       </div>
       <div className="mt-3 border border-black p-2 text-xs">
         <div className="font-semibold">Reception at destination (Reception a destination)</div>

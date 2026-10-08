@@ -19,11 +19,11 @@ export function PrintableStockCard({ data }: PrintableStockCardProps) {
     <PrintableShell title="STOCK CARD" subtitle="Carte de stock" subtitleClassName="text-sm italic">
       <div className="grid grid-cols-2 gap-2 text-sm">
         <div>Description: {card?.description || card?.itemName}</div>
-        <div>Item Code: {card?.itemCode || "—"}</div>
-        <div>Measure Unit: {card?.measureUnit || "—"}</div>
+        <div>Item Code: {card?.itemCode || ""}</div>
+        <div>Measure Unit: {card?.measureUnit || ""}</div>
         <div>CTN/Donor: {card?.ctnCode} / {card?.donorCode}</div>
-        <div>Expiry Date: {card?.expiryDate || "—"}</div>
-        <div>Stock Minimum: {card?.stockMinimum ?? "—"}</div>
+        <div>Expiry Date: {card?.expiryDate || ""}</div>
+        <div>Stock Minimum: {card?.stockMinimum ?? ""}</div>
       </div>
       <table className="mt-3 w-full border-collapse text-sm">
         <thead>
@@ -43,14 +43,14 @@ export function PrintableStockCard({ data }: PrintableStockCardProps) {
           {rows.map((row: any) => (
             <tr key={row.id}>
               <td className="border p-1">{row.date}</td>
-              <td className="border p-1">{row.sourceType === "stock_check" ? "— STOCK CHECK" : row.documentRef || "—"}</td>
-              <td className="border p-1">{row.fromTo || "—"}</td>
-              <td className="border p-1">{row.createdByName || "—"}</td>
+              <td className="border p-1">{row.sourceType === "stock_check" ? "STOCK CHECK" : row.documentRef || ""}</td>
+              <td className="border p-1">{row.fromTo || ""}</td>
+              <td className="border p-1">{row.createdByName || ""}</td>
               <td className="border p-1 text-right">{row.quantityIn}</td>
               <td className="border p-1 text-right">{row.quantityOut}</td>
               <td className="border p-1 text-right">{row.runningBalance}</td>
-              <td className="border p-1">{row.remarks || "—"}</td>
-              <td className="border p-1">{row.binCardId ?? "—"}</td>
+              <td className="border p-1">{row.remarks || ""}</td>
+              <td className="border p-1">{row.binCardId ?? ""}</td>
             </tr>
           ))}
         </tbody>

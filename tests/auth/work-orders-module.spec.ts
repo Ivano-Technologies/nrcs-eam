@@ -38,7 +38,7 @@ test.describe.skip("work orders module (live)", () => {
 
     await loginAsAdmin(page);
     await page.goto("/app/work-orders");
-    await expect(page.getByRole("heading", { name: /^Work Orders$/ })).toBeVisible({
+    await expect(page.getByRole("heading", { name: /^Work orders$/ })).toBeVisible({
       timeout: 30_000,
     });
 
@@ -46,7 +46,7 @@ test.describe.skip("work orders module (live)", () => {
     if ((await createBtn.count()) > 0) {
       await createBtn.click();
     } else {
-      await page.getByRole("button", { name: /Create Work Order/i }).first().click();
+      await page.getByRole("button", { name: /Create work order/i }).first().click();
     }
 
     const createDialog = page.getByRole("dialog", { name: /Create New Work Order/i });
@@ -75,7 +75,7 @@ test.describe.skip("work orders module (live)", () => {
     if ((await submitBtn.count()) > 0) {
       await submitBtn.click();
     } else {
-      await createDialog.getByRole("button", { name: /^Create Work Order$/ }).click();
+      await createDialog.getByRole("button", { name: /^Create work order$/ }).click();
     }
 
     await expect(page.getByText(/Work order created successfully/i)).toBeVisible({

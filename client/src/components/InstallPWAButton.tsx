@@ -66,7 +66,7 @@ export function InstallPWAButton() {
     return (
       <div className="flex items-center gap-2 text-sm text-green-600" data-testid="install-pwa-installed">
         <Check className="h-4 w-4" />
-        App installed — open from your home screen or desktop
+        App installed. Open it from your home screen or desktop.
       </div>
     );
   }

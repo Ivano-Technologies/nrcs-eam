@@ -51,7 +51,7 @@ Legend: `[x]` covered by automated MVP audit (Playwright) · Stack: Vite + React
 | [x] | `/app/reports` |
 | [x] | `/app/report-scheduling` |
 | [x] | `/app/email-notifications` |
-| [x] | `/app/dashboard-settings` |
+| [x] | `/app/settings` (old `/app/dashboard-settings` redirects) |
 
 ---
 

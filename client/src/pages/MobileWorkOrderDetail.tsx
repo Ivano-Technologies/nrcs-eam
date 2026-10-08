@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { formatDate } from "@/lib/format";
 import { useRoute, useLocation, useSearch } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -215,7 +216,7 @@ export default function MobileWorkOrderDetail() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-xl font-bold">Work Order #{workOrder.id}</h1>
+            <h1 className="text-xl font-bold">Work order #{workOrder.id}</h1>
             <p className="text-sm text-muted-foreground">{workOrder.title}</p>
           </div>
         </div>
@@ -245,7 +246,7 @@ export default function MobileWorkOrderDetail() {
                     Saving…
                   </>
                 ) : (
-                  "Start Work"
+                  "Start work"
                 )}
               </Button>
             )}
@@ -266,7 +267,7 @@ export default function MobileWorkOrderDetail() {
                   ) : (
                     <>
                       <Camera className="mr-2 h-4 w-4" />
-                      Take Photo
+                      Take photo
                     </>
                   )}
                 </Button>
@@ -297,7 +298,7 @@ export default function MobileWorkOrderDetail() {
                   ) : (
                     <>
                       <CheckCircle2 className="mr-2 h-4 w-4" />
-                      Mark Complete
+                      Mark complete
                     </>
                   )}
                 </Button>
@@ -398,7 +399,7 @@ export default function MobileWorkOrderDetail() {
             <Textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Enter work notes, findings, or updates..."
+              placeholder="Enter work notes, findings, or updates…"
               rows={4}
               className="text-base"
             />
@@ -416,7 +417,7 @@ export default function MobileWorkOrderDetail() {
               ) : (
                 <>
                   <MessageSquare className="mr-2 h-4 w-4" />
-                  Save Notes
+                  Save notes
                 </>
               )}
             </Button>
@@ -441,18 +442,18 @@ export default function MobileWorkOrderDetail() {
           <CardContent className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Created:</span>
-              <span>{new Date(workOrder.createdAt).toLocaleDateString()}</span>
+              <span>{formatDate(workOrder.createdAt)}</span>
             </div>
             {workOrder.scheduledEnd && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Due:</span>
-                <span>{new Date(workOrder.scheduledEnd).toLocaleDateString()}</span>
+                <span>{formatDate(workOrder.scheduledEnd)}</span>
               </div>
             )}
             {workOrder.actualEnd && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Completed:</span>
-                <span>{new Date(workOrder.actualEnd).toLocaleDateString()}</span>
+                <span>{formatDate(workOrder.actualEnd)}</span>
               </div>
             )}
           </CardContent>

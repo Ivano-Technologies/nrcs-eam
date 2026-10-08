@@ -40,6 +40,13 @@ export function recordPwaSession(local: Storage, session: Storage): number {
 }
 
 /** True when the install prompt may be shown: second session or later, and no "Not now" in the last 30 days. */
+/**
+ * Under 768px the app has a 4rem bottom nav (plus the safe area), so the popup sits
+ * just above it with 12px side insets; from md up it returns to the bottom right corner.
+ */
+export const PWA_POPUP_POSITION_CLASS =
+  "fixed inset-x-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] z-50 animate-in slide-in-from-bottom-5 md:inset-x-auto md:bottom-4 md:right-4 md:max-w-sm";
+
 export function shouldOfferPwaInstall({
   sessionCount,
   dismissedAt,
@@ -166,7 +173,10 @@ export function PWAInstallPrompt() {
   };
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 max-w-sm animate-in slide-in-from-bottom-5">
+    <div
+      data-testid="pwa-install-popup"
+      className={PWA_POPUP_POSITION_CLASS}
+    >
       <PWAInstallCard onInstall={handleInstallClick} onDismiss={handleDismiss} />
     </div>
   );

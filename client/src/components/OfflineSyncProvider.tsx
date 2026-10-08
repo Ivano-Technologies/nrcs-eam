@@ -45,7 +45,7 @@ export function OfflineSyncProvider({ children }: { children: React.ReactNode })
       }
       if (remaining.length > 0) {
         toast.error(
-          `${remaining.length} offline change${remaining.length === 1 ? "" : "s"} could not sync — open the GRN and save again`
+          `${remaining.length} offline change${remaining.length === 1 ? "" : "s"} could not sync. Open the GRN and save again.`
         );
       }
     });

@@ -33,8 +33,11 @@ import {
   Package,
   ShieldAlert,
   TriangleAlert,
+  Warehouse,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatEnumLabel } from "@/lib/format";
+import { HtmlTableEmptyState } from "@/components/ui/EmptyState";
 import { ViewToggle } from "@/components/ViewToggle";
 import { useMobileDefaultViewMode } from "@/hooks/useMobileDefaultViewMode";
 import { CardQrCode } from "@/components/CardQrCode";
@@ -522,7 +525,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                         </Badge>
                         <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-200">
                           {row.itemCategory == null
-                            ? "—"
+                            ? "Not set"
                             : row.itemCategory === "other"
                               ? "Other"
                               : itemCategoryLabel(row.itemCategory)}
@@ -549,7 +552,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
             </div>
           ) : (
             <div
-              className="frozen-table-wrap rounded-md border px-2 md:px-3"
+              className="frozen-table-wrap sticky-first-col rounded-md border px-2 md:px-3"
               style={
                 {
                   "--col1-width": "120px",
@@ -563,17 +566,17 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                 <thead className="bg-background">
                   <tr className="border-b">
                     <th className="w-[120px] min-w-[120px] border-r bg-background px-2 py-2 text-left">
-                      Item Code
+                      Item code
                     </th>
-                    <th className="w-[200px] min-w-[200px] border-r bg-background px-2 py-2 text-left">
+                    <th className="min-w-[12rem] border-r bg-background px-2 py-2 text-left">
                       Location
                     </th>
-                    <th className="w-[240px] min-w-[240px] max-w-[240px] border-r bg-background px-2 py-2 text-left">
-                      Item Name
+                    <th className="min-w-[12rem] border-r bg-background px-2 py-2 text-left">
+                      Item name
                     </th>
                     <th className="px-2 py-2 text-left">Category</th>
                     <th className="px-2 py-2 text-left">Program</th>
-                    <th className="px-2 py-2 text-right">On Hand</th>
+                    <th className="px-2 py-2 text-right">On hand</th>
                     <th className="px-2 py-2 text-left">Unit</th>
                     <th className="px-2 py-2 text-right">Min</th>
                     <th className="px-2 py-2 text-right">Max</th>
@@ -598,10 +601,10 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                       <td className="w-[120px] min-w-[120px] border-r bg-background px-2 py-2">
                         {row.itemCode}
                       </td>
-                      <td className="w-[200px] min-w-[200px] truncate border-r bg-background px-2 py-2">
+                      <td className="min-w-[12rem] whitespace-normal border-r bg-background px-2 py-2">
                         {row.warehouseName}
                       </td>
-                      <td className="w-[240px] min-w-[240px] max-w-[240px] truncate border-r bg-background px-2 py-2">
+                      <td className="min-w-[12rem] whitespace-normal border-r bg-background px-2 py-2">
                         <span className="inline-flex items-center gap-1">
                           {row.itemName}
                           {row.itemCategory == null ? (
@@ -611,7 +614,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                       </td>
                       <td className="px-2 py-2">
                         {row.itemCategory == null ? (
-                          <span className="text-muted-foreground">—</span>
+                          <span className="text-muted-foreground">Not set</span>
                         ) : row.itemCategory === "other" ? (
                           <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-200">
                             Other
@@ -627,11 +630,11 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                           {row.category}
                         </Badge>
                       </td>
-                      <td className="px-2 py-2 text-right">{row.quantityOnHand}</td>
+                      <td className="px-2 py-2 text-right tabular-nums">{row.quantityOnHand}</td>
                       <td className="px-2 py-2">{row.unitOfMeasure}</td>
-                      <td className="px-2 py-2 text-right">{row.minLevel}</td>
-                      <td className="px-2 py-2 text-right">{row.maxLevel ?? "—"}</td>
-                      <td className="px-2 py-2 text-right">{row.safetyStockLevel ?? "—"}</td>
+                      <td className="px-2 py-2 text-right tabular-nums">{row.minLevel}</td>
+                      <td className="px-2 py-2 text-right tabular-nums">{row.maxLevel ?? ""}</td>
+                      <td className="px-2 py-2 text-right tabular-nums">{row.safetyStockLevel ?? ""}</td>
                       <td className="px-2 py-2">
                         <Badge
                           variant="outline"
@@ -649,7 +652,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                           data-testid="ved-badge"
                           data-ved={row.vedClassification ?? "desirable"}
                         >
-                          {row.vedClassification ?? "desirable"}
+                          {formatEnumLabel(row.vedClassification ?? "desirable")}
                         </Badge>
                       </td>
                     </tr>
@@ -729,10 +732,10 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                   </Button>
                   <Button className="h-9" variant="outline" disabled>
                     <ArrowUpFromLine className="mr-2 h-4 w-4" />
-                    Export
+                    Export to Excel
                   </Button>
                   <Button className="h-9" onClick={() => setCreateItemOpen(true)}>
-                    Add Item
+                    Add item
                   </Button>
                 </>
               ) : null
@@ -755,7 +758,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge variant="secondary">{row.category}</Badge>
                       <Badge variant="outline" className={cn("border", vedClass(row.vedClassification))}>
-                        {row.vedClassification ?? "desirable"}
+                        {formatEnumLabel(row.vedClassification ?? "desirable")}
                       </Badge>
                       {row.hasExpiry ? <Badge variant="outline">Expiry</Badge> : null}
                       {row.coldChainRequired ? <Badge variant="outline">Cold Chain</Badge> : null}
@@ -774,7 +777,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
             </div>
           ) : (
           <div
-            className="frozen-table-wrap rounded-md border"
+            className="frozen-table-wrap sticky-first-col rounded-md border"
             style={
               {
                 "--col1-width": "140px",
@@ -788,13 +791,13 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
               <thead className="bg-muted/60">
                 <tr className="border-b">
                   <th className="px-2 py-2 text-left">Code</th>
-                  <th className="px-2 py-2 text-left">Name</th>
+                  <th className="min-w-[12rem] px-2 py-2 text-left">Name</th>
                   <th className="px-2 py-2 text-left">Category</th>
                   <th className="px-2 py-2 text-left">Subcategory</th>
                   <th className="px-2 py-2 text-left">Unit</th>
                   <th className="px-2 py-2 text-left">VED</th>
-                  <th className="px-2 py-2 text-left">Has Expiry</th>
-                  <th className="px-2 py-2 text-left">Cold Chain</th>
+                  <th className="px-2 py-2 text-left">Has expiry</th>
+                  <th className="px-2 py-2 text-left">Cold chain</th>
                   <th className="px-2 py-2 text-left">Active</th>
                 </tr>
               </thead>
@@ -807,9 +810,9 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                     onClick={() => setSelectedCatalogue(row)}
                   >
                     <td className="px-2 py-2">{row.itemCode}</td>
-                    <td className="px-2 py-2">{row.name}</td>
+                    <td className="min-w-[12rem] whitespace-normal px-2 py-2">{row.name}</td>
                     <td className="px-2 py-2">{row.category}</td>
-                    <td className="px-2 py-2">{row.subcategory ?? "—"}</td>
+                    <td className="px-2 py-2">{row.subcategory ?? ""}</td>
                     <td className="px-2 py-2">{row.unitOfMeasure}</td>
                     <td className="px-2 py-2">
                       <Badge
@@ -818,7 +821,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                         data-testid="ved-badge"
                         data-ved={row.vedClassification ?? "desirable"}
                       >
-                        {row.vedClassification ?? "desirable"}
+                        {formatEnumLabel(row.vedClassification ?? "desirable")}
                       </Badge>
                     </td>
                     <td className="px-2 py-2">{row.hasExpiry ? "Yes" : "No"}</td>
@@ -864,17 +867,17 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                 </p>
                 <div className="flex gap-2 pt-2">
                   <Button variant="outline" onClick={() => importMutation.mutate({})}>
-                    Import IFRC Catalogue
+                    Import IFRC catalogue
                   </Button>
                   <Button variant="outline" disabled>
-                    Export Catalogue
+                    Export catalogue to Excel
                   </Button>
                   <Button
                     variant="destructive"
                     disabled={!isAdmin}
                     onClick={() => toast.info("Reset stock levels will be enabled in a later phase.")}
                   >
-                    Reset Stock Levels
+                    Reset stock levels
                   </Button>
                 </div>
               </CardContent>
@@ -1056,10 +1059,10 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid gap-3">
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Item Details</CardTitle>
+                <CardTitle className="text-base">Item details</CardTitle>
               </CardHeader>
               <CardContent className="space-y-1 text-sm">
                 <p>
@@ -1070,7 +1073,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                   <span className="font-semibold">Item category:</span>
                   {selectedItemDetail.data?.itemCategory == null ? (
                     <>
-                      <span className="text-muted-foreground">—</span>
+                      <span className="text-muted-foreground">Not set</span>
                       <TriangleAlert className="h-4 w-4 text-amber-600" aria-label="Uncategorized" />
                     </>
                   ) : selectedItemDetail.data.itemCategory === "other" ? (
@@ -1083,24 +1086,18 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                     </span>
                   )}
                 </p>
-                <p><span className="font-semibold">VED:</span> {selectedItemDetail.data?.vedClassification ?? selectedStock?.vedClassification ?? "desirable"}</p>
+                <p><span className="font-semibold">VED:</span> {formatEnumLabel(selectedItemDetail.data?.vedClassification ?? selectedStock?.vedClassification ?? "desirable")}</p>
                 <p><span className="font-semibold">Unit:</span> {selectedItemDetail.data?.unitOfMeasure ?? selectedStock?.unitOfMeasure}</p>
-                <p><span className="font-semibold">Description:</span> {selectedItemDetail.data?.description ?? "—"}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Recent Movement</CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm text-muted-foreground">
-                Movement history integration lands in Phase 2.
+                {selectedItemDetail.data?.description ? (
+                  <p><span className="font-semibold">Description:</span> {selectedItemDetail.data.description}</p>
+                ) : null}
               </CardContent>
             </Card>
           </div>
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Stock Across Warehouses</CardTitle>
+              <CardTitle className="text-base">Stock across warehouses</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
@@ -1108,24 +1105,32 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                   <thead>
                     <tr className="border-b bg-muted/50">
                       <th className="px-2 py-2 text-left">Location</th>
-                      <th className="px-2 py-2 text-left">On Hand</th>
-                      <th className="px-2 py-2 text-left">Min</th>
-                      <th className="px-2 py-2 text-left">Max</th>
-                      <th className="px-2 py-2 text-left">Safety</th>
+                      <th className="px-2 py-2 text-right">On hand</th>
+                      <th className="px-2 py-2 text-right">Min</th>
+                      <th className="px-2 py-2 text-right">Max</th>
+                      <th className="px-2 py-2 text-right">Safety</th>
                       <th className="px-2 py-2 text-left">Zone</th>
                     </tr>
                   </thead>
                   <tbody>
                     {(selectedStockByItem.data ?? []).map((row) => (
                       <tr key={row.stockId} className="border-b">
-                        <td className="px-2 py-2">{row.warehouseName}</td>
-                        <td className="px-2 py-2">{row.quantityOnHand}</td>
-                        <td className="px-2 py-2">{row.minLevel}</td>
-                        <td className="px-2 py-2">{row.maxLevel ?? "—"}</td>
-                        <td className="px-2 py-2">{row.safetyStockLevel ?? "—"}</td>
-                        <td className="px-2 py-2">{row.zoneLocation ?? "—"}</td>
+                        <td className="min-w-[12rem] whitespace-normal px-2 py-2">{row.warehouseName}</td>
+                        <td className="px-2 py-2 text-right tabular-nums">{row.quantityOnHand}</td>
+                        <td className="px-2 py-2 text-right tabular-nums">{row.minLevel}</td>
+                        <td className="px-2 py-2 text-right tabular-nums">{row.maxLevel ?? ""}</td>
+                        <td className="px-2 py-2 text-right tabular-nums">{row.safetyStockLevel ?? ""}</td>
+                        <td className="px-2 py-2">{row.zoneLocation ?? ""}</td>
                       </tr>
                     ))}
+                    {!selectedStockByItem.isLoading && (selectedStockByItem.data ?? []).length === 0 ? (
+                      <HtmlTableEmptyState
+                        colSpan={6}
+                        icon={Warehouse}
+                        title="No stock held yet"
+                        body="Stock levels appear here once this item is received into a warehouse."
+                      />
+                    ) : null}
                   </tbody>
                 </table>
               </div>
@@ -1154,7 +1159,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                       {ITEM_CATEGORIES.map((c) => (
                         <SelectItem key={c.value} value={c.value}>
                           {c.label}
-                          {c.hint ? ` — ${c.hint}` : ""}
+                          {c.hint ? ` · ${c.hint}` : ""}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1212,7 +1217,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                         })
                       }
                     >
-                      Save Levels
+                      Save levels
                     </Button>
                   </div>
                 ) : null}
@@ -1234,7 +1239,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                       })
                     }
                   >
-                    Save Location
+                    Save location
                   </Button>
                 </div>
               </CardContent>
@@ -1301,7 +1306,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                   {ITEM_CATEGORIES.map((c) => (
                     <SelectItem key={c.value} value={c.value}>
                       {c.label}
-                      {c.hint ? ` — ${c.hint}` : ""}
+                      {c.hint ? ` · ${c.hint}` : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>

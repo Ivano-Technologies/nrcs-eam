@@ -88,10 +88,10 @@ export default function NotificationPreferences() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-3xl space-y-6">
       <PageHeader
         icon={Bell}
-        title="Notification Preferences"
+        title="Notification preferences"
         subtitle="Customize which notifications you want to receive"
       />
 

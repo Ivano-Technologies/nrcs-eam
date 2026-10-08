@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
+import { HtmlTableEmptyState } from "@/components/ui/EmptyState";
+import { DATE_INPUT_HINT, formatDate } from "@/lib/format";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
+import PageHeader from "@/components/ui/PageHeader";
+import { Truck as TruckIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ModuleFiltersCard, ModuleFilterSearch } from "@/components/ModuleFiltersCard";
 import { useMobileTableColumns, MobileColumnsToggle, mobileSecondaryCol } from "@/hooks/useMobileTableColumns";
@@ -56,7 +60,7 @@ export default function Issues({ embedInShell = false }: { embedInShell?: boolea
     <div className="space-y-4">
       {!embedInShell ? (
         <>
-          <h1 className="text-3xl font-bold">Issues (Waybills)</h1>
+          <PageHeader icon={TruckIcon} title="Shipping and tracking" />
           <InventorySecondaryNav />
         </>
       ) : null}
@@ -68,8 +72,9 @@ export default function Issues({ embedInShell = false }: { embedInShell?: boolea
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            <Input className="h-9 w-[170px]" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-            <Input className="h-9 w-[170px]" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+            <Input className="h-9 w-[170px]" type="date" aria-label="From date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+            <Input className="h-9 w-[170px]" type="date" aria-label="To date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+            <span className="text-xs text-muted-foreground">Dates use {DATE_INPUT_HINT}</span>
             <Select value={warehouseId} onValueChange={setWarehouseId}>
               <SelectTrigger className="h-9 w-[220px]"><SelectValue placeholder="Source warehouse" /></SelectTrigger>
               <SelectContent>
@@ -101,11 +106,11 @@ export default function Issues({ embedInShell = false }: { embedInShell?: boolea
         toolbarStart={
           <MobileColumnsToggle isMobile={isMobile} showAll={showAll} onToggle={setShowAll} />
         }
-        toolbarEnd={<Button data-testid="new-waybill-btn" onClick={() => setLocation("/app/inventory/issues/new")}>New Waybill</Button>}
+        toolbarEnd={<Button data-testid="new-waybill-btn" onClick={() => setLocation("/app/inventory/issues/new")}>New waybill</Button>}
       />
 
       <div
-        className="frozen-table-wrap sticky-first-col overflow-x-auto rounded-md border"
+        className="frozen-table-wrap sticky-first-col rounded-md border"
         style={
           {
             "--col1-width": "150px",
@@ -136,14 +141,22 @@ export default function Issues({ embedInShell = false }: { embedInShell?: boolea
                 onClick={() => setLocation(`/app/inventory/issues/${row.id}`)}
               >
                 <td className="px-2 py-2 font-mono">{row.wbNumber}</td>
-                <td className={cn("px-2 py-2", mobileSecondaryCol(showAllColumns))}>{row.date ?? "—"}</td>
+                <td className={cn("px-2 py-2", mobileSecondaryCol(showAllColumns))}>{formatDate(row.date)}</td>
                 <td className={cn("px-2 py-2", mobileSecondaryCol(showAllColumns))}>{wh.find((x) => x.id === row.warehouseId)?.name ?? row.warehouseId}</td>
-                <td className="px-2 py-2">{row.destinationBeneficiary ?? "—"}</td>
+                <td className="px-2 py-2">{row.destinationBeneficiary ?? ""}</td>
                 <td className={cn("px-2 py-2", mobileSecondaryCol(showAllColumns))}>{row.lineCount ?? 0}</td>
                 <td className={cn("px-2 py-2", mobileSecondaryCol(showAllColumns))}>{row.totalUnits ?? 0}</td>
                 <td className="px-2 py-2">{statusBadge(row.status)}</td>
               </tr>
             ))}
+            {!waybills.isLoading && (waybills.data ?? []).length === 0 ? (
+              <HtmlTableEmptyState
+                colSpan={7}
+                icon={TruckIcon}
+                title="No waybills yet"
+                body="Waybills appear here once stock is dispatched from a warehouse."
+              />
+            ) : null}
           </tbody>
         </table>
       </div>

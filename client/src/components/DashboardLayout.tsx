@@ -19,13 +19,14 @@ import {
 import { useIsMobile } from "@/hooks/useMobile";
 import { appPath } from "@/lib/routes";
 import { LogOut, Settings, ChevronsLeft, Search, User } from "lucide-react";
-import { CSSProperties, useEffect, useMemo, useRef, useState } from "react";
+import { CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 import { NotificationCenter } from "./NotificationCenter";
 import Footer from "./Footer";
+import { PageShell } from "@/components/ui/PageShell";
 import { ThemeToggle } from "./ui/ThemeToggle";
 import { SidebarGroupedNav } from "./SidebarGroupedNav";
 import { MobileBottomNav } from "./MobileBottomNav";
@@ -37,14 +38,13 @@ import { ConnectivityIndicator } from "./ConnectivityIndicator";
 import { RoleSwitcher } from "./dashboard/RoleSwitcher";
 import { DashboardRolePreviewProvider } from "./dashboard/rolePreviewContext";
 import type { UserRole } from "./dashboard/types";
+import { SIDEBAR_FULL_WIDTH, SIDEBAR_RAIL_WIDTH, snapSidebarWidth } from "@/lib/sidebarWidth";
+import { FullBleedProvider, useAutoRail, useFullBleedRegistry } from "@/lib/fullBleed";
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
-const DEFAULT_WIDTH = 360;
-const MIN_WIDTH = 80;
-const MAX_WIDTH = 480;
 const PRESET_WIDTHS = {
-  narrow: 80,
-  wide: 360,
+  narrow: SIDEBAR_RAIL_WIDTH,
+  wide: SIDEBAR_FULL_WIDTH,
 };
 
 export default function DashboardLayout({
@@ -54,51 +54,78 @@ export default function DashboardLayout({
 }) {
   const { user } = useAuth();
   const { data: userPrefs } = trpc.userPreferences.get.useQuery(undefined, { enabled: !!user });
-  const [sidebarWidth, setSidebarWidth] = useState(() => {
+  /** The user's saved preference. Full bleed never writes this. */
+  const [savedSidebarWidth, setSavedSidebarWidth] = useState(() => {
     const saved = localStorage.getItem(SIDEBAR_WIDTH_KEY);
-    return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
+    return snapSidebarWidth(saved ? parseInt(saved, 10) : SIDEBAR_FULL_WIDTH);
+  });
+  const { active: fullBleed, registry } = useFullBleedRegistry();
+  const isMobile = useIsMobile();
+  const updatePrefs = trpc.userPreferences.update.useMutation();
+  const { mutate: mutatePrefs } = updatePrefs;
+  /** A saved preference change: local state, localStorage, and the backend preference. */
+  const saveWidth = useCallback(
+    (width: number) => {
+      const snapped = snapSidebarWidth(width);
+      setSavedSidebarWidth(snapped);
+      if (user) mutatePrefs({ sidebarWidth: snapped });
+    },
+    [user, mutatePrefs]
+  );
+  const { width: sidebarWidth, autoRail, inVisit, onManualWidth } = useAutoRail({
+    saved: savedSidebarWidth,
+    fullBleed,
+    isMobile: Boolean(isMobile),
+    onSaveWidth: saveWidth,
   });
 
-  // Sync sidebar width with user preferences from backend
+  useEffect(() => {
+    localStorage.setItem(SIDEBAR_WIDTH_KEY, savedSidebarWidth.toString());
+  }, [savedSidebarWidth]);
+
+  // Sync the saved preference from the backend (display follows it unless a full bleed visit is open).
   useEffect(() => {
     if (userPrefs?.sidebarWidth) {
-      setSidebarWidth(userPrefs.sidebarWidth);
+      setSavedSidebarWidth(snapSidebarWidth(userPrefs.sidebarWidth));
     }
   }, [userPrefs]);
-
-  useEffect(() => {
-    localStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString());
-  }, [sidebarWidth]);
 
   if (!user) {
     return null;
   }
 
   return (
-    <SidebarProvider
-      style={
-        {
-          "--sidebar-width": `${sidebarWidth}px`,
-        } as CSSProperties
-      }
-    >
-      <DashboardLayoutContent setSidebarWidth={setSidebarWidth} sidebarWidth={sidebarWidth}>
-        {children}
-      </DashboardLayoutContent>
-    </SidebarProvider>
+    <FullBleedProvider value={registry}>
+      <SidebarProvider
+        style={
+          {
+            "--sidebar-width": `${sidebarWidth}px`,
+          } as CSSProperties
+        }
+      >
+        <DashboardLayoutContent setSidebarWidth={onManualWidth} sidebarWidth={sidebarWidth} autoRail={autoRail} inVisit={inVisit}>
+          {children}
+        </DashboardLayoutContent>
+      </SidebarProvider>
+    </FullBleedProvider>
   );
 }
 
 type DashboardLayoutContentProps = {
   children: React.ReactNode;
+  /** Manual toggle or drag. Saves the preference, or only sets the visit width inside a full bleed view. */
   setSidebarWidth: (width: number) => void;
   sidebarWidth: number;
+  autoRail: boolean;
+  inVisit: boolean;
 };
 
 function DashboardLayoutContent({
   children,
   setSidebarWidth,
   sidebarWidth,
+  autoRail,
+  inVisit,
 }: DashboardLayoutContentProps) {
   const { user, logout } = useAuth();
   const [location, setLocation] = useLocation();
@@ -128,6 +155,7 @@ function DashboardLayoutContent({
   const { state } = useSidebar();
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
+  const dragWidthRef = useRef<number | null>(null);
   const menuItems = flattenNavItems(user?.role);
   const activeMenuItem =
     menuItems.find((item) => item.path === location) ??
@@ -160,21 +188,12 @@ function DashboardLayoutContent({
     setEffectiveRole(actualRole);
   }, [actualRole, effectiveRole]);
 
-  const updatePrefsMutation = trpc.userPreferences.update.useMutation();
-
   const toggleSidebarWidth = () => {
-    const currentWidth = sidebarWidth;
-    const newWidth = currentWidth === PRESET_WIDTHS.narrow ? PRESET_WIDTHS.wide : PRESET_WIDTHS.narrow;
+    const newWidth = sidebarWidth === PRESET_WIDTHS.narrow ? PRESET_WIDTHS.wide : PRESET_WIDTHS.narrow;
     setSidebarWidth(newWidth);
-    if (user) {
-      updatePrefsMutation.mutate({ sidebarWidth: newWidth });
-    }
-    // Visual feedback
     setToggleFeedback(true);
     setTimeout(() => setToggleFeedback(false), 300);
   };
-
-
 
   // Keyboard shortcut for sidebar toggle (Ctrl+B / Cmd+B)
   useEffect(() => {
@@ -186,21 +205,25 @@ function DashboardLayoutContent({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [sidebarWidth]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sidebarWidth, setSidebarWidth]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isResizing) return;
 
       const sidebarLeft = sidebarRef.current?.getBoundingClientRect().left ?? 0;
-      const newWidth = e.clientX - sidebarLeft;
-      if (newWidth >= MIN_WIDTH && newWidth <= MAX_WIDTH) {
-        setSidebarWidth(newWidth);
+      // Snap while dragging: the sidebar is either the full width or the icon rail, never in between.
+      const snapped = snapSidebarWidth(e.clientX - sidebarLeft);
+      if (snapped !== dragWidthRef.current) {
+        dragWidthRef.current = snapped;
+        setSidebarWidth(snapped);
       }
     };
 
     const handleMouseUp = () => {
       setIsResizing(false);
+      dragWidthRef.current = null;
     };
 
     if (isResizing) {
@@ -220,9 +243,9 @@ function DashboardLayoutContent({
 
   return (
     <DashboardRolePreviewProvider actualRole={actualRole} effectiveRole={effectiveRole} setEffectiveRole={setEffectiveRole}>
-      <div className="relative" ref={sidebarRef}>
+      <div className="relative" ref={sidebarRef} data-testid="app-sidebar" data-auto-rail={autoRail ? "true" : "false"} data-full-bleed={inVisit ? "true" : "false"} data-sidebar-width={sidebarWidth}>
         <Sidebar
-          className="border-r-0"
+          className="border-r-0 motion-reduce:[&_[data-slot=sidebar-gap]]:transition-none motion-reduce:[&_[data-slot=sidebar-container]]:transition-none"
         >
           <SidebarHeader
             className={cn(
@@ -263,25 +286,25 @@ function DashboardLayoutContent({
                 </button>
               </div>
             ) : (
-              <div className="flex items-center gap-3 px-3 transition-all w-full">
+              <div className="flex items-center gap-2 px-2 transition-all w-full">
                 <div className="min-w-0 flex-1">
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Link href={appPath("/")}>
-                        <div className="flex items-center gap-3 min-w-0 rounded-md px-1 py-1 transition-opacity hover:opacity-80 cursor-pointer">
+                        <div className="flex items-center gap-2 min-w-0 rounded-md px-1 py-1 transition-opacity hover:opacity-80 cursor-pointer">
                           <img
                             src="/nrcs-logo-source.png"
                             alt="Nigerian Red Cross Society"
-                            className="h-12 w-12 shrink-0"
+                            className="h-10 w-10 shrink-0"
                           />
-                          <div className="flex flex-col min-w-0">
+                          <div className="flex flex-col min-w-0 gap-0.5">
                             <span
-                              className="font-bold text-[15px] text-sidebar-foreground truncate"
+                              className="font-bold text-sm leading-tight text-sidebar-foreground"
                               data-testid="sidebar-org-name"
                             >
                               Nigerian Red Cross Society
                             </span>
-                            <span className="text-[14px] text-sidebar-foreground/70 truncate">
+                            <span className="text-xs leading-tight text-sidebar-foreground/70">
                               Enterprise Asset Management
                             </span>
                           </div>
@@ -319,7 +342,7 @@ function DashboardLayoutContent({
                   <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-[20px] w-[20px] text-muted-foreground" />
                   <input
                     type="text"
-                    placeholder="Search menu..."
+                    placeholder="Search menu…"
                     aria-label="Search menu"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -376,7 +399,7 @@ function DashboardLayoutContent({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem asChild>
-                  <Link href={appPath("/dashboard-settings")} className="cursor-pointer">
+                  <Link href={appPath("/settings")} className="cursor-pointer">
                     <User className="mr-2 h-4 w-4" />
                     <span>Profile</span>
                   </Link>
@@ -448,9 +471,9 @@ function DashboardLayoutContent({
         )}
         <main
           data-testid="app-page-main"
-          className={cn("flex-1 overflow-x-clip p-3 sm:p-4", isMobile && "pb-20")}
+          className={cn("flex-1 overflow-x-clip", isMobile && "pb-20")}
         >
-          {children}
+          <PageShell>{children}</PageShell>
         </main>
         <Footer className={isMobile ? "pb-16" : undefined} />
         {isMobile ? (

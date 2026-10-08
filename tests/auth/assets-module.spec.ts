@@ -36,7 +36,7 @@ test.describe.skip("assets module (live)", () => {
 
     await loginAsAdmin(page);
     await page.goto("/app/assets");
-    await expect(page.getByRole("heading", { name: /Asset Register/i })).toBeVisible({
+    await expect(page.getByRole("heading", { name: /Asset register/i })).toBeVisible({
       timeout: 30_000,
     });
     await expect(page.getByTestId("asset-list-table")).toBeVisible();
@@ -71,7 +71,7 @@ test.describe.skip("assets module (live)", () => {
 
     const editBtn = page.getByTestId("asset-detail-edit-btn");
     if (await editBtn.count() === 0) {
-      await page.getByRole("button", { name: /Edit Asset/i }).click();
+      await page.getByRole("button", { name: /Edit asset/i }).click();
     } else {
       await editBtn.click();
     }
@@ -81,7 +81,7 @@ test.describe.skip("assets module (live)", () => {
       await saveBtn.click();
     } else {
       await page
-        .getByRole("dialog", { name: /Edit Asset/i })
+        .getByRole("dialog", { name: /Edit asset/i })
         .getByRole("button", { name: /Update Asset/i })
         .click();
     }

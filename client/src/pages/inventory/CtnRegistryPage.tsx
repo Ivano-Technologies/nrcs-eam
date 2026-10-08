@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { DateHint, formatDate } from "@/lib/format";
 import { InventoryShell } from "@/components/inventory/InventoryShell";
 import { ModuleFiltersCard, ModuleFilterSearch } from "@/components/ModuleFiltersCard";
 import { Button } from "@/components/ui/button";
@@ -142,7 +143,7 @@ export default function CtnRegistryPage() {
               </Select>
               <div className="flex flex-wrap items-end gap-2">
                 <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Expiry from</Label>
+                  <Label className="text-xs text-muted-foreground">Expiry from <DateHint /></Label>
                   <Input
                     type="date"
                     className="h-9 w-[160px]"
@@ -151,7 +152,7 @@ export default function CtnRegistryPage() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Expiry to</Label>
+                  <Label className="text-xs text-muted-foreground">Expiry to <DateHint /></Label>
                   <Input
                     type="date"
                     className="h-9 w-[160px]"
@@ -177,7 +178,7 @@ export default function CtnRegistryPage() {
           original quantity.
         </span>
 
-        <div className="frozen-table-wrap sticky-first-col overflow-x-auto rounded-md border">
+        <div className="frozen-table-wrap sticky-first-col rounded-md border">
           <Table>
             <TableHeader>
               <TableRow>
@@ -221,10 +222,10 @@ export default function CtnRegistryPage() {
                       {r.originalQuantity} {r.unit}
                     </TableCell>
                     <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>
-                      {r.receivedDate ? format(new Date(r.receivedDate), "yyyy-MM-dd") : "—"}
+                      {r.receivedDate ? formatDate(r.receivedDate) : ""}
                     </TableCell>
                     <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>
-                      {r.expiryDate ? format(new Date(r.expiryDate), "yyyy-MM-dd") : "—"}
+                      {r.expiryDate ? formatDate(r.expiryDate) : ""}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {r.currentBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })}{" "}
@@ -283,7 +284,7 @@ export default function CtnRegistryPage() {
                   <SelectContent>
                     {(catalogueQuery.data ?? []).map((c) => (
                       <SelectItem key={c.id} value={String(c.id)}>
-                        {c.itemCode} — {c.name}
+                        {c.itemCode} · {c.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -313,7 +314,7 @@ export default function CtnRegistryPage() {
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
-                  <Label htmlFor="ctn-rec">Received date</Label>
+                  <Label htmlFor="ctn-rec">Received date <DateHint /></Label>
                   <Input
                     id="ctn-rec"
                     type="date"
@@ -322,7 +323,7 @@ export default function CtnRegistryPage() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="ctn-exp">Expiry date</Label>
+                  <Label htmlFor="ctn-exp">Expiry date <DateHint /></Label>
                   <Input
                     id="ctn-exp"
                     type="date"

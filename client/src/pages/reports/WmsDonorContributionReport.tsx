@@ -1,6 +1,6 @@
 import WmsReportSuite from "./WmsReportSuite";
 
 export default function WmsDonorContributionReport() {
-  return <WmsReportSuite initialTab="donor" />;
+  return <WmsReportSuite report="donor" />;
 }
 

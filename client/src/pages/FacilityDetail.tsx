@@ -2,7 +2,9 @@ import { useMemo, useState } from "react";
 import { useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import PageLoader from "@/components/ui/PageLoader";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import PageHeader from "@/components/ui/PageHeader";
+import { formatDate, formatEmpty, formatEnumLabel } from "@/lib/format";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -141,19 +143,20 @@ export default function FacilityDetail() {
 
   return (
     <div className="space-y-4">
-      <Card>
-        <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-2 space-y-0">
-          <CardTitle className="flex flex-wrap items-center gap-2">
+      <PageHeader
+        back={{ label: "Facilities", href: appPath("/facilities/all") }}
+        title={
+          <span className="flex flex-wrap items-center gap-2">
             {facility.name}
-            <Badge variant="outline">{FACILITY_TYPE_LABELS[facility.facilityType]}</Badge>
-          </CardTitle>
-          <CardDescription
-            className="mt-1 text-sm text-muted-foreground max-w-2xl line-clamp-2 sm:line-clamp-none"
-            title={FACILITY_TYPE_DESCRIPTIONS[facility.facilityType]}
-          >
-            {FACILITY_TYPE_DESCRIPTIONS[facility.facilityType]}
-          </CardDescription>
-          {isManagerOrAdmin ? (
+            <Badge variant="outline" className="text-sm font-medium">
+              {FACILITY_TYPE_LABELS[facility.facilityType]}
+            </Badge>
+          </span>
+        }
+        subtitle={FACILITY_TYPE_DESCRIPTIONS[facility.facilityType]}
+        actions={
+          <>
+            {isManagerOrAdmin ? (
             <Button
               type="button"
               variant="outline"
@@ -173,16 +176,22 @@ export default function FacilityDetail() {
                 </>
               )}
             </Button>
-          ) : null}
+            ) : null}
+          </>
+        }
+      />
+      <Card>
+        <CardHeader>
+          <CardTitle>Facility details</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-2 text-sm md:grid-cols-2">
-          <p><span className="font-medium">Code:</span> {facility.code ?? "—"}</p>
+          <p><span className="font-medium">Code:</span> {formatEmpty(facility.code)}</p>
           <p><span className="font-medium">Status:</span> {facility.isActive ? "Active" : "Inactive"}</p>
-          <p className="md:col-span-2"><span className="font-medium">Address:</span> {facility.address ?? "—"}</p>
-          <p><span className="font-medium">State:</span> {facility.state ?? "—"}</p>
-          <p><span className="font-medium">Postal code:</span> {facility.postalCode ?? "—"}</p>
-          <p><span className="font-medium">Contact:</span> {facility.contactPerson ?? "—"}</p>
-          <p><span className="font-medium">Phone:</span> {facility.contactPhone ?? "—"}</p>
+          <p className="md:col-span-2"><span className="font-medium">Address:</span> {formatEmpty(facility.address)}</p>
+          <p><span className="font-medium">State:</span> {formatEmpty(facility.state)}</p>
+          <p><span className="font-medium">Postal code:</span> {formatEmpty(facility.postalCode)}</p>
+          <p><span className="font-medium">Contact:</span> {formatEmpty(facility.contactPerson)}</p>
+          <p><span className="font-medium">Phone:</span> {formatEmpty(facility.contactPhone)}</p>
           <div className="md:col-span-2">
             <a
               className="text-primary underline-offset-4 hover:underline"
@@ -192,7 +201,7 @@ export default function FacilityDetail() {
               target="_blank"
               rel="noreferrer"
             >
-              View on Map
+              View on Google Maps
             </a>
           </div>
         </CardContent>
@@ -233,7 +242,7 @@ export default function FacilityDetail() {
           {photosQuery.isLoading ? (
             <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Loading photos...</span>
+              <span>Loading photos…</span>
             </div>
           ) : photosQuery.data?.length === 0 ? (
             <p className="text-sm text-muted-foreground py-4 text-center">
@@ -338,13 +347,13 @@ export default function FacilityDetail() {
             {recentTransfers.length === 0 ? "No recent asset movements." : (
               <ul className="space-y-1">
                 {recentTransfers.map((t) => (
-                  <li key={t.id}>{t.status} transfer #{t.id} - {new Date(t.requestDate).toLocaleDateString()}</li>
+                  <li key={t.id}>{formatEnumLabel(t.status)} transfer #{t.id}, {formatDate(t.requestDate)}</li>
                 ))}
               </ul>
             )}
           </section>
           <section>
-            <h3 className="mb-1 font-medium">Recent Work Orders</h3>
+            <h3 className="mb-1 font-medium">Recent work orders</h3>
             {recentWorkOrders.length === 0 ? "No recent work orders." : (
               <ul className="space-y-1">
                 {recentWorkOrders.map((w) => (
@@ -358,7 +367,7 @@ export default function FacilityDetail() {
             {recentMovements.length === 0 ? "No recent inventory transactions." : (
               <ul className="space-y-1">
                 {recentMovements.map((m, i) => (
-                  <li key={`${m.itemCode}-${i}`}>{m.itemCode} - {m.type} {m.quantity} ({new Date(m.transactionDate).toLocaleDateString()})</li>
+                  <li key={`${m.itemCode}-${i}`}>{m.itemCode}: {formatEnumLabel(m.type)} {m.quantity} ({formatDate(m.transactionDate)})</li>
                 ))}
               </ul>
             )}
