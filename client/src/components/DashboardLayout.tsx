@@ -19,7 +19,7 @@ import {
 import { useIsMobile } from "@/hooks/useMobile";
 import { appPath } from "@/lib/routes";
 import { LogOut, Settings, ChevronsLeft, Search, User } from "lucide-react";
-import { CSSProperties, useEffect, useMemo, useRef, useState } from "react";
+import { CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
@@ -39,6 +39,7 @@ import { RoleSwitcher } from "./dashboard/RoleSwitcher";
 import { DashboardRolePreviewProvider } from "./dashboard/rolePreviewContext";
 import type { UserRole } from "./dashboard/types";
 import { SIDEBAR_FULL_WIDTH, SIDEBAR_RAIL_WIDTH, snapSidebarWidth } from "@/lib/sidebarWidth";
+import { FullBleedProvider, useAutoRail, useFullBleedRegistry } from "@/lib/fullBleed";
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
 const PRESET_WIDTHS = {
@@ -53,51 +54,78 @@ export default function DashboardLayout({
 }) {
   const { user } = useAuth();
   const { data: userPrefs } = trpc.userPreferences.get.useQuery(undefined, { enabled: !!user });
-  const [sidebarWidth, setSidebarWidth] = useState(() => {
+  /** The user's saved preference. Full bleed never writes this. */
+  const [savedSidebarWidth, setSavedSidebarWidth] = useState(() => {
     const saved = localStorage.getItem(SIDEBAR_WIDTH_KEY);
     return snapSidebarWidth(saved ? parseInt(saved, 10) : SIDEBAR_FULL_WIDTH);
   });
+  const { active: fullBleed, registry } = useFullBleedRegistry();
+  const isMobile = useIsMobile();
+  const updatePrefs = trpc.userPreferences.update.useMutation();
+  const { mutate: mutatePrefs } = updatePrefs;
+  /** A saved preference change: local state, localStorage, and the backend preference. */
+  const saveWidth = useCallback(
+    (width: number) => {
+      const snapped = snapSidebarWidth(width);
+      setSavedSidebarWidth(snapped);
+      if (user) mutatePrefs({ sidebarWidth: snapped });
+    },
+    [user, mutatePrefs]
+  );
+  const { width: sidebarWidth, autoRail, inVisit, onManualWidth } = useAutoRail({
+    saved: savedSidebarWidth,
+    fullBleed,
+    isMobile: Boolean(isMobile),
+    onSaveWidth: saveWidth,
+  });
 
-  // Sync sidebar width with user preferences from backend
+  useEffect(() => {
+    localStorage.setItem(SIDEBAR_WIDTH_KEY, savedSidebarWidth.toString());
+  }, [savedSidebarWidth]);
+
+  // Sync the saved preference from the backend (display follows it unless a full bleed visit is open).
   useEffect(() => {
     if (userPrefs?.sidebarWidth) {
-      setSidebarWidth(snapSidebarWidth(userPrefs.sidebarWidth));
+      setSavedSidebarWidth(snapSidebarWidth(userPrefs.sidebarWidth));
     }
   }, [userPrefs]);
-
-  useEffect(() => {
-    localStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString());
-  }, [sidebarWidth]);
 
   if (!user) {
     return null;
   }
 
   return (
-    <SidebarProvider
-      style={
-        {
-          "--sidebar-width": `${sidebarWidth}px`,
-        } as CSSProperties
-      }
-    >
-      <DashboardLayoutContent setSidebarWidth={setSidebarWidth} sidebarWidth={sidebarWidth}>
-        {children}
-      </DashboardLayoutContent>
-    </SidebarProvider>
+    <FullBleedProvider value={registry}>
+      <SidebarProvider
+        style={
+          {
+            "--sidebar-width": `${sidebarWidth}px`,
+          } as CSSProperties
+        }
+      >
+        <DashboardLayoutContent setSidebarWidth={onManualWidth} sidebarWidth={sidebarWidth} autoRail={autoRail} inVisit={inVisit}>
+          {children}
+        </DashboardLayoutContent>
+      </SidebarProvider>
+    </FullBleedProvider>
   );
 }
 
 type DashboardLayoutContentProps = {
   children: React.ReactNode;
+  /** Manual toggle or drag. Saves the preference, or only sets the visit width inside a full bleed view. */
   setSidebarWidth: (width: number) => void;
   sidebarWidth: number;
+  autoRail: boolean;
+  inVisit: boolean;
 };
 
 function DashboardLayoutContent({
   children,
   setSidebarWidth,
   sidebarWidth,
+  autoRail,
+  inVisit,
 }: DashboardLayoutContentProps) {
   const { user, logout } = useAuth();
   const [location, setLocation] = useLocation();
@@ -160,21 +188,12 @@ function DashboardLayoutContent({
     setEffectiveRole(actualRole);
   }, [actualRole, effectiveRole]);
 
-  const updatePrefsMutation = trpc.userPreferences.update.useMutation();
-
   const toggleSidebarWidth = () => {
-    const currentWidth = sidebarWidth;
-    const newWidth = currentWidth === PRESET_WIDTHS.narrow ? PRESET_WIDTHS.wide : PRESET_WIDTHS.narrow;
+    const newWidth = sidebarWidth === PRESET_WIDTHS.narrow ? PRESET_WIDTHS.wide : PRESET_WIDTHS.narrow;
     setSidebarWidth(newWidth);
-    if (user) {
-      updatePrefsMutation.mutate({ sidebarWidth: newWidth });
-    }
-    // Visual feedback
     setToggleFeedback(true);
     setTimeout(() => setToggleFeedback(false), 300);
   };
-
-
 
   // Keyboard shortcut for sidebar toggle (Ctrl+B / Cmd+B)
   useEffect(() => {
@@ -186,7 +205,8 @@ function DashboardLayoutContent({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [sidebarWidth]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sidebarWidth, setSidebarWidth]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -195,15 +215,14 @@ function DashboardLayoutContent({
       const sidebarLeft = sidebarRef.current?.getBoundingClientRect().left ?? 0;
       // Snap while dragging: the sidebar is either the full width or the icon rail, never in between.
       const snapped = snapSidebarWidth(e.clientX - sidebarLeft);
-      dragWidthRef.current = snapped;
-      setSidebarWidth(snapped);
+      if (snapped !== dragWidthRef.current) {
+        dragWidthRef.current = snapped;
+        setSidebarWidth(snapped);
+      }
     };
 
     const handleMouseUp = () => {
       setIsResizing(false);
-      if (user && dragWidthRef.current != null) {
-        updatePrefsMutation.mutate({ sidebarWidth: dragWidthRef.current });
-      }
       dragWidthRef.current = null;
     };
 
@@ -224,9 +243,9 @@ function DashboardLayoutContent({
 
   return (
     <DashboardRolePreviewProvider actualRole={actualRole} effectiveRole={effectiveRole} setEffectiveRole={setEffectiveRole}>
-      <div className="relative" ref={sidebarRef}>
+      <div className="relative" ref={sidebarRef} data-testid="app-sidebar" data-auto-rail={autoRail ? "true" : "false"} data-full-bleed={inVisit ? "true" : "false"} data-sidebar-width={sidebarWidth}>
         <Sidebar
-          className="border-r-0"
+          className="border-r-0 motion-reduce:[&_[data-slot=sidebar-gap]]:transition-none motion-reduce:[&_[data-slot=sidebar-container]]:transition-none"
         >
           <SidebarHeader
             className={cn(

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ComponentProps } from "react";
+import { useFullBleed } from "@/lib/fullBleed";
 import { formatEmpty } from "@/lib/format";
 import { useLocation } from "wouter";
 import type { FacilitiesSegment } from "@/lib/facilityRoutes";
@@ -130,6 +131,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
   });
   const [viewOverride, setViewOverride] = useState<FacilitiesViewMode | null>(null);
   const viewMode: FacilitiesViewMode = viewOverride ?? (isMobile ? "card" : storedViewMode);
+  useFullBleed(viewMode === "map");
   const setViewMode = (mode: FacilitiesViewMode) => {
     setViewOverride(mode);
     if (mode === "table" || mode === "card") setStoredViewMode(mode);

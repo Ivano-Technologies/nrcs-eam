@@ -39,6 +39,7 @@ import {
   type MapLayer,
 } from "@/lib/assetMap/model";
 import { useMapSelection, type Insets } from "@/lib/assetMap/useMapSelection";
+import { useFullBleed } from "@/lib/fullBleed";
 import {
   COMPACT_PANEL_W,
   DRAWER_W,
@@ -141,6 +142,7 @@ function useOptionalSize<T extends HTMLElement>(firstChild = false): [(el: T | n
 }
 
 export default function AssetMap() {
+  useFullBleed(true);
   const [initial] = useState(readInitialUrl);
   const mapMock = initial.mapMock;
   const scheme = useMapScheme();
