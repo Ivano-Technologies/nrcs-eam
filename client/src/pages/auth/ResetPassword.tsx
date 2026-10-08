@@ -132,7 +132,7 @@ export default function ResetPassword() {
         </AuthSubtitle>
 
         {state === "checking" && (
-          <p className="mt-6 text-sm text-gray-600">Validating your recovery link...</p>
+          <p className="mt-6 text-sm text-gray-600 dark:text-gray-400">Validating your recovery link...</p>
         )}
 
         {state === "invalid" && (

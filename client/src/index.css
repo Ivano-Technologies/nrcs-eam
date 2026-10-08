@@ -44,8 +44,6 @@
 
 :root {
   color-scheme: light;
-  --color-primary: #EE1C25;
-  --color-primary-hover: #c8151c;
   --color-navy: #1a2332;
   --color-surface: #ffffff;
   --color-border: rgba(0, 0, 0, 0.07);
@@ -56,13 +54,22 @@
   --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.06);
   --color-accent-border: #374151;
   --dashboard-contrast-text: #334155;
-  /* NRCS Red Cross Red as primary */
-  --primary: oklch(0.60 0.24 25); /* Red #DC2626 */
+  /* NRCS brand red: one token set for fills, hover and red text on dark */
+  --brand-red: #C8102E;
+  --brand-red-hover: #A50D26;
+  --brand-red-on-dark: #F87171;
+  --primary: #C8102E;
+  --primary-hover: #A50D26;
+  --primary-on-dark-text: #F87171;
   --primary-foreground: oklch(0.99 0 0);
+  /* Control borders (outline buttons, inputs) and dark text tokens */
+  --control-border: #8A8F98;
+  --text-on-dark: #E6EAF0;
+  --link-on-dark: #93C5FD;
   /* Navy Blue for sidebar */
   --sidebar: oklch(0.30 0.08 250); /* Navy Blue #1E3A8A */
   --sidebar-foreground: oklch(0.99 0 0);
-  --sidebar-primary: oklch(0.60 0.24 25);
+  --sidebar-primary: #C8102E;
   --sidebar-primary-foreground: oklch(0.99 0 0);
   --chart-1: var(--color-blue-300);
   --chart-2: var(--color-blue-500);
@@ -79,7 +86,7 @@
   --secondary: oklch(0.98 0.001 286.375);
   --secondary-foreground: oklch(0.4 0.015 65);
   --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.552 0.016 285.938);
+  --muted-foreground: oklch(0.50 0.016 285.938); /* #62626C */
   --accent: oklch(0.967 0.001 286.375);
   --accent-foreground: oklch(0.141 0.005 285.823);
   --destructive: oklch(0.577 0.245 27.325);
@@ -90,15 +97,18 @@
   --sidebar-accent: oklch(0.35 0.08 250); /* Darker navy for hover */
   --sidebar-accent-foreground: oklch(0.99 0 0);
   --sidebar-border: oklch(0.25 0.08 250);
-  --sidebar-ring: oklch(0.60 0.24 25); /* Red ring */
+  --sidebar-ring: #C8102E; /* Red ring */
 }
 
 .dark {
   color-scheme: dark;
-  /* Keep NRCS Red as primary in dark mode */
-  --primary: oklch(0.60 0.24 25);
+  /* Keep NRCS Red as primary fill in dark mode; red text uses --primary-on-dark-text */
+  --primary: #C8102E;
+  --primary-hover: #A50D26;
+  --primary-on-dark-text: #F87171;
   --primary-foreground: oklch(0.99 0 0);
-  --sidebar-primary: oklch(0.60 0.24 25);
+  --control-border: #64768E;
+  --sidebar-primary: #C8102E;
   --sidebar-primary-foreground: oklch(0.99 0 0);
   --background: #232323;
   --foreground: oklch(0.85 0.005 65);
@@ -127,7 +137,7 @@
   --sidebar-accent: oklch(0.30 0.08 250);
   --sidebar-accent-foreground: oklch(0.99 0 0);
   --sidebar-border: oklch(0.20 0.08 250);
-  --sidebar-ring: oklch(0.60 0.24 25);
+  --sidebar-ring: #C8102E;
   --color-accent-border: #4b5563;
   --dashboard-contrast-text: hsl(0 0% 95%);
   --color-background-primary: var(--background);
@@ -146,7 +156,8 @@ html.dark {
     @apply bg-background text-foreground;
     background-color: var(--background);
     font-size: 16px;
-    overflow-x: hidden;
+    /* clip (not hidden) so body never becomes a scroll container; the window stays the only scroller and sticky headers keep working */
+    overflow-x: clip;
   }
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
@@ -470,4 +481,21 @@ html.dark {
   .card-mobile-content {
     @apply space-y-2 text-sm;
   }
+}
+
+/*
+ * Contrast tokens (Wave A, Chief contrast fixes).
+ * Dark mode: red text uses --primary-on-dark-text (#F87171) everywhere `text-primary` is used,
+ * since #C8102E on the dark surfaces is below 4.5:1. Fills (`bg-primary`) stay NRCS red.
+ * `:where()` keeps specificity equal to the utility, so hover/focus variants still win.
+ */
+@layer utilities {
+  :where(.dark) .text-primary {
+    color: var(--primary-on-dark-text);
+  }
+}
+
+/* Light mode navy sidebar: muted text needs a light tone (#B8C4D6 on navy is 7.7:1). */
+:where(html:not(.dark)) [data-sidebar="sidebar"] {
+  --muted-foreground: #b8c4d6;
 }
