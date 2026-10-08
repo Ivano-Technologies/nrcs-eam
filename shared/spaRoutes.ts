@@ -36,3 +36,21 @@ export function isKnownSpaPath(pathname: string): boolean {
   if ((PUBLIC_SPA_PATHS as readonly string[]).includes(path)) return true;
   return path === APP_SPA_PREFIX || path.startsWith(`${APP_SPA_PREFIX}/`);
 }
+
+/** Asset detail page in the app shell, e.g. `/app/assets/1015`. */
+export function assetDetailPath(assetId: number | string): string {
+  return `${APP_SPA_PREFIX}/assets/${assetId}`;
+}
+
+/**
+ * Old QR labels encoded `/assets/<id>` (asset ids are integers). Those URLs are forwarded with
+ * a permanent redirect to `/app/assets/<id>`. Digits only, so Vite's hashed bundle files under
+ * `/assets/` (always `name-hash.ext`) can never match. Mirrors the `redirects` entry in vercel.json.
+ */
+export const LEGACY_ASSET_PATH = /^\/assets\/(\d+)\/?$/;
+
+/** Redirect target for a legacy `/assets/<id>` path, or null when the path is anything else. */
+export function legacyAssetRedirectTarget(pathname: string): string | null {
+  const match = LEGACY_ASSET_PATH.exec(pathname);
+  return match ? assetDetailPath(match[1]!) : null;
+}

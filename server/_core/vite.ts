@@ -1,11 +1,22 @@
-import express, { type Express } from "express";
+import express, { type Express, type NextFunction, type Request, type Response } from "express";
 import fs from "fs";
 import { type Server } from "http";
 import { nanoid } from "nanoid";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-import { isKnownSpaPath } from "../../shared/spaRoutes";
+import { isKnownSpaPath, legacyAssetRedirectTarget } from "../../shared/spaRoutes";
 import viteConfig from "../../vite.config";
+
+/** 308 old QR label URLs (`/assets/<id>`) to `/app/assets/<id>`, keeping the query string. Mirrors vercel.json. */
+export function redirectLegacyAssetPaths(req: Request, res: Response, next: NextFunction) {
+  const target = legacyAssetRedirectTarget(req.path);
+  if (!target) {
+    next();
+    return;
+  }
+  const queryIndex = req.originalUrl.indexOf("?");
+  res.redirect(308, queryIndex === -1 ? target : `${target}${req.originalUrl.slice(queryIndex)}`);
+}
 
 export async function setupVite(app: Express, server: Server) {
   const serverOptions = {
@@ -21,6 +32,7 @@ export async function setupVite(app: Express, server: Server) {
     appType: "custom",
   });
 
+  app.use(redirectLegacyAssetPaths);
   app.use(vite.middlewares);
   app.use("/*splat", async (req, res, next) => {
     if (req.path.startsWith("/api")) {
@@ -63,6 +75,7 @@ export function serveStatic(app: Express) {
     );
   }
 
+  app.use(redirectLegacyAssetPaths);
   app.use(express.static(distPath));
 
   // fall through to index.html if the file doesn't exist (never treat /api/* as SPA)
