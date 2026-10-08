@@ -3,7 +3,7 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import fs from "node:fs";
 import path from "path";
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import { vitePluginManusRuntime } from "vite-plugin-manus-runtime";
 import { VitePWA } from "vite-plugin-pwa";
 
@@ -35,6 +35,24 @@ const VENDOR_CHUNKS: Record<string, string> = {
   // recharts / @supabase/supabase-js / posthog-js: leave to Rollup defaults so
   // shared helpers are not glued into a vendor chunk that the entry then imports.
 };
+
+/**
+ * Emit `404.html` as a copy of the built `index.html`. Vercel serves it with HTTP 404 for any
+ * path that no rewrite in vercel.json matches, so unknown URLs get a real 404 status while the
+ * SPA still boots and renders the client NotFound page. See shared/spaRoutes.ts.
+ */
+function spaNotFoundHtml(): Plugin {
+  return {
+    name: "nrcs-spa-404-html",
+    apply: "build",
+    enforce: "post",
+    generateBundle(_options, bundle) {
+      const index = bundle["index.html"];
+      if (!index || index.type !== "asset") return;
+      this.emitFile({ type: "asset", fileName: "404.html", source: index.source });
+    },
+  };
+}
 
 // jsx-loc can throw during transform under concurrent Playwright loads (Windows).
 const plugins = [
@@ -126,6 +144,11 @@ const plugins = [
       /** SPA client routes (/app/*) fall back to cached shell when offline. */
       navigateFallback: "/index.html",
       navigateFallbackDenylist: [/^\/api\//, /^\/login/, /^\/signup/, /^\/reset-password/],
+      /**
+       * Only known client routes get the cached shell, so unknown paths go to the network and
+       * keep their real 404 status for installed clients too (see shared/spaRoutes.ts).
+       */
+      navigateFallbackAllowlist: [/^\/$/, /^\/app(\/.*)?$/, /^\/legal\/(terms|privacy)\/?$/],
       runtimeCaching: [
         {
           urlPattern: /\/assets\/.+\.js$/i,
@@ -156,6 +179,7 @@ const plugins = [
       ],
     },
   }),
+  spaNotFoundHtml(),
 ];
 
 export default defineConfig({
