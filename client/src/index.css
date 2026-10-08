@@ -482,3 +482,20 @@ html.dark {
     @apply space-y-2 text-sm;
   }
 }
+
+/*
+ * Contrast tokens (Wave A, Chief contrast fixes).
+ * Dark mode: red text uses --primary-on-dark-text (#F87171) everywhere `text-primary` is used,
+ * since #C8102E on the dark surfaces is below 4.5:1. Fills (`bg-primary`) stay NRCS red.
+ * `:where()` keeps specificity equal to the utility, so hover/focus variants still win.
+ */
+@layer utilities {
+  :where(.dark) .text-primary {
+    color: var(--primary-on-dark-text);
+  }
+}
+
+/* Light mode navy sidebar: muted text needs a light tone (#B8C4D6 on navy is 7.7:1). */
+:where(html:not(.dark)) [data-sidebar="sidebar"] {
+  --muted-foreground: #b8c4d6;
+}
