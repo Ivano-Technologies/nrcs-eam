@@ -45,8 +45,19 @@ type LineEntry = { line: google.maps.Polyline; childId: number; parentId: number
 
 const TIER_Z: Record<string, number> = { none: 1, offline: 1, good: 2, partial: 3, low: 4 };
 
+/** Run one Google call; a dead or rejected Maps API can throw from any setter. */
+function safely(fn: () => void): void {
+  try {
+    fn();
+  } catch {
+    // Ignore: the map is being torn down or Google already failed.
+  }
+}
+
 export class AssetMapOverlay {
   private map: google.maps.Map | null = null;
+  /** Set once Google fails (auth, billing, quota or a thrown error). The overlay then never touches Google again. */
+  private dead = false;
   private entries = new Map<number, Entry>();
   private lines = new Map<number, LineEntry>();
   private hoverLabel: google.maps.marker.AdvancedMarkerElement | null = null;
@@ -55,11 +66,42 @@ export class AssetMapOverlay {
   private lastMarkerClick = 0;
   private state: OverlayState | null = null;
 
+  /** Called once when a Google call throws, so the page can switch to the fallback. */
+  private onFailure: ((error: unknown) => void) | null = null;
+
   constructor(private readonly callbacks: OverlayCallbacks) {}
+
+  setFailureHandler(handler: ((error: unknown) => void) | null) {
+    this.onFailure = handler;
+  }
+
+  /** True after `disable()` or a failed update. */
+  get disabled(): boolean {
+    return this.dead;
+  }
+
+  /**
+   * Google rejected the key or stopped working: detach every marker, label and line, drop the
+   * listeners and ignore all later calls. Each detach is guarded because a dead API can throw.
+   */
+  disable() {
+    if (this.dead) return;
+    this.dead = true;
+    this.teardown();
+    this.state = null;
+  }
 
   /** Attach to a (possibly new) map instance and move every overlay across. */
   setMap(map: google.maps.Map | null) {
-    if (map === this.map) return;
+    if (this.dead || map === this.map) return;
+    try {
+      this.attach(map);
+    } catch (error) {
+      this.fail(error);
+    }
+  }
+
+  private attach(map: google.maps.Map | null) {
     this.listeners.forEach((l) => l.remove());
     this.listeners = [];
     this.map = map;
@@ -81,21 +123,42 @@ export class AssetMapOverlay {
   }
 
   destroy() {
-    this.listeners.forEach((l) => l.remove());
+    this.teardown();
+  }
+
+  private teardown() {
+    this.listeners.forEach((l) => safely(() => l.remove()));
     this.listeners = [];
-    this.entries.forEach((e) => {
-      e.marker.map = null;
-    });
-    this.lines.forEach((l) => l.line.setMap(null));
-    if (this.hoverLabel) this.hoverLabel.map = null;
-    if (this.selectedLabel) this.selectedLabel.map = null;
+    this.entries.forEach((e) => safely(() => (e.marker.map = null)));
+    this.lines.forEach((l) => safely(() => l.line.setMap(null)));
+    const { hoverLabel, selectedLabel } = this;
+    if (hoverLabel) safely(() => (hoverLabel.map = null));
+    if (selectedLabel) safely(() => (selectedLabel.map = null));
+    this.hoverLabel = null;
+    this.selectedLabel = null;
     this.entries.clear();
     this.lines.clear();
     this.map = null;
   }
 
+  private fail(error: unknown) {
+    if (this.dead) return;
+    this.disable();
+    this.onFailure?.(error);
+  }
+
   update(state: OverlayState) {
+    if (this.dead) return;
     this.state = state;
+    try {
+      this.sync(state);
+    } catch (error) {
+      // Never let a Google error escape into React (it would take down the page).
+      this.fail(error);
+    }
+  }
+
+  private sync(state: OverlayState) {
     const map = this.map;
     const g = window.google?.maps;
     if (!map || !g?.marker?.AdvancedMarkerElement) return;

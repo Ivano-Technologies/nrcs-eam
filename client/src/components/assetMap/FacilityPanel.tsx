@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { ChevronDown, ListFilter, Search, SearchX, X } from "lucide-react";
+import { AlertTriangle, ChevronDown, ListFilter, RotateCw, Search, SearchX, X } from "lucide-react";
 import type { FacilityType } from "@shared/facilities";
 import {
   ASSET_STATUS_COLOURS,
@@ -55,6 +55,11 @@ export type FacilityPanelProps = {
   onSelect: (id: number, opener: HTMLElement | null) => void;
   /** Asset figures are limited to the caller's own facility. */
   statsLimited: boolean;
+  /** The facility data request failed (and there is no earlier data to show). */
+  loadError?: boolean;
+  /** A retry is in flight. */
+  retrying?: boolean;
+  onRetry?: () => void;
   /** "panel" on desktop, "sheet" inside the mobile bottom sheet. */
   variant?: "panel" | "sheet";
   /** Mobile: type chips live behind a Filters button. */
@@ -86,6 +91,9 @@ export function FacilityPanel(props: FacilityPanelProps) {
     selectedId,
     onSelect,
     statsLimited,
+    loadError = false,
+    retrying = false,
+    onRetry,
     variant = "panel",
     showTypeChips = true,
     className,
@@ -206,6 +214,8 @@ export function FacilityPanel(props: FacilityPanelProps) {
               <Skeleton className="h-6 w-48" />
               <Skeleton className="h-2 w-full" />
             </div>
+          ) : loadError ? (
+            <DataLoadError onRetry={onRetry} retrying={retrying} />
           ) : layer === "facilities" ? (
             <>
               <div className="flex items-center justify-between gap-2">
@@ -330,7 +340,7 @@ export function FacilityPanel(props: FacilityPanelProps) {
                 >
                   <span className="flex items-center gap-1.5">
                     <span className="inline-block h-2 w-2 rounded-full" style={{ background: tierColours[t] }} />
-                    <span className="text-[15px] font-semibold tabular-nums">{loading ? "" : tierCounts[t]}</span>
+                    <span className="text-[15px] font-semibold tabular-nums">{loading || loadError ? "" : tierCounts[t]}</span>
                   </span>
                   <span className="mt-0.5 block text-[13px] font-medium leading-tight">{READINESS_LABELS[t]}</span>
                   <span className={cn("block text-[11px] leading-tight", mutedText)}>{READINESS_THRESHOLDS[t]}</span>
@@ -402,7 +412,7 @@ export function FacilityPanel(props: FacilityPanelProps) {
           selectedId={selectedId}
           onSelect={onSelect}
         />
-        {!loading && filtered.length === 0 ? (
+        {!loading && !loadError && filtered.length === 0 ? (
           <div className="px-6 pb-6 pt-4 text-center">
             <span className="mx-auto mb-3 grid h-10 w-10 place-items-center rounded-[10px] bg-[#F3F4F6] dark:bg-[#1E2B3C]">
               <SearchX className="h-5 w-5" />
@@ -623,5 +633,46 @@ function FacilityList({
         );
       })}
     </ul>
+  );
+}
+
+/**
+ * Shown when the facility data request fails. Distinct from the empty state ("No facilities
+ * match"): it says the data didn't load and offers Retry, which refetches.
+ */
+export function DataLoadError({
+  onRetry,
+  retrying = false,
+  className,
+}: {
+  onRetry?: () => void;
+  retrying?: boolean;
+  className?: string;
+}) {
+  return (
+    <div role="alert" data-testid="asset-map-data-error" className={cn("flex gap-3", className)}>
+      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[#B91C1C] dark:text-[#F87171]" aria-hidden="true" />
+      <div className="min-w-0">
+        <p className="text-sm font-semibold">Facility data didn&apos;t load</p>
+        <p className={cn("mt-1 text-[13px]", mutedText)}>Check your connection and try again.</p>
+        {onRetry ? (
+          <button
+            type="button"
+            data-testid="asset-map-data-retry"
+            onClick={onRetry}
+            disabled={retrying}
+            aria-busy={retrying || undefined}
+            className={cn(
+              "mt-3 inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#0B2545] bg-white px-3 text-[13px] font-semibold text-[#0B2545] transition-colors hover:bg-[#EEF2F8] disabled:cursor-progress",
+              "dark:border-[#E6EAF0] dark:bg-[#162130] dark:text-[#E6EAF0] dark:hover:bg-[#1E2B3C]",
+              focusRing
+            )}
+          >
+            <RotateCw className={cn("h-3.5 w-3.5", retrying && "animate-spin motion-reduce:animate-none")} aria-hidden="true" />
+            {retrying ? "Retrying" : "Retry"}
+          </button>
+        ) : null}
+      </div>
+    </div>
   );
 }

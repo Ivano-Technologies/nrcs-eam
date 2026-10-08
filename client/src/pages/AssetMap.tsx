@@ -8,14 +8,14 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ListFilter, List as ListIcon, Search, X } from "lucide-react";
 import type { FacilityType } from "@shared/facilities";
-import { MapView, type MapColorScheme } from "@/components/Map";
-import { FacilityPanel } from "@/components/assetMap/FacilityPanel";
+import { MapView, mapLoadErrorMessage, type MapColorScheme } from "@/components/Map";
+import { DataLoadError, FacilityPanel } from "@/components/assetMap/FacilityPanel";
 import { FacilityDrawer } from "@/components/assetMap/FacilityDrawer";
 import { EmptyMapCard, LayerBar, MapControls, MapErrorCard, NoLocationChip, TileShimmer } from "@/components/assetMap/MapChrome";
 import { MockMapCanvas } from "@/components/assetMap/MockMapCanvas";
 import { BottomSheet, snapHeight, type SheetSnap } from "@/components/assetMap/BottomSheet";
 import { focusRing, mutedText, surfaceClass, useMapScheme, useMediaQuery } from "@/components/assetMap/parts";
-import { createGoogleController, type MapController, type MapStyle } from "@/lib/assetMap/controller";
+import { createGoogleController, guardController, type MapController, type MapStyle } from "@/lib/assetMap/controller";
 import { AssetMapOverlay } from "@/lib/assetMap/googleOverlay";
 import {
   EMPTY_FILTERS,
@@ -128,6 +128,13 @@ export default function AssetMap() {
   const all: MapFacility[] = useMemo(() => mapQuery.data?.facilities ?? [], [mapQuery.data]);
   const statsLimited = mapQuery.data ? mapQuery.data.statsScope !== "all" : false;
   const freshness = formatClock(mapQuery.data?.generatedAt);
+  /** The request failed and there is nothing cached to show: an error with Retry, not "0 facilities". */
+  const dataError = mapQuery.isError && !mapQuery.data;
+  const retrying = dataError && mapQuery.isFetching;
+  const { refetch: refetchMapData } = mapQuery;
+  const retryData = useCallback(() => {
+    void refetchMapData();
+  }, [refetchMapData]);
 
   /* ---------------- view state ---------------- */
   const [layer, setLayer] = useState<MapLayer>(initial.layer);
@@ -139,9 +146,11 @@ export default function AssetMap() {
   const [hoveredId, setHoveredId] = useState<number | null>(null);
   const [mapStyle, setMapStyle] = useState<MapStyle>("default");
   const [mapError, setMapError] = useState<string | null>(null);
+  /** Mirrors mapError for callbacks that run outside React (Google events, timers). */
+  const mapErrorRef = useRef<string | null>(null);
   const [tilesLoading, setTilesLoading] = useState(false);
   const [railOpen, setRailOpen] = useState(false);
-  const [listSnap, setListSnap] = useState<SheetSnap>("half");
+  const [listSnapRaw, setListSnap] = useState<SheetSnap>("half");
   const [detailSnap, setDetailSnap] = useState<SheetSnap>("half");
 
   // Debounced search (200ms). Search filters the list and pins; it never pans or zooms.
@@ -160,6 +169,9 @@ export default function AssetMap() {
   const onMapCount = filtered.filter((f) => facilityPosition(f)).length;
   const isEmpty = !mapQuery.isLoading && all.length > 0 && activeFilters && onMapCount === 0 && !filters.noLocationOnly;
   const byId = useMemo(() => new Map(all.map((f) => [f.id, f])), [all]);
+
+  // Phones: keep the list sheet at least at half while the data error and Retry need to be seen.
+  const listSnap: SheetSnap = dataError && listSnapRaw === "peek" ? "half" : listSnapRaw;
 
   /* ---------------- geometry ---------------- */
   const frameRef = useRef<HTMLDivElement>(null);
@@ -206,9 +218,12 @@ export default function AssetMap() {
   const ensureVisible = useCallback((id: number) => {
     const f = byIdRef.current.get(id);
     const pos = f ? facilityPosition(f) : null;
-    if (!pos) return;
+    if (!pos || mapErrorRef.current) return;
     // Wait a frame so the drawer insets are current; this only ever pans.
-    window.requestAnimationFrame(() => controllerRef.current?.ensureVisible(pos, insetsRef.current(true)));
+    window.requestAnimationFrame(() => {
+      if (mapErrorRef.current) return;
+      controllerRef.current?.ensureVisible(pos, insetsRef.current(true));
+    });
   }, []);
   const { selectedId, select, clear } = useMapSelection({ ensureVisible });
   const selected = selectedId != null ? byId.get(selectedId) : undefined;
@@ -231,8 +246,13 @@ export default function AssetMap() {
     },
   }));
 
+  // Any Google failure (load error, gm_authFailure, or a Google call that throws later) lands here.
+  const failMapRef = useRef<(message: string) => void>(() => {});
   const [overlay] = useState(() => (mapMock ? null : new AssetMapOverlay(callbacks)));
-  useEffect(() => () => overlay?.destroy(), [overlay]);
+  useEffect(() => {
+    overlay?.setFailureHandler(() => failMapRef.current(mapLoadErrorMessage("runtime")));
+    return () => overlay?.destroy();
+  }, [overlay]);
 
   const shimmerTimer = useRef<number | null>(null);
   const startShimmer = useCallback(() => {
@@ -250,19 +270,62 @@ export default function AssetMap() {
   }, []);
 
   const mapListeners = useRef<google.maps.MapsEventListener[]>([]);
+  const removeMapListeners = useCallback(() => {
+    mapListeners.current.forEach((l) => {
+      try {
+        l.remove();
+      } catch {
+        // The Maps API may already be dead.
+      }
+    });
+    mapListeners.current = [];
+  }, []);
+
+  /**
+   * Google rejected the key (referrer, billing, quota) or broke later. Detach every marker and
+   * line, drop the controller so nothing pans, zooms or fits again, and show the fallback. The
+   * list, filters, drawer and Assets tab keep working without a map.
+   */
+  const failMap = useCallback(
+    (message: string) => {
+      overlay?.disable();
+      const controller = controllerRef.current as (MapController & { disable?: () => void }) | null;
+      controller?.disable?.();
+      if (!mapMock) controllerRef.current = null;
+      mapRef.current = null;
+      removeMapListeners();
+      stopShimmer();
+      if (mapErrorRef.current) return;
+      mapErrorRef.current = message;
+      setMapError(message);
+    },
+    [overlay, mapMock, removeMapListeners, stopShimmer]
+  );
+  useLayoutEffect(() => {
+    failMapRef.current = failMap;
+  });
+
   const onMapReady = useCallback(
     (map: google.maps.Map) => {
-      mapListeners.current.forEach((l) => l.remove());
-      mapRef.current = map;
-      controllerRef.current = createGoogleController(map);
-      overlay?.setMap(map);
-      mapListeners.current = [
-        map.addListener("zoom_changed", startShimmer),
-        map.addListener("maptypeid_changed", startShimmer),
-      ];
+      if (mapErrorRef.current) return;
+      removeMapListeners();
+      try {
+        const controller = guardController(createGoogleController(map), () => failMapRef.current(mapLoadErrorMessage("runtime")));
+        mapRef.current = map;
+        controllerRef.current = controller;
+        overlay?.setMap(map);
+        mapListeners.current = [
+          map.addListener("zoom_changed", startShimmer),
+          map.addListener("maptypeid_changed", startShimmer),
+        ];
+      } catch {
+        failMapRef.current(mapLoadErrorMessage("runtime"));
+        return;
+      }
+      if (mapErrorRef.current) return;
       setMapEpoch((n) => n + 1);
     },
-    [startShimmer, overlay]
+    [startShimmer, overlay, removeMapListeners]
   );
 
   useEffect(() => {
@@ -278,9 +341,9 @@ export default function AssetMap() {
     };
   }, []);
 
-  // Keep the overlay in sync. Updates markers in place; never refits.
+  // Keep the overlay in sync. Updates markers in place; never refits. Nothing touches Google once it failed.
   useEffect(() => {
-    if (!overlay) return;
+    if (!overlay || mapError) return;
     overlay.update({
       facilities: all,
       visibleIds,
@@ -292,18 +355,18 @@ export default function AssetMap() {
       empty: isEmpty,
       touch,
     });
-  }, [overlay, all, visibleIds, layer, scheme, selectedId, hoveredId, lines, isEmpty, touch, mapEpoch]);
+  }, [overlay, mapError, all, visibleIds, layer, scheme, selectedId, hoveredId, lines, isEmpty, touch, mapEpoch]);
 
   // First load: fit all located facilities once, with panel padding.
   useEffect(() => {
-    if (fittedRef.current || !mapQuery.data || !frameStable) return;
+    if (fittedRef.current || !mapQuery.data || !frameStable || mapError) return;
     if (!mapMock && !mapRef.current) return;
     const points = filtered.map(facilityPosition).filter((p): p is google.maps.LatLngLiteral => Boolean(p));
     const fallback = all.map(facilityPosition).filter((p): p is google.maps.LatLngLiteral => Boolean(p));
     fittedRef.current = true;
     const target = points.length ? points : fallback;
     if (target.length) controllerRef.current?.fitTo(target, fitInsetsFor(selectedIdRef.current != null));
-  }, [mapQuery.data, mapEpoch, mapMock, filtered, all, fitInsetsFor, frameStable]);
+  }, [mapQuery.data, mapEpoch, mapMock, filtered, all, fitInsetsFor, frameStable, mapError]);
 
   // Restore ?facility= once data arrives.
   const restoredRef = useRef(false);
@@ -408,6 +471,9 @@ export default function AssetMap() {
     selectedId,
     onSelect: selectFromList,
     statsLimited,
+    loadError: dataError,
+    retrying,
+    onRetry: retryData,
   };
 
   const drawer = selected ? (
@@ -482,7 +548,7 @@ export default function AssetMap() {
             disableDefaultUI
             options={isMobile ? MOBILE_MAP_OPTIONS : MAP_OPTIONS}
             onMapReady={onMapReady}
-            onLoadError={setMapError}
+            onLoadError={failMap}
             onTilesLoaded={stopShimmer}
             errorDisplay="none"
           />
@@ -553,6 +619,13 @@ export default function AssetMap() {
               </div>
             ) : null}
           </>
+        ) : null}
+
+        {/* Tablet: the list is behind the rail, so show the data error over the map too */}
+        {isTablet && dataError && !railOpen ? (
+          <div className="absolute z-10 flex justify-center" style={{ left: GAP + RAIL_W + GAP, right: GAP, top: 132 }}>
+            <DataLoadError onRetry={retryData} retrying={retrying} className={cn(surfaceClass, "max-w-[420px] p-4")} />
+          </div>
         ) : null}
 
         {/* Layer bar and notice chip */}

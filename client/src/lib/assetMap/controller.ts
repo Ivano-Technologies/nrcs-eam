@@ -16,6 +16,53 @@ export interface MapController {
   ensureVisible(point: LatLng, insets: Insets): void;
   setStyle(style: MapStyle): void;
   getZoom(): number | undefined;
+  /** Release anything the controller attached to the map. */
+  dispose?(): void;
+}
+
+/**
+ * Wraps a controller so a dead or rejected Maps API can never throw into React. After `disable()`
+ * (or the first thrown call) every method is a no op and `onFailure` has been called once.
+ */
+export function guardController(
+  inner: MapController,
+  onFailure: (error: unknown) => void
+): MapController & { disable(): void; readonly disabled: boolean } {
+  let dead = false;
+  const release = () => {
+    try {
+      inner.dispose?.();
+    } catch {
+      // Already failing.
+    }
+  };
+  const run = <T>(fn: () => T): T | undefined => {
+    if (dead) return undefined;
+    try {
+      return fn();
+    } catch (error) {
+      dead = true;
+      release();
+      onFailure(error);
+      return undefined;
+    }
+  };
+  return {
+    zoomBy: (delta) => void run(() => inner.zoomBy(delta)),
+    fitTo: (points, insets) => void run(() => inner.fitTo(points, insets)),
+    ensureVisible: (point, insets) => void run(() => inner.ensureVisible(point, insets)),
+    setStyle: (style) => void run(() => inner.setStyle(style)),
+    getZoom: () => run(() => inner.getZoom()),
+    dispose: release,
+    disable() {
+      if (dead) return;
+      dead = true;
+      release();
+    },
+    get disabled() {
+      return dead;
+    },
+  };
 }
 
 class ProjectionProbe {
@@ -79,6 +126,9 @@ export function createGoogleController(map: google.maps.Map): MapController {
     },
     getZoom() {
       return map.getZoom();
+    },
+    dispose() {
+      probe.overlay.setMap(null);
     },
   };
 }

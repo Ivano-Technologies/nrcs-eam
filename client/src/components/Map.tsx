@@ -124,7 +124,7 @@ function ensureAuthFailureHook() {
   window.gm_authFailure = hook;
 }
 
-export function mapLoadErrorMessage(result: Exclude<MapScriptResult, "ok"> | "auth"): string {
+export function mapLoadErrorMessage(result: Exclude<MapScriptResult, "ok"> | "auth" | "runtime"): string {
   switch (result) {
     case "no_key":
       return "Google Maps is not configured for this environment.";
@@ -134,6 +134,8 @@ export function mapLoadErrorMessage(result: Exclude<MapScriptResult, "ok"> | "au
       const host = typeof window !== "undefined" ? window.location.host : "this host";
       return `Google Maps rejected this host. Add ${host} to the API key HTTP referrer allowlist.`;
     }
+    case "runtime":
+      return "Google Maps stopped responding. Check the API key, billing and quota.";
     default:
       return "Google Maps did not load. Check the API key and HTTP referrer allowlist.";
   }
