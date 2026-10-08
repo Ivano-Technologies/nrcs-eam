@@ -46,7 +46,7 @@ export default function BranchScorecards() {
         <PageHeader
           icon={Trophy}
           title="Branch scorecards"
-          subtitle="Composite branch health — verification, maintenance, stock, expiry, and asset pipeline."
+          subtitle="Branch health across verification, maintenance, stock, expiry and asset pipeline."
         />
 
         <div className="flex flex-wrap items-center gap-2">
@@ -96,7 +96,7 @@ export default function BranchScorecards() {
                   </div>
                   <p className="text-sm">
                     {row.trendVsPriorMonth == null ? (
-                      <span className="text-muted-foreground">Trend —</span>
+                      <span className="text-muted-foreground">No trend yet</span>
                     ) : row.trendVsPriorMonth >= 0 ? (
                       <span className="inline-flex items-center text-green-700">
                         <ArrowUp className="mr-1 h-3 w-3" />
@@ -159,7 +159,7 @@ export default function BranchScorecards() {
                   <TableCell className="font-semibold">{row.compositeScore}</TableCell>
                   <TableCell>
                     {row.trendVsPriorMonth == null ? (
-                      "—"
+                      <span className="text-muted-foreground">No trend yet</span>
                     ) : row.trendVsPriorMonth >= 0 ? (
                       <span className="inline-flex items-center text-green-700">
                         <ArrowUp className="mr-1 h-3 w-3" />

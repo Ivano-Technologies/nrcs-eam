@@ -175,10 +175,10 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
                     ? new Date(row.dateOfArrival).toLocaleDateString()
                     : row.createdAt
                       ? new Date(row.createdAt).toLocaleDateString()
-                      : "—"}
+                      : ""}
                 </td>
-                <td className="px-2 py-2">{row.referenceDocument ?? "—"}</td>
-                <td className={cn("px-2 py-2", mobileSecondaryCol(showAllColumns))}>{row.referenceDocument ?? "—"}</td>
+                <td className="px-2 py-2">{row.referenceDocument ?? ""}</td>
+                <td className={cn("px-2 py-2", mobileSecondaryCol(showAllColumns))}>{row.referenceDocument ?? ""}</td>
                 <td className={cn("px-2 py-2", mobileSecondaryCol(showAllColumns))}>{row.lineCount}</td>
                 <td className="px-2 py-2">
                   {row.status === "finalized" || row.status === "completed" ? (

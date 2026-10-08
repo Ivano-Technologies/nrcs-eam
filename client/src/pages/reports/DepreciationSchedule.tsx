@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatNaira } from "@/lib/format";
+import { formatDate, formatNaira } from "@/lib/format";
 import { KPI_VALUE_CLASS } from "@/lib/kpiTypography";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -194,11 +194,11 @@ export default function DepreciationSchedule() {
               <TableBody>
                 {pageRows.map((r) => (
                   <TableRow key={r.assetId}>
-                    <TableCell>{r.assetCode ?? "—"}</TableCell>
+                    <TableCell>{r.assetCode ?? ""}</TableCell>
                     <TableCell>{r.assetName}</TableCell>
                     <TableCell>{r.categoryName}</TableCell>
                     <TableCell>{r.facilityName}</TableCell>
-                    <TableCell>{r.acquisitionDate ?? "—"}</TableCell>
+                    <TableCell>{formatDate(r.acquisitionDate)}</TableCell>
                     <TableCell className="text-right">{formatNaira(r.acquisitionCostNgn)}</TableCell>
                     <TableCell className="text-right">{r.usefulLifeYears}</TableCell>
                     <TableCell className="text-right">{formatNaira(r.annualDepreciationNgn)}</TableCell>

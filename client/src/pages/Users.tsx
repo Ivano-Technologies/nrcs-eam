@@ -1,4 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { formatEmpty } from "@/lib/format";
 import PageHeader from "@/components/ui/PageHeader";
 import TableLoader from "@/components/ui/TableLoader";
 import { Badge } from "@/components/ui/badge";
@@ -319,17 +320,17 @@ export default function Users() {
               const facilityName = (u as { facilityName?: string | null }).facilityName ?? null;
               return (
                 <TableRow key={u.id} data-testid={`user-row-${u.id}`}>
-                  <TableCell className="font-medium bg-background">{u.name || "—"}</TableCell>
-                  <TableCell className={cn("max-w-[220px] truncate bg-background", mobileSecondaryCol(showAllColumns))}>{u.email || "—"}</TableCell>
+                  <TableCell className="font-medium bg-background">{formatEmpty(u.name)}</TableCell>
+                  <TableCell className={cn("max-w-[220px] truncate bg-background", mobileSecondaryCol(showAllColumns))}>{u.email || ""}</TableCell>
                   <TableCell className="bg-background">
                     <Badge className={roleBadgeClass(u.role)} variant="secondary">
                       {roleLabel(u.role)}
                     </Badge>
                   </TableCell>
-                  <TableCell className={cn("max-w-[200px] truncate", mobileSecondaryCol(showAllColumns))}>{facilityName ?? "—"}</TableCell>
+                  <TableCell className={cn("max-w-[200px] truncate", mobileSecondaryCol(showAllColumns))}>{formatEmpty(facilityName)}</TableCell>
                   <TableCell>{statusLabel(st)}</TableCell>
                   <TableCell className={cn("whitespace-nowrap text-muted-foreground text-sm", mobileSecondaryCol(showAllColumns))}>
-                    {u.lastSignedIn ? new Date(u.lastSignedIn).toLocaleString() : "—"}
+                    {u.lastSignedIn ? new Date(u.lastSignedIn).toLocaleString() : ""}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
@@ -695,7 +696,7 @@ export default function Users() {
                 <TableBody>
                   {orphaned?.map((o) => (
                     <TableRow key={o.id}>
-                      <TableCell>{o.email ?? "—"}</TableCell>
+                      <TableCell>{o.email ?? ""}</TableCell>
                       <TableCell>{roleLabel(o.role)}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {new Date(o.createdAt).toLocaleDateString()}

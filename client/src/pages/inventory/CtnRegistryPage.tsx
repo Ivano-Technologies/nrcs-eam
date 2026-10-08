@@ -221,10 +221,10 @@ export default function CtnRegistryPage() {
                       {r.originalQuantity} {r.unit}
                     </TableCell>
                     <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>
-                      {r.receivedDate ? format(new Date(r.receivedDate), "yyyy-MM-dd") : "—"}
+                      {r.receivedDate ? format(new Date(r.receivedDate), "yyyy-MM-dd") : ""}
                     </TableCell>
                     <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>
-                      {r.expiryDate ? format(new Date(r.expiryDate), "yyyy-MM-dd") : "—"}
+                      {r.expiryDate ? format(new Date(r.expiryDate), "yyyy-MM-dd") : ""}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {r.currentBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })}{" "}
@@ -283,7 +283,7 @@ export default function CtnRegistryPage() {
                   <SelectContent>
                     {(catalogueQuery.data ?? []).map((c) => (
                       <SelectItem key={c.id} value={String(c.id)}>
-                        {c.itemCode} — {c.name}
+                        {c.itemCode} · {c.name}
                       </SelectItem>
                     ))}
                   </SelectContent>

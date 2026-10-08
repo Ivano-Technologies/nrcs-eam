@@ -354,7 +354,7 @@ function WmsSingleReport({ report }: { report: WmsReportKey }) {
                   <SelectContent>
                     <SelectItem value="none">Select donor</SelectItem>
                     {(donorsQuery.data ?? []).map((d) => (
-                      <SelectItem key={d.id} value={String(d.id)}>{d.name} ({d.code})</SelectItem>
+                      <SelectItem key={d.id} value={String(d.id)}>{d.code} · {d.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -399,7 +399,7 @@ function WmsSingleReport({ report }: { report: WmsReportKey }) {
                   <TableBody>
                     {donorStatementQuery.data.lines.map((line) => (
                       <TableRow key={line.catalogueId}>
-                        <TableCell className={WIDE}>{line.itemName} ({line.itemCode})</TableCell>
+                        <TableCell className={WIDE}>{line.itemCode} · {line.itemName}</TableCell>
                         <TableCell className={NUM}>{line.openingBalance}</TableCell>
                         <TableCell className={cn(sec, NUM)}>{line.received}</TableCell>
                         <TableCell className={cn(sec, NUM)}>{line.distributed}</TableCell>

@@ -88,7 +88,7 @@ export default function DonorAssets() {
         <PageHeader
           icon={Gift}
           title="Donor assets report"
-          subtitle="Donor-funded assets from the register — acquisition and book values by donor"
+          subtitle="Donor funded assets from the register, with acquisition and book values by donor."
           className="mb-0"
         />
         {canExport ? (
@@ -288,12 +288,12 @@ export default function DonorAssets() {
                                   <TableCell>{a.name}</TableCell>
                                   <TableCell>{a.categoryName}</TableCell>
                                   <TableCell>{a.facilityName}</TableCell>
-                                  <TableCell>{a.yearAcquired ?? "—"}</TableCell>
+                                  <TableCell>{a.yearAcquired ?? ""}</TableCell>
                                   <TableCell className="text-right">
                                     {formatNaira(a.acquisitionValueNgn)}
                                   </TableCell>
                                   <TableCell className="text-right">{formatNaira(a.bookValueNgn)}</TableCell>
-                                  <TableCell>{a.condition ?? "—"}</TableCell>
+                                  <TableCell>{a.condition ?? ""}</TableCell>
                                 </TableRow>
                               ))}
                             </TableBody>

@@ -1,4 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { formatDate } from "@/lib/format";
 import { InsuranceRegisterContent } from "@/pages/compliance/InsuranceRegister";
 import PageHeader from "@/components/ui/PageHeader";
 import { Badge } from "@/components/ui/badge";
@@ -281,7 +282,7 @@ export default function ComplianceRegister() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Non-compliant / overdue</CardTitle>
+            <CardTitle className="text-sm">Not compliant or overdue</CardTitle>
           </CardHeader>
           <CardContent>
             <p className={cn(KPI_VALUE_CLASS, (summary?.nonCompliantCount ?? 0) > 0 && "text-red-600")}>
@@ -346,10 +347,10 @@ export default function ComplianceRegister() {
                       <TableCell>{r.description}</TableCell>
                       <TableCell>{r.branch}</TableCell>
                       <TableCell>{r.plateNumber}</TableCell>
-                      <TableCell>{r.roadWorthinessExpiry ?? "—"}</TableCell>
-                      <TableCell>{r.insuranceExpiry ?? "—"}</TableCell>
-                      <TableCell>{r.licenceExpiry ?? "—"}</TableCell>
-                      <TableCell>{r.lastInspectionDate ?? "—"}</TableCell>
+                      <TableCell>{formatDate(r.roadWorthinessExpiry)}</TableCell>
+                      <TableCell>{formatDate(r.insuranceExpiry)}</TableCell>
+                      <TableCell>{formatDate(r.licenceExpiry)}</TableCell>
+                      <TableCell>{formatDate(r.lastInspectionDate)}</TableCell>
                       <TableCell>{docBadge(r.status)}</TableCell>
                       {canEdit ? (
                         <TableCell className="space-x-1">
@@ -428,11 +429,11 @@ export default function ComplianceRegister() {
                       <TableCell>{r.assetCode}</TableCell>
                       <TableCell>{r.description}</TableCell>
                       <TableCell>{r.branch}</TableCell>
-                      <TableCell>{r.lastServiceDate ?? "—"}</TableCell>
-                      <TableCell>{r.nextServiceDue ?? "—"}</TableCell>
-                      <TableCell>{r.serviceProvider ?? "—"}</TableCell>
-                      <TableCell>{r.runningHoursAtService ?? "—"}</TableCell>
-                      <TableCell>{r.safetyCertExpiry ?? "—"}</TableCell>
+                      <TableCell>{formatDate(r.lastServiceDate)}</TableCell>
+                      <TableCell>{r.nextServiceDue ?? ""}</TableCell>
+                      <TableCell>{r.serviceProvider ?? ""}</TableCell>
+                      <TableCell>{r.runningHoursAtService ?? ""}</TableCell>
+                      <TableCell>{formatDate(r.safetyCertExpiry)}</TableCell>
                       <TableCell>{generatorBadge(r.status)}</TableCell>
                       {canEdit ? (
                         <TableCell>
@@ -492,8 +493,8 @@ export default function ComplianceRegister() {
                       <TableCell>{r.certificateType}</TableCell>
                       <TableCell>{r.issuingAuthority}</TableCell>
                       <TableCell>{r.certificateNumber}</TableCell>
-                      <TableCell>{r.issueDate ?? "—"}</TableCell>
-                      <TableCell>{r.expiryDate ?? "—"}</TableCell>
+                      <TableCell>{formatDate(r.issueDate)}</TableCell>
+                      <TableCell>{formatDate(r.expiryDate)}</TableCell>
                       <TableCell>{docBadge(r.status)}</TableCell>
                       {canEdit ? (
                         <TableCell>
@@ -552,7 +553,7 @@ export default function ComplianceRegister() {
                       <TableCell>{r.assetOrFacility}</TableCell>
                       <TableCell>{r.reportType}</TableCell>
                       <TableCell>{r.dueDate}</TableCell>
-                      <TableCell>{r.submittedDate ?? "—"}</TableCell>
+                      <TableCell>{formatDate(r.submittedDate)}</TableCell>
                       <TableCell>{donorBadge(r.status)}</TableCell>
                       {canEdit ? (
                         <TableCell>

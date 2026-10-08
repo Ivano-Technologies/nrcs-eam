@@ -208,7 +208,7 @@ export default function FleetHealth() {
                     <Wrench className="h-5 w-5" />
                     Maintenance predictions
                   </CardTitle>
-                  <CardDescription>High and critical priority — create preventive work orders</CardDescription>
+                  <CardDescription>High and critical priority. Create preventive work orders.</CardDescription>
                 </div>
                 <Button
                   size="sm"
@@ -260,10 +260,10 @@ export default function FleetHealth() {
               <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-4">
                 {(
                   [
-                    ["0–7 days", row.openWorkOrdersByAge.days0to7],
-                    ["8–14 days", row.openWorkOrdersByAge.days8to14],
-                    ["15–30 days", row.openWorkOrdersByAge.days15to30],
-                    ["30+ days", row.openWorkOrdersByAge.days30plus],
+                    ["0 to 7 days", row.openWorkOrdersByAge.days0to7],
+                    ["8 to 14 days", row.openWorkOrdersByAge.days8to14],
+                    ["15 to 30 days", row.openWorkOrdersByAge.days15to30],
+                    ["Over 30 days", row.openWorkOrdersByAge.days30plus],
                   ] as const
                 ).map(([label, count]) => (
                   <div key={label} className="rounded-md border p-3 text-center">

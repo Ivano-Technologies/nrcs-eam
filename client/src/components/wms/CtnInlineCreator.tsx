@@ -53,7 +53,7 @@ export function CtnInlineCreator({
       notes: notes || undefined,
     });
     const item = wmsItems.find((x) => x.id === created.itemId);
-    onCreated({ id: created.id, label: `${created.ctnCode} — ${item?.itemCode ?? ""} ${item?.name ?? ""}` });
+    onCreated({ id: created.id, label: `${created.ctnCode} · ${item?.itemCode ?? ""} ${item?.name ?? ""}` });
     toast.success("CTN created and selected.");
     onOpenChange(false);
   };
@@ -78,7 +78,7 @@ export function CtnInlineCreator({
               <SelectContent>
                 {(donorsQuery.data ?? []).map((d: { id: number; code: string; name: string }) => (
                   <SelectItem key={d.id} value={String(d.id)}>
-                    {d.code} — {d.name}
+                    {d.code} · {d.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -100,7 +100,7 @@ export function CtnInlineCreator({
               <SelectContent>
                 {wmsItems.map((i) => (
                   <SelectItem key={i.id} value={String(i.id)}>
-                    {i.itemCode} — {i.name}
+                    {i.itemCode} · {i.name}
                   </SelectItem>
                 ))}
               </SelectContent>

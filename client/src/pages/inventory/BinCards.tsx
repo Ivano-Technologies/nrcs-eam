@@ -1,4 +1,5 @@
 import { ModuleFilterSearch, ModuleFiltersCard } from "@/components/ModuleFiltersCard";
+import { formatEmpty } from "@/lib/format";
 import { ViewToggle } from "@/components/ViewToggle";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -41,8 +42,8 @@ export default function BinCards({ embedInShell = false }: Props = {}) {
                   <p className="font-mono text-sm">{row.binNumber}</p>
                   <Badge variant="outline">{row.status}</Badge>
                 </div>
-                <p className="font-semibold">{row.itemDescription || row.itemCode || "—"}</p>
-                <p className="text-sm text-muted-foreground">{row.stockLocation || "—"}</p>
+                <p className="font-semibold">{formatEmpty(row.itemDescription || row.itemCode)}</p>
+                <p className="text-sm text-muted-foreground">{formatEmpty(row.stockLocation)}</p>
                 <p className="text-sm tabular-nums">Balance: {row.currentBalance}</p>
               </CardContent>
             </Card>
@@ -68,13 +69,13 @@ export default function BinCards({ embedInShell = false }: Props = {}) {
               {rows.map((row) => (
                 <TableRow key={row.id} className="cursor-pointer" onClick={() => openDetail(row.id)}>
                   <TableCell>{row.binNumber}</TableCell>
-                  <TableCell>{row.stockLocation || "—"}</TableCell>
-                  <TableCell>{row.itemCode || "—"}</TableCell>
-                  <TableCell>{row.itemDescription || "—"}</TableCell>
-                  <TableCell>{row.ctnDonor || "—"}</TableCell>
+                  <TableCell>{formatEmpty(row.stockLocation)}</TableCell>
+                  <TableCell>{row.itemCode || ""}</TableCell>
+                  <TableCell>{formatEmpty(row.itemDescription)}</TableCell>
+                  <TableCell>{row.ctnDonor || ""}</TableCell>
                   <TableCell className="text-right">{row.currentBalance}</TableCell>
-                  <TableCell>{row.storekeeper || "—"}</TableCell>
-                  <TableCell>{row.openedAt ? String(row.openedAt).slice(0, 10) : "—"}</TableCell>
+                  <TableCell>{formatEmpty(row.storekeeper)}</TableCell>
+                  <TableCell>{row.openedAt ? String(row.openedAt).slice(0, 10) : ""}</TableCell>
                   <TableCell>{row.status}</TableCell>
                 </TableRow>
               ))}

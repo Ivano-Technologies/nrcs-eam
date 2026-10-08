@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { formatEmpty } from "@/lib/format";
 import { useLocation, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -174,7 +175,7 @@ export default function ReceiptDetail() {
     () =>
       (ctnList.data?.items ?? []).map((c) => ({
         id: c.id,
-        label: `${c.ctnCode} — ${c.itemCode} ${c.itemName}`,
+        label: `${c.ctnCode} · ${c.itemCode} ${c.itemName}`,
       })),
     [ctnList.data?.items]
   );
@@ -227,14 +228,14 @@ export default function ReceiptDetail() {
     if (!navigator.onLine) {
       if (savedId == null) {
         enqueueGrnOperation({ kind: "createDraft", payload: payload as unknown });
-        toast.info("GRN draft saved offline — will sync when you are back online.");
+        toast.info("GRN draft saved offline. It will sync when you are back online.");
       } else {
         enqueueGrnOperation({
           kind: "updateDraft",
           documentId: savedId,
           payload: payload as unknown,
         });
-        toast.info("GRN draft saved offline — will sync when you are back online.");
+        toast.info("GRN draft saved offline. It will sync when you are back online.");
       }
       setDirty(false);
       return;
@@ -458,10 +459,10 @@ export default function ReceiptDetail() {
             <CardTitle>Live preview</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <div><span className="font-medium">GRN:</span> {form.grnNumber || "—"}</div>
-            <div><span className="font-medium">Location:</span> {warehouses.find((w) => String(w.id) === form.delegationLocationId)?.name ?? "—"}</div>
-            <div><span className="font-medium">Received from:</span> {form.receivedFrom || "—"}</div>
-            <div><span className="font-medium">Arrival:</span> {form.dateOfArrival || "—"}</div>
+            <div><span className="font-medium">GRN:</span> {form.grnNumber || ""}</div>
+            <div><span className="font-medium">Location:</span> {formatEmpty(warehouses.find((w) => String(w.id) === form.delegationLocationId)?.name)}</div>
+            <div><span className="font-medium">Received from:</span> {form.receivedFrom || ""}</div>
+            <div><span className="font-medium">Arrival:</span> {form.dateOfArrival || ""}</div>
             <div><span className="font-medium">Lines:</span> {lines.length}</div>
             <div><span className="font-medium">Status:</span> {savedId ? "draft/finalizable" : "new draft"}</div>
           </CardContent>

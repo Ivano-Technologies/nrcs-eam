@@ -48,16 +48,18 @@ const DATE_TIME_FORMAT = new Intl.DateTimeFormat("en-GB", {
   minute: "2-digit",
 });
 
-/** "8 Oct 2026". Empty string for missing or invalid dates. */
+/** "8 Oct 2026". Empty string when missing; unparseable text is shown as is. */
 export function formatDate(value: DateInput): string {
   const d = toValidDate(value);
-  return d ? DATE_FORMAT.format(d) : "";
+  if (d) return DATE_FORMAT.format(d);
+  return typeof value === "string" ? value : "";
 }
 
-/** "8 Oct 2026, 10:04". Empty string for missing or invalid dates. */
+/** "8 Oct 2026, 10:04". Empty string when missing; unparseable text is shown as is. */
 export function formatDateTime(value: DateInput): string {
   const d = toValidDate(value);
-  return d ? DATE_TIME_FORMAT.format(d) : "";
+  if (d) return DATE_TIME_FORMAT.format(d);
+  return typeof value === "string" ? value : "";
 }
 
 /** "8 Oct 2026 to 30 Oct 2026" for ranges. */

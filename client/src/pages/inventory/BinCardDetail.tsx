@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { formatEmpty, formatDate } from "@/lib/format";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useMobileTableColumns, MobileColumnsToggle, mobileSecondaryCol } from "@/hooks/useMobileTableColumns";
@@ -44,12 +45,12 @@ export default function BinCardDetail() {
         </Button>
       </div>
       <div className="grid gap-2 rounded-md border p-4 md:grid-cols-2">
-        <div>Stock Location: {card.stockLocation || "—"}</div>
-        <div>CTN/Donor: {card.commodityTrackingNumber || "—"} / {card.donorCode || "—"}</div>
-        <div>Unit: {card.unit || "—"}</div>
-        <div>Item Code: {card.itemCode || "—"}</div>
-        <div>Item Description: {card.itemDescription || "—"}</div>
-        <div>Exp Date: {card.expiryDate || "—"}</div>
+        <div>Stock Location: {formatEmpty(card.stockLocation)}</div>
+        <div>CTN/Donor: {card.commodityTrackingNumber || ""} / {card.donorCode || ""}</div>
+        <div>Unit: {card.unit || ""}</div>
+        <div>Item Code: {card.itemCode || ""}</div>
+        <div>Item Description: {formatEmpty(card.itemDescription)}</div>
+        <div>Exp Date: {formatDate(card.expiryDate)}</div>
       </div>
       <div className="flex items-center gap-2">
         {card.status === "open" ? (
@@ -103,13 +104,13 @@ export default function BinCardDetail() {
             {ledger.map((row) => (
               <TableRow key={row.id}>
                 <TableCell>{row.date}</TableCell>
-                <TableCell>{row.fromTo || "—"}</TableCell>
-                <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.documentRef || "—"}</TableCell>
+                <TableCell>{row.fromTo || ""}</TableCell>
+                <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.documentRef || ""}</TableCell>
                 <TableCell className={cn("text-right", mobileSecondaryCol(showAllColumns))}>{row.quantityIn}</TableCell>
                 <TableCell className={cn("text-right", mobileSecondaryCol(showAllColumns))}>{row.quantityOut}</TableCell>
                 <TableCell className="text-right">{row.balanceAfter}</TableCell>
-                <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.storekeeperInitials || "—"}</TableCell>
-                <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.signatureUrl || "—"}</TableCell>
+                <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.storekeeperInitials || ""}</TableCell>
+                <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.signatureUrl || ""}</TableCell>
               </TableRow>
             ))}
           </TableBody>

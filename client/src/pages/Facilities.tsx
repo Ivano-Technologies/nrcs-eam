@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ComponentProps } from "react";
+import { formatEmpty } from "@/lib/format";
 import { useLocation } from "wouter";
 import type { FacilitiesSegment } from "@/lib/facilityRoutes";
 import { parseFacilityTypeFromSearch, segmentToListFilter } from "@/lib/facilityRoutes";
@@ -544,10 +545,10 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
                     {f.isActive ? "Active" : "Inactive"}
                   </Badge>
                 </div>
-                <div className="text-muted-foreground">{f.code ?? "—"}</div>
-                <div className="text-muted-foreground">{f.address ?? "—"}</div>
-                <div className="text-muted-foreground">{f.contactPerson ?? "—"}</div>
-                <div className="text-muted-foreground">{f.parentFacilityName ? `Parent: ${f.parentFacilityName}` : "Parent: —"}</div>
+                <div className="text-muted-foreground">{f.code ?? ""}</div>
+                <div className="text-muted-foreground">{f.address ?? ""}</div>
+                <div className="text-muted-foreground">{f.contactPerson ?? ""}</div>
+                <div className="text-muted-foreground">Parent: {formatEmpty(f.parentFacilityName)}</div>
                 <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
                   <CardQrCode
                     idValue={String(f.id)}
@@ -604,20 +605,20 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
                   >
                     <StickyCell className="px-2 py-1 text-muted-foreground">{rowNo}</StickyCell>
                     <StickyCell className="px-2 py-1 w-[260px] min-w-[260px] max-w-[260px] truncate font-medium" data-testid={`facility-name-${f.id}`}>{f.name}</StickyCell>
-                    <StickyCell className="px-2 py-1 w-[160px] min-w-[160px] max-w-[160px] truncate">{f.state ?? "—"}</StickyCell>
+                    <StickyCell className="px-2 py-1 w-[160px] min-w-[160px] max-w-[160px] truncate">{f.state ?? ""}</StickyCell>
                     <TableCell title={f.address ?? ""} className="px-2 py-1 max-w-[260px] truncate">
-                      {f.address ?? "—"}
+                      {f.address ?? ""}
                     </TableCell>
-                    <TableCell className="px-2 py-1">{f.code ?? "—"}</TableCell>
+                    <TableCell className="px-2 py-1">{f.code ?? ""}</TableCell>
                     <TableCell className="px-2 py-1">
                       <Badge variant="outline" className={cn("border", TYPE_BADGE[f.facilityType])}>
                         {FACILITY_TYPE_LABELS[f.facilityType]}
                       </Badge>
                     </TableCell>
-                    <TableCell className="px-2 py-1">{f.parentFacilityName ?? "—"}</TableCell>
-                    <TableCell className="px-2 py-1">{f.contactPerson ?? "—"}</TableCell>
-                    <TableCell className="px-2 py-1">{f.contactPhone ?? "—"}</TableCell>
-                    <TableCell className="px-2 py-1">{f.postalCode ?? "—"}</TableCell>
+                    <TableCell className="px-2 py-1">{formatEmpty(f.parentFacilityName)}</TableCell>
+                    <TableCell className="px-2 py-1">{f.contactPerson ?? ""}</TableCell>
+                    <TableCell className="px-2 py-1">{f.contactPhone ?? ""}</TableCell>
+                    <TableCell className="px-2 py-1">{f.postalCode ?? ""}</TableCell>
                     <TableCell className="px-2 py-1">
                       <Badge variant={f.isActive ? "default" : "secondary"}>
                         {f.isActive ? "Active" : "Inactive"}
@@ -757,7 +758,7 @@ function FacilityFormFields(props: {
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
             {FACILITY_TYPE_VALUES.map((t) => (
-              <SelectItem key={t} value={t}>{FACILITY_TYPE_LABELS[t]} — {FACILITY_TYPE_EXAMPLES[t]}</SelectItem>
+              <SelectItem key={t} value={t}>{FACILITY_TYPE_LABELS[t]} ({FACILITY_TYPE_EXAMPLES[t]})</SelectItem>
             ))}
           </SelectContent>
         </Select>

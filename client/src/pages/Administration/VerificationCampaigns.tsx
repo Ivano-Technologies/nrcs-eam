@@ -1,4 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { formatDateRange } from "@/lib/format";
 import PageHeader from "@/components/ui/PageHeader";
 import { ViewToggle } from "@/components/ViewToggle";
 import { Badge } from "@/components/ui/badge";
@@ -101,7 +102,7 @@ export default function VerificationCampaigns() {
       <PageHeader
         icon={ClipboardCheck}
         title="Verification campaigns"
-        subtitle="National asset verification drives — progress, discrepancies, and close-out."
+        subtitle="National asset verification drives, with progress, discrepancies and closure."
       />
 
       {isAdmin ? (
@@ -133,7 +134,7 @@ export default function VerificationCampaigns() {
                         {statusBadge(c.status)}
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        {new Date(c.startsAt).toLocaleDateString()} — {new Date(c.endsAt).toLocaleDateString()}
+                        {formatDateRange(c.startsAt, c.endsAt)}
                       </p>
                     </CardContent>
                   </Card>
@@ -159,7 +160,7 @@ export default function VerificationCampaigns() {
                     <TableCell>{c.name}</TableCell>
                     <TableCell>{statusBadge(c.status)}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">
-                      {new Date(c.startsAt).toLocaleDateString()} — {new Date(c.endsAt).toLocaleDateString()}
+                      {formatDateRange(c.startsAt, c.endsAt)}
                     </TableCell>
                   </TableRow>
                 ))}

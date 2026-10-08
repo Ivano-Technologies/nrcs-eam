@@ -72,7 +72,7 @@ function parseAssetEditChanges(raw: string | null | undefined): {
 }
 
 function formatAuditCell(v: unknown): string {
-  if (v === null || v === undefined) return "—";
+  if (v === null || v === undefined || v === "") return "None";
   if (typeof v === "object") return JSON.stringify(v);
   return String(v);
 }
@@ -1396,7 +1396,7 @@ export default function AssetDetail() {
                   value={
                     computedEditDepreciation != null
                       ? String(computedEditDepreciation)
-                      : "— (set unit value, category, year)"
+                      : "Set unit value, category and year to calculate"
                   }
                 />
               )}

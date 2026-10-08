@@ -633,8 +633,8 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                       <td className="px-2 py-2 text-right">{row.quantityOnHand}</td>
                       <td className="px-2 py-2">{row.unitOfMeasure}</td>
                       <td className="px-2 py-2 text-right">{row.minLevel}</td>
-                      <td className="px-2 py-2 text-right">{row.maxLevel ?? "—"}</td>
-                      <td className="px-2 py-2 text-right">{row.safetyStockLevel ?? "—"}</td>
+                      <td className="px-2 py-2 text-right">{row.maxLevel ?? ""}</td>
+                      <td className="px-2 py-2 text-right">{row.safetyStockLevel ?? ""}</td>
                       <td className="px-2 py-2">
                         <Badge
                           variant="outline"
@@ -812,7 +812,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                     <td className="px-2 py-2">{row.itemCode}</td>
                     <td className="px-2 py-2">{row.name}</td>
                     <td className="px-2 py-2">{row.category}</td>
-                    <td className="px-2 py-2">{row.subcategory ?? "—"}</td>
+                    <td className="px-2 py-2">{row.subcategory ?? ""}</td>
                     <td className="px-2 py-2">{row.unitOfMeasure}</td>
                     <td className="px-2 py-2">
                       <Badge
@@ -1159,7 +1159,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                       {ITEM_CATEGORIES.map((c) => (
                         <SelectItem key={c.value} value={c.value}>
                           {c.label}
-                          {c.hint ? ` — ${c.hint}` : ""}
+                          {c.hint ? ` · ${c.hint}` : ""}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1306,7 +1306,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                   {ITEM_CATEGORIES.map((c) => (
                     <SelectItem key={c.value} value={c.value}>
                       {c.label}
-                      {c.hint ? ` — ${c.hint}` : ""}
+                      {c.hint ? ` · ${c.hint}` : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>

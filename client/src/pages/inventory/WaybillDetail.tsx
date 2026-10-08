@@ -481,7 +481,7 @@ export default function WaybillDetail() {
                       <div className="rounded border border-amber-500 bg-amber-50 p-2 text-xs text-amber-900 dark:bg-amber-950 dark:text-amber-100">
                         <div className="mb-1 flex items-center gap-1 font-medium">
                           <AlertTriangle className="h-3.5 w-3.5" />
-                          FEFO override — older stock skipped
+                          FEFO override: older stock skipped
                         </div>
                         <ul className="list-disc pl-4">
                           {(fefoWarnings[lineIdx] ?? []).map((w, i) => (
@@ -557,7 +557,7 @@ export default function WaybillDetail() {
                             }
                           />
                           <div className="flex h-9 items-center rounded border px-2 text-xs">
-                            Balance: {ctn?.currentBalance ?? "—"}
+                            Balance: {ctn?.currentBalance ?? ""}
                           </div>
                           <div className="flex h-9 items-center">
                             {expired ? <Badge variant="destructive">expired</Badge> : <Badge variant="secondary">valid</Badge>}

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatEmpty } from "@/lib/format";
 import { trpc } from "@/lib/trpc";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
 import PageHeader from "@/components/ui/PageHeader";
@@ -100,8 +101,8 @@ export default function Distributions({ embedInShell = false }: { embedInShell?:
                   <td className="px-2 py-2">{row.location}</td>
                   <td className="px-2 py-2">{row.beneficiaryCount ?? 0}</td>
                   <td className="px-2 py-2">{row.householdCount ?? 0}</td>
-                  <td className="px-2 py-2">{row.conductedBy ?? "—"}</td>
-                  <td className="px-2 py-2">{row.incidentReference ?? "—"}</td>
+                  <td className="px-2 py-2">{formatEmpty(row.conductedBy)}</td>
+                  <td className="px-2 py-2">{row.incidentReference ?? ""}</td>
                   <td className="px-2 py-2">
                     <Button
                       size="sm"

@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { formatDate } from "@/lib/format";
 import { CalendarClock } from "lucide-react";
 import { appPath } from "@/lib/routes";
 import PageHeader from "@/components/ui/PageHeader";
@@ -68,8 +69,8 @@ export default function WmsExpiryReport() {
                 <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.donor}</TableCell>
                 <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.location}</TableCell>
                 <TableCell className="text-right">{row.balance}</TableCell>
-                <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{row.expiryDate ?? "—"}</TableCell>
-                <TableCell className={tone(row.daysUntilExpiry)}>{row.daysUntilExpiry ?? "—"}</TableCell>
+                <TableCell className={cn(mobileSecondaryCol(showAllColumns))}>{formatDate(row.expiryDate)}</TableCell>
+                <TableCell className={tone(row.daysUntilExpiry)}>{row.daysUntilExpiry ?? ""}</TableCell>
               </TableRow>
             ))}
           </TableBody>

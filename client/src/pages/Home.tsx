@@ -246,7 +246,7 @@ export default function Home() {
 
               title="Dashboard"
 
-              subtitle="Field view — your branch only"
+              subtitle="Field view. Your branch only."
 
               className="mb-0"
 

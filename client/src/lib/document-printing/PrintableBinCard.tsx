@@ -10,12 +10,12 @@ export function PrintableBinCard({ data }: PrintableBinCardProps) {
   return (
     <PrintableShell title="NIGERIAN RED CROSS SOCIETY NATIONAL HEADQUARTERS" subtitle="BIN CARD">
       <div className="grid grid-cols-2 gap-2 text-sm">
-        <div>Stock Location: {card?.stockLocation || "—"}</div>
-        <div>CTN/Donor: {card?.commodityTrackingNumber || "—"} / {card?.donorCode || "—"}</div>
-        <div>Unit: {card?.unit || "—"}</div>
-        <div>Item Code: {card?.itemCode || "—"}</div>
-        <div>Item Description: {card?.itemDescription || "—"}</div>
-        <div>Exp Date: {card?.expiryDate || "—"}</div>
+        <div>Stock Location: {card?.stockLocation || ""}</div>
+        <div>CTN/Donor: {card?.commodityTrackingNumber || ""} / {card?.donorCode || ""}</div>
+        <div>Unit: {card?.unit || ""}</div>
+        <div>Item Code: {card?.itemCode || ""}</div>
+        <div>Item Description: {card?.itemDescription || ""}</div>
+        <div>Exp Date: {card?.expiryDate || ""}</div>
       </div>
       <table className="mt-3 w-full border-collapse text-sm">
         <thead>
@@ -34,13 +34,13 @@ export function PrintableBinCard({ data }: PrintableBinCardProps) {
           {ledger.map((row: any) => (
             <tr key={row.id}>
               <td className="border p-1">{row.date}</td>
-              <td className="border p-1">{row.fromTo || "—"}</td>
-              <td className="border p-1">{row.documentRef || "—"}</td>
+              <td className="border p-1">{row.fromTo || ""}</td>
+              <td className="border p-1">{row.documentRef || ""}</td>
               <td className="border p-1 text-right">{row.quantityIn}</td>
               <td className="border p-1 text-right">{row.quantityOut}</td>
               <td className="border p-1 text-right">{row.balanceAfter}</td>
-              <td className="border p-1">{row.storekeeperInitials || "—"}</td>
-              <td className="border p-1">{row.signatureUrl || "—"}</td>
+              <td className="border p-1">{row.storekeeperInitials || ""}</td>
+              <td className="border p-1">{row.signatureUrl || ""}</td>
             </tr>
           ))}
         </tbody>

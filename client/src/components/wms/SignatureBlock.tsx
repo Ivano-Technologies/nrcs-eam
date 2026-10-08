@@ -80,7 +80,7 @@ export function SignatureBlock({
         </div>
       ) : (
         <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-          Signature pad mode placeholder — default typed mode is active per current facility preference.
+          This facility uses typed signatures.
         </div>
       )}
     </div>

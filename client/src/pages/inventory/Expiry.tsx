@@ -100,9 +100,9 @@ export default function Expiry({ embedInShell = false }: { embedInShell?: boolea
                     <tr key={row.batchId} data-testid={`expiry-row-${row.batchId}`} className="border-b">
                       <td className="px-2 py-2">{row.itemCode} - {row.itemName}</td>
                       <td className="px-2 py-2">{row.warehouseName}</td>
-                      <td className="px-2 py-2">{row.batchNumber ?? "—"}</td>
-                      <td className="px-2 py-2">{row.expiryDate ? new Date(row.expiryDate).toLocaleDateString() : "—"}</td>
-                      <td className="px-2 py-2"><Badge variant={tone as any}>{days ?? "—"}</Badge></td>
+                      <td className="px-2 py-2">{row.batchNumber ?? ""}</td>
+                      <td className="px-2 py-2">{row.expiryDate ? new Date(row.expiryDate).toLocaleDateString() : ""}</td>
+                      <td className="px-2 py-2"><Badge variant={tone as any}>{days ?? ""}</Badge></td>
                       <td className="px-2 py-2">{row.quantity}</td>
                       <td className="px-2 py-2">
                         {isManagerOrAdmin ? (
@@ -239,8 +239,8 @@ export default function Expiry({ embedInShell = false }: { embedInShell?: boolea
                           }
                         />
                       </td>
-                      <td className="px-2 py-2">{row.batchNumber ?? "—"}</td>
-                      <td className="px-2 py-2">{row.expiryDate ? String(row.expiryDate) : "—"}</td>
+                      <td className="px-2 py-2">{row.batchNumber ?? ""}</td>
+                      <td className="px-2 py-2">{row.expiryDate ? String(row.expiryDate) : ""}</td>
                       <td className="px-2 py-2">{row.quantity}</td>
                     </tr>
                   ))}

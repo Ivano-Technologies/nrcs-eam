@@ -110,14 +110,14 @@ export default function Movements({ embedInShell = false }: { embedInShell?: boo
           <tbody>
             {(movements.data ?? []).map((row) => (
               <tr key={row.id} className="border-b">
-                <td className="px-2 py-2">{row.createdAt ? new Date(row.createdAt).toLocaleString() : "—"}</td>
+                <td className="px-2 py-2">{row.createdAt ? new Date(row.createdAt).toLocaleString() : ""}</td>
                 <td className="px-2 py-2">{row.movementType}</td>
                 <td className="px-2 py-2">{row.itemCode} - {row.itemName}</td>
-                <td className="px-2 py-2">{row.fromWarehouseId ?? "—"}</td>
-                <td className="px-2 py-2">{row.toWarehouseId ?? "—"}</td>
+                <td className="px-2 py-2">{row.fromWarehouseId ?? ""}</td>
+                <td className="px-2 py-2">{row.toWarehouseId ?? ""}</td>
                 <td className="px-2 py-2 text-right">{row.quantityChange}</td>
                 <td className="px-2 py-2 text-right">{row.balanceAfter}</td>
-                <td className="px-2 py-2">{row.documentNumber ?? "—"}</td>
+                <td className="px-2 py-2">{row.documentNumber ?? ""}</td>
               </tr>
             ))}
           </tbody>

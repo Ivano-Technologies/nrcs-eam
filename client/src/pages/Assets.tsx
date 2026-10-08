@@ -41,7 +41,7 @@ import { toast } from "sonner";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { calculateDepreciatedValue } from "@/lib/depreciation";
 import { appPath } from "@/lib/routes";
-import { formatNaira } from "@/lib/format";
+import { formatDate as formatDisplayDate, formatEmpty, formatNaira } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ViewToggle } from "@/components/ViewToggle";
@@ -108,7 +108,8 @@ const REGISTER_LABELS: Record<string, string> = {
   beyond_repair: "Beyond Repair",
 };
 
-const EM_DASH = "—";
+/** Optional register columns stay blank when empty (no dash placeholders). */
+const EM_DASH = "";
 const REGISTER_TABLE_COLUMN_ORDER = [
   "S.No","Item Type","Item Category","Sub Item Category","Item Description","Branch Code","Category Code","NUM","Asset Code",
   "Serial Number","Actual Unit Value","Depreciated Value","Method of Acquisition","Acquisition Detail","Project Ref","Year Acquired",
@@ -121,13 +122,7 @@ function formatMoney(n: number | null | undefined): string {
 }
 
 function formatDate(d: Date | string | null | undefined): string {
-  if (!d) return EM_DASH;
-  const x = new Date(d);
-  if (Number.isNaN(x.getTime())) return EM_DASH;
-  const dd = String(x.getDate()).padStart(2, "0");
-  const mm = String(x.getMonth() + 1).padStart(2, "0");
-  const yyyy = x.getFullYear();
-  return `${dd}/${mm}/${yyyy}`;
+  return formatDisplayDate(d);
 }
 
 function registerStatusFromCurrentStatus(status: string): string {
@@ -921,7 +916,7 @@ export default function Assets() {
                 <DialogHeader>
                   <DialogTitle>Add New Asset</DialogTitle>
                   <DialogDescription>
-                    Create a register entry (asset tag is optional — auto-generated if empty)
+                    Create a register entry. Asset tag is optional. We create one if you leave it empty.
                   </DialogDescription>
                 </DialogHeader>
                 {createFormError ? (
@@ -1002,7 +997,7 @@ export default function Assets() {
                         <SelectValue placeholder="Select sub item category" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="__none__">—</SelectItem>
+                        <SelectItem value="__none__">None</SelectItem>
                         {SUB_ITEM_CATEGORIES.map((item) => (
                           <SelectItem key={item} value={item}>
                             {item}
@@ -1114,7 +1109,7 @@ export default function Assets() {
                           value={
                             computedCreateDepreciation != null
                               ? String(computedCreateDepreciation)
-                              : "— (set unit value, category, and year)"
+                              : "Set unit value, category and year to calculate"
                           }
                         />
                       )}
@@ -1136,7 +1131,7 @@ export default function Assets() {
                         <SelectValue placeholder="Select method" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="__none__">—</SelectItem>
+                        <SelectItem value="__none__">None</SelectItem>
                         {METHOD_OF_ACQUISITION_OPTIONS.map((m) => (
                           <SelectItem key={m} value={m}>
                             {m}
@@ -1177,7 +1172,7 @@ export default function Assets() {
                           <SelectValue placeholder="Select year" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="__none__">—</SelectItem>
+                          <SelectItem value="__none__">None</SelectItem>
                           {YEAR_ACQUIRED_OPTIONS.map((yearOption) => (
                             <SelectItem key={yearOption} value={yearOption}>
                               {yearOption}
@@ -1501,12 +1496,12 @@ export default function Assets() {
                 <p className="text-muted-foreground">{row.assetTag?.trim() || EM_DASH}</p>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline">{row.itemType === "inventory" ? "Inventory" : "Asset"}</Badge>
-                  <Badge variant="secondary">{row.categoryName?.trim() || EM_DASH}</Badge>
+                  {row.categoryName?.trim() ? <Badge variant="secondary">{row.categoryName.trim()}</Badge> : null}
                   <Badge variant="outline" className={cn("text-xs font-normal", STATUS_BADGE[row.registerStatus as string] ?? "")}>
                     {REGISTER_LABELS[row.registerStatus as string] ?? row.registerStatus}
                   </Badge>
                 </div>
-                <p className="text-muted-foreground">{row.siteName || EM_DASH}</p>
+                <p className="text-muted-foreground">{formatEmpty(row.siteName)}</p>
                 <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
                   <CardQrCode
                     idValue={String(row.id)}
@@ -1594,7 +1589,7 @@ export default function Assets() {
                       "";
                     const loc = [row.siteName, row.location].filter(Boolean).join(" / ");
                     const desc =
-                      row.description?.trim() ? `${row.name} — ${row.description}` : row.name;
+                      row.description?.trim() ? `${row.name}: ${row.description}` : row.name;
                     const statusLabel = REGISTER_LABELS[rs] ?? rs;
                     const cond = row.physicalCondition?.trim() || "";
                     const rowBgClass = i % 2 === 1 ? "bg-muted/30" : "bg-background";
@@ -2241,7 +2236,7 @@ export default function Assets() {
                         value={
                           computedEditDepreciation != null
                             ? String(computedEditDepreciation)
-                            : "— (set unit value, category label, and year)"
+                            : "Set unit value, category label and year to calculate"
                         }
                       />
                     )}

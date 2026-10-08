@@ -154,7 +154,7 @@ export default function ImportPage({ embedInShell = false }: { embedInShell?: bo
               <tr key={row.rowIndex} className={row.status === "error" ? "bg-red-50" : row.status === "warning" ? "bg-amber-50" : "bg-green-50"}>
                 <td className="px-2 py-2">{row.rowIndex}</td>
                 <td className="px-2 py-2 capitalize">{row.status}</td>
-                <td className="px-2 py-2">{(row.errors ?? []).join("; ") || "—"}</td>
+                <td className="px-2 py-2">{(row.errors ?? []).join("; ") || ""}</td>
                 <td className="px-2 py-2 text-xs">{JSON.stringify(row.data)}</td>
               </tr>
             ))}

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { formatDate } from "@/lib/format";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -138,9 +139,9 @@ export default function Issues({ embedInShell = false }: { embedInShell?: boolea
                 onClick={() => setLocation(`/app/inventory/issues/${row.id}`)}
               >
                 <td className="px-2 py-2 font-mono">{row.wbNumber}</td>
-                <td className={cn("px-2 py-2", mobileSecondaryCol(showAllColumns))}>{row.date ?? "—"}</td>
+                <td className={cn("px-2 py-2", mobileSecondaryCol(showAllColumns))}>{formatDate(row.date)}</td>
                 <td className={cn("px-2 py-2", mobileSecondaryCol(showAllColumns))}>{wh.find((x) => x.id === row.warehouseId)?.name ?? row.warehouseId}</td>
-                <td className="px-2 py-2">{row.destinationBeneficiary ?? "—"}</td>
+                <td className="px-2 py-2">{row.destinationBeneficiary ?? ""}</td>
                 <td className={cn("px-2 py-2", mobileSecondaryCol(showAllColumns))}>{row.lineCount ?? 0}</td>
                 <td className={cn("px-2 py-2", mobileSecondaryCol(showAllColumns))}>{row.totalUnits ?? 0}</td>
                 <td className="px-2 py-2">{statusBadge(row.status)}</td>

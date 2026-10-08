@@ -442,7 +442,7 @@ export default function Reports() {
                   <tr key={idx} className="border-t">
                     {Object.keys((tableRows[0] as any) ?? { info: "" }).map((k) => (
                       <td key={k} className="px-2 py-2">
-                        {typeof row[k] === "object" ? JSON.stringify(row[k]) : String(row[k] ?? "—")}
+                        {typeof row[k] === "object" ? JSON.stringify(row[k]) : String(row[k] ?? "")}
                       </td>
                     ))}
                   </tr>
