@@ -163,9 +163,9 @@ export default function Signup() {
             )}
           </Button>
 
-          <p className="pt-2 text-center text-sm text-gray-600">
+          <p className="pt-2 text-center text-sm text-gray-600 dark:text-gray-400">
             Already have an account?{" "}
-            <Link href="/login" className="font-medium text-[#ef4444] hover:underline">
+            <Link href="/login" className="font-medium text-[#C8102E] hover:underline dark:text-[#F87171]">
               Sign In
             </Link>
           </p>

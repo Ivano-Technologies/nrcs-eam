@@ -9,10 +9,10 @@ import { Link } from "wouter";
 type KpiTone = "red" | "blue" | "purple" | "orange" | "green";
 
 const iconToneClassMap: Record<KpiTone, string> = {
-  red: "text-[#EE1C25] dark:text-[hsl(0_0%_95%)]",
+  red: "text-[#C8102E] dark:text-[hsl(0_0%_95%)]",
   blue: "text-[#1a2332] dark:text-[hsl(0_0%_95%)]",
   purple: "text-[#1a2332] dark:text-[hsl(0_0%_95%)]",
-  orange: "text-[#EE1C25] dark:text-[hsl(0_0%_95%)]",
+  orange: "text-[#C8102E] dark:text-[hsl(0_0%_95%)]",
   green: "text-[#1a2332] dark:text-[hsl(0_0%_95%)]",
 };
 

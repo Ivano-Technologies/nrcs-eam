@@ -9,6 +9,8 @@ const MVP_AUDIT_AUTH_FILE = path.join(__dirname, "playwright", ".auth", "mvp-aud
 const LIVE_AUTH_AUTH_FILE = path.join(__dirname, "playwright", ".auth", "live-auth-user.json");
 
 const LIVE_AUTH_BASE = "https://nrcseam.techivano.com";
+/** Public UI checks (no sign in). Point at a Vercel Preview with `PLAYWRIGHT_BASE_URL`. */
+const PUBLIC_UI_BASE = process.env.PLAYWRIGHT_BASE_URL?.trim() || LIVE_AUTH_BASE;
 
 const argvJoined = process.argv.join(" ");
 const wantsMvpAuditProject = argvJoined.includes("mvp-audit");
@@ -19,6 +21,8 @@ const runLiveAuthOnly =
     process.argv.some(
       (arg) =>
         arg.includes("tests/auth") ||
+        arg.includes("tests/public") ||
+        arg.includes("public-ui") ||
         arg.includes("password-login") ||
         arg.includes("live-auth")
     )) &&
@@ -67,6 +71,16 @@ export default defineConfig({
         trace: "retain-on-failure",
         screenshot: "only-on-failure",
         storageState: LIVE_AUTH_AUTH_FILE,
+      },
+    },
+    {
+      name: "public-ui",
+      testMatch: "**/public/**/*.spec.ts",
+      retries: process.env.CI ? 1 : 0,
+      use: {
+        baseURL: PUBLIC_UI_BASE,
+        trace: "retain-on-failure",
+        screenshot: "only-on-failure",
       },
     },
     {
