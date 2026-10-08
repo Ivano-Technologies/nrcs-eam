@@ -39,7 +39,14 @@ describe("NotFound (Wave B11)", () => {
 
   it("renders only the card inside the app shell", () => {
     renderAt("/app/nope");
-    expect(screen.getByTestId("not-found")).toBeInTheDocument();
+    const card = screen.getByTestId("not-found");
+    expect(card).toBeInTheDocument();
+    expect(card.getAttribute("data-variant")).toBe("app");
+    // Themed app card, not the light glass card: bg-card follows light and dark.
+    expect(card.className).toContain("bg-card");
     expect(screen.queryByRole("button", { name: /switch to (light|dark) theme/i })).not.toBeInTheDocument();
+    const action = screen.getByRole("button", { name: "Back to home" });
+    expect(action.className).toContain("bg-[#C8102E]");
+    expect(action.className).not.toMatch(/bg-blue/);
   });
 });
