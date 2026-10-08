@@ -201,7 +201,7 @@ export function GlobalSearch({ className }: { className?: string }) {
                     const href = appPath(`/work-orders/${w.id}`);
                     const entry: RecentEntry = {
                       id: `wo-${w.id}`,
-                      label: `${w.workOrderNumber} — ${w.title}`,
+                      label: `${w.workOrderNumber} · ${w.title}`,
                       href,
                       group: "Work order",
                     };

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatDateTime } from "@/lib/format";
 import PageHeader from "@/components/ui/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -57,11 +58,11 @@ export default function PendingUsers() {
   const processed = pendingUsers?.filter((u) => u.status !== "pending") || [];
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="space-y-6">
       <div data-testid="pending-users-heading">
         <PageHeader
           icon={UserCheck}
-          title="Pending Users"
+          title="Pending users"
           subtitle="Review and approve user signup requests"
         />
       </div>
@@ -105,7 +106,7 @@ export default function PendingUsers() {
                         <strong>Department:</strong> {user.department}
                       </p>
                     ) : null}
-                    <p><strong>Requested:</strong> {new Date(user.createdAt).toLocaleString()}</p>
+                    <p><strong>Requested:</strong> {formatDateTime(user.createdAt)}</p>
                   </div>
                   
                   <div className="flex gap-2">
@@ -183,7 +184,7 @@ export default function PendingUsers() {
               </CardHeader>
               <CardContent>
                 <div className="text-sm text-gray-600">
-                  <p><strong>Processed:</strong> {user.approvedAt ? new Date(user.approvedAt).toLocaleString() : "N/A"}</p>
+                  <p><strong>Processed:</strong> {user.approvedAt ? formatDateTime(user.approvedAt) : "Not yet"}</p>
                   {user.rejectionReason && (
                     <p><strong>Reason:</strong> {user.rejectionReason}</p>
                   )}

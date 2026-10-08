@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { formatDateTime } from "@/lib/format";
 import { useLocation } from "wouter";
 import { Html5Qrcode } from "html5-qrcode";
 import { trpc } from "@/lib/trpc";
@@ -102,7 +103,7 @@ export default function AssetScanner() {
       notes: updateForm.notes 
         ? `${scannedAsset.notes || ""}
 
-[Scanner Update ${new Date().toLocaleString()}]
+[Scanner update ${formatDateTime(new Date())}]
 ${updateForm.notes}`
         : scannedAsset.notes,
     });
@@ -165,11 +166,11 @@ ${updateForm.notes}`
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
-      <div className="max-w-2xl mx-auto space-y-6">
+      <div className="max-w-3xl space-y-6">
         {/* Header */}
         <PageHeader
           icon={QrCode}
-          title="Asset Scanner"
+          title="Asset scanner"
           subtitle="Mobile-enabled asset scanning for rapid identification, verification, and field updates."
         />
 
@@ -197,7 +198,7 @@ ${updateForm.notes}`
                 className="inline-flex h-11 flex-1 items-center justify-center gap-2"
               >
                 <Search className="h-4 w-4 shrink-0" />
-                Manual Entry
+                Manual entry
               </Button>
               <Button
                 data-testid="asset-scanner-mode-camera"
@@ -206,24 +207,24 @@ ${updateForm.notes}`
                 className="inline-flex h-11 flex-1 items-center justify-center gap-2"
               >
                 <Camera className="h-4 w-4 shrink-0" />
-                Camera Scan
+                Camera scan
               </Button>
             </div>
 
-            {/* Camera Scan */}
+            {/* Camera scan */}
             {scanMode === "camera" && (
               <div className="flex flex-col gap-4">
                 <div id="qr-reader" className="w-full overflow-hidden rounded-lg border bg-black"></div>
                 <p className="text-center text-sm text-muted-foreground">
-                  {isScanning ? "Point camera at QR code or barcode..." : "Starting camera..."}
+                  {isScanning ? "Point camera at QR code or barcode…" : "Starting camera…"}
                 </p>
                 <Button onClick={() => setScanMode("manual")} variant="outline" className="h-11 w-full">
-                  Switch to Manual Entry
+                  Switch to Manual entry
                 </Button>
               </div>
             )}
 
-            {/* Manual Entry */}
+            {/* Manual entry */}
             {scanMode === "manual" && (
               <div className="flex flex-col gap-4">
                 <div className="flex flex-col gap-4">
@@ -234,7 +235,7 @@ ${updateForm.notes}`
                   </Label>
                   <Input
                     id="assetTag"
-                    placeholder="Enter asset tag..."
+                    placeholder="Enter asset tag…"
                     value={assetTag}
                     onChange={(e) => setAssetTag(e.target.value)}
                     onKeyDown={(e) => {
@@ -248,7 +249,7 @@ ${updateForm.notes}`
                 </div>
                 <Button onClick={handleScan} className="h-11 w-full text-lg">
                   <Search className="h-5 w-5 mr-2" />
-                  Find Asset
+                  Find asset
                 </Button>
               </div>
             )}
@@ -297,7 +298,7 @@ ${updateForm.notes}`
                   onClick={() => setLocation(appPath(`/assets/${scannedAsset.id}`))}
                   className="w-full"
                 >
-                  View Full Details
+                  View full details
                 </Button>
               </CardContent>
             </Card>
@@ -408,7 +409,7 @@ ${updateForm.notes}`
                   <Label htmlFor="location">Location</Label>
                   <Input
                     id="location"
-                    placeholder="Enter new location..."
+                    placeholder="Enter new location…"
                     value={updateForm.location}
                     onChange={(e) =>
                       setUpdateForm({ ...updateForm, location: e.target.value })
@@ -420,7 +421,7 @@ ${updateForm.notes}`
                   <Label htmlFor="notes">Notes</Label>
                   <Textarea
                     id="notes"
-                    placeholder="Add notes about this update..."
+                    placeholder="Add notes about this update…"
                     value={updateForm.notes}
                     onChange={(e) =>
                       setUpdateForm({ ...updateForm, notes: e.target.value })
@@ -438,10 +439,10 @@ ${updateForm.notes}`
                     {updateAssetMutation.isPending ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Updating...
+                        Updating…
                       </>
                     ) : (
-                      "Update Asset"
+                      "Update asset"
                     )}
                   </Button>
                   <Button

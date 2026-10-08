@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { useRoute, useLocation } from "wouter";
+import { appPath } from "@/lib/routes";
+import PageHeader from "@/components/ui/PageHeader";
+import { useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import PageLoader from "@/components/ui/PageLoader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Edit, Loader2 } from "lucide-react";
+import { Edit, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -14,7 +16,6 @@ import { toast } from "sonner";
 
 export default function WorkOrderDetail() {
   const [, params] = useRoute("/app/work-orders/:id");
-  const [, setLocation] = useLocation();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   const workOrderId = params?.id ? Number(params.id) : 0;
@@ -41,19 +42,17 @@ export default function WorkOrderDetail() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="icon" onClick={() => setLocation("/app/work-orders")}><ArrowLeft className="h-4 w-4" /></Button>
-          <div>
-            <h1 className="text-3xl font-bold">{workOrder.title}</h1>
-            <p className="text-muted-foreground">{workOrder.workOrderNumber}</p>
-          </div>
-        </div>
-        <Button data-testid="work-order-edit-btn" onClick={handleEdit}>
-          <Edit className="mr-2 h-4 w-4" />
-          Edit
-        </Button>
-      </div>
+      <PageHeader
+        back={{ label: "Work orders", href: appPath("/work-orders") }}
+        title={workOrder.title}
+        subtitle={workOrder.workOrderNumber}
+        actions={
+          <Button data-testid="work-order-edit-btn" onClick={handleEdit}>
+            <Edit className="mr-2 h-4 w-4" />
+            Edit
+          </Button>
+        }
+      />
       <Card>
         <CardHeader><CardTitle>Work Order Details</CardTitle></CardHeader>
         <CardContent className="space-y-4">

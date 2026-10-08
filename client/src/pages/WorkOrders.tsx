@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatDate } from "@/lib/format";
 import { trpc } from "@/lib/trpc";
 import PageHeader from "@/components/ui/PageHeader";
 import TableLoader from "@/components/ui/TableLoader";
@@ -108,7 +109,7 @@ export default function WorkOrders() {
       <div className="flex items-center justify-between">
         <PageHeader
           icon={ClipboardList}
-          title="Work Orders"
+          title="Work orders"
           subtitle="Manage maintenance and repair work orders"
           className="mb-0"
         />
@@ -116,7 +117,7 @@ export default function WorkOrders() {
           <DialogTrigger asChild>
             <Button data-testid="work-order-create-btn">
               <Plus className="mr-2 h-4 w-4" />
-              Create Work Order
+              Create work order
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -153,7 +154,7 @@ export default function WorkOrders() {
                   id="description"
                   value={newWorkOrder.description}
                   onChange={(e) => setNewWorkOrder({ ...newWorkOrder, description: e.target.value })}
-                  placeholder="Detailed work order description..."
+                  placeholder="Detailed work order description…"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -248,10 +249,10 @@ export default function WorkOrders() {
                 {createWorkOrderMutation.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating...
+                    Creating…
                   </>
                 ) : (
-                  "Create Work Order"
+                  "Create work order"
                 )}
               </Button>
             </DialogFooter>
@@ -319,7 +320,7 @@ export default function WorkOrders() {
                     {wo.scheduledStart && (
                       <div className="flex items-center gap-1 text-muted-foreground">
                         <Calendar className="h-3 w-3" />
-                        <span>{new Date(wo.scheduledStart).toLocaleDateString()}</span>
+                        <span>{formatDate(wo.scheduledStart)}</span>
                       </div>
                     )}
                   </div>

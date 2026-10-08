@@ -19,7 +19,7 @@ export default function MonthlyWarehouseReportPrint() {
     return <div className="p-6 text-sm text-red-600">Invalid monthly report print parameters.</div>;
   }
   if (reportQuery.isLoading || sitesQuery.isLoading) {
-    return <div className="p-6 text-sm text-muted-foreground">Loading monthly report print view...</div>;
+    return <div className="p-6 text-sm text-muted-foreground">Loading monthly report print view…</div>;
   }
   if (!reportQuery.data) {
     return <div className="p-6 text-sm text-red-600">Monthly report not found.</div>;

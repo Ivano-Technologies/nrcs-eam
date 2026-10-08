@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState, type ComponentProps } from "react";
+import { useFullBleed } from "@/lib/fullBleed";
+import { formatEmpty } from "@/lib/format";
 import { useLocation } from "wouter";
 import type { FacilitiesSegment } from "@/lib/facilityRoutes";
 import { parseFacilityTypeFromSearch, segmentToListFilter } from "@/lib/facilityRoutes";
@@ -44,7 +46,7 @@ import {
 import { cn } from "@/lib/utils";
 import { MapView } from "@/components/Map";
 import { DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM_COUNTRY } from "@/lib/mapDefaults";
-import { Download, Edit2, Loader2, MapPin, Plus, Save, Trash2, Upload, X } from "lucide-react";
+import { Download, Edit2, Loader2, Plus, Save, Trash2, Upload, X } from "lucide-react";
 import { ViewToggle } from "@/components/ViewToggle";
 import { CardQrCode } from "@/components/CardQrCode";
 import { ModuleFiltersCard, ModuleFilterSearch } from "@/components/ModuleFiltersCard";
@@ -55,6 +57,12 @@ type FacilitiesViewMode = "table" | "card" | "map";
 type SortKey = "code" | "name" | "facilityType" | "parentFacilityName" | "state" | "isActive";
 type SortDir = "asc" | "desc";
 type PageSize = "25" | "50" | "100" | "all";
+
+/** Badge text: short form so the badge fits beside the pinned columns at 390 (matches the "National HQ" tab). */
+const TYPE_BADGE_LABEL: Record<FacilityType, string> = {
+  ...FACILITY_TYPE_LABELS,
+  national_headquarters: "National HQ",
+};
 
 const TYPE_BADGE: Record<FacilityType, string> = {
   branch: "bg-blue-600/15 text-blue-800 border-blue-200 dark:text-blue-200",
@@ -123,6 +131,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
   });
   const [viewOverride, setViewOverride] = useState<FacilitiesViewMode | null>(null);
   const viewMode: FacilitiesViewMode = viewOverride ?? (isMobile ? "card" : storedViewMode);
+  useFullBleed(viewMode === "map");
   const setViewMode = (mode: FacilitiesViewMode) => {
     setViewOverride(mode);
     if (mode === "table" || mode === "card") setStoredViewMode(mode);
@@ -437,15 +446,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
         }
         toolbarStart={
           <>
-            <ViewToggle value={viewMode === "card" ? "card" : "table"} onChange={setViewMode} />
-            <Button
-              variant={viewMode === "map" ? "secondary" : "outline"}
-              className="h-9"
-              onClick={() => setViewMode("map")}
-            >
-              <MapPin className="mr-2 h-4 w-4" />
-              Map
-            </Button>
+            <ViewToggle value={viewMode} onChange={setViewMode} showMap />
           </>
         }
         toolbarEnd={
@@ -481,12 +482,6 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
               </Button>
               <input {...facilitiesImportFile.inputProps} />
             </label>
-            {canEditFacilities ? (
-              <Button className="h-9" onClick={() => setIsCreateOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Facility
-              </Button>
-            ) : null}
           </>
         }
       />
@@ -495,7 +490,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogContent className="max-w-3xl">
             <DialogHeader>
-              <DialogTitle>Add Facility</DialogTitle>
+              <DialogTitle>Add facility</DialogTitle>
               <DialogDescription>Create a new facility record</DialogDescription>
             </DialogHeader>
             <FacilityFormFields
@@ -519,10 +514,10 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
                 {createMutation.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
+                    Saving…
                   </>
                 ) : (
-                  "Create Facility"
+                  "Create facility"
                 )}
               </Button>
             </DialogFooter>
@@ -543,17 +538,17 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
                 <div className="flex items-center gap-2">
-                  <Badge variant="outline" className={cn("border", TYPE_BADGE[f.facilityType])}>
-                    {FACILITY_TYPE_LABELS[f.facilityType]}
+                  <Badge variant="outline" className={cn("border whitespace-nowrap", TYPE_BADGE[f.facilityType])}>
+                    {TYPE_BADGE_LABEL[f.facilityType]}
                   </Badge>
                   <Badge variant={f.isActive ? "default" : "secondary"}>
                     {f.isActive ? "Active" : "Inactive"}
                   </Badge>
                 </div>
-                <div className="text-muted-foreground">{f.code ?? "—"}</div>
-                <div className="text-muted-foreground">{f.address ?? "—"}</div>
-                <div className="text-muted-foreground">{f.contactPerson ?? "—"}</div>
-                <div className="text-muted-foreground">{f.parentFacilityName ? `Parent: ${f.parentFacilityName}` : "Parent: —"}</div>
+                <div className="text-muted-foreground">{f.code ?? ""}</div>
+                <div className="text-muted-foreground">{f.address ?? ""}</div>
+                <div className="text-muted-foreground">{f.contactPerson ?? ""}</div>
+                <div className="text-muted-foreground">Parent: {formatEmpty(f.parentFacilityName)}</div>
                 <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
                   <CardQrCode
                     idValue={String(f.id)}
@@ -569,7 +564,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
         </div>
       ) : (
         <div
-          className="frozen-table-wrap rounded-md border bg-card px-2 md:px-3"
+          className="frozen-table-wrap sticky-lead-cols rounded-md border bg-card px-2 md:px-3"
           style={
             {
               "--col1-width": "56px",
@@ -584,17 +579,17 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
             <TableHeader className="bg-background">
               <TableRow>
                 <StickyHead className="px-2 py-1.5 text-left font-medium whitespace-nowrap">S/No</StickyHead>
-                <StickyHead onClick={() => sort("name")} className="px-2 py-1.5 text-left font-medium whitespace-nowrap">Name</StickyHead>
-                <StickyHead onClick={() => sort("state")} className="px-2 py-1.5 text-left font-medium whitespace-nowrap">State/Region</StickyHead>
-                <TableHead className="px-2 py-1.5 text-left font-medium whitespace-nowrap">Address</TableHead>
+                <StickyHead onClick={() => sort("name")} className="w-[9rem] min-w-[9rem] md:w-auto md:min-w-[12rem] px-2 py-1.5 text-left font-medium whitespace-nowrap">Name</StickyHead>
+                <TableHead onClick={() => sort("facilityType")} className="cursor-pointer px-3 py-1.5 text-left font-medium whitespace-nowrap">Type</TableHead>
                 <TableHead onClick={() => sort("code")} className="cursor-pointer px-2 py-1.5 text-left font-medium whitespace-nowrap">Code</TableHead>
-                <TableHead onClick={() => sort("facilityType")} className="cursor-pointer px-2 py-1.5 text-left font-medium whitespace-nowrap">Type</TableHead>
-                <TableHead onClick={() => sort("parentFacilityName")} className="cursor-pointer px-2 py-1.5 text-left font-medium whitespace-nowrap">Parent Facility</TableHead>
+                <TableHead onClick={() => sort("state")} className="cursor-pointer px-2 py-1.5 text-left font-medium whitespace-nowrap">State or region</TableHead>
+                <TableHead className="px-2 py-1.5 text-left font-medium whitespace-nowrap">Address</TableHead>
+                <TableHead onClick={() => sort("parentFacilityName")} className="cursor-pointer px-2 py-1.5 text-left font-medium whitespace-nowrap">Parent facility</TableHead>
                 <TableHead className="px-2 py-1.5 text-left font-medium whitespace-nowrap">Contact</TableHead>
                 <TableHead className="px-2 py-1.5 text-left font-medium whitespace-nowrap">Phone</TableHead>
-                <TableHead className="px-2 py-1.5 text-left font-medium whitespace-nowrap">Postal Code</TableHead>
+                <TableHead className="px-2 py-1.5 text-left font-medium whitespace-nowrap">Postal code</TableHead>
                 <TableHead onClick={() => sort("isActive")} className="cursor-pointer px-2 py-1.5 text-left font-medium whitespace-nowrap">Status</TableHead>
-                <TableHead className="px-2 py-1.5 text-left font-medium whitespace-nowrap">Actions</TableHead>
+                <TableHead className="px-2 pr-4 py-1.5 text-left font-medium whitespace-nowrap">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -609,27 +604,28 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
                     onClick={() => setLocation(appPath(`/facilities/${f.id}`))}
                   >
                     <StickyCell className="px-2 py-1 text-muted-foreground">{rowNo}</StickyCell>
-                    <StickyCell className="px-2 py-1 w-[260px] min-w-[260px] max-w-[260px] truncate font-medium" data-testid={`facility-name-${f.id}`}>{f.name}</StickyCell>
-                    <StickyCell className="px-2 py-1 w-[160px] min-w-[160px] max-w-[160px] truncate">{f.state ?? "—"}</StickyCell>
-                    <TableCell title={f.address ?? ""} className="px-2 py-1 max-w-[260px] truncate">
-                      {f.address ?? "—"}
-                    </TableCell>
-                    <TableCell className="px-2 py-1">{f.code ?? "—"}</TableCell>
-                    <TableCell className="px-2 py-1">
-                      <Badge variant="outline" className={cn("border", TYPE_BADGE[f.facilityType])}>
-                        {FACILITY_TYPE_LABELS[f.facilityType]}
+                    <StickyCell className="px-2 py-1 w-[9rem] min-w-[9rem] md:w-auto md:min-w-[12rem] whitespace-normal font-medium" data-testid={`facility-name-${f.id}`}>{f.name}</StickyCell>
+                    {/* Type sits right after the pinned columns so the badge is always reachable in full (1280 and 390). */}
+                    <TableCell className="px-3 py-1 whitespace-nowrap" data-testid={`facility-type-${f.id}`}>
+                      <Badge variant="outline" className={cn("border whitespace-nowrap", TYPE_BADGE[f.facilityType])}>
+                        {TYPE_BADGE_LABEL[f.facilityType]}
                       </Badge>
                     </TableCell>
-                    <TableCell className="px-2 py-1">{f.parentFacilityName ?? "—"}</TableCell>
-                    <TableCell className="px-2 py-1">{f.contactPerson ?? "—"}</TableCell>
-                    <TableCell className="px-2 py-1">{f.contactPhone ?? "—"}</TableCell>
-                    <TableCell className="px-2 py-1">{f.postalCode ?? "—"}</TableCell>
+                    <TableCell className="px-2 py-1 whitespace-nowrap">{f.code ?? ""}</TableCell>
+                    <TableCell className="px-2 py-1 whitespace-nowrap">{f.state ?? ""}</TableCell>
+                    <TableCell title={f.address ?? ""} className="px-2 py-1 max-w-[260px] truncate">
+                      {f.address ?? ""}
+                    </TableCell>
+                    <TableCell className="px-2 py-1 min-w-[12rem] whitespace-normal">{formatEmpty(f.parentFacilityName)}</TableCell>
+                    <TableCell className="px-2 py-1">{f.contactPerson ?? ""}</TableCell>
+                    <TableCell className="px-2 py-1">{f.contactPhone ?? ""}</TableCell>
+                    <TableCell className="px-2 py-1">{f.postalCode ?? ""}</TableCell>
                     <TableCell className="px-2 py-1">
                       <Badge variant={f.isActive ? "default" : "secondary"}>
                         {f.isActive ? "Active" : "Inactive"}
                       </Badge>
                     </TableCell>
-                    <TableCell className="px-2 py-1" onClick={(e) => e.stopPropagation()}>
+                    <TableCell className="px-2 pr-4 py-1" onClick={(e) => e.stopPropagation()}>
                       {canEditFacilities && (
                         <div className="flex items-center gap-1">
                           {editingId === f.id ? (
@@ -763,7 +759,7 @@ function FacilityFormFields(props: {
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
             {FACILITY_TYPE_VALUES.map((t) => (
-              <SelectItem key={t} value={t}>{FACILITY_TYPE_LABELS[t]} — {FACILITY_TYPE_EXAMPLES[t]}</SelectItem>
+              <SelectItem key={t} value={t}>{FACILITY_TYPE_LABELS[t]} ({FACILITY_TYPE_EXAMPLES[t]})</SelectItem>
             ))}
           </SelectContent>
         </Select>

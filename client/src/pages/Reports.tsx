@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { DateHint } from "@/lib/format";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import PageHeader from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -183,7 +184,7 @@ export default function Reports() {
     <div className="space-y-6">
       <PageHeader
         icon={FileBarChart}
-        title="Reports"
+        title="Reports overview"
         subtitle="Inventory intelligence, VED/ABC/FNS analysis, and forecasting."
       />
 
@@ -262,11 +263,11 @@ export default function Reports() {
         </CardHeader>
         <CardContent className="flex flex-wrap items-end gap-3">
           <div className="space-y-1">
-            <Label>Start date</Label>
+            <Label>Start date <DateHint /></Label>
             <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
           </div>
           <div className="space-y-1">
-            <Label>End date</Label>
+            <Label>End date <DateHint /></Label>
             <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
           </div>
           <div className="space-y-1">
@@ -311,7 +312,7 @@ export default function Reports() {
               },
               {
                 id: "excel",
-                label: "Export Excel",
+                label: "Export to Excel",
                 onSelect: () => downloadCsv(tableRows as any[], `report-${selectedReport}.xlsx.csv`),
               },
               {
@@ -442,7 +443,7 @@ export default function Reports() {
                   <tr key={idx} className="border-t">
                     {Object.keys((tableRows[0] as any) ?? { info: "" }).map((k) => (
                       <td key={k} className="px-2 py-2">
-                        {typeof row[k] === "object" ? JSON.stringify(row[k]) : String(row[k] ?? "—")}
+                        {typeof row[k] === "object" ? JSON.stringify(row[k]) : String(row[k] ?? "")}
                       </td>
                     ))}
                   </tr>

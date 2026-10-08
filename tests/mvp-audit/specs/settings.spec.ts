@@ -11,7 +11,7 @@ test.describe("Settings (2g)", () => {
   });
 
   test("dashboard widget toggle persists", async ({ page }) => {
-    await page.goto("/app/dashboard-settings");
+    await page.goto("/app/settings");
     await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible({ timeout: 20_000 });
     await shot(page, "settings-dashboard-before");
 

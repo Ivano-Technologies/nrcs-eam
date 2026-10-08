@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { DATE_INPUT_HINT, formatDate } from "@/lib/format";
+import { HtmlTableEmptyState } from "@/components/ui/EmptyState";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
+import PageHeader from "@/components/ui/PageHeader";
+import { PackageCheck as PackageCheckIcon } from "lucide-react";
 import { toast } from "sonner";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { Badge } from "@/components/ui/badge";
@@ -79,7 +83,7 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
     <div className="space-y-4">
       {!embedInShell ? (
         <>
-          <h1 className="text-3xl font-bold">Receipts (GRN)</h1>
+          <PageHeader icon={PackageCheckIcon} title="Receiving" />
           <InventorySecondaryNav />
         </>
       ) : null}
@@ -97,8 +101,9 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
               value={receivedFrom}
               onChange={(e) => setReceivedFrom(e.target.value)}
             />
-            <Input className="h-9 w-[170px]" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-            <Input className="h-9 w-[170px]" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+            <Input className="h-9 w-[170px]" type="date" aria-label="From date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+            <Input className="h-9 w-[170px]" type="date" aria-label="To date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+            <span className="text-xs text-muted-foreground">Dates use {DATE_INPUT_HINT}</span>
             <Select value={status} onValueChange={(v) => setStatus(v as typeof status)}>
               <SelectTrigger className="h-9 w-[180px]"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -116,7 +121,7 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
         }
         toolbarEnd={
           <>
-            <Button variant="outline">Export</Button>
+            <Button variant="outline">Export to Excel</Button>
             <Button variant="outline">Template</Button>
             <Button variant="outline" onClick={() => setLocation(appPath("/inventory/import"))}>
               Import
@@ -131,7 +136,7 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
       />
 
       <div
-        className="frozen-table-wrap sticky-first-col overflow-x-auto rounded-md border"
+        className="frozen-table-wrap sticky-first-col rounded-md border"
         style={
           {
             "--col1-width": "170px",
@@ -170,13 +175,13 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
                 <td className="px-2 py-2 font-mono">{row.documentNumber}</td>
                 <td className={cn("px-2 py-2", mobileSecondaryCol(showAllColumns))}>
                   {row.dateOfArrival
-                    ? new Date(row.dateOfArrival).toLocaleDateString()
+                    ? formatDate(row.dateOfArrival)
                     : row.createdAt
-                      ? new Date(row.createdAt).toLocaleDateString()
-                      : "—"}
+                      ? formatDate(row.createdAt)
+                      : ""}
                 </td>
-                <td className="px-2 py-2">{row.referenceDocument ?? "—"}</td>
-                <td className={cn("px-2 py-2", mobileSecondaryCol(showAllColumns))}>{row.referenceDocument ?? "—"}</td>
+                <td className="px-2 py-2">{row.referenceDocument ?? ""}</td>
+                <td className={cn("px-2 py-2", mobileSecondaryCol(showAllColumns))}>{row.referenceDocument ?? ""}</td>
                 <td className={cn("px-2 py-2", mobileSecondaryCol(showAllColumns))}>{row.lineCount}</td>
                 <td className="px-2 py-2">
                   {row.status === "finalized" || row.status === "completed" ? (
@@ -214,7 +219,7 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
                     {downloadPdfMutation.isPending ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Generating...
+                        Generating…
                       </>
                     ) : (
                       "Download PDF"
@@ -243,6 +248,14 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
                 </td>
               </tr>
             ))}
+            {!receipts.isLoading && (receipts.data ?? []).length === 0 ? (
+              <HtmlTableEmptyState
+                colSpan={7}
+                icon={PackageCheckIcon}
+                title="No receipts yet"
+                body="Receipts appear here once a GRN is posted."
+              />
+            ) : null}
           </tbody>
         </table>
       </div>
@@ -297,6 +310,7 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
                   />
                   <Input
                     type="date"
+                    aria-label="Expiry date"
                     value={line.expiryDate}
                     onChange={(e) => setLines((prev) => prev.map((x, i) => (i === idx ? { ...x, expiryDate: e.target.value } : x)))}
                   />
@@ -313,7 +327,7 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
                   setLines((p) => [...p, { catalogueId: "", ctnId: "", quantity: "", batchNumber: "", expiryDate: "", notes: "" }])
                 }
               >
-                Add Line
+                Add line
               </Button>
             </div>
             <div className="flex justify-end gap-2">

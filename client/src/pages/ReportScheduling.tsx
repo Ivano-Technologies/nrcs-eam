@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatDate } from "@/lib/format";
 import { trpc } from "@/lib/trpc";
 import PageHeader from "@/components/ui/PageHeader";
 import PageLoader from "@/components/ui/PageLoader";
@@ -172,17 +173,17 @@ export default function ReportScheduling() {
   if (isLoading) return <PageLoader />;
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
         <PageHeader
           icon={Calendar}
-          title="Report Scheduling"
+          title="Report scheduling"
           subtitle="Automate report generation and email delivery"
           className="mb-0"
         />
         <Button onClick={() => setIsCreateDialogOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
-          New Schedule
+          New schedule
         </Button>
       </div>
 
@@ -193,7 +194,7 @@ export default function ReportScheduling() {
             <p className="text-muted-foreground">No scheduled reports yet. Create your first schedule to get started.</p>
             <Button type="button" onClick={() => setIsCreateDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
-              New Schedule
+              New schedule
             </Button>
           </CardContent>
         </Card>
@@ -242,7 +243,7 @@ export default function ReportScheduling() {
                   </div>
                   {schedule.lastRun && (
                     <p className="text-xs text-muted-foreground">
-                      Last run: {new Date(schedule.lastRun).toLocaleDateString()}
+                      Last run: {formatDate(schedule.lastRun)}
                     </p>
                   )}
                 </div>
@@ -261,7 +262,7 @@ export default function ReportScheduling() {
       }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingSchedule ? "Edit Schedule" : "Create New Schedule"}</DialogTitle>
+            <DialogTitle>{editingSchedule ? "Edit Schedule" : "Create New schedule"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>

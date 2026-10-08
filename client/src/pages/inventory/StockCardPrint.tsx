@@ -12,7 +12,7 @@ export default function StockCardPrint() {
   }
 
   if (card.isLoading) {
-    return <div className="p-6 text-sm text-muted-foreground">Loading stock card print view...</div>;
+    return <div className="p-6 text-sm text-muted-foreground">Loading stock card print view…</div>;
   }
 
   if (!card.data) {

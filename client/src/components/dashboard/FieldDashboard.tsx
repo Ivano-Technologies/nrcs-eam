@@ -76,7 +76,7 @@ export function FieldDashboard({ metrics: metricsProp, metricsFailed, onRetry }:
         <Button asChild size="lg" className="gap-2">
           <Link href={`${appPath("/inventory/requisitions")}?new=1`}>
             <PackagePlus className="h-5 w-5" />
-            New Requisition
+            New requisition
           </Link>
         </Button>
       </div>
@@ -105,7 +105,7 @@ export function FieldDashboard({ metrics: metricsProp, metricsFailed, onRetry }:
                     <p className="font-medium">{r.reqNumber}</p>
                     <p className="text-sm text-muted-foreground line-clamp-1">{r.title}</p>
                   </div>
-                  <Badge variant="secondary">{STATUS_LABEL[r.status ?? ""] ?? r.status ?? "—"}</Badge>
+                  <Badge variant="secondary">{STATUS_LABEL[r.status ?? ""] ?? r.status ?? ""}</Badge>
                 </li>
               ))}
             </ul>

@@ -1060,7 +1060,7 @@ export default function ComponentsShowcase() {
                           <Label htmlFor="dialog-input">Input</Label>
                           <Input
                             id="dialog-input"
-                            placeholder="Type something..."
+                            placeholder="Type something…"
                             value={dialogInput}
                             onChange={(e) => setDialogInput(e.target.value)}
                             onKeyDown={handleDialogKeyDown}
@@ -1401,7 +1401,7 @@ export default function ComponentsShowcase() {
                           setTimeout(resolve, 2000)
                         );
                         sonnerToast.promise(promise, {
-                          loading: "Processing...",
+                          loading: "Processing…",
                           success: "Processing complete!",
                           error: "Processing failed",
                         });

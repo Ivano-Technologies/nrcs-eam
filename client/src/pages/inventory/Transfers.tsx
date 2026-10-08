@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { formatDate } from "@/lib/format";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
+import PageHeader from "@/components/ui/PageHeader";
+import { ArrowLeftRight as ArrowLeftRightIcon } from "lucide-react";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { toast } from "sonner";
 import { Loader2, Plus, Trash2 } from "lucide-react";
@@ -160,7 +163,7 @@ export default function Transfers({ embedInShell = false }: { embedInShell?: boo
     <div className="space-y-4">
       {!embedInShell ? (
         <>
-          <h1 className="text-3xl font-bold">Transfers</h1>
+          <PageHeader icon={ArrowLeftRightIcon} title="Transfers" />
           <InventorySecondaryNav />
         </>
       ) : null}
@@ -178,7 +181,7 @@ export default function Transfers({ embedInShell = false }: { embedInShell?: boo
           </Select>
           {isManagerOrAdmin ? (
             <Button className="ml-auto" data-testid="new-transfer-btn" onClick={() => setOpen(true)}>
-              New Transfer
+              New transfer
             </Button>
           ) : null}
         </CardContent>
@@ -208,11 +211,11 @@ export default function Transfers({ embedInShell = false }: { embedInShell?: boo
                 <tr key={`${transfer.source}-${transfer.id}`} data-testid={`transfer-row-${transfer.documentNumber}`} className="border-b">
                   <td className="px-2 py-2 font-mono">{transfer.documentNumber}</td>
                   <td className="px-2 py-2">{transfer.status}</td>
-                  <td className="px-2 py-2">{transfer.fromWarehouseId ?? "—"}</td>
-                  <td className="px-2 py-2">{transfer.toWarehouseId ?? "—"}</td>
+                  <td className="px-2 py-2">{transfer.fromWarehouseId ?? ""}</td>
+                  <td className="px-2 py-2">{transfer.toWarehouseId ?? ""}</td>
                   <td className="px-2 py-2 space-x-2">
                     {isAdmin && transfer.status === "pending_approval" ? (
-                      <Button size="sm" disabled={isApproving} onClick={() => approveMutation.mutate(ref)}>
+                      <Button variant="outline" size="sm" disabled={isApproving} onClick={() => approveMutation.mutate(ref)}>
                         {isApproving ? (
                           <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -225,6 +228,7 @@ export default function Transfers({ embedInShell = false }: { embedInShell?: boo
                     ) : null}
                     {isStaffOrAbove && transfer.status === "approved" ? (
                       <Button
+                        variant="outline"
                         size="sm"
                         data-testid={`dispatch-transfer-${transfer.documentNumber}`}
                         disabled={isDispatching}
@@ -242,6 +246,7 @@ export default function Transfers({ embedInShell = false }: { embedInShell?: boo
                     ) : null}
                     {isStaffOrAbove && transfer.status === "dispatched" ? (
                       <Button
+                        variant="outline"
                         size="sm"
                         data-testid={`receive-transfer-${transfer.documentNumber}`}
                         disabled={isReceiving}
@@ -267,7 +272,7 @@ export default function Transfers({ embedInShell = false }: { embedInShell?: boo
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>New Transfer</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>New transfer</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <Label>From Warehouse</Label>
             <Select value={fromWarehouseId} onValueChange={setFromWarehouseId}>
@@ -374,7 +379,7 @@ export default function Transfers({ embedInShell = false }: { embedInShell?: boo
               return (
                 <div key={line.lineId} className="rounded-md border p-3">
                   <p className="font-medium">
-                    {item ? `${item.itemCode} — ${item.name}` : `Item #${line.catalogueId}`} ({line.quantity})
+                    {item ? `${item.itemCode} · ${item.name}` : `Item #${line.catalogueId}`} ({line.quantity})
                   </p>
                   <table className="mt-2 w-full text-sm">
                     <thead>
@@ -389,8 +394,8 @@ export default function Transfers({ embedInShell = false }: { embedInShell?: boo
                       {line.sources.map((source) => (
                         <tr key={source.ctnId} className="border-b">
                           <td className="py-1 font-mono">{source.ctnCode ?? source.ctnId}</td>
-                          <td className="py-1">{source.expiryDate ?? "—"}</td>
-                          <td className="py-1">{source.balance ?? "—"}</td>
+                          <td className="py-1">{formatDate(source.expiryDate)}</td>
+                          <td className="py-1">{source.balance ?? ""}</td>
                           <td className="py-1">
                             <Input
                               type="number"

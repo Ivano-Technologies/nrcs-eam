@@ -114,7 +114,7 @@ export async function deleteAssetByTagViaUi(page: Page, assetTag: string): Promi
   await loginAsAdmin(page);
   await page.goto("/app/assets");
   await expect(
-    page.getByTestId("asset-register-heading").or(page.getByRole("heading", { name: /Asset Register/i }))
+    page.getByTestId("asset-register-heading").or(page.getByRole("heading", { name: /Asset register/i }))
   ).toBeVisible({ timeout: 30_000 });
   await page.getByTestId("asset-search-input").fill(assetTag);
   await page.waitForTimeout(400);
@@ -136,7 +136,7 @@ export async function deleteAssetByTagViaUi(page: Page, assetTag: string): Promi
 export async function cancelWorkOrderByNumberViaUi(page: Page, woNum: string): Promise<void> {
   await loginAsAdmin(page);
   await page.goto("/app/work-orders");
-  await expect(page.getByRole("heading", { name: /^Work Orders$/ })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("heading", { name: /^Work orders$/ })).toBeVisible({ timeout: 30_000 });
   const link = page.locator(`a[href*="/app/work-orders/"]`).filter({ hasText: woNum }).first();
   if ((await link.count()) === 0) {
     return;

@@ -1,4 +1,5 @@
 import { KPI_VALUE_CLASS } from "@/lib/kpiTypography";
+import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -134,7 +135,7 @@ export default function AssetDepreciation({ assetId }: AssetDepreciationProps) {
                   <TableRow key={entry.year}>
                     <TableCell className="font-medium">{entry.year}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {new Date(entry.date).toLocaleDateString()}
+                      {formatDate(entry.date)}
                     </TableCell>
                     <TableCell className="text-right">
                       ₦{entry.beginningValue.toLocaleString()}

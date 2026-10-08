@@ -1,3 +1,4 @@
+import { formatEnumLabel } from "@/lib/format";
 import { ITEM_CATEGORY_VALUES, type ItemCategory } from "@shared/itemCategory";
 
 export type ItemCategoryRow = { readonly value: ItemCategory; readonly label: string; readonly hint?: string };
@@ -19,7 +20,7 @@ export function isItemCategoryValue(s: string | null | undefined): s is ItemCate
 }
 
 export function itemCategoryLabel(value: ItemCategory | null | undefined): string {
-  if (value == null) return "—";
+  if (value == null) return "Not set";
   const row = ITEM_CATEGORIES.find((c) => c.value === value);
-  return row?.label ?? String(value);
+  return row?.label ?? formatEnumLabel(String(value));
 }

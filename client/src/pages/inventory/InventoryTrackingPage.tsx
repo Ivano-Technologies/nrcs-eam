@@ -15,25 +15,25 @@ import { Link } from "wouter";
 const LINKS: { title: string; description: string; href: string; icon: typeof Package }[] = [
   {
     title: "Stock cards",
-    description: "Per-CTN stock card ledger and stock checks.",
+    description: "Stock card ledger per CTN, with stock checks.",
     href: appPath("/inventory/tracking/stock-cards"),
     icon: BookText,
   },
   {
     title: "Bin cards",
-    description: "Bin-card ledger and lifecycle actions.",
+    description: "Bin card ledger and lifecycle actions.",
     href: appPath("/inventory/tracking/bin-cards"),
     icon: BookText,
   },
   {
     title: "Movements",
-    description: "Audit trail of receipts, issues, transfers, and adjustments.",
+    description: "Audit trail of receipts, issues, transfers and adjustments.",
     href: appPath("/inventory/movements"),
     icon: RefreshCw,
   },
   {
     title: "Transfers",
-    description: "Inter-warehouse transfer notes, dispatch, and receive.",
+    description: "Transfer notes between warehouses, dispatch and receipt.",
     href: appPath("/inventory/transfers"),
     icon: ArrowRightLeft,
   },
@@ -45,13 +45,13 @@ const LINKS: { title: string; description: string; href: string; icon: typeof Pa
   },
   {
     title: "Adjustments",
-    description: "Write-offs and corrections — consolidated view coming soon.",
+    description: "Write offs and corrections. A combined view is coming soon.",
     href: appPath("/inventory/adjustments"),
     icon: Layers,
   },
   {
     title: "Expiry",
-    description: "FEFO visibility and near-expiry stock.",
+    description: "FEFO visibility and stock near expiry.",
     href: appPath("/inventory/expiry"),
     icon: Package,
   },

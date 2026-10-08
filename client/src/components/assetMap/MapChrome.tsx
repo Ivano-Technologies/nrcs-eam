@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { focusRing, mutedText, surfaceClass } from "./parts";
+import { focusRing, mutedText, surfaceClass, linkText } from "./parts";
 
 /* Layer bar --------------------------------------------------------------- */
 
@@ -145,10 +145,7 @@ export function NoLocationChip({
         type="button"
         onClick={onShow}
         aria-pressed={active}
-        className={cn(
-          "h-8 rounded-full px-3 font-semibold text-[#1E3A8A] hover:bg-[#EEF2FF] dark:text-[#93C5FD] dark:hover:bg-[#1E2B3C]",
-          focusRing
-        )}
+        className={cn("h-8 rounded-full px-3 font-semibold hover:bg-[#EEF2FF] dark:hover:bg-[#1E2B3C]", linkText, focusRing)}
       >
         {active ? "Hide" : "Show"}
       </button>
@@ -190,6 +187,7 @@ function ControlButton({
 }
 
 export function MapControls({
+  ref,
   touch,
   onZoomIn,
   onZoomOut,
@@ -200,6 +198,8 @@ export function MapControls({
   className,
   positionStyle,
 }: {
+  /** The control column; the page measures it to keep the phone empty card clear of it. */
+  ref?: React.Ref<HTMLDivElement>;
   touch: boolean;
   onZoomIn: () => void;
   onZoomOut: () => void;
@@ -223,7 +223,7 @@ export function MapControls({
   };
   const group = cn(surfaceClass, "flex flex-col overflow-hidden rounded-[12px] divide-y divide-[#E5E7EB] dark:divide-[#26364A]");
   return (
-    <div className={cn("flex flex-col items-end gap-2", className)} style={positionStyle} role="group" aria-label="Map controls">
+    <div ref={ref} className={cn("flex flex-col items-end gap-2", className)} style={positionStyle} role="group" aria-label="Map controls">
       {!touch ? (
         <div className={group}>
           <ControlButton label="Zoom in" onClick={onZoomIn} touch={touch}>

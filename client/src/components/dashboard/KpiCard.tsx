@@ -48,7 +48,7 @@ function DeltaPill({
     <span
       className={cn(
         "inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium",
-        isGood ? "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300" : "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300"
+        isGood ? "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300" : "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300"
       )}
     >
       {isGood ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
@@ -78,7 +78,7 @@ function KpiCardInner({
       className={cn(
         "dashboard-card relative flex h-full min-h-[168px] flex-col border-l-[3px] border-l-[var(--color-accent-border)] transition-[transform,box-shadow,border-color] duration-150 ease-in-out",
         interactive &&
-          "cursor-pointer hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-[0_6px_24px_rgba(0,0,0,0.12)] focus-within:ring-2 focus-within:ring-primary/30"
+          "cursor-pointer hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-[0_6px_24px_rgba(0,0,0,0.12)] focus-within:ring-2 focus-within:ring-primary/30"
       )}
     >
       <CardContent className="flex flex-1 flex-col px-5 pb-4 pt-5">

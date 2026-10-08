@@ -7,7 +7,7 @@ export function ManagerFinanceGate({ children }: { children: React.ReactNode }) 
   const allowed = user?.role === "admin" || user?.role === "manager";
   if (allowed) return <>{children}</>;
   return (
-    <div className="container mx-auto max-w-lg space-y-4 p-6">
+    <div className="max-w-lg space-y-4">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">

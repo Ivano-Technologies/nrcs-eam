@@ -36,7 +36,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { focusRing, MOBILE_BOTTOM_NAV_CLEARANCE, mutedText, TypeGlyph } from "./parts";
+import { focusRing, MOBILE_BOTTOM_NAV_CLEARANCE, mutedText, TypeGlyph, linkText } from "./parts";
 
 function locationLine(f: MapFacility): string | null {
   const state = f.state?.trim();
@@ -201,7 +201,7 @@ export const FacilityDrawer = forwardRef<HTMLDivElement, FacilityDrawerProps>(fu
               {f.isActive ? (
                 <Link
                   href={appPath("/inventory/stock-overview")}
-                  className={cn("mt-1 inline-block font-medium text-[#1E3A8A] hover:underline dark:text-[#93C5FD]", focusRing)}
+                  className={cn("mt-1 inline-block font-medium hover:underline", linkText, focusRing)}
                 >
                   Stock settings
                 </Link>
@@ -275,7 +275,7 @@ export const FacilityDrawer = forwardRef<HTMLDivElement, FacilityDrawerProps>(fu
               <dt className={mutedText}>Phone</dt>
               <dd className="text-right font-medium">
                 {detail?.contactPhone ? (
-                  <a href={`tel:${detail.contactPhone.replace(/[^\d+]/g, "")}`} className={cn("text-[#1E3A8A] hover:underline dark:text-[#93C5FD]", focusRing)}>
+                  <a href={`tel:${detail.contactPhone.replace(/[^\d+]/g, "")}`} className={cn("hover:underline", linkText, focusRing)}>
                     {detail.contactPhone}
                   </a>
                 ) : detailLoading ? (
@@ -292,7 +292,8 @@ export const FacilityDrawer = forwardRef<HTMLDivElement, FacilityDrawerProps>(fu
                   <button
                     type="button"
                     onClick={() => onSelectFacility(detail.parentFacility!.id)}
-                    className={cn("text-right text-[#1E3A8A] hover:underline dark:text-[#93C5FD]", focusRing)}
+                    data-testid="asset-map-parent-facility-link"
+                    className={cn("text-right hover:underline", linkText, focusRing)}
                   >
                     {detail.parentFacility.name}
                   </button>
@@ -318,7 +319,7 @@ export const FacilityDrawer = forwardRef<HTMLDivElement, FacilityDrawerProps>(fu
                   <Link
                     href={appPath(`/facilities/${f.id}`)}
                     data-testid="asset-map-add-location"
-                    className={cn("text-[#1E3A8A] hover:underline dark:text-[#93C5FD]", focusRing)}
+                    className={cn("hover:underline", linkText, focusRing)}
                   >
                     No location yet. Add it
                   </Link>
