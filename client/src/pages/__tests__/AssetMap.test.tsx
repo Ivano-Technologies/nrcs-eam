@@ -196,6 +196,24 @@ describe("Asset Map (mapMock)", () => {
     expect(link.className).not.toMatch(/\btext-primary\b/);
   });
 
+  it("search and the count are a fixed header; only the content below scrolls", async () => {
+    await renderPage("?mapMock=1");
+    const panel = screen.getByTestId("asset-map-facility-panel");
+    const header = within(panel).getByTestId("asset-map-panel-header");
+    const scroll = panel.querySelector("[data-panel-scroll]") as HTMLElement;
+    expect(within(header).getByTestId("asset-map-search")).toBeInTheDocument();
+    expect(within(header).getByTestId("asset-map-count")).toHaveTextContent("facilities");
+    expect(header.contains(scroll)).toBe(false);
+    expect(scroll.contains(within(panel).getByTestId("asset-map-count"))).toBe(false);
+    expect(within(scroll).getByTestId("asset-map-list")).toBeInTheDocument();
+    expect(within(scroll).getByText("Stock readiness")).toBeInTheDocument();
+  });
+
+  it("the offline pill never wraps", async () => {
+    await renderPage("?mapMock=1");
+    expect(screen.getAllByTestId("asset-map-status-filter")[0].className).toContain("whitespace-nowrap");
+  });
+
   it("Escape closes the drawer", async () => {
     await renderPage("?mapMock=1");
     fireEvent.click(screen.getByTestId("asset-map-row-KAN-001"));

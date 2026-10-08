@@ -46,7 +46,7 @@ import {
 import { cn } from "@/lib/utils";
 import { MapView } from "@/components/Map";
 import { DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM_COUNTRY } from "@/lib/mapDefaults";
-import { Download, Edit2, Loader2, MapPin, Plus, Save, Trash2, Upload, X } from "lucide-react";
+import { Download, Edit2, Loader2, Plus, Save, Trash2, Upload, X } from "lucide-react";
 import { ViewToggle } from "@/components/ViewToggle";
 import { CardQrCode } from "@/components/CardQrCode";
 import { ModuleFiltersCard, ModuleFilterSearch } from "@/components/ModuleFiltersCard";
@@ -446,15 +446,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
         }
         toolbarStart={
           <>
-            <ViewToggle value={viewMode === "card" ? "card" : "table"} onChange={setViewMode} />
-            <Button
-              variant={viewMode === "map" ? "secondary" : "outline"}
-              className="h-9"
-              onClick={() => setViewMode("map")}
-            >
-              <MapPin className="mr-2 h-4 w-4" />
-              Map
-            </Button>
+            <ViewToggle value={viewMode} onChange={setViewMode} showMap />
           </>
         }
         toolbarEnd={
