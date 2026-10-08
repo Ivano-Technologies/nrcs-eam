@@ -144,6 +144,11 @@ const plugins = [
       /** SPA client routes (/app/*) fall back to cached shell when offline. */
       navigateFallback: "/index.html",
       navigateFallbackDenylist: [/^\/api\//, /^\/login/, /^\/signup/, /^\/reset-password/],
+      /**
+       * Only known client routes get the cached shell, so unknown paths go to the network and
+       * keep their real 404 status for installed clients too (see shared/spaRoutes.ts).
+       */
+      navigateFallbackAllowlist: [/^\/$/, /^\/app(\/.*)?$/, /^\/legal\/(terms|privacy)\/?$/],
       runtimeCaching: [
         {
           urlPattern: /\/assets\/.+\.js$/i,
