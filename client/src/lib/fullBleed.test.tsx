@@ -65,8 +65,21 @@ function App({ page, initialSaved = SIDEBAR_FULL_WIDTH, onSave = () => {} }: { p
 }
 
 describe("full bleed auto rail (Wave B)", () => {
-  it("only flags the Asset Map and the Facilities map view", () => {
-    expect(FULL_BLEED_VIEWS.map((v) => v.id)).toEqual(["asset-map", "facilities-map"]);
+  it("flags the maps, the wide WMS and report tables and the print previews, never the Asset Scanner", () => {
+    expect(FULL_BLEED_VIEWS.map((v) => v.id)).toEqual([
+      "asset-map",
+      "facilities-map",
+      "wms-monthly-report",
+      "wms-stock-movements",
+      "wms-loss-damage",
+      "branch-scorecards",
+      "print-receipt",
+      "print-waybill",
+      "print-stock-card",
+      "print-bin-card",
+      "print-monthly-report",
+    ]);
+    expect(FULL_BLEED_VIEWS.some((v) => /scanner/i.test(v.path) || /scanner/i.test(v.id))).toBe(false);
   });
 
   it("collapses to the rail on entering a full bleed view without writing the saved preference", () => {
