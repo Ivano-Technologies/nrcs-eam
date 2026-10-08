@@ -28,7 +28,7 @@ import {
 } from "@/lib/assetMap/model";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { chipBase, focusRing, mutedText, OfflineGlyph, ReadinessPill, TypeGlyph } from "./parts";
+import { chipBase, focusRing, mutedText, OfflineGlyph, ReadinessPill, TypeGlyph, linkText } from "./parts";
 
 const LEGEND_KEY = "nrcs-asset-map-legend-open";
 
@@ -135,7 +135,8 @@ export function FacilityPanel(props: FacilityPanelProps) {
   const offlineCount = all.filter((f) => !f.isActive).length;
   const onMap = filtered.filter(hasLocation).length;
   const active = hasActiveFilters(filters);
-  const totalForBar = READINESS_TIERS.reduce((s, t) => s + tierCounts[t], 0);
+  // With no matches the bar is the empty neutral track, not the tier mix of the other filters.
+  const totalForBar = filtered.length > 0 ? READINESS_TIERS.reduce((s, t) => s + tierCounts[t], 0) : 0;
 
   const assetTotals = useMemo(() => {
     let inUse = 0;
@@ -350,7 +351,7 @@ export function FacilityPanel(props: FacilityPanelProps) {
               <button
                 type="button"
                 onClick={onClearFilters}
-                className={cn("text-[13px] font-medium text-[#1E3A8A] hover:underline dark:text-[#93C5FD]", focusRing)}
+                className={cn("text-[13px] font-medium hover:underline", linkText, focusRing)}
               >
                 Clear filters
               </button>

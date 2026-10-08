@@ -47,6 +47,7 @@ import {
   collapsedLayerBarPlacement,
   desktopLeftInset,
   isNarrowMap,
+  mobileEmptyCardBox,
   showMobileEmptyCard,
   withLabelRoom,
 } from "@/lib/assetMap/layout";
@@ -493,6 +494,7 @@ export default function AssetMap() {
   /* ---------------- collapsed panel (desktop, narrow map, drawer open) ---------------- */
   const [compactCardRef, compactCardSize] = useOptionalSize<HTMLElement>();
   const [layerBarRef, layerBarSize] = useOptionalSize<HTMLDivElement>(true);
+  const [controlsRef, controlsSize] = useOptionalSize<HTMLDivElement>();
   const panelHostRef = useRef<HTMLDivElement>(null);
   const savedPanelScroll = useRef<number | null>(null);
   const panelCollapsed = isDesktop && panelCollapsedFor(Boolean(selected));
@@ -636,14 +638,27 @@ export default function AssetMap() {
             {!isMobile || showMobileEmptyCard(listSnap, drawerOpen) ? (
             <div
               className="pointer-events-none absolute z-[5] flex items-center justify-center"
-              style={{
-                left: insetsFor(drawerOpen).left,
-                right: insetsFor(drawerOpen).right,
-                top: insetsFor(drawerOpen).top,
-                bottom: insetsFor(drawerOpen).bottom,
-              }}
+              data-testid="asset-map-empty-area"
+              style={
+                isMobile
+                  ? mobileEmptyCardBox({
+                      controlsRight,
+                      controlsWidth: controlsSize.width,
+                      peekHeight: snapHeight("peek", frameHeight),
+                    })
+                  : {
+                      left: insetsFor(drawerOpen).left,
+                      right: insetsFor(drawerOpen).right,
+                      top: insetsFor(drawerOpen).top,
+                      bottom: insetsFor(drawerOpen).bottom,
+                    }
+              }
             >
-              <EmptyMapCard summary={filterSummary(filters)} onClear={clearFilters} />
+              <EmptyMapCard
+                summary={filterSummary(filters)}
+                onClear={clearFilters}
+                className={isMobile ? "w-full max-w-none" : undefined}
+              />
             </div>
             ) : null}
           </>
@@ -750,6 +765,7 @@ export default function AssetMap() {
         {/* Map controls */}
         {!mapError && !(isMobile && drawerOpen) ? (
           <MapControls
+            ref={controlsRef}
             touch={touch}
             onZoomIn={() => controllerRef.current?.zoomBy(1)}
             onZoomOut={() => controllerRef.current?.zoomBy(-1)}

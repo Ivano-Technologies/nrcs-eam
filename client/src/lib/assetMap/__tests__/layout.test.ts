@@ -5,6 +5,7 @@ import {
   desktopLeftInset,
   freeMapWidth,
   isNarrowMap,
+  mobileEmptyCardBox,
   showMobileEmptyCard,
   withLabelRoom,
 } from "../layout";
@@ -59,3 +60,16 @@ describe("Asset Map phone empty card", () => {
     expect(showMobileEmptyCard("peek", true)).toBe(false);
   });
 });
+
+describe("Asset Map phone empty card box", () => {
+  it("insets 16 on the left and clears the measured control column by 12 on the right, above the peek sheet", () => {
+    // Control column 44 wide at right 16: it starts at 390 - 60 = 330, so the card must end by 318.
+    expect(mobileEmptyCardBox({ controlsRight: 16, controlsWidth: 44, peekHeight: 96 })).toEqual({
+      left: 16,
+      right: 72,
+      top: 0,
+      bottom: 96,
+    });
+  });
+});
+

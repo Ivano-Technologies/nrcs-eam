@@ -63,6 +63,23 @@ export function collapsedLayerBarPlacement(opts: {
   return { mode: "belowCard", left: MAP_GAP, top: MAP_GAP + opts.compactCardHeight + 8 };
 }
 
+/** Space between the phone empty card and the map control column. */
+export const EMPTY_CARD_CONTROLS_GAP = 12;
+
+/**
+ * Phones, list sheet at peek: the empty card's box. 16px from the left; on the right it clears the
+ * measured control column (its right offset plus its width) by 12px; vertically it spans the map
+ * visible above the peek sheet, so the card is centred there.
+ */
+export function mobileEmptyCardBox(opts: { controlsRight: number; controlsWidth: number; peekHeight: number }) {
+  return {
+    left: MAP_GAP,
+    right: opts.controlsRight + opts.controlsWidth + EMPTY_CARD_CONTROLS_GAP,
+    top: 0,
+    bottom: opts.peekHeight,
+  };
+}
+
 /** Phones: the map empty card only shows when the list sheet is at peek and no detail sheet is open. */
 export function showMobileEmptyCard(listSnap: "peek" | "half" | "full", detailOpen: boolean): boolean {
   return !detailOpen && listSnap === "peek";

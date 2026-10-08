@@ -186,6 +186,16 @@ describe("Asset Map (mapMock)", () => {
     expect(screen.getByRole("dialog", { name: `<img src=x onerror="alert(1)">Clinic` })).toBeInTheDocument();
   });
 
+  it("the facility link uses the map link token, never text-primary", async () => {
+    await renderPage("?mapMock=1");
+    fireEvent.click(screen.getByTestId("asset-map-row-KAN-001"));
+    const link = screen.getByTestId("asset-map-parent-facility-link");
+    expect(link).toHaveTextContent("National Headquarters");
+    expect(link.className).toContain("text-[#1E3A8A]");
+    expect(link.className).toContain("dark:text-[#93C5FD]");
+    expect(link.className).not.toMatch(/\btext-primary\b/);
+  });
+
   it("Escape closes the drawer", async () => {
     await renderPage("?mapMock=1");
     fireEvent.click(screen.getByTestId("asset-map-row-KAN-001"));
@@ -350,6 +360,20 @@ describe("Asset Map phone empty card", () => {
     tap();
     expect(sheet).toHaveAttribute("data-snap", "peek");
     expect(screen.getByTestId("asset-map-empty")).toBeInTheDocument();
+    // The card box sits right of the 16px inset and left of the control column (width 0 in jsdom) plus 12.
+    const area = screen.getByTestId("asset-map-empty-area");
+    expect(area.style.left).toBe("16px");
+    expect(area.style.right).toBe(`${16 + 0 + 12}px`);
+    expect(area.style.bottom).toBe("96px");
+  });
+
+  it("with 0 matches the readiness bar is the empty neutral track", async () => {
+    setPhone();
+    const { container } = await renderPage("?mapMock=1&types=clinic&tiers=low");
+    expect(screen.getByTestId("asset-map-list-sheet")).toHaveTextContent("0 of 6 facilities match");
+    const track = container.querySelector("[data-testid=asset-map-list-sheet] .h-2.overflow-hidden.rounded-full");
+    expect(track).not.toBeNull();
+    expect(track!.children).toHaveLength(0);
   });
 });
 
