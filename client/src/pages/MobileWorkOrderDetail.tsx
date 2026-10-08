@@ -215,7 +215,7 @@ export default function MobileWorkOrderDetail() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-xl font-bold">Work Order #{workOrder.id}</h1>
+            <h1 className="text-xl font-bold">Work order #{workOrder.id}</h1>
             <p className="text-sm text-muted-foreground">{workOrder.title}</p>
           </div>
         </div>

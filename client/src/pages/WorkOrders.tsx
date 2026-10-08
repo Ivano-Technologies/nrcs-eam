@@ -108,7 +108,7 @@ export default function WorkOrders() {
       <div className="flex items-center justify-between">
         <PageHeader
           icon={ClipboardList}
-          title="Work Orders"
+          title="Work orders"
           subtitle="Manage maintenance and repair work orders"
           className="mb-0"
         />

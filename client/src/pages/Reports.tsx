@@ -183,7 +183,7 @@ export default function Reports() {
     <div className="space-y-6">
       <PageHeader
         icon={FileBarChart}
-        title="Reports"
+        title="Reports overview"
         subtitle="Inventory intelligence, VED/ABC/FNS analysis, and forecasting."
       />
 

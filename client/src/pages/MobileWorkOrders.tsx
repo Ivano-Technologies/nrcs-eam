@@ -93,7 +93,7 @@ export default function MobileWorkOrders() {
       {/* Header */}
       <div className="bg-white border-b sticky top-0 z-10">
         <div className="p-4">
-          <h1 className="text-2xl font-bold">Work Orders</h1>
+          <h1 className="text-2xl font-bold">Work orders</h1>
           <p className="text-sm text-muted-foreground">Mobile View</p>
         </div>
 

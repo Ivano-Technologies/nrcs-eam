@@ -61,7 +61,7 @@ export default function ActivityLog() {
     <div className="space-y-6">
       <PageHeader
         icon={Activity}
-        title="Activity Log"
+        title="Activity log"
         subtitle="Audit trail of user actions and system changes"
       />
 

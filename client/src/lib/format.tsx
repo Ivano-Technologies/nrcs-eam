@@ -30,6 +30,11 @@ type DateInput = Date | string | number | null | undefined;
 
 function toValidDate(value: DateInput): Date | null {
   if (value == null || value === "") return null;
+  if (typeof value === "string") {
+    // Plain calendar dates ("2026-10-08") are local days, not UTC midnight.
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+    if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  }
   const d = value instanceof Date ? value : new Date(value);
   return Number.isNaN(d.getTime()) ? null : d;
 }

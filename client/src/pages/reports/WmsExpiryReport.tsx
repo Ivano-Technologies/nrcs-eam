@@ -1,4 +1,7 @@
 import { Button } from "@/components/ui/button";
+import { CalendarClock } from "lucide-react";
+import { appPath } from "@/lib/routes";
+import PageHeader from "@/components/ui/PageHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useMobileTableColumns, MobileColumnsToggle, mobileSecondaryCol } from "@/hooks/useMobileTableColumns";
 import { trpc } from "@/lib/trpc";
@@ -32,13 +35,18 @@ export default function WmsExpiryReport() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-3xl font-bold">WMS Expiry Report</h1>
-        <div className="flex flex-wrap items-center gap-2">
-          <MobileColumnsToggle isMobile={isMobile} showAll={showAll} onToggle={setShowAll} />
-          <Button onClick={exportCsv}>Export CSV</Button>
-        </div>
-      </div>
+      <PageHeader
+        icon={CalendarClock}
+        title="WMS expiry"
+        subtitle="Stock nearing expiry across warehouses."
+        back={{ label: "WMS report suite", href: appPath("/reports/wms") }}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <MobileColumnsToggle isMobile={isMobile} showAll={showAll} onToggle={setShowAll} />
+            <Button variant="outline" onClick={exportCsv}>Export CSV</Button>
+          </div>
+        }
+      />
       <div className="frozen-table-wrap sticky-first-col overflow-x-auto rounded-md border">
         <Table>
           <TableHeader>

@@ -55,7 +55,7 @@ export default function EmailNotifications() {
       <div className="flex items-center justify-between">
         <PageHeader
           icon={Mail}
-          title="Email Notifications"
+          title="Email notifications"
           subtitle="Send custom email notifications to users"
           className="mb-0"
         />

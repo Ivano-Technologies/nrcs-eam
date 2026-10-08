@@ -165,7 +165,7 @@ export default function WorkOrderTemplates() {
       <div className="flex justify-between items-center">
         <PageHeader
           icon={Files}
-          title="Work Order Templates"
+          title="Work order templates"
           subtitle="Create reusable templates for common maintenance tasks"
           className="mb-0"
         />

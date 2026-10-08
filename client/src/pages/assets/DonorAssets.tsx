@@ -87,7 +87,7 @@ export default function DonorAssets() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <PageHeader
           icon={Gift}
-          title="Donor Assets Report"
+          title="Donor assets report"
           subtitle="Donor-funded assets from the register — acquisition and book values by donor"
           className="mb-0"
         />

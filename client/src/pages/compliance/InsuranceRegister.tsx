@@ -126,7 +126,7 @@ export function InsuranceRegisterContent({ embedded = false }: { embedded?: bool
         <div className="flex flex-col gap-4 sm:flex-row sm:justify-between">
           <PageHeader
             icon={Shield}
-            title="Insurance Register"
+            title="Insurance register"
             subtitle="Property, vehicle, equipment, and liability policies"
             className="mb-0"
           />

@@ -76,7 +76,7 @@ export default function DepreciationSchedule() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <PageHeader
             icon={TrendingDown}
-            title="Depreciation Reporting"
+            title="Depreciation schedule"
             subtitle="Automated depreciation schedules and net book value reporting for organizational assets."
             className="mb-0"
           />

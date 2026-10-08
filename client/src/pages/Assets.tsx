@@ -903,7 +903,7 @@ export default function Assets() {
         <div data-testid="asset-register-heading">
           <PageHeader
             icon={Package}
-            title="Asset Register"
+            title="Asset register"
             subtitle="Centralized digital asset register for managing, tracking, and maintaining all NRCS assets across locations and departments."
             className="mb-0"
           />

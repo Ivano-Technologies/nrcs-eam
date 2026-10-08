@@ -105,7 +105,7 @@ export default function Observability() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <PageHeader
           icon={BarChart3}
-          title="System Observability"
+          title="System health"
           subtitle="Real-time pool, cache, and dashboard performance"
           className="mb-0"
         />

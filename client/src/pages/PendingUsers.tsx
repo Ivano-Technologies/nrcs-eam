@@ -61,7 +61,7 @@ export default function PendingUsers() {
       <div data-testid="pending-users-heading">
         <PageHeader
           icon={UserCheck}
-          title="Pending Users"
+          title="Pending users"
           subtitle="Review and approve user signup requests"
         />
       </div>

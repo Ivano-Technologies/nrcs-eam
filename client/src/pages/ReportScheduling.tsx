@@ -176,7 +176,7 @@ export default function ReportScheduling() {
       <div className="flex justify-between items-center">
         <PageHeader
           icon={Calendar}
-          title="Report Scheduling"
+          title="Report scheduling"
           subtitle="Automate report generation and email delivery"
           className="mb-0"
         />

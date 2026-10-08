@@ -169,7 +169,7 @@ ${updateForm.notes}`
         {/* Header */}
         <PageHeader
           icon={QrCode}
-          title="Asset Scanner"
+          title="Asset scanner"
           subtitle="Mobile-enabled asset scanning for rapid identification, verification, and field updates."
         />
 

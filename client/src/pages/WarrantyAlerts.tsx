@@ -42,7 +42,7 @@ export default function WarrantyAlerts() {
       <div className="flex items-center justify-between">
         <PageHeader
           icon={ShieldAlert}
-          title="Warranty Alerts"
+          title="Warranty alerts"
           subtitle="Monitor asset warranties and receive expiration alerts"
           className="mb-0"
         />

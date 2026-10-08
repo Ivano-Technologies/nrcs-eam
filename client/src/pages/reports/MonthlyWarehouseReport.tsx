@@ -41,7 +41,7 @@ export default function MonthlyWarehouseReport() {
     <div className="space-y-4">
       <PageHeader
         icon={CalendarDays}
-        title="Monthly Warehouse Report"
+        title="Monthly warehouse report"
         subtitle="Consolidated monthly warehouse performance and inventory reporting for the Nigerian Red Cross Society."
       />
 

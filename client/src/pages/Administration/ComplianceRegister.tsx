@@ -243,7 +243,7 @@ export default function ComplianceRegister() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <PageHeader
           icon={ShieldCheck}
-          title="Compliance Tracking"
+          title="Compliance register"
           subtitle="Vehicle, generator, building safety, donor reporting, and insurance compliance"
           className="mb-0"
         />
