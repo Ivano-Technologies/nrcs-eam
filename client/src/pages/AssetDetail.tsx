@@ -32,6 +32,7 @@ import { toast } from "sonner";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import AssetDepreciation from "@/components/AssetDepreciation";
 import { AssetMaintenanceTimeline } from "@/components/AssetMaintenanceTimeline";
+import { hasTechnicalDetails } from "@/lib/assetDetail";
 import { DateHint, formatDate, formatDateTime, formatEnumLabel, formatNaira } from "@/lib/format";
 import { calculateDepreciatedValue } from "@/lib/depreciation";
 import {
@@ -510,16 +511,12 @@ export default function AssetDetail() {
           </CardContent>
         </Card>
 
-        <Card>
+        {hasTechnicalDetails(asset) ? (
+        <Card data-testid="asset-technical-details">
           <CardHeader>
             <CardTitle>Technical details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {!asset.manufacturer && !asset.model && !asset.serialNumber && !asset.location ? (
-              <p className="text-sm text-muted-foreground" data-testid="asset-technical-empty">
-                No technical details recorded.
-              </p>
-            ) : null}
             {asset.manufacturer && (
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Manufacturer</p>
@@ -549,6 +546,7 @@ export default function AssetDetail() {
             )}
           </CardContent>
         </Card>
+        ) : null}
 
         <Card>
           <CardHeader>
