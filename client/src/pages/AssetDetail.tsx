@@ -32,7 +32,7 @@ import { toast } from "sonner";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import AssetDepreciation from "@/components/AssetDepreciation";
 import { AssetMaintenanceTimeline } from "@/components/AssetMaintenanceTimeline";
-import { formatEnumLabel, formatNaira } from "@/lib/format";
+import { DateHint, formatDate, formatDateTime, formatEnumLabel, formatNaira } from "@/lib/format";
 import { calculateDepreciatedValue } from "@/lib/depreciation";
 import {
   CONDITION_OPTIONS,
@@ -560,7 +560,7 @@ export default function AssetDetail() {
                 <p className="text-sm font-medium text-muted-foreground">Acquisition date</p>
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <p className="text-base">{new Date(asset.acquisitionDate).toLocaleDateString()}</p>
+                  <p className="text-base">{formatDate(asset.acquisitionDate)}</p>
                 </div>
               </div>
             )}
@@ -591,7 +591,7 @@ export default function AssetDetail() {
             {asset.warrantyExpiry && (
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Warranty expiry</p>
-                <p className="text-base">{new Date(asset.warrantyExpiry).toLocaleDateString()}</p>
+                <p className="text-base">{formatDate(asset.warrantyExpiry)}</p>
               </div>
             )}
           </CardContent>
@@ -816,7 +816,7 @@ export default function AssetDetail() {
                         <div key={entry.id} className="rounded-md border p-3 space-y-2">
                           <div className="flex flex-wrap justify-between gap-2 text-xs text-muted-foreground">
                             <span className="font-medium text-foreground">{entry.userLabel}</span>
-                            <span>{new Date(entry.timestamp).toLocaleString()}</span>
+                            <span>{formatDateTime(entry.timestamp)}</span>
                           </div>
                           {!parsed || parsed.changedFields.length === 0 ? (
                             <p className="text-xs text-muted-foreground">No field diff stored for this entry.</p>
@@ -1265,7 +1265,7 @@ export default function AssetDetail() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Last physical check</Label>
+                <Label>Last physical check <DateHint /></Label>
                 <Input
                   type="date"
                   value={editForm.lastPhysicalCheck}
@@ -1367,7 +1367,7 @@ export default function AssetDetail() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Depreciation start</Label>
+                <Label>Depreciation start <DateHint /></Label>
                 <Input
                   type="date"
                   value={editForm.depreciationStartDate}

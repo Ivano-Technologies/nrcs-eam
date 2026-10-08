@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { formatEmpty } from "@/lib/format";
+import { DateHint, formatDateTime, formatEmpty } from "@/lib/format";
 import { useLocation, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -326,7 +326,7 @@ export default function ReceiptDetail() {
                 <Input id="grn-received-from" value={form.receivedFrom} onChange={(e) => { setForm((p) => ({ ...p, receivedFrom: e.target.value })); setDirty(true); }} />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="grn-date-of-arrival">Date of arrival</Label>
+                <Label htmlFor="grn-date-of-arrival">Date of arrival <DateHint /></Label>
                 <Input id="grn-date-of-arrival" type="date" value={form.dateOfArrival} onChange={(e) => { setForm((p) => ({ ...p, dateOfArrival: e.target.value })); setDirty(true); }} />
               </div>
               <div className="space-y-1">
@@ -445,7 +445,7 @@ export default function ReceiptDetail() {
                   const timestamp = (receiptQuery.data?.copiesPrinted as Record<string, string | null> | undefined)?.[copy];
                   return (
                     <div key={copy} className="rounded border px-2 py-1">
-                      {timestamp ? `✔ ${copy}: ${new Date(timestamp).toLocaleString()}` : `○ ${copy}: unprinted`}
+                      {timestamp ? `✔ ${copy}: ${formatDateTime(timestamp)}` : `○ ${copy}: not printed`}
                     </div>
                   );
                 })}

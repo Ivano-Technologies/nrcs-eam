@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatDate } from "@/lib/format";
 import { trpc } from "@/lib/trpc";
 import PageHeader from "@/components/ui/PageHeader";
 import TableLoader from "@/components/ui/TableLoader";
@@ -319,7 +320,7 @@ export default function WorkOrders() {
                     {wo.scheduledStart && (
                       <div className="flex items-center gap-1 text-muted-foreground">
                         <Calendar className="h-3 w-3" />
-                        <span>{new Date(wo.scheduledStart).toLocaleDateString()}</span>
+                        <span>{formatDate(wo.scheduledStart)}</span>
                       </div>
                     )}
                   </div>

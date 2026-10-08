@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatDateTime } from "@/lib/format";
 import { trpc } from "@/lib/trpc";
 import PageHeader from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -190,7 +191,7 @@ export default function EmailNotifications() {
                         Sent to: {email.recipientCount} {email.recipientType === "all" ? "users" : `${email.recipientRole}s`}
                       </span>
                       <span>•</span>
-                      <span>{new Date(email.sentAt).toLocaleString()}</span>
+                      <span>{formatDateTime(email.sentAt)}</span>
                     </div>
                   </div>
                 </div>

@@ -3,7 +3,7 @@ import { useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import PageLoader from "@/components/ui/PageLoader";
 import PageHeader from "@/components/ui/PageHeader";
-import { formatEmpty } from "@/lib/format";
+import { formatDate, formatEmpty, formatEnumLabel } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -347,7 +347,7 @@ export default function FacilityDetail() {
             {recentTransfers.length === 0 ? "No recent asset movements." : (
               <ul className="space-y-1">
                 {recentTransfers.map((t) => (
-                  <li key={t.id}>{t.status} transfer #{t.id} - {new Date(t.requestDate).toLocaleDateString()}</li>
+                  <li key={t.id}>{formatEnumLabel(t.status)} transfer #{t.id}, {formatDate(t.requestDate)}</li>
                 ))}
               </ul>
             )}
@@ -367,7 +367,7 @@ export default function FacilityDetail() {
             {recentMovements.length === 0 ? "No recent inventory transactions." : (
               <ul className="space-y-1">
                 {recentMovements.map((m, i) => (
-                  <li key={`${m.itemCode}-${i}`}>{m.itemCode} - {m.type} {m.quantity} ({new Date(m.transactionDate).toLocaleDateString()})</li>
+                  <li key={`${m.itemCode}-${i}`}>{m.itemCode}: {formatEnumLabel(m.type)} {m.quantity} ({formatDate(m.transactionDate)})</li>
                 ))}
               </ul>
             )}

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { formatDate } from "@/lib/format";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -101,7 +102,7 @@ export default function Expiry({ embedInShell = false }: { embedInShell?: boolea
                       <td className="px-2 py-2">{row.itemCode} - {row.itemName}</td>
                       <td className="px-2 py-2">{row.warehouseName}</td>
                       <td className="px-2 py-2">{row.batchNumber ?? ""}</td>
-                      <td className="px-2 py-2">{row.expiryDate ? new Date(row.expiryDate).toLocaleDateString() : ""}</td>
+                      <td className="px-2 py-2">{row.expiryDate ? formatDate(row.expiryDate) : ""}</td>
                       <td className="px-2 py-2"><Badge variant={tone as any}>{days ?? ""}</Badge></td>
                       <td className="px-2 py-2">{row.quantity}</td>
                       <td className="px-2 py-2">

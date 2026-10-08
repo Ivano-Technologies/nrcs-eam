@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { DATE_INPUT_HINT, formatDateTime } from "@/lib/format";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -88,8 +89,9 @@ export default function Movements({ embedInShell = false }: { embedInShell?: boo
               <SelectItem value="transfer_in">Transfer In</SelectItem>
             </SelectContent>
           </Select>
-          <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-[180px]" />
-          <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-[180px]" />
+          <Input type="date" aria-label="From date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-[180px]" />
+          <Input type="date" aria-label="To date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-[180px]" />
+          <span className="text-xs text-muted-foreground">Dates use {DATE_INPUT_HINT}</span>
           <Button variant="outline" className="ml-auto" onClick={exportCsv}>Export to Excel</Button>
         </CardContent>
       </Card>
@@ -110,7 +112,7 @@ export default function Movements({ embedInShell = false }: { embedInShell?: boo
           <tbody>
             {(movements.data ?? []).map((row) => (
               <tr key={row.id} className="border-b">
-                <td className="px-2 py-2">{row.createdAt ? new Date(row.createdAt).toLocaleString() : ""}</td>
+                <td className="px-2 py-2">{row.createdAt ? formatDateTime(row.createdAt) : ""}</td>
                 <td className="px-2 py-2">{row.movementType}</td>
                 <td className="px-2 py-2">{row.itemCode} - {row.itemName}</td>
                 <td className="px-2 py-2">{row.fromWarehouseId ?? ""}</td>

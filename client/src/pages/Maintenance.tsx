@@ -1,4 +1,5 @@
 import { trpc } from "@/lib/trpc";
+import { DateHint, formatDate } from "@/lib/format";
 import PageHeader from "@/components/ui/PageHeader";
 import PageLoader from "@/components/ui/PageLoader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -169,7 +170,7 @@ export default function Maintenance() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="nextDue">Next Due Date *</Label>
+                  <Label htmlFor="nextDue">Next Due Date * <DateHint /></Label>
                   <Input
                     id="nextDue"
                     type="date"
@@ -246,7 +247,7 @@ export default function Maintenance() {
             <div className="space-y-3">
               {upcoming.map((s) => (
                 <div key={s.id} className="flex items-center justify-between border-b pb-3 last:border-0">
-                  <div><p className="font-medium">{s.name}</p><p className="text-sm text-muted-foreground">Due: {new Date(s.nextDue).toLocaleDateString()}</p></div>
+                  <div><p className="font-medium">{s.name}</p><p className="text-sm text-muted-foreground">Due: {formatDate(s.nextDue)}</p></div>
                   <Badge>{s.frequency}</Badge>
                 </div>
               ))}

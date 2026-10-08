@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { DATE_INPUT_HINT, formatDate } from "@/lib/format";
 import { HtmlTableEmptyState } from "@/components/ui/EmptyState";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -100,8 +101,9 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
               value={receivedFrom}
               onChange={(e) => setReceivedFrom(e.target.value)}
             />
-            <Input className="h-9 w-[170px]" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-            <Input className="h-9 w-[170px]" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+            <Input className="h-9 w-[170px]" type="date" aria-label="From date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+            <Input className="h-9 w-[170px]" type="date" aria-label="To date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+            <span className="text-xs text-muted-foreground">Dates use {DATE_INPUT_HINT}</span>
             <Select value={status} onValueChange={(v) => setStatus(v as typeof status)}>
               <SelectTrigger className="h-9 w-[180px]"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -173,9 +175,9 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
                 <td className="px-2 py-2 font-mono">{row.documentNumber}</td>
                 <td className={cn("px-2 py-2", mobileSecondaryCol(showAllColumns))}>
                   {row.dateOfArrival
-                    ? new Date(row.dateOfArrival).toLocaleDateString()
+                    ? formatDate(row.dateOfArrival)
                     : row.createdAt
-                      ? new Date(row.createdAt).toLocaleDateString()
+                      ? formatDate(row.createdAt)
                       : ""}
                 </td>
                 <td className="px-2 py-2">{row.referenceDocument ?? ""}</td>
@@ -308,6 +310,7 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
                   />
                   <Input
                     type="date"
+                    aria-label="Expiry date"
                     value={line.expiryDate}
                     onChange={(e) => setLines((prev) => prev.map((x, i) => (i === idx ? { ...x, expiryDate: e.target.value } : x)))}
                   />

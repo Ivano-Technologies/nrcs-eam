@@ -1,6 +1,6 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { TableEmptyState } from "@/components/ui/EmptyState";
-import { formatDate } from "@/lib/format";
+import { DateHint, formatDate } from "@/lib/format";
 import { InsuranceRegisterContent } from "@/pages/compliance/InsuranceRegister";
 import PageHeader from "@/components/ui/PageHeader";
 import { Badge } from "@/components/ui/badge";
@@ -637,25 +637,25 @@ export default function ComplianceRegister() {
               value={vehicleForm.plateNumber}
               onChange={(e) => setVehicleForm((f) => ({ ...f, plateNumber: e.target.value }))}
             />
-            <Label>Road worthiness expiry</Label>
+            <Label>Road worthiness expiry <DateHint /></Label>
             <Input
               type="date"
               value={vehicleForm.roadWorthinessExpiry}
               onChange={(e) => setVehicleForm((f) => ({ ...f, roadWorthinessExpiry: e.target.value }))}
             />
-            <Label>Insurance expiry</Label>
+            <Label>Insurance expiry <DateHint /></Label>
             <Input
               type="date"
               value={vehicleForm.insuranceExpiry}
               onChange={(e) => setVehicleForm((f) => ({ ...f, insuranceExpiry: e.target.value }))}
             />
-            <Label>Licence expiry</Label>
+            <Label>Licence expiry <DateHint /></Label>
             <Input
               type="date"
               value={vehicleForm.licenceExpiry}
               onChange={(e) => setVehicleForm((f) => ({ ...f, licenceExpiry: e.target.value }))}
             />
-            <Label>Last inspection</Label>
+            <Label>Last inspection <DateHint /></Label>
             <Input
               type="date"
               value={vehicleForm.lastInspectionDate}
@@ -711,7 +711,7 @@ export default function ComplianceRegister() {
               value={genForm.assetCode}
               onChange={(e) => setGenForm((f) => ({ ...f, assetCode: e.target.value }))}
             />
-            <Label>Next service due</Label>
+            <Label>Next service due <DateHint /></Label>
             <Input
               type="date"
               value={genForm.nextServiceDue}
@@ -788,7 +788,7 @@ export default function ComplianceRegister() {
                 ))}
               </SelectContent>
             </Select>
-            <Label>Expiry date</Label>
+            <Label>Expiry date <DateHint /></Label>
             <Input
               type="date"
               value={buildingForm.expiryDate}
@@ -860,13 +860,13 @@ export default function ComplianceRegister() {
                 ))}
               </SelectContent>
             </Select>
-            <Label>Due date</Label>
+            <Label>Due date <DateHint /></Label>
             <Input
               type="date"
               value={donorForm.dueDate}
               onChange={(e) => setDonorForm((f) => ({ ...f, dueDate: e.target.value }))}
             />
-            <Label>Submitted date</Label>
+            <Label>Submitted date <DateHint /></Label>
             <Input
               type="date"
               value={donorForm.submittedDate}

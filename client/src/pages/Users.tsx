@@ -1,5 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
-import { formatDateTime, formatEmpty } from "@/lib/format";
+import { formatDate, formatDateTime, formatEmpty } from "@/lib/format";
 import PageHeader from "@/components/ui/PageHeader";
 import TableLoader from "@/components/ui/TableLoader";
 import { Badge } from "@/components/ui/badge";
@@ -699,7 +699,7 @@ export default function Users() {
                       <TableCell>{o.email ?? ""}</TableCell>
                       <TableCell>{roleLabel(o.role)}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">
-                        {new Date(o.createdAt).toLocaleDateString()}
+                        {formatDate(o.createdAt)}
                       </TableCell>
                       <TableCell className="text-right">
                         <Button

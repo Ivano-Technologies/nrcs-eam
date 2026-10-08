@@ -41,7 +41,7 @@ import { toast } from "sonner";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { calculateDepreciatedValue } from "@/lib/depreciation";
 import { appPath } from "@/lib/routes";
-import { formatDate as formatDisplayDate, formatEmpty, formatNaira } from "@/lib/format";
+import { DateHint, formatDate as formatDisplayDate, formatEmpty, formatNaira } from "@/lib/format";
 import { HtmlTableEmptyState } from "@/components/ui/EmptyState";
 import { cn } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -1294,7 +1294,7 @@ export default function Assets() {
                     </Select>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Date of Last Physical Check</Label>
+                      <Label>Date of Last Physical Check <DateHint /></Label>
                       <Input
                         type="date"
                         value={newAsset.lastPhysicalCheck}
@@ -2076,7 +2076,7 @@ export default function Assets() {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label>Last physical check</Label>
+                      <Label>Last physical check <DateHint /></Label>
                       <Input
                         type="date"
                         value={editingAsset.lastPhysicalCheck ?? ""}
@@ -2197,7 +2197,7 @@ export default function Assets() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Depreciation start date</Label>
+                      <Label>Depreciation start date <DateHint /></Label>
                       <Input
                         type="date"
                         value={editingAsset.depreciationStartDate ?? ""}

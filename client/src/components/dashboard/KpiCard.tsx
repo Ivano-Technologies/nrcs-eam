@@ -78,7 +78,7 @@ function KpiCardInner({
       className={cn(
         "dashboard-card relative flex h-full min-h-[168px] flex-col border-l-[3px] border-l-[var(--color-accent-border)] transition-[transform,box-shadow,border-color] duration-150 ease-in-out",
         interactive &&
-          "cursor-pointer hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-[0_6px_24px_rgba(0,0,0,0.12)] focus-within:ring-2 focus-within:ring-primary/30"
+          "cursor-pointer hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-[0_6px_24px_rgba(0,0,0,0.12)] focus-within:ring-2 focus-within:ring-primary/30"
       )}
     >
       <CardContent className="flex flex-1 flex-col px-5 pb-4 pt-5">

@@ -1,5 +1,5 @@
 import { ModuleFilterSearch, ModuleFiltersCard } from "@/components/ModuleFiltersCard";
-import { formatEmpty } from "@/lib/format";
+import { formatDate, formatEmpty } from "@/lib/format";
 import { ViewToggle } from "@/components/ViewToggle";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -75,7 +75,7 @@ export default function BinCards({ embedInShell = false }: Props = {}) {
                   <TableCell>{row.ctnDonor || ""}</TableCell>
                   <TableCell className="text-right">{row.currentBalance}</TableCell>
                   <TableCell>{formatEmpty(row.storekeeper)}</TableCell>
-                  <TableCell>{row.openedAt ? String(row.openedAt).slice(0, 10) : ""}</TableCell>
+                  <TableCell>{row.openedAt ? formatDate(row.openedAt) : ""}</TableCell>
                   <TableCell>{row.status}</TableCell>
                 </TableRow>
               ))}

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { formatDateTime } from "@/lib/format";
 import { useLocation } from "wouter";
 import { Html5Qrcode } from "html5-qrcode";
 import { trpc } from "@/lib/trpc";
@@ -102,7 +103,7 @@ export default function AssetScanner() {
       notes: updateForm.notes 
         ? `${scannedAsset.notes || ""}
 
-[Scanner Update ${new Date().toLocaleString()}]
+[Scanner update ${formatDateTime(new Date())}]
 ${updateForm.notes}`
         : scannedAsset.notes,
     });

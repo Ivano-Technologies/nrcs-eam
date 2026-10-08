@@ -28,7 +28,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { formatNaira } from "@/lib/format";
+import { DateHint, formatNaira } from "@/lib/format";
 import { KPI_VALUE_CLASS } from "@/lib/kpiTypography";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
@@ -308,13 +308,13 @@ export function InsuranceRegisterContent({ embedded = false }: { embedded?: bool
                 value={form.annualPremiumNgn}
                 onChange={(e) => setForm((f) => ({ ...f, annualPremiumNgn: e.target.value }))}
               />
-              <Label>Policy start</Label>
+              <Label>Policy start <DateHint /></Label>
               <Input
                 type="date"
                 value={form.policyStart}
                 onChange={(e) => setForm((f) => ({ ...f, policyStart: e.target.value }))}
               />
-              <Label>Policy end</Label>
+              <Label>Policy end <DateHint /></Label>
               <Input
                 type="date"
                 value={form.policyEnd}

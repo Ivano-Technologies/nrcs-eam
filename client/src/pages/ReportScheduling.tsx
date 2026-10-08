@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatDate } from "@/lib/format";
 import { trpc } from "@/lib/trpc";
 import PageHeader from "@/components/ui/PageHeader";
 import PageLoader from "@/components/ui/PageLoader";
@@ -242,7 +243,7 @@ export default function ReportScheduling() {
                   </div>
                   {schedule.lastRun && (
                     <p className="text-xs text-muted-foreground">
-                      Last run: {new Date(schedule.lastRun).toLocaleDateString()}
+                      Last run: {formatDate(schedule.lastRun)}
                     </p>
                   )}
                 </div>

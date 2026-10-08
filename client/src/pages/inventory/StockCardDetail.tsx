@@ -75,7 +75,7 @@ export default function StockCardDetail() {
       </div>
 
       <div className="grid gap-2 rounded-md border p-4 md:grid-cols-5">
-        <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+        <Input type="date" aria-label="Count date" value={date} onChange={(e) => setDate(e.target.value)} />
         <Input placeholder="Counted qty" value={countedQty} onChange={(e) => setCountedQty(e.target.value)} />
         <Input placeholder="Supervisor ID (for retroactive)" value={supervisorId} onChange={(e) => setSupervisorId(e.target.value)} />
         <Input placeholder="Notes" value={notes} onChange={(e) => setNotes(e.target.value)} />

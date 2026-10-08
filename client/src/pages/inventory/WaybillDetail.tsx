@@ -13,7 +13,7 @@ import { CtnInlineCreator } from "@/components/wms/CtnInlineCreator";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
 import PageHeader from "@/components/ui/PageHeader";
 import { appPath } from "@/lib/routes";
-import { formatNaira } from "@/lib/format";
+import { DateHint, formatDateTime, formatNaira } from "@/lib/format";
 import { toast } from "sonner";
 import { Loader2, AlertTriangle } from "lucide-react";
 
@@ -330,7 +330,7 @@ export default function WaybillDetail() {
               />
             </div>
             <div className="space-y-1">
-              <Label>Date</Label>
+              <Label>Date <DateHint /></Label>
               <Input type="date" value={header.date} onChange={(e) => setHeader((p) => ({ ...p, date: e.target.value }))} />
             </div>
             <div className="space-y-1">
@@ -674,7 +674,7 @@ export default function WaybillDetail() {
                 const timestamp = (details.data?.copiesPrinted as Record<string, string | null> | undefined)?.[copy];
                 return (
                   <div key={copy} className="rounded border px-2 py-1">
-                    {timestamp ? `✔ ${copy}: ${new Date(timestamp).toLocaleString()}` : `○ ${copy}: unprinted`}
+                    {timestamp ? `✔ ${copy}: ${formatDateTime(timestamp)}` : `○ ${copy}: not printed`}
                   </div>
                 );
               })}

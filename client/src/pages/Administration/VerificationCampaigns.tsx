@@ -1,6 +1,6 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { EmptyState, TableEmptyState } from "@/components/ui/EmptyState";
-import { formatDateRange } from "@/lib/format";
+import { DateHint, formatDateRange } from "@/lib/format";
 import PageHeader from "@/components/ui/PageHeader";
 import { ViewToggle } from "@/components/ViewToggle";
 import { Badge } from "@/components/ui/badge";
@@ -288,11 +288,11 @@ export default function VerificationCampaigns() {
               <Input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} />
             </div>
             <div className="space-y-1">
-              <Label>Starts</Label>
+              <Label>Starts <DateHint /></Label>
               <Input type="date" value={form.startsAt} onChange={(e) => setForm((p) => ({ ...p, startsAt: e.target.value }))} />
             </div>
             <div className="space-y-1">
-              <Label>Ends</Label>
+              <Label>Ends <DateHint /></Label>
               <Input type="date" value={form.endsAt} onChange={(e) => setForm((p) => ({ ...p, endsAt: e.target.value }))} />
             </div>
           </div>

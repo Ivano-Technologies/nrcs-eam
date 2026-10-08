@@ -121,3 +121,12 @@ export function formatEmpty(value: ReactNode): ReactNode {
   if (typeof value === "string" && value.trim() === "") return <span className="text-muted-foreground">Not set</span>;
   return value;
 }
+
+/** Visible format hint for native date inputs, placed inside the field label. */
+export function DateHint({ className }: { className?: string }) {
+  return (
+    <span className={`ml-1 text-xs font-normal text-muted-foreground${className ? ` ${className}` : ""}`}>
+      {DATE_INPUT_HINT}
+    </span>
+  );
+}

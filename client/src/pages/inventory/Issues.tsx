@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { HtmlTableEmptyState } from "@/components/ui/EmptyState";
-import { formatDate } from "@/lib/format";
+import { DATE_INPUT_HINT, formatDate } from "@/lib/format";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -72,8 +72,9 @@ export default function Issues({ embedInShell = false }: { embedInShell?: boolea
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            <Input className="h-9 w-[170px]" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-            <Input className="h-9 w-[170px]" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+            <Input className="h-9 w-[170px]" type="date" aria-label="From date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+            <Input className="h-9 w-[170px]" type="date" aria-label="To date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+            <span className="text-xs text-muted-foreground">Dates use {DATE_INPUT_HINT}</span>
             <Select value={warehouseId} onValueChange={setWarehouseId}>
               <SelectTrigger className="h-9 w-[220px]"><SelectValue placeholder="Source warehouse" /></SelectTrigger>
               <SelectContent>

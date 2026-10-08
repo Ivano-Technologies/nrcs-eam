@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { formatDate } from "@/lib/format";
 import { useRoute, useLocation, useSearch } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -441,18 +442,18 @@ export default function MobileWorkOrderDetail() {
           <CardContent className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Created:</span>
-              <span>{new Date(workOrder.createdAt).toLocaleDateString()}</span>
+              <span>{formatDate(workOrder.createdAt)}</span>
             </div>
             {workOrder.scheduledEnd && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Due:</span>
-                <span>{new Date(workOrder.scheduledEnd).toLocaleDateString()}</span>
+                <span>{formatDate(workOrder.scheduledEnd)}</span>
               </div>
             )}
             {workOrder.actualEnd && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Completed:</span>
-                <span>{new Date(workOrder.actualEnd).toLocaleDateString()}</span>
+                <span>{formatDate(workOrder.actualEnd)}</span>
               </div>
             )}
           </CardContent>

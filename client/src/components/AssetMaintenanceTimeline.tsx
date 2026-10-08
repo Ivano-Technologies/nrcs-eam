@@ -1,4 +1,5 @@
 import { trpc } from "@/lib/trpc";
+import { formatDateTime } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Wrench, AlertCircle, CheckCircle, Loader2 } from "lucide-react";
@@ -94,7 +95,7 @@ export function AssetMaintenanceTimeline({ assetId }: AssetMaintenanceTimelinePr
                         </p>
                       )}
                       <p className="text-xs text-muted-foreground mt-1">
-                        {event.date.toLocaleDateString()} at {event.date.toLocaleTimeString()}
+                        {formatDateTime(event.date)}
                       </p>
                     </div>
                     <Badge className={getStatusColor(event.status)}>

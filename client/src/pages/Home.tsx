@@ -327,7 +327,17 @@ export default function Home() {
 
       value: metrics?.activeFacilities.value ?? 0,
 
-      sub: `of ${metrics?.activeFacilities.total ?? 0} · ${metrics?.activeFacilities.offline ?? 0} offline`,
+      sub: (
+        <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span>of {metrics?.activeFacilities.total ?? 0}</span>
+          {(metrics?.activeFacilities.offline ?? 0) > 0 ? (
+            <span className="inline-flex items-center gap-1.5" data-testid="kpi-facilities-offline">
+              <span className="h-2 w-2 rounded-full bg-amber-500" aria-hidden />
+              {metrics?.activeFacilities.offline} offline
+            </span>
+          ) : null}
+        </span>
+      ),
 
       icon: MapPin,
 
