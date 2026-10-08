@@ -70,7 +70,7 @@ function FilterSelects({
   return (
     <>
       <Select value={type} onValueChange={(v) => onType(v as FacilityType | "all")}>
-        <SelectTrigger className={trigger("w-[124px]")} aria-label="Facility type" data-testid="facilities-type-select">
+        <SelectTrigger className={trigger("w-[112px]")} aria-label="Facility type" data-testid="facilities-type-select">
           <SelectValue placeholder="All types" />
         </SelectTrigger>
         <SelectContent>
@@ -83,7 +83,7 @@ function FilterSelects({
         </SelectContent>
       </Select>
       <Select value={state} onValueChange={onState}>
-        <SelectTrigger className={trigger("w-[124px]")} aria-label="State" data-testid="facilities-state-select">
+        <SelectTrigger className={trigger("w-[116px]")} aria-label="State" data-testid="facilities-state-select">
           <SelectValue placeholder="All states" />
         </SelectTrigger>
         <SelectContent>
@@ -123,7 +123,7 @@ export function FacilitiesToolbar(p: FacilitiesToolbarProps) {
   };
 
   const search = (
-    <div className={cn("relative", p.compact ? "min-w-0 flex-1" : "w-[268px] shrink-0")}>
+    <div className={cn("relative", p.compact ? "min-w-0 flex-1" : "w-[288px] shrink-0")}>
       <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
       <Input
         type="search"
