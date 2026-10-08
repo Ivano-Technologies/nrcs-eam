@@ -6,22 +6,16 @@ test.describe("UI improvements (live)", () => {
     await loginAsAdmin(page);
     await page.goto("/app/asset-map");
     await expect(page.getByRole("heading", { name: /Asset Map/i })).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByText("Map View", { exact: false })).toBeVisible({ timeout: 15_000 });
     const panel = page.getByTestId("asset-map-panel");
-    if ((await panel.count()) > 0) {
-      await expect(panel).toBeVisible();
-    }
+    await expect(panel).toBeVisible({ timeout: 15_000 });
+    const box = await panel.boundingBox();
+    expect(box?.height ?? 0).toBeGreaterThan(200);
+    // Automated browsers never load Google (navigator.webdriver), so either the map container or
+    // the restyled fallback (facility list plus error card) is shown.
     const mapEl = page.getByTestId("asset-map-container");
-    if ((await mapEl.count()) > 0) {
-      await expect(mapEl).toBeVisible();
-      const box = await mapEl.boundingBox();
-      expect(box?.height ?? 0).toBeGreaterThan(200);
-    } else {
-      const fallback = page.locator(".h-\\[600px\\], .h-\\[500px\\]").first();
-      await expect(fallback).toBeVisible({ timeout: 10_000 });
-      const box = await fallback.boundingBox();
-      expect(box?.height ?? 0).toBeGreaterThan(200);
-    }
+    const fallback = page.getByTestId("asset-map-facility-fallback");
+    await expect(mapEl.or(fallback).first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId("asset-map-list")).toBeVisible();
   });
 
   test("asset scanner page has mode buttons with consistent height", async ({ page }) => {
