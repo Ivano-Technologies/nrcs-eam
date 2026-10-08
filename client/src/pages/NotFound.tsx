@@ -12,8 +12,8 @@ export default function NotFound() {
   };
 
   return (
-    <PublicPageChrome>
-    <div className="flex-1 w-full flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-[#232323] dark:to-[#2a2a2a] pt-16">
+    <PublicPageChrome className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-[#232323] dark:to-[#2a2a2a]">
+    <div className="flex-1 w-full flex items-center justify-center pt-16">
       <Card className="w-full max-w-lg mx-4 shadow-lg border-0 bg-white/80 backdrop-blur-sm">
         <CardContent className="pt-8 pb-8 text-center">
           <div className="flex justify-center mb-6">

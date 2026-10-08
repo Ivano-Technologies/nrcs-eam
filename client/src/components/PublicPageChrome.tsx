@@ -1,10 +1,25 @@
 import { IvanoCopyright } from "@/components/brand/IvanoCopyright";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { cn } from "@/lib/utils";
 
-/** Legal / standalone pages outside auth layout: theme toggle, page background, Ivano credit. */
-export function PublicPageChrome({ children }: { children: React.ReactNode }) {
+/**
+ * Legal / standalone pages outside auth layout: theme toggle, page background, Ivano credit.
+ * `className` overrides the page background so it runs under the credit too (no strip).
+ */
+export function PublicPageChrome({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
-    <div className="relative flex min-h-screen flex-col bg-background text-foreground dark:bg-[#232323]">
+    <div
+      className={cn(
+        "relative flex min-h-screen flex-col bg-background text-foreground dark:bg-[#232323]",
+        className
+      )}
+    >
       <div className="fixed top-4 right-4 z-50">
         <ThemeToggle />
       </div>
