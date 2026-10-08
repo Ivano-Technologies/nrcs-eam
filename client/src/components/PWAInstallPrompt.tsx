@@ -166,7 +166,10 @@ export function PWAInstallPrompt() {
   };
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 max-w-sm animate-in slide-in-from-bottom-5">
+    <div
+      data-testid="pwa-install-popup"
+      className="fixed inset-x-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] z-50 animate-in slide-in-from-bottom-5 md:inset-x-auto md:bottom-4 md:right-4 md:max-w-sm"
+    >
       <PWAInstallCard onInstall={handleInstallClick} onDismiss={handleDismiss} />
     </div>
   );
