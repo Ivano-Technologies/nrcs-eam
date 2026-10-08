@@ -61,6 +61,13 @@
       "schedule": "0 7 * * *"
     }
   ],
+  "redirects": [
+    {
+      "source": "/assets/:id(\\d+)",
+      "destination": "/app/assets/:id",
+      "permanent": true
+    }
+  ],
   "rewrites": [
     {
       "source": "/health",
