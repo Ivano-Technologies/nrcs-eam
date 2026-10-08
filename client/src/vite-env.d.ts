@@ -11,6 +11,13 @@ interface ImportMetaEnv {
   readonly VITE_ANALYTICS_WEBSITE_ID?: string;
   readonly VITE_APP_ID?: string;
   readonly VITE_OAUTH_PORTAL_URL?: string;
+  /** Google Maps JavaScript API browser key. Keep it HTTP referrer restricted. */
+  readonly VITE_GOOGLE_MAPS_API_KEY?: string;
+  /**
+   * Google Maps Map ID (JavaScript, vector) with a light and a dark cloud style attached.
+   * Falls back to Google's unstyled `DEMO_MAP_ID` when unset.
+   */
+  readonly VITE_GOOGLE_MAPS_MAP_ID?: string;
 }
 
 interface ImportMeta {

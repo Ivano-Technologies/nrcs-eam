@@ -9,6 +9,7 @@ import {
   assertRecordFacilityAccess,
 } from "../_core/facilityAccess";
 import * as db from "../db";
+import * as assetMap from "../assetMap";
 import * as notificationHelper from "../notificationHelper";
 import { generatePDFReport, generateExcelReport } from "../reportGenerator";
 import { generateEmailTemplate, sendBulkEmails, sendEmail } from "../emailService";
@@ -45,7 +46,7 @@ import {
 } from "../../drizzle/schema";
 import { buildDistributionVelocity, buildStockReadiness, getPeriodWindow } from "../wms/dashboard";
 import { queryDistributionVelocityTotals } from "../wms/distributionVelocity";
-import { cacheGetJson, cacheSetJson, withDashboardCache } from "../_core/cache";
+import { withDashboardCache } from "../_core/cache";
 import { withTimeout } from "../_core/withTimeout";
 import { dashboardQueryQueue } from "../_core/dashboardQueryQueue";
 import {
@@ -101,18 +102,30 @@ export const sitesRouter = router({
         );
       }),
 
-    mapData: protectedProcedure.query(async () => {
-      return await db.getSitesMapData();
+    /**
+     * Asset Map facilities (both layers). Location and stock readiness for every facility;
+     * asset counts only where the caller may see them (see server/assetMap.ts).
+     */
+    mapFacilities: protectedProcedure.query(async ({ ctx }) => {
+      const { generatedAt, rows } = await assetMap.getMapFacilitiesCached();
+      return {
+        generatedAt,
+        statsScope: assetMap.mapStatsScope(ctx.user),
+        ownFacilityId: ctx.user.siteId ?? null,
+        facilities: assetMap.scopeMapFacilities(rows, ctx.user),
+      } satisfies assetMap.MapFacilitiesResult;
     }),
 
-    mapNetworkData: protectedProcedure.query(async () => {
-      const cacheKey = "sites:mapNetworkData:v1";
-      const cached = await cacheGetJson<Awaited<ReturnType<typeof db.getSitesMapNetworkData>>>(cacheKey);
-      if (cached) return cached;
-      const rows = await db.getSitesMapNetworkData();
-      await cacheSetJson(cacheKey, rows, 1800);
-      return rows;
-    }),
+    /** Asset Map drawer details. Book value and work orders follow the same role rule. */
+    mapFacilityDetail: protectedProcedure
+      .input(z.object({ id: z.number().int().positive() }))
+      .query(async ({ ctx, input }) => {
+        const detail = await assetMap.getMapFacilityDetailRaw(input.id);
+        if (!detail) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Facility not found" });
+        }
+        return assetMap.scopeMapFacilityDetail(detail, ctx.user);
+      }),
 
     getById: protectedProcedure
       .input(z.object({ id: z.number() }))
