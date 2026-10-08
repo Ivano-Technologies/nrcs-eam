@@ -33,8 +33,11 @@ import {
   Package,
   ShieldAlert,
   TriangleAlert,
+  Warehouse,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatEnumLabel } from "@/lib/format";
+import { HtmlTableEmptyState } from "@/components/ui/EmptyState";
 import { ViewToggle } from "@/components/ViewToggle";
 import { useMobileDefaultViewMode } from "@/hooks/useMobileDefaultViewMode";
 import { CardQrCode } from "@/components/CardQrCode";
@@ -522,7 +525,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                         </Badge>
                         <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-200">
                           {row.itemCategory == null
-                            ? "—"
+                            ? "Not set"
                             : row.itemCategory === "other"
                               ? "Other"
                               : itemCategoryLabel(row.itemCategory)}
@@ -611,7 +614,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                       </td>
                       <td className="px-2 py-2">
                         {row.itemCategory == null ? (
-                          <span className="text-muted-foreground">—</span>
+                          <span className="text-muted-foreground">Not set</span>
                         ) : row.itemCategory === "other" ? (
                           <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-200">
                             Other
@@ -1056,10 +1059,10 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid gap-3">
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Item Details</CardTitle>
+                <CardTitle className="text-base">Item details</CardTitle>
               </CardHeader>
               <CardContent className="space-y-1 text-sm">
                 <p>
@@ -1070,7 +1073,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                   <span className="font-semibold">Item category:</span>
                   {selectedItemDetail.data?.itemCategory == null ? (
                     <>
-                      <span className="text-muted-foreground">—</span>
+                      <span className="text-muted-foreground">Not set</span>
                       <TriangleAlert className="h-4 w-4 text-amber-600" aria-label="Uncategorized" />
                     </>
                   ) : selectedItemDetail.data.itemCategory === "other" ? (
@@ -1083,24 +1086,18 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                     </span>
                   )}
                 </p>
-                <p><span className="font-semibold">VED:</span> {selectedItemDetail.data?.vedClassification ?? selectedStock?.vedClassification ?? "desirable"}</p>
+                <p><span className="font-semibold">VED:</span> {formatEnumLabel(selectedItemDetail.data?.vedClassification ?? selectedStock?.vedClassification ?? "desirable")}</p>
                 <p><span className="font-semibold">Unit:</span> {selectedItemDetail.data?.unitOfMeasure ?? selectedStock?.unitOfMeasure}</p>
-                <p><span className="font-semibold">Description:</span> {selectedItemDetail.data?.description ?? "—"}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Recent Movement</CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm text-muted-foreground">
-                Movement history integration lands in Phase 2.
+                {selectedItemDetail.data?.description ? (
+                  <p><span className="font-semibold">Description:</span> {selectedItemDetail.data.description}</p>
+                ) : null}
               </CardContent>
             </Card>
           </div>
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Stock Across Warehouses</CardTitle>
+              <CardTitle className="text-base">Stock across warehouses</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
@@ -1108,24 +1105,32 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                   <thead>
                     <tr className="border-b bg-muted/50">
                       <th className="px-2 py-2 text-left">Location</th>
-                      <th className="px-2 py-2 text-left">On Hand</th>
-                      <th className="px-2 py-2 text-left">Min</th>
-                      <th className="px-2 py-2 text-left">Max</th>
-                      <th className="px-2 py-2 text-left">Safety</th>
+                      <th className="px-2 py-2 text-right">On hand</th>
+                      <th className="px-2 py-2 text-right">Min</th>
+                      <th className="px-2 py-2 text-right">Max</th>
+                      <th className="px-2 py-2 text-right">Safety</th>
                       <th className="px-2 py-2 text-left">Zone</th>
                     </tr>
                   </thead>
                   <tbody>
                     {(selectedStockByItem.data ?? []).map((row) => (
                       <tr key={row.stockId} className="border-b">
-                        <td className="px-2 py-2">{row.warehouseName}</td>
-                        <td className="px-2 py-2">{row.quantityOnHand}</td>
-                        <td className="px-2 py-2">{row.minLevel}</td>
-                        <td className="px-2 py-2">{row.maxLevel ?? "—"}</td>
-                        <td className="px-2 py-2">{row.safetyStockLevel ?? "—"}</td>
-                        <td className="px-2 py-2">{row.zoneLocation ?? "—"}</td>
+                        <td className="min-w-[12rem] whitespace-normal px-2 py-2">{row.warehouseName}</td>
+                        <td className="px-2 py-2 text-right tabular-nums">{row.quantityOnHand}</td>
+                        <td className="px-2 py-2 text-right tabular-nums">{row.minLevel}</td>
+                        <td className="px-2 py-2 text-right tabular-nums">{row.maxLevel ?? ""}</td>
+                        <td className="px-2 py-2 text-right tabular-nums">{row.safetyStockLevel ?? ""}</td>
+                        <td className="px-2 py-2">{row.zoneLocation ?? ""}</td>
                       </tr>
                     ))}
+                    {!selectedStockByItem.isLoading && (selectedStockByItem.data ?? []).length === 0 ? (
+                      <HtmlTableEmptyState
+                        colSpan={6}
+                        icon={Warehouse}
+                        title="No stock held yet"
+                        body="Stock levels appear here once this item is received into a warehouse."
+                      />
+                    ) : null}
                   </tbody>
                 </table>
               </div>
