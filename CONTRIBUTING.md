@@ -6,8 +6,8 @@ This application is **single-organization** (Nigerian Red Cross Society). Featur
 
 ## Branches
 
-- **`main`** and **`blue`** — keep them in sync; keep both buildable (`pnpm check`, `pnpm test` when you touch logic).
-- **Feature branches** — `feature/<short-name>` or `fix/<short-name>` from `blue` (or `main`); open PRs into `blue` unless the work is explicitly for `main`.
+- **`main`** (production) and **`dev`** (soak/staging) — the two long-lived branches. Keep both buildable (`pnpm check`, `pnpm test` when you touch logic). `dev` was previously named `blue`.
+- **Feature branches** — `feature/<short-name>` or `fix/<short-name>` from `dev`; open PRs into `dev`. Changes reach `main` only by promoting `dev` → `main`; never open feature PRs into `main`.
 
 ## Secrets and operational data
 
