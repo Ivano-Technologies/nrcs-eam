@@ -39,7 +39,7 @@ import { cn } from "@/lib/utils";
 import { formatEnumLabel } from "@/lib/format";
 import { HtmlTableEmptyState } from "@/components/ui/EmptyState";
 import { ViewToggle } from "@/components/ViewToggle";
-import { useMobileDefaultViewMode } from "@/hooks/useMobileDefaultViewMode";
+import { useViewMode } from "@/hooks/useViewMode";
 import { CardQrCode } from "@/components/CardQrCode";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
 import { ModuleFiltersCard, ModuleFilterSearch } from "@/components/ModuleFiltersCard";
@@ -119,8 +119,8 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
       setStatus(st);
     }
   }, [urlSearch]);
-  const [overviewViewMode, setOverviewViewMode] = useMobileDefaultViewMode("viewMode_inventory");
-  const [catalogueViewMode, setCatalogueViewMode] = useMobileDefaultViewMode("viewMode_inventory_catalogue");
+  const [overviewViewMode, setOverviewViewMode] = useViewMode("inventory", "table");
+  const [catalogueViewMode, setCatalogueViewMode] = useViewMode("inventory_catalogue");
   const [warehouseId, setWarehouseId] = useState<string>("all");
   const [category, setCategory] = useState<string>("all");
   const [status, setStatus] = useState<string>("all");
@@ -746,6 +746,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
               {catalogueRows.map((row) => (
                 <Card
                   key={row.id}
+                  data-testid={`catalogue-card-${row.itemCode}`}
                   className="cursor-pointer"
                   onClick={() => setSelectedCatalogue(row)}
                 >

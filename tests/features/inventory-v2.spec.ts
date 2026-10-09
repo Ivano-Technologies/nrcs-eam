@@ -10,12 +10,18 @@ test.describe("Inventory V2 (live)", () => {
     await expect(page.getByPlaceholder("Search item code/name")).toBeVisible();
     await expect(page.getByTestId("view-toggle-card")).toBeVisible();
     await expect(page.getByTestId("view-toggle-table")).toBeVisible();
+    // Stock overview is a dense list: Table stays its default.
+    await expect(page.getByTestId("view-toggle-table")).toHaveAttribute("aria-pressed", "true");
 
     // Settings tab houses catalogue admin actions post inventory
     // restructure (was on Catalogue tab before commit 1b7325f)
     await page.getByTestId("inventory-tab-settings").click();
     await expect(page.getByRole("button", { name: /Import IFRC Catalogue/i })).toBeVisible();
     await page.getByTestId("inventory-tab-catalogue").click();
+    // The Item catalogue opens in Card (the default wherever a Card/Table toggle exists).
+    await expect(page.locator('[data-testid^="catalogue-card-"]').first()).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByTestId("view-toggle-card")).toHaveAttribute("aria-pressed", "true");
+    await page.getByTestId("view-toggle-table").click();
 
     const rows = page.locator('[data-testid^="catalogue-row-"]');
     await expect(rows.first()).toBeVisible({ timeout: 60_000 });

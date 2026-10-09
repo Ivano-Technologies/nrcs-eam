@@ -24,7 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc";
-import { useMobileDefaultViewMode } from "@/hooks/useMobileDefaultViewMode";
+import { useViewMode } from "@/hooks/useViewMode";
 import { ClipboardCheck, Loader2, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -37,7 +37,7 @@ function statusBadge(status: string) {
 
 export default function VerificationCampaigns() {
   const { user } = useAuth();
-  const [viewMode, setViewMode] = useMobileDefaultViewMode("viewMode_verification_campaigns");
+  const [viewMode, setViewMode] = useViewMode("verification_campaigns");
   const isAdmin = user?.role === "admin";
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);

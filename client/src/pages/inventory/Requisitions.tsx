@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ViewToggle } from "@/components/ViewToggle";
-import { useMobileDefaultViewMode } from "@/hooks/useMobileDefaultViewMode";
+import { useViewMode } from "@/hooks/useViewMode";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { toast } from "sonner";
 import { downloadBase64File } from "@/lib/download";
@@ -32,7 +32,7 @@ function priorityVariant(priority?: string) {
 export default function Requisitions({ embedInShell = false }: { embedInShell?: boolean } = {}) {
   const [location, setLocation] = useLocation();
   const { isAdmin } = usePermissions();
-  const [viewMode, setViewMode] = useMobileDefaultViewMode("viewMode_inventory_requisitions");
+  const [viewMode, setViewMode] = useViewMode("inventory_requisitions");
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState("all");
   const [priority, setPriority] = useState("all");

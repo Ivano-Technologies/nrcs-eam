@@ -56,3 +56,28 @@ export function typeToSegment(type: FacilityType | "all"): FacilitiesSegment {
   if (type === "clinic") return "clinics";
   return "warehouses";
 }
+
+/** Facilities list routes (the Table, Card and Map views live here; not /new or a detail page). */
+const FACILITIES_LIST_PATH = /^\/app\/facilities(?:\/(?:all|national-hq|branches|divisions|clinics|warehouses))?\/?$/;
+
+export function isFacilitiesListPath(pathname: string): boolean {
+  return FACILITIES_LIST_PATH.test(pathname);
+}
+
+/** Saved view name for the Facilities list (`viewMode_v2_facilities`: table, card or map). */
+export const FACILITIES_VIEW_NAME = "facilities";
+export const FACILITIES_VIEWS = ["table", "card", "map"] as const;
+
+/** True when the URL asks for the Map view (`?view=map`). */
+export function isFacilitiesMapSearch(search: string): boolean {
+  return new URLSearchParams(search).get("view") === "map";
+}
+
+/** The same path with `view` set to map, or removed. Other params (for example mapMock) are kept. */
+export function withFacilitiesView(pathname: string, search: string, view: "map" | null): string {
+  const params = new URLSearchParams(search);
+  if (view) params.set("view", view);
+  else params.delete("view");
+  const qs = params.toString();
+  return qs ? `${pathname}?${qs}` : pathname;
+}
