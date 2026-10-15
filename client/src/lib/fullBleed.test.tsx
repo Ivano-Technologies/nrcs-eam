@@ -1,6 +1,6 @@
 import { act, cleanup, render, screen } from "@testing-library/react";
 import React, { useState } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   FULL_BLEED_VIEWS,
   FullBleedProvider,
@@ -73,7 +73,7 @@ function App({ page, initialSaved = SIDEBAR_FULL_WIDTH, onSave = () => {} }: { p
 }
 
 describe("full bleed auto rail (Wave B)", () => {
-  it("flags the maps, the wide WMS and report tables and the print previews, never the Asset Scanner", () => {
+  it("flags only the two maps and the four wide report tables, never the Asset Scanner or print previews", () => {
     expect(FULL_BLEED_VIEWS.map((v) => v.id)).toEqual([
       "asset-map",
       "facilities-map",
@@ -81,13 +81,9 @@ describe("full bleed auto rail (Wave B)", () => {
       "wms-stock-movements",
       "wms-loss-damage",
       "branch-scorecards",
-      "print-receipt",
-      "print-waybill",
-      "print-stock-card",
-      "print-bin-card",
-      "print-monthly-report",
     ]);
     expect(FULL_BLEED_VIEWS.some((v) => /scanner/i.test(v.path) || /scanner/i.test(v.id))).toBe(false);
+    expect(FULL_BLEED_VIEWS.some((v) => /print/i.test(v.path) || /print/i.test(v.id))).toBe(false);
   });
 
   it("collapses to the rail on entering a full bleed view without writing the saved preference", () => {
@@ -201,5 +197,36 @@ describe("route driven fold (polish phase 1)", () => {
   it("every route driven path is also listed in FULL_BLEED_VIEWS", () => {
     const listed = FULL_BLEED_VIEWS.map((v) => v.path as string);
     for (const path of ROUTE_FULL_BLEED_PATHS) expect(listed).toContain(path);
+  });
+
+  describe("Facilities Map view from the URL", () => {
+    beforeEach(() => window.localStorage.clear());
+
+    it("folds the Facilities list for ?view=map on every type segment", () => {
+      for (const seg of ["all", "national-hq", "branches", "divisions", "clinics", "warehouses"]) {
+        expect(routeWantsFullBleed(`/app/facilities/${seg}`, "?view=map")).toBe(true);
+        expect(routeWantsFullBleed(`/app/facilities/${seg}`, "view=map&mapMock=1")).toBe(true);
+        expect(routeWantsFullBleed(`/app/facilities/${seg}`, "")).toBe(false);
+      }
+    });
+
+    it("never folds a facility detail page or the new facility page", () => {
+      expect(routeWantsFullBleed("/app/facilities/12", "?view=map")).toBe(false);
+      expect(routeWantsFullBleed("/app/facilities/new", "?view=map")).toBe(false);
+    });
+
+    it("a saved Map choice folds on the first frame, before the page adds ?view=map", () => {
+      window.localStorage.setItem("viewMode_v2_facilities", "map");
+      expect(routeWantsFullBleed("/app/facilities/all", "")).toBe(true);
+      // An explicit list view in the URL wins over the saved choice.
+      expect(routeWantsFullBleed("/app/facilities/all", "?view=table")).toBe(false);
+      window.localStorage.setItem("viewMode_v2_facilities", "card");
+      expect(routeWantsFullBleed("/app/facilities/all", "")).toBe(false);
+    });
+
+    it("ignores the pre reset key", () => {
+      window.localStorage.setItem("viewMode_facilities", "map");
+      expect(routeWantsFullBleed("/app/facilities/all", "")).toBe(false);
+    });
   });
 });

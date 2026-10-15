@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useMobileDefaultViewMode } from "@/hooks/useMobileDefaultViewMode";
+import { useViewMode } from "@/hooks/useViewMode";
 import { trpc } from "@/lib/trpc";
 import { useMemo, useState } from "react";
 import { useLocation } from "wouter";
@@ -14,7 +14,7 @@ import { useLocation } from "wouter";
 type Props = { embedInShell?: boolean };
 
 export default function StockCards({ embedInShell = false }: Props = {}) {
-  const [viewMode, setViewMode] = useMobileDefaultViewMode("viewMode_stock_cards");
+  const [viewMode, setViewMode] = useViewMode("stock_cards");
   const [search, setSearch] = useState("");
   const [locationId, setLocationId] = useState("all");
   const [expiryWindow, setExpiryWindow] = useState<"all" | "expiring-30" | "expiring-90" | "expired">("all");

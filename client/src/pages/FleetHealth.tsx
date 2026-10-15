@@ -21,7 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ViewToggle } from "@/components/ViewToggle";
-import { useMobileDefaultViewMode } from "@/hooks/useMobileDefaultViewMode";
+import { useViewMode } from "@/hooks/useViewMode";
 import { downloadBase64File } from "@/lib/download";
 import { formatNaira } from "@/lib/format";
 import { KPI_VALUE_CLASS } from "@/lib/kpiTypography";
@@ -31,7 +31,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 export default function FleetHealth() {
-  const [viewMode, setViewMode] = useMobileDefaultViewMode("viewMode_fleet_health");
+  const [viewMode, setViewMode] = useViewMode("fleet_health");
   const [siteId, setSiteId] = useState<string>("all");
   const queryInput = useMemo(
     () => (siteId !== "all" ? { siteId: parseInt(siteId, 10) } : undefined),
