@@ -69,11 +69,11 @@ export default function InventoryTrackingPage() {
         <p className="text-sm text-muted-foreground max-w-2xl">
           Track inventory transactions, stock history, and material movement across locations.
         </p>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {LINKS.map((item) => (
-            <Link key={item.title} href={item.href} className="block h-full rounded-lg border bg-card transition-colors hover:bg-muted/50">
-              <Card className="h-full border-0 shadow-none">
-                <CardHeader className="pb-2">
+            <Link key={item.title} href={item.href} className="block h-full rounded-xl border bg-card transition-colors hover:bg-muted/50">
+              <Card size="sm" className="h-full border-0 shadow-none">
+                <CardHeader>
                   <div className="flex items-start gap-3">
                     <item.icon className="h-5 w-5 shrink-0 text-primary" />
                     <div className="min-w-0 space-y-1">

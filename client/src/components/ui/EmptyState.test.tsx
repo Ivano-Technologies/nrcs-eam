@@ -6,10 +6,11 @@ import { EmptyState, HtmlTableEmptyState } from "./EmptyState";
 afterEach(() => cleanup());
 
 describe("EmptyState (Wave B6)", () => {
-  it("renders title, body and action", () => {
-    render(<EmptyState title="No receipts yet" body="Receipts appear here once a GRN is posted." action={<button type="button">New receipt</button>} />);
+  it("renders an icon, one line and the action", () => {
+    const { container } = render(<EmptyState title="No receipts yet" action={<button type="button">New receipt</button>} />);
     expect(screen.getByText("No receipts yet")).toBeInTheDocument();
-    expect(screen.getByText("Receipts appear here once a GRN is posted.")).toBeInTheDocument();
+    expect(container.querySelector("svg")).not.toBeNull();
+    expect(container.querySelectorAll("p")).toHaveLength(1);
     expect(screen.getByRole("button", { name: "New receipt" })).toBeInTheDocument();
   });
 

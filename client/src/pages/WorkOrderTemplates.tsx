@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { trpc } from "@/lib/trpc";
 import PageHeader from "@/components/ui/PageHeader";
 import PageLoader from "@/components/ui/PageLoader";
@@ -162,25 +163,32 @@ export default function WorkOrderTemplates() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <PageHeader
-          icon={Files}
-          title="Work order templates"
-          subtitle="Create reusable templates for common maintenance tasks"
-          className="mb-0"
-        />
-        <Button onClick={() => setIsCreateDialogOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          New template
-        </Button>
-      </div>
+      <PageHeader
+        icon={Files}
+        title="Work order templates"
+        subtitle="Create reusable templates for common maintenance tasks"
+        actions={
+          <>
+            <Button onClick={() => setIsCreateDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              New template
+            </Button>
+          </>
+        }
+      />
 
       {templates.length === 0 ? (
         <Card>
-          <CardContent className="py-8 text-center">
-            <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">No templates yet. Create your first template to get started.</p>
-          </CardContent>
+          <EmptyState
+            icon={FileText}
+            title="No templates yet"
+            action={
+              <Button variant="outline" onClick={() => setIsCreateDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                New template
+              </Button>
+            }
+          />
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -211,10 +219,10 @@ export default function WorkOrderTemplates() {
                 <div className="space-y-2 text-sm">
                   <p className="text-muted-foreground">{template.description}</p>
                   <div className="flex gap-2">
-                    <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">
+                    <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-md text-xs">
                       {template.type}
                     </span>
-                    <span className={`px-2 py-1 rounded text-xs ${
+                    <span className={`rounded-full px-2 py-1 text-xs ${
                       template.priority === 'critical' ? 'bg-red-100 text-red-800' :
                       template.priority === 'high' ? 'bg-orange-100 text-orange-800' :
                       template.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :

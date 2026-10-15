@@ -79,7 +79,7 @@ export function BottomSheet({
       data-testid={testId}
       data-snap={snap}
       className={cn(
-        "absolute inset-x-0 bottom-0 z-20 flex flex-col rounded-t-[18px] border-t border-[#E5E7EB] bg-white text-[#111827] shadow-[0_-8px_24px_rgba(15,23,42,.12)] dark:border-[#26364A] dark:bg-[#162130] dark:text-[#E6EAF0]",
+        "absolute inset-x-0 bottom-0 z-20 flex flex-col rounded-t-xl border-t border-[#E5E7EB] bg-white text-[#111827] shadow-[0_-8px_24px_rgba(15,23,42,.12)] dark:border-[#26364A] dark:bg-[#162130] dark:text-[#E6EAF0]",
         drag == null && "transition-[height] duration-200 ease-out motion-reduce:transition-none",
         className
       )}

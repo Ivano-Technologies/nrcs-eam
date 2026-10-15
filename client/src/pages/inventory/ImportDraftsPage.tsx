@@ -36,7 +36,7 @@ export default function ImportDraftsPage({ embedInShell = false }: { embedInShel
   });
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {!embedInShell ? (
         <div>
           <PageHeader
@@ -113,7 +113,6 @@ export default function ImportDraftsPage({ embedInShell = false }: { embedInShel
                     colSpan={6}
                     icon={Upload}
                     title="No import drafts yet"
-                    body="Import drafts appear here once a file is imported."
                   />
                 ) : null}
               </tbody>

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
 import PageHeader from "@/components/ui/PageHeader";
 import { ArrowLeftRight as ArrowLeftRightIcon } from "lucide-react";
@@ -160,7 +160,7 @@ export default function Transfers({ embedInShell = false }: { embedInShell?: boo
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {!embedInShell ? (
         <>
           <PageHeader icon={ArrowLeftRightIcon} title="Transfers" />
@@ -348,7 +348,7 @@ export default function Transfers({ embedInShell = false }: { embedInShell?: boo
                 </div>
               ))}
             </div>
-            <div className="flex justify-end gap-2">
+            <DialogFooter>
               <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
               <Button disabled={createMutation.isPending} onClick={submitCreate}>
                 {createMutation.isPending ? (
@@ -360,7 +360,7 @@ export default function Transfers({ embedInShell = false }: { embedInShell?: boo
                   "Submit"
                 )}
               </Button>
-            </div>
+            </DialogFooter>
           </div>
         </DialogContent>
       </Dialog>
@@ -416,7 +416,7 @@ export default function Transfers({ embedInShell = false }: { embedInShell?: boo
               );
             })}
           </div>
-          <div className="flex justify-end gap-2">
+          <DialogFooter>
             <Button variant="outline" onClick={() => setDispatchOpen(false)}>Cancel</Button>
             <Button disabled={dispatchMutation.isPending} onClick={submitDispatch}>
               {dispatchMutation.isPending ? (
@@ -428,7 +428,7 @@ export default function Transfers({ embedInShell = false }: { embedInShell?: boo
                 "Confirm dispatch"
               )}
             </Button>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

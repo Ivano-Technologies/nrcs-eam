@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { Toolbar } from "@/components/Toolbar";
+import { InventoryShellActions } from "@/components/inventory/InventoryShell";
 import { DateHint, formatEmpty } from "@/lib/format";
 import { trpc } from "@/lib/trpc";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
@@ -8,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ViewToggle } from "@/components/ViewToggle";
@@ -50,27 +52,35 @@ export default function Distributions({ embedInShell = false }: { embedInShell?:
     onError: (e) => toast.error(e.message),
   });
 
+  const newDistributionButton = (
+    <Button className="h-9" data-testid="new-dist-btn" onClick={() => setOpen(true)}>
+      New distribution
+    </Button>
+  );
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      <InventoryShellActions>{newDistributionButton}</InventoryShellActions>
       {!embedInShell ? (
         <>
-          <PageHeader icon={HandHeartIcon} title="Distributions" />
+          <PageHeader icon={HandHeartIcon} title="Distributions" actions={newDistributionButton} />
           <InventorySecondaryNav />
         </>
       ) : null}
-      <Card>
-        <CardContent className="flex flex-wrap items-center gap-2 pt-4">
-          <Input placeholder="Incident" className="w-[220px]" value={incident} onChange={(e) => setIncident(e.target.value)} />
-          <Input placeholder="Location" className="w-[220px]" value={location} onChange={(e) => setLocation(e.target.value)} />
-          <ViewToggle value={viewMode} onChange={setViewMode} />
-          <Button data-testid="new-dist-btn" className="ml-auto" onClick={() => setOpen(true)}>New distribution</Button>
-        </CardContent>
-      </Card>
+      <Toolbar
+        filters={
+          <>
+            <Input placeholder="Incident" aria-label="Incident" className="h-9 w-36" value={incident} onChange={(e) => setIncident(e.target.value)} />
+            <Input placeholder="Location" aria-label="Location" className="h-9 w-36" value={location} onChange={(e) => setLocation(e.target.value)} />
+          </>
+        }
+        end={<ViewToggle value={viewMode} onChange={setViewMode} />}
+      />
       {viewMode === "card" ? (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {(list.data ?? []).map((row) => (
-            <Card key={row.id} data-testid={`dist-row-${row.distributionNumber}`}>
-              <CardContent className="space-y-2 p-4">
+            <Card size="sm" key={row.id} data-testid={`dist-row-${row.distributionNumber}`}>
+              <CardContent className="space-y-2">
                 <p className="font-mono text-sm">{row.distributionNumber}</p>
                 <p className="font-semibold">{row.location}</p>
                 <p className="text-xs text-muted-foreground">{row.distributionDate}</p>
@@ -160,14 +170,14 @@ export default function Distributions({ embedInShell = false }: { embedInShell?:
             </Select>
             <Label>Incident reference</Label>
             <Input value={incident} onChange={(e) => setIncident(e.target.value)} />
-            <div className="grid grid-cols-4 gap-2">
-              <Input placeholder="Households" value={householdCount} onChange={(e) => setHouseholdCount(e.target.value)} />
-              <Input placeholder="Individuals" value={beneficiaryCount} onChange={(e) => setBeneficiaryCount(e.target.value)} />
-              <Input placeholder="Male" value={maleCount} onChange={(e) => setMaleCount(e.target.value)} />
-              <Input placeholder="Female" value={femaleCount} onChange={(e) => setFemaleCount(e.target.value)} />
-              <Input placeholder="Children" value={childrenCount} onChange={(e) => setChildrenCount(e.target.value)} />
-              <Input placeholder="Elderly" value={elderlyCount} onChange={(e) => setElderlyCount(e.target.value)} />
-              <Input placeholder="PWD" value={pwdCount} onChange={(e) => setPwdCount(e.target.value)} />
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
+              <div className="space-y-1"><Label className="text-xs text-muted-foreground">Households</Label><Input aria-label="Households" placeholder="Households" value={householdCount} onChange={(e) => setHouseholdCount(e.target.value)} /></div>
+              <div className="space-y-1"><Label className="text-xs text-muted-foreground">Individuals</Label><Input aria-label="Individuals" placeholder="Individuals" value={beneficiaryCount} onChange={(e) => setBeneficiaryCount(e.target.value)} /></div>
+              <div className="space-y-1"><Label className="text-xs text-muted-foreground">Male</Label><Input aria-label="Male" placeholder="Male" value={maleCount} onChange={(e) => setMaleCount(e.target.value)} /></div>
+              <div className="space-y-1"><Label className="text-xs text-muted-foreground">Female</Label><Input aria-label="Female" placeholder="Female" value={femaleCount} onChange={(e) => setFemaleCount(e.target.value)} /></div>
+              <div className="space-y-1"><Label className="text-xs text-muted-foreground">Children</Label><Input aria-label="Children" placeholder="Children" value={childrenCount} onChange={(e) => setChildrenCount(e.target.value)} /></div>
+              <div className="space-y-1"><Label className="text-xs text-muted-foreground">Elderly</Label><Input aria-label="Elderly" placeholder="Elderly" value={elderlyCount} onChange={(e) => setElderlyCount(e.target.value)} /></div>
+              <div className="space-y-1"><Label className="text-xs text-muted-foreground">PWD</Label><Input aria-label="PWD" placeholder="PWD" value={pwdCount} onChange={(e) => setPwdCount(e.target.value)} /></div>
             </div>
             <Label>Observers</Label>
             <Input value={observers} onChange={(e) => setObservers(e.target.value)} />
@@ -175,7 +185,7 @@ export default function Distributions({ embedInShell = false }: { embedInShell?:
             <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
             <Label>Challenges</Label>
             <Textarea value={challenges} onChange={(e) => setChallenges(e.target.value)} />
-            <div className="flex justify-end gap-2">
+            <DialogFooter>
               <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
               <Button
                 onClick={() =>
@@ -203,7 +213,7 @@ export default function Distributions({ embedInShell = false }: { embedInShell?:
               >
                 Submit
               </Button>
-            </div>
+            </DialogFooter>
           </div>
         </DialogContent>
       </Dialog>

@@ -1,4 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import { Upload } from "lucide-react";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { InventoryShellActions } from "@/components/inventory/InventoryShell";
 import { DATE_INPUT_HINT, formatDate } from "@/lib/format";
 import { HtmlTableEmptyState } from "@/components/ui/EmptyState";
 import { trpc } from "@/lib/trpc";
@@ -6,14 +9,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
 import PageHeader from "@/components/ui/PageHeader";
 import { PackageCheck as PackageCheckIcon } from "lucide-react";
 import { toast } from "sonner";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { Badge } from "@/components/ui/badge";
-import { ModuleFiltersCard, ModuleFilterSearch } from "@/components/ModuleFiltersCard";
+import { Toolbar, ToolbarMore, ToolbarSearch } from "@/components/Toolbar";
 import { useMobileTableColumns, MobileColumnsToggle, mobileSecondaryCol } from "@/hooks/useMobileTableColumns";
 import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
@@ -79,33 +82,40 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
     onError: (e) => toast.error(e.message),
   });
 
+  const newGrnButton = isStaffOrAbove ? (
+    <Button className="h-9" data-testid="new-grn-btn" onClick={() => setLocation("/app/inventory/receipts/new")}>
+      New GRN
+    </Button>
+  ) : null;
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      <InventoryShellActions>{newGrnButton}</InventoryShellActions>
       {!embedInShell ? (
         <>
-          <PageHeader icon={PackageCheckIcon} title="Receiving" />
+          <PageHeader icon={PackageCheckIcon} title="Receiving" actions={newGrnButton ?? undefined} />
           <InventorySecondaryNav />
         </>
       ) : null}
-      <ModuleFiltersCard
-        filterRow={
+      <Toolbar
+        filters={
           <>
-            <ModuleFilterSearch
+            <ToolbarSearch
               placeholder="Search GRN number or consignment"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
             <Input
-              className="h-9 w-[220px]"
+              className="h-9 w-36"
               placeholder="Received from"
               value={receivedFrom}
               onChange={(e) => setReceivedFrom(e.target.value)}
             />
-            <Input className="h-9 w-[170px]" type="date" aria-label="From date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-            <Input className="h-9 w-[170px]" type="date" aria-label="To date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+            <Input className="h-9 w-36" type="date" aria-label="From date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+            <Input className="h-9 w-36" type="date" aria-label="To date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
             <span className="text-xs text-muted-foreground">Dates use {DATE_INPUT_HINT}</span>
             <Select value={status} onValueChange={(v) => setStatus(v as typeof status)}>
-              <SelectTrigger className="h-9 w-[180px]"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-9 w-36"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All status</SelectItem>
                 <SelectItem value="draft">Draft</SelectItem>
@@ -116,19 +126,15 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
             </Select>
           </>
         }
-        toolbarStart={
-          <MobileColumnsToggle isMobile={isMobile} showAll={showAll} onToggle={setShowAll} />
-        }
-        toolbarEnd={
+        end={
           <>
-            <Button variant="outline" onClick={() => setLocation(appPath("/inventory/import"))}>
-              Import
-            </Button>
-            {isStaffOrAbove ? (
-              <Button data-testid="new-grn-btn" onClick={() => setLocation("/app/inventory/receipts/new")}>
-                New GRN
-              </Button>
-            ) : null}
+            <MobileColumnsToggle isMobile={isMobile} showAll={showAll} onToggle={setShowAll} />
+            <ToolbarMore>
+              <DropdownMenuItem onSelect={() => setLocation(appPath("/inventory/import"))}>
+                <Upload className="mr-2 h-4 w-4" aria-hidden />
+                Import from file
+              </DropdownMenuItem>
+            </ToolbarMore>
           </>
         }
       />
@@ -251,7 +257,6 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
                 colSpan={7}
                 icon={PackageCheckIcon}
                 title="No receipts yet"
-                body="Receipts appear here once a GRN is posted."
               />
             ) : null}
           </tbody>
@@ -277,46 +282,46 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
             <div className="space-y-2">
               <Label>Line items</Label>
               {lines.map((line, idx) => (
-                <div key={idx} className="grid grid-cols-5 gap-2">
-                  <Select
+                <div key={idx} className="grid grid-cols-1 gap-2 rounded-md border p-3 sm:grid-cols-3" data-testid={`grn-line-${idx}`}>
+                  <div className="space-y-1"><Label className="text-xs text-muted-foreground">Item</Label><Select
                     value={line.catalogueId}
                     onValueChange={(v) =>
                       setLines((prev) => prev.map((x, i) => (i === idx ? { ...x, catalogueId: v } : x)))
                     }
                   >
-                    <SelectTrigger><SelectValue placeholder="Item" /></SelectTrigger>
+                    <SelectTrigger aria-label="Item"><SelectValue placeholder="Item" /></SelectTrigger>
                     <SelectContent>
                       {(catalogue ?? []).map((c) => (
                         <SelectItem key={c.id} value={String(c.id)}>{c.itemCode} · {c.name}</SelectItem>
                       ))}
                     </SelectContent>
-                  </Select>
-                  <Input
+                  </Select></div>
+                  <div className="space-y-1"><Label className="text-xs text-muted-foreground">CTN ID</Label><Input aria-label="CTN ID"
                     placeholder="CTN ID"
                     value={line.ctnId}
                     onChange={(e) => setLines((prev) => prev.map((x, i) => (i === idx ? { ...x, ctnId: e.target.value } : x)))}
-                  />
-                  <Input
+                  /></div>
+                  <div className="space-y-1"><Label className="text-xs text-muted-foreground">Qty</Label><Input aria-label="Qty"
                     placeholder="Qty"
                     value={line.quantity}
                     onChange={(e) => setLines((prev) => prev.map((x, i) => (i === idx ? { ...x, quantity: e.target.value } : x)))}
-                  />
-                  <Input
+                  /></div>
+                  <div className="space-y-1"><Label className="text-xs text-muted-foreground">Batch #</Label><Input aria-label="Batch #"
                     placeholder="Batch #"
                     value={line.batchNumber}
                     onChange={(e) => setLines((prev) => prev.map((x, i) => (i === idx ? { ...x, batchNumber: e.target.value } : x)))}
-                  />
-                  <Input
+                  /></div>
+                  <div className="space-y-1"><Label className="text-xs text-muted-foreground">Expiry date</Label><Input
                     type="date"
                     aria-label="Expiry date"
                     value={line.expiryDate}
                     onChange={(e) => setLines((prev) => prev.map((x, i) => (i === idx ? { ...x, expiryDate: e.target.value } : x)))}
-                  />
-                  <Input
+                  /></div>
+                  <div className="space-y-1"><Label className="text-xs text-muted-foreground">Notes</Label><Input aria-label="Notes"
                     placeholder="Notes"
                     value={line.notes}
                     onChange={(e) => setLines((prev) => prev.map((x, i) => (i === idx ? { ...x, notes: e.target.value } : x)))}
-                  />
+                  /></div>
                 </div>
               ))}
               <Button
@@ -328,7 +333,7 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
                 Add line
               </Button>
             </div>
-            <div className="flex justify-end gap-2">
+            <DialogFooter>
               <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
               <Button
                 disabled={createMutation.isPending}
@@ -360,7 +365,7 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
                   "Submit for Approval"
                 )}
               </Button>
-            </div>
+            </DialogFooter>
           </div>
         </DialogContent>
       </Dialog>

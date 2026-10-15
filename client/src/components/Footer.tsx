@@ -7,7 +7,7 @@ export default function Footer({ className }: { className?: string }) {
 
   return (
     <footer className={cn("border-t bg-background mt-auto", className)}>
-      <div className="container mx-auto px-4 py-6">
+      <div className="w-full px-4 py-6 sm:px-6">
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="text-sm text-muted-foreground text-center md:text-left">
             <p>© {currentYear} Nigerian Red Cross Society. All rights reserved.</p>

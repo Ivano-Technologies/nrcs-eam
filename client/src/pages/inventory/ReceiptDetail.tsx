@@ -285,7 +285,7 @@ export default function ReceiptDetail() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div>
         <PageHeader title={savedId ? "GRN detail" : "New GRN"} back={{ label: "Receiving", href: appPath("/inventory/receipts") }} />
         <InventorySecondaryNav />
@@ -409,7 +409,7 @@ export default function ReceiptDetail() {
                     Saving…
                   </>
                 ) : (
-                  "Save as Draft"
+                  "Save as draft"
                 )}
               </Button>
               <Button onClick={() => void finalize()} disabled={!isFinalizable || finalizePending || isLegacy || isFinalized}>
@@ -444,7 +444,7 @@ export default function ReceiptDetail() {
                 {COPY_TYPES.map((copy) => {
                   const timestamp = (receiptQuery.data?.copiesPrinted as Record<string, string | null> | undefined)?.[copy];
                   return (
-                    <div key={copy} className="rounded border px-2 py-1">
+                    <div key={copy} className="rounded-md border px-2 py-1">
                       {timestamp ? `✔ ${copy}: ${formatDateTime(timestamp)}` : `○ ${copy}: not printed`}
                     </div>
                   );

@@ -1,4 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { formatDate, formatDateTime, formatEmpty } from "@/lib/format";
 import PageHeader from "@/components/ui/PageHeader";
 import TableLoader from "@/components/ui/TableLoader";
@@ -210,26 +211,27 @@ export default function Users() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <PageHeader
-          icon={UsersIcon}
-          title="Users"
-          subtitle="Create accounts, assign facilities, and manage access"
-          className="mb-0"
-        />
-        <div className="flex shrink-0 flex-wrap gap-2">
-          <Button variant="outline" className="gap-2" onClick={() => setOrphanOpen(true)}>
-            <Ghost className="h-4 w-4" />
-            Find orphaned accounts
-          </Button>
-          <Button onClick={() => setCreateOpen(true)} className="gap-2">
-            <UserPlus className="h-4 w-4" />
-            Add user
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        icon={UsersIcon}
+        title="Users"
+        subtitle="Create accounts, assign facilities, and manage access"
+        actions={
+          <>
+            <div className="flex shrink-0 flex-wrap gap-2">
+              <Button variant="outline" className="gap-2" onClick={() => setOrphanOpen(true)}>
+                <Ghost className="h-4 w-4" />
+                Find orphaned accounts
+              </Button>
+              <Button onClick={() => setCreateOpen(true)} className="gap-2">
+                <UserPlus className="h-4 w-4" />
+                Add user
+              </Button>
+            </div>
+          </>
+        }
+      />
 
-      <div className="flex flex-col gap-3 rounded-lg border bg-card p-4 md:flex-row md:flex-wrap md:items-end">
+      <div className="flex flex-col gap-3 rounded-xl border bg-card p-4 md:flex-row md:flex-wrap md:items-end">
         <div className="min-w-[200px] flex-1 space-y-2">
           <Label htmlFor="user-search">Search</Label>
           <Input
@@ -384,7 +386,7 @@ export default function Users() {
           </TableBody>
         </Table>
         {(rows?.length ?? 0) === 0 ? (
-          <p className="p-6 text-center text-muted-foreground">No users match your filters.</p>
+          <EmptyState icon={UsersIcon} title="No users match these filters" />
         ) : null}
       </div>
 
@@ -624,6 +626,7 @@ export default function Users() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={deactivateMutation.isPending || deactivateId == null}
               onClick={() => deactivateId != null && deactivateMutation.mutate({ id: deactivateId })}
             >

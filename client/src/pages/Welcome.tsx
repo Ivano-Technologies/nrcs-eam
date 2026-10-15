@@ -137,11 +137,11 @@ export default function Welcome() {
             </p>
           </div>
           <div className="grid gap-4 md:grid-cols-2 max-w-2xl mx-auto">
-            <Button size="lg" onClick={() => setLocation(appPath("/facilities"))}>
+            <Button onClick={() => setLocation(appPath("/facilities"))}>
               <Package className="mr-2 h-5 w-5" />
               Add first facility
             </Button>
-            <Button size="lg" variant="outline" onClick={() => setLocation(appPath("/"))}>
+            <Button variant="outline" onClick={() => setLocation(appPath("/"))}>
               View dashboard
             </Button>
           </div>

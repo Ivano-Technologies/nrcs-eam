@@ -79,7 +79,7 @@ export function PWAInstallCard({
     <Card className="border-primary shadow-lg" role="dialog" aria-labelledby="pwa-install-title">
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
-          <div className="p-2 rounded-lg bg-primary/10 shrink-0">
+          <div className="p-2 rounded-md bg-primary/10 shrink-0">
             <Download className="h-5 w-5 text-primary dark:text-[#F87171]" aria-hidden />
           </div>
           <div className="flex-1 min-w-0">

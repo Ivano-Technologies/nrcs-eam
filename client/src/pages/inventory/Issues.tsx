@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { InventoryShellActions } from "@/components/inventory/InventoryShell";
 import { HtmlTableEmptyState } from "@/components/ui/EmptyState";
 import { DATE_INPUT_HINT, formatDate } from "@/lib/format";
 import { trpc } from "@/lib/trpc";
@@ -9,7 +10,7 @@ import { InventorySecondaryNav } from "@/components/inventory/InventorySecondary
 import PageHeader from "@/components/ui/PageHeader";
 import { Truck as TruckIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { ModuleFiltersCard, ModuleFilterSearch } from "@/components/ModuleFiltersCard";
+import { Toolbar, ToolbarSearch } from "@/components/Toolbar";
 import { useMobileTableColumns, MobileColumnsToggle, mobileSecondaryCol } from "@/hooks/useMobileTableColumns";
 import { cn } from "@/lib/utils";
 import { useLocation, useSearch } from "wouter";
@@ -56,34 +57,41 @@ export default function Issues({ embedInShell = false }: { embedInShell?: boolea
     return <Badge variant="secondary">draft</Badge>;
   };
 
+  const newWaybillButton = (
+    <Button className="h-9" data-testid="new-waybill-btn" onClick={() => setLocation("/app/inventory/issues/new")}>
+      New waybill
+    </Button>
+  );
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      <InventoryShellActions>{newWaybillButton}</InventoryShellActions>
       {!embedInShell ? (
         <>
-          <PageHeader icon={TruckIcon} title="Shipping and tracking" />
+          <PageHeader icon={TruckIcon} title="Shipping and tracking" actions={newWaybillButton} />
           <InventorySecondaryNav />
         </>
       ) : null}
-      <ModuleFiltersCard
-        filterRow={
+      <Toolbar
+        filters={
           <>
-            <ModuleFilterSearch
+            <ToolbarSearch
               placeholder="Search WB number or destination"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            <Input className="h-9 w-[170px]" type="date" aria-label="From date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-            <Input className="h-9 w-[170px]" type="date" aria-label="To date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+            <Input className="h-9 w-36" type="date" aria-label="From date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+            <Input className="h-9 w-36" type="date" aria-label="To date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
             <span className="text-xs text-muted-foreground">Dates use {DATE_INPUT_HINT}</span>
             <Select value={warehouseId} onValueChange={setWarehouseId}>
-              <SelectTrigger className="h-9 w-[220px]"><SelectValue placeholder="Source warehouse" /></SelectTrigger>
+              <SelectTrigger className="h-9 w-36"><SelectValue placeholder="Source warehouse" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All warehouses</SelectItem>
                 {wh.map((w) => <SelectItem key={w.id} value={String(w.id)}>{w.name}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={status} onValueChange={(v) => setStatus(v as typeof status)}>
-              <SelectTrigger className="h-9 w-[170px]"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-9 w-36"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All status</SelectItem>
                 <SelectItem value="draft">Draft</SelectItem>
@@ -93,7 +101,7 @@ export default function Issues({ embedInShell = false }: { embedInShell?: boolea
               </SelectContent>
             </Select>
             <Select value={destinationType} onValueChange={(v) => setDestinationType(v as typeof destinationType)}>
-              <SelectTrigger className="h-9 w-[190px]"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-9 w-36"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All destinations</SelectItem>
                 <SelectItem value="beneficiary">Beneficiary</SelectItem>
@@ -103,10 +111,9 @@ export default function Issues({ embedInShell = false }: { embedInShell?: boolea
             </Select>
           </>
         }
-        toolbarStart={
+        end={
           <MobileColumnsToggle isMobile={isMobile} showAll={showAll} onToggle={setShowAll} />
         }
-        toolbarEnd={<Button data-testid="new-waybill-btn" onClick={() => setLocation("/app/inventory/issues/new")}>New waybill</Button>}
       />
 
       <div
@@ -154,7 +161,6 @@ export default function Issues({ embedInShell = false }: { embedInShell?: boolea
                 colSpan={7}
                 icon={TruckIcon}
                 title="No waybills yet"
-                body="Waybills appear here once stock is dispatched from a warehouse."
               />
             ) : null}
           </tbody>

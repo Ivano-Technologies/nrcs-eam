@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { DateHint, formatDate } from "@/lib/format";
-import { InventoryShell } from "@/components/inventory/InventoryShell";
-import { ModuleFiltersCard, ModuleFilterSearch } from "@/components/ModuleFiltersCard";
+import { InventoryShell, InventoryShellActions } from "@/components/inventory/InventoryShell";
+import { Toolbar, ToolbarSearch } from "@/components/Toolbar";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -103,19 +103,23 @@ export default function CtnRegistryPage() {
 
   return (
     <InventoryShell activeTab="ctn-registry">
-      <div className="space-y-4">
+      <InventoryShellActions>
+        <Button className="h-9" onClick={() => setCreateOpen(true)} data-testid="ctn-create-open">
+          New CTN
+        </Button>
+      </InventoryShellActions>
+      <div className="space-y-6">
 
-        <ModuleFiltersCard
-          filterRow={
+        <Toolbar
+          filters={
             <>
-              <ModuleFilterSearch
+              <ToolbarSearch
                 placeholder="Search CTN code, item code, name…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="min-w-[220px]"
               />
               <Select value={donorId} onValueChange={setDonorId}>
-                <SelectTrigger className="h-9 w-[200px]" data-testid="ctn-filter-donor">
+                <SelectTrigger className="h-9 w-36" data-testid="ctn-filter-donor">
                   <SelectValue placeholder="Donor" />
                 </SelectTrigger>
                 <SelectContent>
@@ -128,7 +132,7 @@ export default function CtnRegistryPage() {
                 </SelectContent>
               </Select>
               <Select value={itemCategory} onValueChange={setItemCategory}>
-                <SelectTrigger className="h-9 w-[200px]">
+                <SelectTrigger className="h-9 w-36">
                   <SelectValue placeholder="Category" />
                 </SelectTrigger>
                 <SelectContent>
@@ -162,13 +166,8 @@ export default function CtnRegistryPage() {
               </div>
             </>
           }
-          toolbarStart={
+          end={
             <MobileColumnsToggle isMobile={isMobile} showAll={showAll} onToggle={setShowAll} />
-          }
-          toolbarEnd={
-            <Button className="h-9" onClick={() => setCreateOpen(true)} data-testid="ctn-create-open">
-              New CTN
-            </Button>
           }
         />
 

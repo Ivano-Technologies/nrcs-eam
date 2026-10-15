@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { Toolbar, ToolbarSearch } from "@/components/Toolbar";
+import { InventoryShellActions } from "@/components/inventory/InventoryShell";
 import { EmptyState, HtmlTableEmptyState } from "@/components/ui/EmptyState";
 import { formatEnumLabel } from "@/lib/format";
 import { useLocation } from "wouter";
@@ -10,7 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -115,57 +117,65 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
     }
   };
 
+  const newRequisitionButton = (
+    <Button className="h-9" data-testid="new-req-btn" onClick={() => setOpen(true)}>
+      New requisition
+    </Button>
+  );
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      <InventoryShellActions>{newRequisitionButton}</InventoryShellActions>
       {!embedInShell ? (
         <>
-          <PageHeader icon={ClipboardListIcon} title="Order fulfilment" />
+          <PageHeader icon={ClipboardListIcon} title="Order fulfilment" actions={newRequisitionButton} />
           <InventorySecondaryNav />
         </>
       ) : null}
-      <Card>
-        <CardContent className="flex flex-wrap items-center gap-2 pt-4">
-          <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger className="w-[170px]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All statuses</SelectItem>
-              {["draft", "submitted", "branch_approved", "hq_approved", "fulfilled", "rejected", "cancelled"].map((s) => (
-                <SelectItem key={s} value={s}>{s}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={priority} onValueChange={setPriority}>
-            <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All priority</SelectItem>
-              <SelectItem value="emergency">Emergency</SelectItem>
-              <SelectItem value="urgent">Urgent</SelectItem>
-              <SelectItem value="routine">Routine</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={facilityId} onValueChange={setFacilityId}>
-            <SelectTrigger className="w-[220px]"><SelectValue placeholder="Requesting facility" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All facilities</SelectItem>
-              {(facilities ?? []).map((f) => <SelectItem key={f.id} value={String(f.id)}>{f.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Input className="w-[240px]" placeholder="Search requisitions" value={search} onChange={(e) => setSearch(e.target.value)} />
-          <ViewToggle value={viewMode} onChange={setViewMode} />
-          <Button data-testid="new-req-btn" className="ml-auto" onClick={() => setOpen(true)}>New requisition</Button>
-        </CardContent>
-      </Card>
+      <Toolbar
+        filters={
+          <>
+            <ToolbarSearch placeholder="Search requisitions" aria-label="Search requisitions" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <Select value={status} onValueChange={setStatus}>
+              <SelectTrigger className="h-9 w-36"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All statuses</SelectItem>
+                {["draft", "submitted", "branch_approved", "hq_approved", "fulfilled", "rejected", "cancelled"].map((s) => (
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={priority} onValueChange={setPriority}>
+              <SelectTrigger className="h-9 w-36"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All priority</SelectItem>
+                <SelectItem value="emergency">Emergency</SelectItem>
+                <SelectItem value="urgent">Urgent</SelectItem>
+                <SelectItem value="routine">Routine</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={facilityId} onValueChange={setFacilityId}>
+              <SelectTrigger className="h-9 w-36"><SelectValue placeholder="Requesting facility" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All facilities</SelectItem>
+                {(facilities ?? []).map((f) => <SelectItem key={f.id} value={String(f.id)}>{f.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </>
+        }
+        end={<ViewToggle value={viewMode} onChange={setViewMode} />}
+      />
 
       {viewMode === "card" ? (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {!list.isLoading && (list.data ?? []).length === 0 ? (
             <Card className="col-span-full">
-              <EmptyState icon={ClipboardListIcon} title="No requisitions yet" body="Requisitions appear here once a branch requests stock." />
+              <EmptyState icon={ClipboardListIcon} title="No requisitions yet" />
             </Card>
           ) : null}
           {(list.data ?? []).map((row) => (
-            <Card key={row.id} data-testid={`req-row-${row.reqNumber}`}>
-              <CardContent className="space-y-2 p-4">
+            <Card size="sm" key={row.id} data-testid={`req-row-${row.reqNumber}`}>
+              <CardContent className="space-y-2">
                 <div className="flex items-center justify-between">
                   <p className="font-mono text-sm">{row.reqNumber}</p>
                   <Badge data-testid="req-priority-badge" data-priority={row.priority ?? "routine"} variant={priorityVariant(row.priority ?? undefined) as any}>{row.priority}</Badge>
@@ -334,7 +344,6 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
                   colSpan={7}
                   icon={ClipboardListIcon}
                   title="No requisitions yet"
-                  body="Requisitions appear here once a branch requests stock."
                 />
               ) : null}
             </tbody>
@@ -370,25 +379,25 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
             <Textarea value={justification} onChange={(e) => setJustification(e.target.value)} />
             <Label>Line items</Label>
             {lines.map((line, idx) => (
-              <div key={idx} className="grid grid-cols-4 gap-2">
-                <Select value={line.catalogueId} onValueChange={(v) => setLines((prev) => prev.map((x, i) => (i === idx ? { ...x, catalogueId: v } : x)))}>
-                  <SelectTrigger><SelectValue placeholder="Item" /></SelectTrigger>
+              <div key={idx} className="grid grid-cols-1 gap-2 rounded-md border p-3 sm:grid-cols-4" data-testid={`req-line-${idx}`}>
+                <div className="space-y-1"><Label className="text-xs text-muted-foreground">Item</Label><Select value={line.catalogueId} onValueChange={(v) => setLines((prev) => prev.map((x, i) => (i === idx ? { ...x, catalogueId: v } : x)))}>
+                  <SelectTrigger aria-label="Item"><SelectValue placeholder="Item" /></SelectTrigger>
                   <SelectContent>{(catalogue ?? []).map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.itemCode} · {c.name}</SelectItem>)}</SelectContent>
-                </Select>
-                <Input placeholder="Qty" value={line.quantity} onChange={(e) => setLines((prev) => prev.map((x, i) => (i === idx ? { ...x, quantity: e.target.value } : x)))} />
-                <Select value={line.urgency} onValueChange={(v) => setLines((prev) => prev.map((x, i) => (i === idx ? { ...x, urgency: v } : x)))}>
-                  <SelectTrigger><SelectValue placeholder="Urgency" /></SelectTrigger>
+                </Select></div>
+                <div className="space-y-1"><Label className="text-xs text-muted-foreground">Qty</Label><Input aria-label="Qty" placeholder="Qty" value={line.quantity} onChange={(e) => setLines((prev) => prev.map((x, i) => (i === idx ? { ...x, quantity: e.target.value } : x)))} /></div>
+                <div className="space-y-1"><Label className="text-xs text-muted-foreground">Urgency</Label><Select value={line.urgency} onValueChange={(v) => setLines((prev) => prev.map((x, i) => (i === idx ? { ...x, urgency: v } : x)))}>
+                  <SelectTrigger aria-label="Urgency"><SelectValue placeholder="Urgency" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="emergency">Emergency</SelectItem>
                     <SelectItem value="urgent">Urgent</SelectItem>
                     <SelectItem value="routine">Routine</SelectItem>
                   </SelectContent>
-                </Select>
-                <Input placeholder="Notes" value={line.notes} onChange={(e) => setLines((prev) => prev.map((x, i) => (i === idx ? { ...x, notes: e.target.value } : x)))} />
+                </Select></div>
+                <div className="space-y-1"><Label className="text-xs text-muted-foreground">Notes</Label><Input aria-label="Notes" placeholder="Notes" value={line.notes} onChange={(e) => setLines((prev) => prev.map((x, i) => (i === idx ? { ...x, notes: e.target.value } : x)))} /></div>
               </div>
             ))}
             <Button variant="outline" onClick={() => setLines((p) => [...p, { catalogueId: "", quantity: "", urgency: "routine", notes: "" }])}>Add item</Button>
-            <div className="flex justify-end gap-2">
+            <DialogFooter>
               <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
               <Button
                 disabled={createMutation.isPending}
@@ -415,10 +424,10 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
                     Saving…
                   </>
                 ) : (
-                  "Save as Draft"
+                  "Save as draft"
                 )}
               </Button>
-            </div>
+            </DialogFooter>
           </div>
         </DialogContent>
       </Dialog>

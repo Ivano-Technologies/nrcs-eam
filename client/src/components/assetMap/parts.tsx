@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
 /** Floating surface (panel, drawer, layer bar, controls). */
 export const surfaceClass =
-  "rounded-[14px] border border-[#E5E7EB] bg-white text-[#111827] shadow-[0_1px_2px_rgba(15,23,42,.06),0_8px_24px_rgba(15,23,42,.10)] dark:border-[#26364A] dark:bg-[#162130] dark:text-[#E6EAF0] dark:shadow-[0_1px_2px_rgba(0,0,0,.30),0_8px_24px_rgba(0,0,0,.35)]";
+  "rounded-xl border border-[#E5E7EB] bg-white text-[#111827] shadow-[0_1px_2px_rgba(15,23,42,.06),0_8px_24px_rgba(15,23,42,.10)] dark:border-[#26364A] dark:bg-[#162130] dark:text-[#E6EAF0] dark:shadow-[0_1px_2px_rgba(0,0,0,.30),0_8px_24px_rgba(0,0,0,.35)]";
 
 /**
  * Clearance for the app's mobile bottom nav: DashboardLayout reserves `pb-20` (80px) for

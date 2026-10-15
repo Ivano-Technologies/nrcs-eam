@@ -28,7 +28,7 @@ test.describe("Compliance register and activity log (live)", () => {
     await page.goto("/app/administration/activity-log");
     await expect(page.getByRole("heading", { name: /^Activity log$/ })).toBeVisible({ timeout: 60_000 });
     await expect(page.getByText("Audit trail of user actions and system changes")).toBeVisible();
-    await expect(page.getByText("Filters", { exact: true }).first()).toBeVisible();
+    await expect(page.getByTestId("activity-log-toolbar")).toBeVisible();
 
     await expect(
       page

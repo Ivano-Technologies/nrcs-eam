@@ -29,7 +29,7 @@ function NotFoundCard({ homePath, inApp = false }: { homePath: string; inApp?: b
     // (bg-card and border follow light and dark) with the same brand red action.
     return (
       <div
-        className="mx-auto w-full max-w-md rounded-3xl border bg-card p-8 text-center text-card-foreground shadow-sm md:p-10"
+        className="mx-auto w-full max-w-md rounded-xl border bg-card p-8 text-center text-card-foreground shadow-sm md:p-10"
         data-testid="not-found"
         data-variant="app"
       >

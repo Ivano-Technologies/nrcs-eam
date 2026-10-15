@@ -123,37 +123,38 @@ export function InsuranceRegisterContent({ embedded = false }: { embedded?: bool
         ) : null}
 
         {!embedded ? (
-        <div className="flex flex-col gap-4 sm:flex-row sm:justify-between">
-          <PageHeader
-            icon={Shield}
-            title="Insurance register"
-            subtitle="Property, vehicle, equipment, and liability policies"
-            className="mb-0"
-          />
-          <div className="flex gap-2">
-            {canManage ? (
-              <Button onClick={() => setOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add policy
-              </Button>
-            ) : null}
-            {canManage ? (
-              <Button variant="outline" disabled={exportExcel.isPending} onClick={() => exportExcel.mutate({})}>
-                {exportExcel.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Exporting…
-                  </>
-                ) : (
-                  <>
-                    <FileSpreadsheet className="mr-2 h-4 w-4" />
-                    Export to Excel
-                  </>
-                )}
-              </Button>
-            ) : null}
-          </div>
-        </div>
+        <PageHeader
+          icon={Shield}
+          title="Insurance register"
+          subtitle="Property, vehicle, equipment, and liability policies"
+          actions={
+            <>
+              <div className="flex gap-2">
+                {canManage ? (
+                  <Button onClick={() => setOpen(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add policy
+                  </Button>
+                ) : null}
+                {canManage ? (
+                  <Button variant="outline" disabled={exportExcel.isPending} onClick={() => exportExcel.mutate({})}>
+                    {exportExcel.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Exporting…
+                      </>
+                    ) : (
+                      <>
+                        <FileSpreadsheet className="mr-2 h-4 w-4" />
+                        Export to Excel
+                      </>
+                    )}
+                  </Button>
+                ) : null}
+              </div>
+            </>
+          }
+        />
         ) : canManage ? (
           <div className="mb-4 flex justify-end gap-2">
             <Button onClick={() => setOpen(true)}>
@@ -176,33 +177,33 @@ export function InsuranceRegisterContent({ embedded = false }: { embedded?: bool
           </div>
         ) : null}
 
-        <div className="grid gap-4 md:grid-cols-4">
-          <Card>
-            <CardHeader className="pb-2">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Card size="sm">
+            <CardHeader>
               <CardTitle className="text-sm">Total insured value</CardTitle>
             </CardHeader>
             <CardContent>
               <p className={KPI_VALUE_CLASS}>{formatNaira(summary.insured)}</p>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="pb-2">
+          <Card size="sm">
+            <CardHeader>
               <CardTitle className="text-sm">Annual premiums</CardTitle>
             </CardHeader>
             <CardContent>
               <p className={KPI_VALUE_CLASS}>{formatNaira(summary.premiums)}</p>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="pb-2">
+          <Card size="sm">
+            <CardHeader>
               <CardTitle className="text-sm">Active policies</CardTitle>
             </CardHeader>
             <CardContent>
               <p className={KPI_VALUE_CLASS}>{summary.active}</p>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="pb-2">
+          <Card size="sm">
+            <CardHeader>
               <CardTitle className="text-sm">Expiring within 30 days</CardTitle>
             </CardHeader>
             <CardContent>
