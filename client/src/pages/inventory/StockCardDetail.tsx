@@ -58,9 +58,8 @@ export default function StockCardDetail() {
   if (!card.data) return <div className="p-4 text-sm text-muted-foreground">Loading stock card…</div>;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <PageHeader
-        className="mb-0"
         eyebrow="Inventory"
         title="Stock card"
         back={{ label: "Stock cards", href: "/app/inventory/tracking/stock-cards" }}

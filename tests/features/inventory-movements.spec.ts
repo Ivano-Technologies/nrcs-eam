@@ -12,7 +12,7 @@ test.describe("Inventory Phase 2 (live)", () => {
     });
     await expect(page.getByLabel("GRN number")).toBeVisible();
     await expect(page.getByLabel("Delegation/consignee location")).toBeVisible();
-    await expect(page.getByRole("button", { name: /Save as Draft/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Save as draft/i })).toBeVisible();
     await expect(page.getByRole("button", { name: /Finalise/i })).toBeVisible();
   });
 
@@ -27,7 +27,7 @@ test.describe("Inventory Phase 2 (live)", () => {
     await expect(page.getByText("WB number")).toBeVisible();
     await expect(page.getByText("Source warehouse")).toBeVisible();
     await expect(page.getByText("Destination name")).toBeVisible();
-    await expect(page.getByRole("button", { name: /Save as Draft/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Save as draft/i })).toBeVisible();
     await expect(page.getByRole("button", { name: /Dispatch/i })).toBeVisible();
   });
 

@@ -68,13 +68,13 @@ export function AuthBrandLogo({ className }: { className?: string }) {
 
 /** Auth inputs: solid fill and a 3:1 border so fields read as fields on the glass card. */
 export const authInputClass = cn(
-  "h-12 rounded-[10px] bg-white border border-[#8A8F98] text-[15px] placeholder:text-gray-500",
+  "h-12 rounded-md bg-white border border-[#8A8F98] text-[15px] placeholder:text-gray-500",
   "focus-visible:border-[#C8102E] focus-visible:ring-2 focus-visible:ring-[#C8102E]/30",
   "dark:bg-white/10 dark:border-white/40 dark:text-white dark:placeholder:text-white/60"
 );
 
 /** Primary CTA — full width, red, elevated shadow (conversion anchor). */
 export const authPrimaryButtonClass = cn(
-  "mt-7 w-full min-h-[48px] rounded-[10px] px-7 py-3.5 text-[15px] font-semibold text-white",
+  "mt-7 w-full min-h-[48px] rounded-md px-7 py-3.5 text-[15px] font-semibold text-white",
   "bg-[#C8102E] shadow-[0_8px_20px_rgba(200,16,46,0.25)] transition-colors hover:bg-[#A50D26]"
 );

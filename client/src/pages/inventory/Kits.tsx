@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
@@ -44,7 +44,7 @@ export default function Kits({ embedInShell = false }: { embedInShell?: boolean 
   const disassembleMutation = trpc.inventoryV2.kits.disassemble.useMutation({ onSuccess: () => toast.success("Disassembled"), onError: (e) => toast.error(e.message) });
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {!embedInShell ? (
         <>
           <PageHeader icon={BoxesIcon} title="Kits" />
@@ -83,8 +83,8 @@ export default function Kits({ embedInShell = false }: { embedInShell?: boolean 
         </TabsContent>
         <TabsContent value="operations">
           <div className="grid gap-4 md:grid-cols-2">
-            <Card>
-              <CardContent className="space-y-2 p-4">
+            <Card size="sm">
+              <CardContent className="space-y-2">
                 <p className="font-semibold">Assemble kits</p>
                 <Select value={warehouseId} onValueChange={setWarehouseId}>
                   <SelectTrigger><SelectValue placeholder="Warehouse" /></SelectTrigger>
@@ -113,8 +113,8 @@ export default function Kits({ embedInShell = false }: { embedInShell?: boolean 
                 ) : null}
               </CardContent>
             </Card>
-            <Card>
-              <CardContent className="space-y-2 p-4">
+            <Card size="sm">
+              <CardContent className="space-y-2">
                 <p className="font-semibold">Disassemble kits</p>
                 <Select value={warehouseId} onValueChange={setWarehouseId}>
                   <SelectTrigger><SelectValue placeholder="Warehouse" /></SelectTrigger>
@@ -178,7 +178,7 @@ export default function Kits({ embedInShell = false }: { embedInShell?: boolean 
               </div>
             ))}
             <Button variant="outline" onClick={() => setComponents((p) => [...p, { catalogueId: "", quantity: "" }])}>Add component</Button>
-            <div className="flex justify-end gap-2">
+            <DialogFooter>
               <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
               <Button
                 disabled={createMutation.isPending}
@@ -202,7 +202,7 @@ export default function Kits({ embedInShell = false }: { embedInShell?: boolean 
                   "Save"
                 )}
               </Button>
-            </div>
+            </DialogFooter>
           </div>
         </DialogContent>
       </Dialog>

@@ -32,7 +32,7 @@ export function OpenRegistrationSettings() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="flex items-center justify-between gap-4 rounded-lg border p-4">
+        <div className="flex items-center justify-between gap-4 rounded-md border p-4">
           <Label htmlFor="open-registration" className="text-base font-medium cursor-pointer">
             Open registration
           </Label>

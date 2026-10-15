@@ -61,7 +61,7 @@ export function LayerBar({
               data-testid={t.testId}
               onClick={() => onLayer(t.id)}
               className={cn(
-                "h-9 flex-1 rounded-[10px] px-3.5 text-[13.5px] font-semibold transition-colors",
+                "h-9 flex-1 rounded-md px-3.5 text-[13.5px] font-semibold transition-colors",
                 compact && "h-11",
                 on
                   ? "bg-[#0B2545] text-white dark:bg-[#E6EAF0] dark:text-[#0F1724]"
@@ -83,7 +83,7 @@ export function LayerBar({
         data-testid="asset-map-lines-toggle"
         onClick={() => onLines(!lines)}
         className={cn(
-          "flex items-center gap-2 rounded-[10px] px-2.5 text-[13.5px] font-medium hover:bg-[#F3F4F6] dark:hover:bg-[#1E2B3C]",
+          "flex items-center gap-2 rounded-md px-2.5 text-[13.5px] font-medium hover:bg-[#F3F4F6] dark:hover:bg-[#1E2B3C]",
           compact ? "h-11 w-11 justify-center px-0" : "h-9",
           compact && lines && "bg-[#0B2545] text-white dark:bg-[#E6EAF0] dark:text-[#0F1724]",
           focusRing
@@ -221,7 +221,7 @@ export function MapControls({
     if (document.fullscreenElement) void document.exitFullscreen();
     else void fullscreenTarget.current?.requestFullscreen?.();
   };
-  const group = cn(surfaceClass, "flex flex-col overflow-hidden rounded-[12px] divide-y divide-[#E5E7EB] dark:divide-[#26364A]");
+  const group = cn(surfaceClass, "flex flex-col overflow-hidden rounded-md divide-y divide-[#E5E7EB] dark:divide-[#26364A]");
   return (
     <div ref={ref} className={cn("flex flex-col items-end gap-2", className)} style={positionStyle} role="group" aria-label="Map controls">
       {!touch ? (
@@ -291,7 +291,7 @@ export function EmptyMapCard({ summary, onClear, className }: { summary: string;
         type="button"
         onClick={onClear}
         className={cn(
-          "mt-4 h-10 rounded-[10px] bg-[#0B2545] px-4 text-sm font-semibold text-white hover:bg-[#13315C] dark:bg-[#E6EAF0] dark:text-[#0F1724] dark:hover:bg-white",
+          "mt-4 h-10 rounded-md bg-[#0B2545] px-4 text-sm font-semibold text-white hover:bg-[#13315C] dark:bg-[#E6EAF0] dark:text-[#0F1724] dark:hover:bg-white",
           focusRing
         )}
       >

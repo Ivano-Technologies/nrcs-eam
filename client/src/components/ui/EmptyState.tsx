@@ -5,17 +5,15 @@ import { cn } from "@/lib/utils";
 
 type EmptyStateProps = {
   icon?: LucideIcon;
-  /** "No {things} yet" */
+  /** One sentence-case line, e.g. "No receipts yet". No second line of explanation. */
   title: string;
-  /** "{Things} appear here once {trigger}." */
-  body?: string;
-  /** Optional primary action (a single Button). */
+  /** The page's main action, only when the user is allowed to take it (a single Button). */
   action?: React.ReactNode;
   className?: string;
 };
 
-/** One empty state used everywhere: icon, title, body and an optional primary action. */
-export function EmptyState({ icon: Icon = Inbox, title, body, action, className }: EmptyStateProps) {
+/** One empty state used everywhere: an icon, one line, and the main action when the user has permission. */
+export function EmptyState({ icon: Icon = Inbox, title, action, className }: EmptyStateProps) {
   return (
     <div
       data-testid="empty-state"
@@ -23,7 +21,6 @@ export function EmptyState({ icon: Icon = Inbox, title, body, action, className 
     >
       <Icon className="h-10 w-10 text-muted-foreground" aria-hidden />
       <p className="text-base font-medium text-foreground">{title}</p>
-      {body ? <p className="max-w-md text-sm text-muted-foreground">{body}</p> : null}
       {action ? <div className="mt-2">{action}</div> : null}
     </div>
   );

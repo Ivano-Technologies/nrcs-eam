@@ -65,7 +65,7 @@ export default function Expiry({ embedInShell = false }: { embedInShell?: boolea
   }, [horizon.data?.buckets]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {!embedInShell ? (
         <>
           <PageHeader icon={CalendarClockIcon} title="Expiry tracking" />

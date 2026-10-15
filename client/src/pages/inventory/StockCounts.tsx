@@ -66,7 +66,7 @@ export default function StockCounts({ embedInShell = false }: { embedInShell?: b
   });
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {!embedInShell ? (
         <>
           <PageHeader icon={ClipboardCheckIcon} title="Stock counts" />

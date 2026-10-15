@@ -27,7 +27,7 @@ export function RequisitionsTable() {
       <CardHeader className="flex flex-row items-center justify-between gap-3">
         <CardTitle className="dashboard-section-title">Pending requisitions</CardTitle>
         <Link href={appPath("/inventory/requisitions")}>
-          <Button className="rounded-lg font-semibold">
+          <Button className="rounded-md font-semibold">
             Go to queue
           </Button>
         </Link>

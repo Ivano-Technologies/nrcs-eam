@@ -5,6 +5,19 @@ import { Link, useLocation } from "wouter";
 import PageHeader from "@/components/ui/PageHeader";
 import { cn } from "@/lib/utils";
 import { Boxes } from "lucide-react";
+import { createContext, useContext, useState } from "react";
+import { createPortal } from "react-dom";
+
+const ShellActionsContext = createContext<HTMLDivElement | null>(null);
+
+/**
+ * Renders a child page's primary action in the InventoryShell header (one primary button per page,
+ * always in the header). Outside a shell it renders nothing, so pages pass the same node to their own PageHeader.
+ */
+export function InventoryShellActions({ children }: { children: React.ReactNode }) {
+  const slot = useContext(ShellActionsContext);
+  return slot ? createPortal(children, slot) : null;
+}
 
 const DEFAULT_SUBTITLE =
   "Humanitarian inventory management system for tracking relief materials across NRCS warehouses nationwide.";
@@ -54,17 +67,20 @@ type InventoryShellProps = {
 export function InventoryShell({ activeTab, title, children }: InventoryShellProps) {
   const [location] = useLocation();
   const locPath = (location.split("?")[0] || "/").replace(/\/$/, "") || "/";
+  const [actionsSlot, setActionsSlot] = useState<HTMLDivElement | null>(null);
 
   return (
-    <div>
+    <ShellActionsContext.Provider value={actionsSlot}>
+    <div className="space-y-6">
       <PageHeader
         icon={Boxes}
         eyebrow="Inventory"
         title={title ?? TABS.find((t) => t.tab === activeTab)?.label ?? "Inventory"}
         subtitle={TAB_DESCRIPTIONS[activeTab] ?? DEFAULT_SUBTITLE}
+        actionsRef={setActionsSlot}
       />
 
-      <div className="mb-5 flex flex-wrap gap-2 border-b border-border pb-2">
+      <div className="flex flex-wrap gap-2 border-b border-border pb-2">
         {TABS.map((t) => {
           const href = tabHref(t.path);
           const active = isTabActive(t.tab, t.path, locPath);
@@ -87,5 +103,6 @@ export function InventoryShell({ activeTab, title, children }: InventoryShellPro
 
       {children}
     </div>
+    </ShellActionsContext.Provider>
   );
 }

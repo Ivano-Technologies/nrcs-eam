@@ -69,9 +69,9 @@ export default function BranchScorecards() {
         </div>
 
         {viewMode === "card" ? (
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {rows.map((row, idx) => (
-              <Card
+              <Card size="sm"
                 key={row.branchId}
                 data-testid={`scorecard-row-${row.branchId}`}
                 className={
@@ -82,7 +82,7 @@ export default function BranchScorecards() {
                       : undefined
                 }
               >
-                <CardContent className="space-y-2 p-4">
+                <CardContent className="space-y-2">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-sm text-muted-foreground">#{idx + 1}</span>
                     <span className="text-lg font-semibold">{row.compositeScore}</span>

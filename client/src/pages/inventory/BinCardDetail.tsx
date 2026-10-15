@@ -38,9 +38,8 @@ export default function BinCardDetail() {
 
   const { card, ledger } = data.data;
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <PageHeader
-        className="mb-0"
         eyebrow="Inventory"
         title="Bin card"
         back={{ label: "Bin cards", href: "/app/inventory/tracking/bin-cards" }}

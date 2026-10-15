@@ -31,7 +31,7 @@ export function GlassCard({ children, className, "data-testid": testId }: GlassC
     <div
       style={glassStyle}
       data-testid={testId}
-      className={cn("w-full max-w-md mx-auto rounded-3xl p-8 md:p-10", className)}
+      className={cn("w-full max-w-md mx-auto rounded-xl p-8 md:p-10", className)}
     >
       {children}
     </div>

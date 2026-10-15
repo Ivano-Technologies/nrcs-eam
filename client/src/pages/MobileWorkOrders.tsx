@@ -1,4 +1,6 @@
+import { Wrench } from "lucide-react";
 import { useState } from "react";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -117,18 +119,16 @@ export default function MobileWorkOrders() {
       <div className="p-4 space-y-3">
         {workOrders.length === 0 ? (
           <Card>
-            <CardContent className="py-8 text-center text-muted-foreground">
-              No work orders found
-            </CardContent>
+            <EmptyState icon={Wrench} title="No work orders yet" />
           </Card>
         ) : (
           workOrders.map((wo: any) => (
-            <Card
+            <Card size="sm"
               key={wo.id}
               className="cursor-pointer active:scale-98 transition-transform"
               onClick={() => setLocation(appPath(`/mobile-work-order/${wo.id}`))}
             >
-              <CardContent className="p-4">
+              <CardContent>
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">

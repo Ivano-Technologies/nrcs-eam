@@ -1,4 +1,6 @@
+import { History as HistoryIcon } from "lucide-react";
 import { useMemo, useState } from "react";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { useRoute, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import PageLoader from "@/components/ui/PageLoader";
@@ -627,7 +629,7 @@ export default function AssetDetail() {
                   <img
                     src={asset.qrCode}
                     alt="Asset QR Code"
-                    className="w-48 h-48 border-2 border-border rounded-lg"
+                    className="w-48 h-48 border-2 border-border rounded-md"
                   />
                 </div>
                 <div className="flex gap-2">
@@ -727,7 +729,7 @@ export default function AssetDetail() {
                   <img
                     src={photo.photoUrl}
                     alt={photo.caption || 'Asset photo'}
-                    className="w-full h-32 object-cover rounded-lg border-2 border-border cursor-pointer hover:border-primary transition-colors"
+                    className="w-full h-32 object-cover rounded-md border-2 border-border cursor-pointer hover:border-primary transition-colors"
                     onClick={() => setSelectedImage(photo.photoUrl)}
                   />
                   {canEdit && (
@@ -747,17 +749,7 @@ export default function AssetDetail() {
               ))}
             </div>
           ) : (
-            <div className="text-center py-8">
-              <ImageIcon className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
-              <p className="text-sm text-muted-foreground">
-                No photos uploaded yet
-              </p>
-              {canEdit && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Click "Upload photo" to add images
-                </p>
-              )}
-            </div>
+            <EmptyState icon={ImageIcon} title="No photos yet" className="py-8" />
           )}
         </CardContent>
       </Card>
@@ -772,7 +764,7 @@ export default function AssetDetail() {
             <img
               src={selectedImage}
               alt="Asset photo preview"
-              className="w-full h-auto rounded-lg"
+              className="w-full h-auto rounded-md"
             />
           )}
         </DialogContent>
@@ -805,7 +797,7 @@ export default function AssetDetail() {
             <CollapsibleContent>
               <CardContent className="pt-0 text-sm">
                 {!editHistory?.length ? (
-                  <p className="text-muted-foreground">No edit history recorded yet.</p>
+                  <EmptyState icon={HistoryIcon} title="No edit history yet" className="py-6" />
                 ) : (
                   <div className="space-y-4">
                     {editHistory.map((entry) => {
@@ -952,7 +944,7 @@ export default function AssetDetail() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="edit-manufacturer">Manufacturer</Label>
                 <Input
@@ -970,7 +962,7 @@ export default function AssetDetail() {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="edit-serialNumber">Serial number</Label>
                 <Input
@@ -996,7 +988,7 @@ export default function AssetDetail() {
                 onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Category *</Label>
                 <Select
@@ -1034,7 +1026,7 @@ export default function AssetDetail() {
                 </Select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Register status</Label>
                 <Select
@@ -1102,7 +1094,7 @@ export default function AssetDetail() {
                 onChange={(e) => setEditForm({ ...editForm, subCategory: e.target.value })}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Sub-item category</Label>
                 <Select
@@ -1151,7 +1143,7 @@ export default function AssetDetail() {
               </div>
             </div>
             <h3 className="text-sm font-semibold pt-2">Acquisition</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2 md:col-span-2">
                 <Label>Method of acquisition</Label>
                 <Select
@@ -1214,7 +1206,7 @@ export default function AssetDetail() {
               </div>
             </div>
             <h3 className="text-sm font-semibold pt-2">Condition</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Current status</Label>
                 <Select
@@ -1279,7 +1271,7 @@ export default function AssetDetail() {
               </div>
             </div>
             <h3 className="text-sm font-semibold pt-2">Admin</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2 md:col-span-2">
                 <Label>Remarks (register)</Label>
                 <Textarea
@@ -1303,7 +1295,7 @@ export default function AssetDetail() {
               </div>
             </div>
             <h3 className="text-sm font-semibold pt-2">Map coordinates (optional)</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Latitude</Label>
                 <Input
@@ -1320,7 +1312,7 @@ export default function AssetDetail() {
               </div>
             </div>
             <h3 className="text-sm font-semibold pt-2">Financial (register)</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Actual unit value (NGN)</Label>
                 <Input
@@ -1340,7 +1332,7 @@ export default function AssetDetail() {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Depreciation method</Label>
                 <Input

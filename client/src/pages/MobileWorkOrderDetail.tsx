@@ -223,8 +223,8 @@ export default function MobileWorkOrderDetail() {
       </div>
 
       <div className="p-4 space-y-4">
-        <Card>
-          <CardContent className="p-4">
+        <Card size="sm">
+          <CardContent>
             <div className="flex gap-2 mb-4">
               <Badge className={getStatusColor(workOrder.status)}>
                 {workOrder.status.replace("_", " ")}
@@ -335,7 +335,7 @@ export default function MobileWorkOrderDetail() {
                     <div key={photo.id} className="relative aspect-square">
                       <button
                         type="button"
-                        className="w-full h-full rounded-lg overflow-hidden border bg-muted"
+                        className="w-full h-full rounded-md overflow-hidden border bg-muted"
                         onClick={() => setPreviewUrl(photo.publicUrl)}
                       >
                         <img

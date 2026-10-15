@@ -560,7 +560,7 @@ export default function AssetMap() {
       <div
         ref={frameRef}
         data-testid="asset-map-panel"
-        className="relative min-h-0 flex-1 overflow-hidden border-b border-[#E5E7EB] bg-[#ECEEF1] dark:border-[#26364A] dark:bg-[#121B28] sm:rounded-2xl sm:border"
+        className="relative min-h-0 flex-1 overflow-hidden border-b border-[#E5E7EB] bg-[#ECEEF1] dark:border-[#26364A] dark:bg-[#121B28] sm:rounded-xl sm:border"
       >
         {/* Map layer */}
         {mapError ? (
@@ -692,7 +692,7 @@ export default function AssetMap() {
                     type="button"
                     aria-label="Close facility list"
                     onClick={() => setRailOpen(false)}
-                    className={cn("grid h-9 w-9 place-items-center rounded-lg hover:bg-[#F3F4F6] dark:hover:bg-[#1E2B3C]", focusRing)}
+                    className={cn("grid h-9 w-9 place-items-center rounded-md hover:bg-[#F3F4F6] dark:hover:bg-[#1E2B3C]", focusRing)}
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -804,7 +804,7 @@ function RailButton({
       aria-label={badge ? `${label} (${badge} on)` : label}
       title={label}
       onClick={onClick}
-      className={cn("relative grid h-11 w-11 place-items-center rounded-[10px] hover:bg-[#F3F4F6] dark:hover:bg-[#1E2B3C]", focusRing)}
+      className={cn("relative grid h-11 w-11 place-items-center rounded-md hover:bg-[#F3F4F6] dark:hover:bg-[#1E2B3C]", focusRing)}
     >
       {children}
       {badge ? (
