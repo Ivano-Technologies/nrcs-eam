@@ -1,8 +1,7 @@
-import { appPath } from "@/lib/routes";
 import type { FacilitiesSegment } from "@/lib/facilityRoutes";
 import { segmentToNewTypeQuery } from "@/lib/facilityRoutes";
 import { Button } from "@/components/ui/button";
-import { Link } from "wouter";
+import { Link, useLocation, useSearch } from "wouter";
 import PageHeader from "@/components/ui/PageHeader";
 import { Building2, Plus } from "lucide-react";
 import { usePermissions } from "@/_core/hooks/usePermissions";
@@ -18,9 +17,15 @@ export function FacilitiesShell({
 }: FacilitiesShellProps) {
   const { canEditFacilities } = usePermissions();
 
+  const [location] = useLocation();
+  const search = useSearch();
+  // Add opens the dialog in place (?new=1) so the page keeps its view and the sidebar fold.
   const addType = segmentToNewTypeQuery(activeSegment);
-  const newHref =
-    appPath("/facilities/new") + (addType ? `?type=${encodeURIComponent(addType)}` : "");
+  const params = new URLSearchParams(search);
+  params.set("new", "1");
+  if (addType) params.set("type", addType);
+  else params.delete("type");
+  const newHref = `${location}?${params.toString()}`;
 
   return (
     <div>

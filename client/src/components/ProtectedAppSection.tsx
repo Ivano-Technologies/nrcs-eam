@@ -340,10 +340,16 @@ function ProtectedAppSectionRoutes() {
             <Route path="/app/users">
               <Redirect to={appPath("/settings/users")} />
             </Route>
-            <Route path="/app/users/pending" component={PendingUsers} />
+            <Route path="/app/users/pending">
+              <Redirect to="/app/settings/pending-users" />
+            </Route>
             <Route path="/app/settings/pending-users" component={PendingUsers} />
-            <Route path="/app/pending-users" component={PendingUsers} />
-            <Route path="/app/settings/notifications" component={NotificationPreferences} />
+            <Route path="/app/pending-users">
+              <Redirect to="/app/settings/pending-users" />
+            </Route>
+            <Route path="/app/settings/notifications">
+              <Redirect to="/app/notification-preferences" />
+            </Route>
             <Route path="/app/notification-preferences" component={NotificationPreferences} />
             <Route path="/app/reports" component={Reports} />
             <Route path="/app/reports/branch-scorecards" component={BranchScorecards} />
