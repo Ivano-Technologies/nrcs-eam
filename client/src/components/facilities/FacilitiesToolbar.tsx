@@ -189,15 +189,15 @@ export function FacilitiesToolbar(p: FacilitiesToolbarProps) {
     );
   }
 
-  // Desktop: one row at 1280 with the full sidebar (A1). Below xl the toggle is icon only and the
-  // count sits under the toolbar; from xl it joins the right cluster.
+  // Desktop: one row at 1280 with the full sidebar (A1). Below 2xl the toggle is icon only and the
+  // count sits under the toolbar; from 2xl it joins the right cluster.
   return (
     <div className={cn("flex flex-wrap items-center gap-x-2 gap-y-1", p.className)} data-testid="facilities-toolbar">
       {search}
       <FilterSelects {...selects} />
-      <div className="order-last w-full xl:order-none xl:ml-auto xl:w-auto">{count}</div>
-      <div className="ml-auto flex items-center gap-2 xl:ml-0">
-        <ViewToggle value={p.view} onChange={p.onView} showMap compactBelowXl />
+      <div className="order-last w-full 2xl:order-none 2xl:ml-auto 2xl:w-auto">{count}</div>
+      <div className="ml-auto flex items-center gap-2 2xl:ml-0">
+        <ViewToggle value={p.view} onChange={p.onView} showMap compactBelow2xl />
         {more}
       </div>
     </div>

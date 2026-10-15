@@ -25,8 +25,8 @@ export function ViewToggle<M extends ViewModeWithMap = ViewMode>({
   value,
   onChange,
   showMap = false,
-  compactBelowXl = false,
-}: ViewToggleProps<M> & { compactBelowXl?: boolean }) {
+  compactBelow2xl = false,
+}: ViewToggleProps<M> & { compactBelow2xl?: boolean }) {
   const segments = showMap ? SEGMENTS : SEGMENTS.filter(s => s.mode !== "map");
   return (
     <div
@@ -47,11 +47,11 @@ export function ViewToggle<M extends ViewModeWithMap = ViewMode>({
               i === segments.length - 1 ? "rounded-r-md" : ""
             } ${selected ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
             data-testid={`view-toggle-${mode}`}
-            aria-label={compactBelowXl ? label : undefined}
+            aria-label={compactBelow2xl ? label : undefined}
           >
             <Icon className="h-4 w-4" aria-hidden />
-            {/* Icon only below xl when asked, so a dense toolbar stays on one row at 1280. */}
-            <span className={compactBelowXl ? "sr-only xl:not-sr-only" : undefined}>{label}</span>
+            {/* Icon only below 2xl when asked, so a dense toolbar stays on one row at 1280. */}
+            <span className={compactBelow2xl ? "sr-only 2xl:not-sr-only" : undefined}>{label}</span>
           </button>
         );
       })}
