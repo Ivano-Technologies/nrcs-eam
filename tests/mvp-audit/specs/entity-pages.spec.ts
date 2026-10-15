@@ -17,7 +17,7 @@ const ROUTES: { path: string; slug: string; heading: string | RegExp }[] = [
   { path: "/app/pending-users", slug: "pending-users", heading: /User Access Requests/ },
   { path: "/app/report-scheduling", slug: "report-scheduling", heading: /Report scheduling/ },
   { path: "/app/scanner", slug: "scanner", heading: /Asset scanner/ },
-  { path: "/app/asset-map", slug: "asset-map", heading: /Asset Map/ },
+  { path: "/app/asset-map", slug: "asset-map", heading: /Asset map/i },
   { path: "/app/warranty-alerts", slug: "warranty-alerts", heading: /Warranty alerts/ },
   { path: "/app/administration/activity-log", slug: "activity-log", heading: /Activity log/ },
   { path: "/app/mobile-work-orders", slug: "mobile-work-orders", heading: /Work orders/ },

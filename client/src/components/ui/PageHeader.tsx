@@ -20,6 +20,8 @@ interface PageHeaderProps {
   className?: string;
   /** Extra props for the h1 (e.g. data-testid). */
   titleTestId?: string;
+  /** Small label above the title naming the module, e.g. "Inventory" above "Receiving". */
+  eyebrow?: string;
 }
 
 /**
@@ -34,6 +36,7 @@ export default function PageHeader({
   back,
   className,
   titleTestId,
+  eyebrow,
 }: PageHeaderProps) {
   return (
     <div className={cn("mb-6", className)} data-testid="page-header">
@@ -48,6 +51,11 @@ export default function PageHeader({
       ) : null}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
+          {eyebrow ? (
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground" data-testid="page-header-eyebrow">
+              {eyebrow}
+            </p>
+          ) : null}
           <h1
             className="flex items-center gap-2 text-3xl font-bold tracking-tight"
             data-testid={titleTestId}

@@ -17,7 +17,7 @@ export default function ImportDraftsPage({ embedInShell = false }: { embedInShel
   const finalize = trpc.inventoryV2.documents.drafts.finalize.useMutation({
     onSuccess: (res) => {
       if (res.success) {
-        toast.success("Draft finalized");
+        toast.success("Draft finalised");
       } else {
         toast.error("Draft has validation errors");
       }
@@ -41,6 +41,7 @@ export default function ImportDraftsPage({ embedInShell = false }: { embedInShel
         <div>
           <PageHeader
             icon={Upload}
+            eyebrow="Inventory"
             title="Import drafts"
             subtitle="Review imported drafts and post them when they are ready."
             back={{ label: "Import", href: appPath("/inventory/import") }}
@@ -86,7 +87,7 @@ export default function ImportDraftsPage({ embedInShell = false }: { embedInShel
                             Finalizing…
                           </>
                         ) : (
-                          "Finalize"
+                          "Finalise"
                         )}
                       </Button>
                       <Button

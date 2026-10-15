@@ -14,7 +14,7 @@ export default function TermsOfService() {
         </CardHeader>
         <CardContent className="prose prose-sm max-w-none dark:prose-invert">
           <section className="mb-6">
-            <h2 className="text-xl font-semibold mb-3">1. Acceptance of Terms</h2>
+            <h2 className="text-xl font-semibold mb-3">1. Acceptance of terms</h2>
             <p className="text-muted-foreground mb-4">
               By accessing and using the Nigerian Red Cross Society Enterprise Asset Management (NRCS EAM) system, 
               you accept and agree to be bound by the terms and provision of this agreement. If you do not agree 
@@ -23,22 +23,22 @@ export default function TermsOfService() {
           </section>
 
           <section className="mb-6">
-            <h2 className="text-xl font-semibold mb-3">2. Use License</h2>
+            <h2 className="text-xl font-semibold mb-3">2. Use licence</h2>
             <p className="text-muted-foreground mb-4">
               Permission is granted to authorized Nigerian Red Cross Society personnel to use this system for 
-              official organizational purposes only. This license shall automatically terminate if you violate 
+              official organisational purposes only. This license shall automatically terminate if you violate 
               any of these restrictions.
             </p>
             <ul className="list-disc list-inside text-muted-foreground space-y-2 ml-4">
-              <li>Access is restricted to authorized users only</li>
+              <li>Access is restricted to authorised users only</li>
               <li>User credentials must not be shared with unauthorized individuals</li>
-              <li>System must be used in compliance with organizational policies</li>
+              <li>System must be used in compliance with organisational policies</li>
               <li>Data must be handled according to confidentiality requirements</li>
             </ul>
           </section>
 
           <section className="mb-6">
-            <h2 className="text-xl font-semibold mb-3">3. User Responsibilities</h2>
+            <h2 className="text-xl font-semibold mb-3">3. User responsibilities</h2>
             <p className="text-muted-foreground mb-4">
               Users of the NRCS EAM system agree to:
             </p>
@@ -46,13 +46,13 @@ export default function TermsOfService() {
               <li>Maintain the confidentiality of login credentials</li>
               <li>Ensure accuracy of data entered into the system</li>
               <li>Report any security breaches or unauthorized access immediately</li>
-              <li>Use the system only for legitimate organizational purposes</li>
+              <li>Use the system only for legitimate organisational purposes</li>
               <li>Comply with all applicable laws and regulations</li>
             </ul>
           </section>
 
           <section className="mb-6">
-            <h2 className="text-xl font-semibold mb-3">4. Data Accuracy and Liability</h2>
+            <h2 className="text-xl font-semibold mb-3">4. Data accuracy and liability</h2>
             <p className="text-muted-foreground mb-4">
               While we strive to ensure data accuracy, the Nigerian Red Cross Society makes no warranties or 
               representations regarding the accuracy, completeness, or reliability of information in this system. 
@@ -61,15 +61,15 @@ export default function TermsOfService() {
           </section>
 
           <section className="mb-6">
-            <h2 className="text-xl font-semibold mb-3">5. Intellectual Property</h2>
+            <h2 className="text-xl font-semibold mb-3">5. Intellectual property</h2>
             <p className="text-muted-foreground mb-4">
               All content, data, and materials within the NRCS EAM system are the property of the Nigerian Red 
-              Cross Society. Unauthorized reproduction, distribution, or use of system content is prohibited.
+              Cross Society. Unauthorised reproduction, distribution, or use of system content is prohibited.
             </p>
           </section>
 
           <section className="mb-6">
-            <h2 className="text-xl font-semibold mb-3">6. System Availability</h2>
+            <h2 className="text-xl font-semibold mb-3">6. System availability</h2>
             <p className="text-muted-foreground mb-4">
               We strive to maintain system availability but do not guarantee uninterrupted access. The system 
               may be temporarily unavailable due to maintenance, updates, or unforeseen technical issues.
@@ -77,7 +77,7 @@ export default function TermsOfService() {
           </section>
 
           <section className="mb-6">
-            <h2 className="text-xl font-semibold mb-3">7. Modifications to Terms</h2>
+            <h2 className="text-xl font-semibold mb-3">7. Modifications to terms</h2>
             <p className="text-muted-foreground mb-4">
               The Nigerian Red Cross Society reserves the right to modify these terms at any time. Continued 
               use of the system after changes constitutes acceptance of the modified terms.
@@ -93,7 +93,7 @@ export default function TermsOfService() {
           </section>
 
           <section className="mb-6">
-            <h2 className="text-xl font-semibold mb-3">9. Governing Law</h2>
+            <h2 className="text-xl font-semibold mb-3">9. Governing law</h2>
             <p className="text-muted-foreground mb-4">
               These terms shall be governed by and construed in accordance with the laws of the Federal Republic 
               of Nigeria, without regard to its conflict of law provisions.
@@ -101,13 +101,13 @@ export default function TermsOfService() {
           </section>
 
           <section className="mb-6">
-            <h2 className="text-xl font-semibold mb-3">10. Contact Information</h2>
+            <h2 className="text-xl font-semibold mb-3">10. Contact information</h2>
             <p className="text-muted-foreground mb-4">
               For questions regarding these Terms of Service, please contact:
             </p>
             <div className="bg-muted p-4 rounded-lg">
               <p className="font-medium">Nigerian Red Cross Society</p>
-              <p className="text-sm text-muted-foreground">IT Department</p>
+              <p className="text-sm text-muted-foreground">IT department</p>
               <p className="text-sm text-muted-foreground">Contact your NRCS system administrator</p>
             </div>
           </section>

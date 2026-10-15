@@ -274,12 +274,12 @@ export default function Transfers({ embedInShell = false }: { embedInShell?: boo
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>New transfer</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <Label>From Warehouse</Label>
+            <Label>From warehouse</Label>
             <Select value={fromWarehouseId} onValueChange={setFromWarehouseId}>
               <SelectTrigger><SelectValue placeholder="Select source" /></SelectTrigger>
               <SelectContent>{wh.map((w) => <SelectItem key={w.id} value={String(w.id)}>{w.name}</SelectItem>)}</SelectContent>
             </Select>
-            <Label>To Warehouse</Label>
+            <Label>To warehouse</Label>
             <Select value={toWarehouseId} onValueChange={setToWarehouseId}>
               <SelectTrigger><SelectValue placeholder="Select destination" /></SelectTrigger>
               <SelectContent>
@@ -316,7 +316,7 @@ export default function Transfers({ embedInShell = false }: { embedInShell?: boo
                       <SelectTrigger><SelectValue placeholder="Catalogue item" /></SelectTrigger>
                       <SelectContent>
                         {(catalogue ?? []).map((c) => (
-                          <SelectItem key={c.id} value={String(c.id)}>{c.itemCode} - {c.name}</SelectItem>
+                          <SelectItem key={c.id} value={String(c.id)}>{c.itemCode} · {c.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>

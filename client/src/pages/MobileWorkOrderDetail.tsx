@@ -393,7 +393,7 @@ export default function MobileWorkOrderDetail() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Add Notes</CardTitle>
+            <CardTitle className="text-base">Add notes</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <Textarea
@@ -427,7 +427,7 @@ export default function MobileWorkOrderDetail() {
         {workOrder.completionNotes && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Previous Notes</CardTitle>
+              <CardTitle className="text-base">Previous notes</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm whitespace-pre-wrap">{workOrder.completionNotes}</p>

@@ -70,7 +70,7 @@ export default function EmailNotifications() {
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>Compose email Notification</DialogTitle>
+              <DialogTitle>Compose email notification</DialogTitle>
               <DialogDescription>Send a custom email to selected users</DialogDescription>
             </DialogHeader>
 
@@ -82,15 +82,15 @@ export default function EmailNotifications() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Users</SelectItem>
-                    <SelectItem value="role">By Role</SelectItem>
+                    <SelectItem value="all">All users</SelectItem>
+                    <SelectItem value="role">By role</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               {recipientType === "role" && (
                 <div className="space-y-2">
-                  <Label>Select Role</Label>
+                  <Label>Select role</Label>
                   <Select value={recipientRole} onValueChange={(v) => setRecipientRole(v as any)}>
                     <SelectTrigger>
                       <SelectValue />
@@ -115,7 +115,7 @@ export default function EmailNotifications() {
               </div>
 
               <div className="space-y-2">
-                <Label>Message Body</Label>
+                <Label>Message body</Label>
                 <Textarea
                   data-testid="email-body-input"
                   placeholder="Email message…"
@@ -152,12 +152,12 @@ export default function EmailNotifications() {
         </Dialog>
       </div>
 
-      {/* Email History */}
+      {/* Email history */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <History className="h-5 w-5" />
-            Email History
+            Email history
           </CardTitle>
           <CardDescription>Previously sent email notifications</CardDescription>
         </CardHeader>

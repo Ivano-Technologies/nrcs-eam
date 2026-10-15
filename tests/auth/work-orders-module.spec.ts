@@ -49,7 +49,7 @@ test.describe.skip("work orders module (live)", () => {
       await page.getByRole("button", { name: /Create work order/i }).first().click();
     }
 
-    const createDialog = page.getByRole("dialog", { name: /Create New Work Order/i });
+    const createDialog = page.getByRole("dialog", { name: /Create work order/i });
     await expect(createDialog).toBeVisible({ timeout: 15_000 });
 
     await createDialog.getByLabel(/Work Order Number \*/i).fill(woNum);
@@ -105,7 +105,7 @@ test.describe.skip("work orders module (live)", () => {
       await page.getByRole("button", { name: /^Edit$/ }).click();
     }
 
-    const updateDialog = page.getByRole("dialog", { name: /Update Work Order/i });
+    const updateDialog = page.getByRole("dialog", { name: /Edit work order/i });
     await expect(updateDialog).toBeVisible({ timeout: 15_000 });
 
     const statusSelect = updateDialog.getByTestId("work-order-status-select");

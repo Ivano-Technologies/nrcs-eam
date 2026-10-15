@@ -11,9 +11,9 @@ test.describe("Inventory Phase 2 (live)", () => {
       timeout: 30_000,
     });
     await expect(page.getByLabel("GRN number")).toBeVisible();
-    await expect(page.getByLabel("Delegation/Consignee Location")).toBeVisible();
+    await expect(page.getByLabel("Delegation/consignee location")).toBeVisible();
     await expect(page.getByRole("button", { name: /Save as Draft/i })).toBeVisible();
-    await expect(page.getByRole("button", { name: /Finalize/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Finalise/i })).toBeVisible();
   });
 
   test("Create Waybill, dispatch, verify stock decreases", async ({ page }) => {
@@ -63,7 +63,7 @@ test.describe("Inventory Phase 2 (live)", () => {
   test("Movements page shows all transactions", async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto("/app/inventory/movements");
-    await expect(page.getByRole("heading", { name: /Inventory movements/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Stock movements/i })).toBeVisible();
     await expect(page.locator("table")).toBeVisible();
     const rows = page.locator("table tbody tr");
     const hasRows = (await rows.count()) > 0;

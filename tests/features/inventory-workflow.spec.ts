@@ -8,7 +8,7 @@ test.describe("Inventory Phase 4 workflow (live)", () => {
     await page.goto("/app/inventory/requisitions");
     await page.getByTestId("new-req-btn").click();
     const dialog = page.getByRole("dialog");
-    await expect(dialog.getByText("Create Requisition")).toBeVisible();
+    await expect(dialog.getByText("New requisition")).toBeVisible();
     await dialog.getByRole("textbox").first().fill(`REQ live ${Date.now()}`);
     await dialog.getByRole("combobox").first().click();
     await page.getByRole("option").first().click();
@@ -27,7 +27,7 @@ test.describe("Inventory Phase 4 workflow (live)", () => {
     test.skip(test.info().project.name === "live-auth", "Skipped on live-auth to avoid mutating production requisition data.");
     await loginAsAdmin(page);
     await page.goto("/app/inventory/requisitions");
-    const fulfill = page.getByRole("button", { name: "Fulfill" }).first();
+    const fulfill = page.getByRole("button", { name: "Fulfil" }).first();
     if (await fulfill.count()) await fulfill.click();
     await expect(page.locator("[data-testid^='req-row-']").first()).toBeVisible();
     await page.goto("/app/inventory/issues");
@@ -56,7 +56,7 @@ test.describe("Inventory Phase 4 workflow (live)", () => {
       test.skip(true, "Live admin user is redirected to welcome page; dashboard widgets not available.");
     }
     await expect(
-      page.getByText("Low Stock Items").or(page.getByText(/Beneficiaries Reached/))
+      page.getByText("Low stock items").or(page.getByText(/Beneficiaries Reached/))
     ).toBeVisible({ timeout: 15000 });
   });
 
@@ -64,7 +64,7 @@ test.describe("Inventory Phase 4 workflow (live)", () => {
     test.skip(test.info().project.name === "live-auth", "Skipped on live-auth to avoid mutating production stock.");
     await loginAsAdmin(page);
     await page.goto("/app/inventory/kits");
-    await page.getByRole("tab", { name: "Kit Operations" }).click();
+    await page.getByRole("tab", { name: "Kit operations" }).click();
     await page.getByRole("combobox").first().click();
     await page.getByRole("option").first().click();
     await page.getByRole("combobox").nth(1).click();
@@ -77,7 +77,7 @@ test.describe("Inventory Phase 4 workflow (live)", () => {
     test.skip(test.info().project.name === "live-auth", "Skipped on live-auth to avoid mutating production stock.");
     await loginAsAdmin(page);
     await page.goto("/app/inventory/kits");
-    await page.getByRole("tab", { name: "Kit Operations" }).click();
+    await page.getByRole("tab", { name: "Kit operations" }).click();
     await page.getByRole("combobox").nth(2).click();
     await page.getByRole("option").first().click();
     await page.getByRole("combobox").nth(3).click();

@@ -28,7 +28,6 @@ export default function BinCards({ embedInShell = false }: Props = {}) {
 
   return (
     <div className="space-y-4">
-      {embedInShell ? <h2 className="text-2xl font-bold">Bin Cards</h2> : null}
       <ModuleFiltersCard
         filterRow={<ModuleFilterSearch placeholder="Search bin cards…" value={search} onChange={(e) => setSearch(e.target.value)} />}
         toolbarStart={<ViewToggle value={viewMode} onChange={setViewMode} />}
@@ -58,7 +57,7 @@ export default function BinCards({ embedInShell = false }: Props = {}) {
                 <TableHead>Stock location</TableHead>
                 <TableHead>Item code</TableHead>
                 <TableHead>Item description</TableHead>
-                <TableHead>CTN/Donor</TableHead>
+                <TableHead>CTN/donor</TableHead>
                 <TableHead className="text-right">Current balance</TableHead>
                 <TableHead>Storekeeper</TableHead>
                 <TableHead>Opened date</TableHead>

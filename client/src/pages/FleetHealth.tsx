@@ -76,7 +76,7 @@ export default function FleetHealth() {
         <div className="flex flex-wrap items-center gap-3">
           <Select value={siteId} onValueChange={setSiteId}>
             <SelectTrigger className="w-[220px]" data-testid="fleet-health-site-filter">
-              <SelectValue placeholder="All sites" />
+              <SelectValue placeholder="All facilities" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Organisation-wide</SelectItem>
@@ -172,7 +172,7 @@ export default function FleetHealth() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Asset</TableHead>
-                        <TableHead>Site</TableHead>
+                        <TableHead>Facility</TableHead>
                         <TableHead>Category</TableHead>
                         <TableHead>Life used</TableHead>
                         <TableHead className="text-right">Book value</TableHead>

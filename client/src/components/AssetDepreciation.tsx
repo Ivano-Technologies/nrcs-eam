@@ -53,7 +53,7 @@ export default function AssetDepreciation({ assetId }: AssetDepreciationProps) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <TrendingDown className="h-5 w-5" />
-          Depreciation Analysis
+          Depreciation analysis
         </CardTitle>
         <CardDescription>
           {depreciation.method} method
@@ -65,7 +65,7 @@ export default function AssetDepreciation({ assetId }: AssetDepreciationProps) {
           <div className="p-4 border rounded-lg">
             <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
               <DollarSign className="h-4 w-4" />
-              Current Book Value
+              Current book value
             </div>
             <div className={cn(KPI_VALUE_CLASS, "text-green-600")}>
               ₦{depreciation.currentBookValue.toLocaleString()}
@@ -75,7 +75,7 @@ export default function AssetDepreciation({ assetId }: AssetDepreciationProps) {
           <div className="p-4 border rounded-lg">
             <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
               <TrendingDown className="h-4 w-4" />
-              Accumulated Depreciation
+              Accumulated depreciation
             </div>
             <div className={cn(KPI_VALUE_CLASS, "text-red-600")}>
               ₦{depreciation.accumulatedDepreciation.toLocaleString()}
@@ -95,7 +95,7 @@ export default function AssetDepreciation({ assetId }: AssetDepreciationProps) {
           <div className="p-4 border rounded-lg">
             <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
               <Calendar className="h-4 w-4" />
-              Years Remaining
+              Years remaining
             </div>
             <div className={KPI_VALUE_CLASS}>
               {depreciation.remainingYears.toFixed(1)}
@@ -106,28 +106,28 @@ export default function AssetDepreciation({ assetId }: AssetDepreciationProps) {
         {/* Key Metrics */}
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Annual Depreciation:</span>
+            <span className="text-muted-foreground">Annual depreciation:</span>
             <span className="font-medium">₦{depreciation.annualDepreciation.toLocaleString()}</span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Years Elapsed:</span>
+            <span className="text-muted-foreground">Years elapsed:</span>
             <span className="font-medium">{depreciation.yearsElapsed.toFixed(2)} years</span>
           </div>
         </div>
 
-        {/* Depreciation Schedule */}
+        {/* Depreciation schedule */}
         <div>
-          <h4 className="text-sm font-semibold mb-3">Depreciation Schedule</h4>
+          <h4 className="text-sm font-semibold mb-3">Depreciation schedule</h4>
           <div className="border rounded-lg overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Year</TableHead>
                   <TableHead>Date</TableHead>
-                  <TableHead className="text-right">Beginning Value</TableHead>
+                  <TableHead className="text-right">Beginning value</TableHead>
                   <TableHead className="text-right">Depreciation</TableHead>
                   <TableHead className="text-right">Accumulated</TableHead>
-                  <TableHead className="text-right">Ending Value</TableHead>
+                  <TableHead className="text-right">Ending value</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

@@ -79,13 +79,13 @@ function formatAuditCell(v: unknown): string {
 }
 
 const REGISTER_STATUS_EDIT_OPTIONS = [
-  { value: "in_use", label: "In Use" },
-  { value: "in_store", label: "In Store" },
-  { value: "under_maintenance", label: "Under Maintenance" },
+  { value: "in_use", label: "In use" },
+  { value: "in_store", label: "In store" },
+  { value: "under_maintenance", label: "Under maintenance" },
   { value: "disposed", label: "Disposed" },
-  { value: "to_be_disposed", label: "To be Disposed" },
-  { value: "out_of_order", label: "Out of Order" },
-  { value: "beyond_repair", label: "Beyond Repair" },
+  { value: "to_be_disposed", label: "To be disposed" },
+  { value: "out_of_order", label: "Out of order" },
+  { value: "beyond_repair", label: "Beyond repair" },
 ] as const;
 
 export default function AssetDetail() {
@@ -114,7 +114,7 @@ export default function AssetDetail() {
 
   const generateQRCodeMutation = trpc.assets.generateQRCode.useMutation({
     onSuccess: () => {
-      toast.success("QR Code generated successfully");
+      toast.success("QR code generated successfully");
       refetch();
     },
     onError: (error) => {
@@ -582,7 +582,7 @@ export default function AssetDetail() {
             )}
             {asset.depreciationRate && (
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Depreciation Rate</p>
+                <p className="text-sm font-medium text-muted-foreground">Depreciation rate</p>
                 <p className="text-base">{asset.depreciationRate}% per year</p>
               </div>
             )}
@@ -766,7 +766,7 @@ export default function AssetDetail() {
       <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
         <DialogContent className="max-w-4xl">
           <DialogHeader>
-            <DialogTitle>Photo Preview</DialogTitle>
+            <DialogTitle>Photo preview</DialogTitle>
           </DialogHeader>
           {selectedImage && (
             <img
@@ -862,14 +862,14 @@ export default function AssetDetail() {
       <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Upload Photos</DialogTitle>
+            <DialogTitle>Upload photos</DialogTitle>
             <DialogDescription>
               {pendingFiles.length} photo(s) selected. Add an optional caption that will apply to all photos.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="photo-caption">Caption (Optional)</Label>
+              <Label htmlFor="photo-caption">Caption (optional)</Label>
               <Input
                 id="photo-caption"
                 placeholder="e.g., Front view, After maintenance, etc."
@@ -922,7 +922,7 @@ export default function AssetDetail() {
           <ScrollArea className="max-h-[calc(90vh-8rem)] pr-3">
             <div className="grid gap-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-name">Asset Name</Label>
+              <Label htmlFor="edit-name">Asset name</Label>
               <Input
                 id="edit-name"
                 value={editForm.name}

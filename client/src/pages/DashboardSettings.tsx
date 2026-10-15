@@ -439,7 +439,7 @@ export default function DashboardSettings() {
 
       <Card className="max-w-full overflow-hidden">
         <CardHeader>
-          <CardTitle>Install App</CardTitle>
+          <CardTitle>Install app</CardTitle>
           <CardDescription>
             Install NRCS EAM as a standalone app on your device for quick access and a better experience.
           </CardDescription>
@@ -569,7 +569,7 @@ export default function DashboardSettings() {
       {isAdmin && (
         <Card className="border-amber-200/80 dark:border-amber-900/50 bg-amber-50/40 dark:bg-amber-950/20">
           <CardHeader>
-            <CardTitle>Data &amp; Privacy</CardTitle>
+            <CardTitle>Data and privacy</CardTitle>
             <CardDescription>Export a full copy of key operational data (admin only).</CardDescription>
           </CardHeader>
           <CardContent>

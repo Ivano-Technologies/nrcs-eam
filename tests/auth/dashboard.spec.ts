@@ -26,7 +26,7 @@ test.describe("dashboard (live)", () => {
     });
 
     /** First KPI is low stock in current app; production may still ship beneficiaries until deploy. */
-    const firstKpi = metricValueLocator(page, /Low Stock Items/, "dashboard-kpi-value-lowStock").or(
+    const firstKpi = metricValueLocator(page, /Low stock items/i, "dashboard-kpi-value-lowStock").or(
       metricValueLocator(page, /Beneficiaries Reached/, "dashboard-kpi-value-beneficiaries")
     );
     const pending = metricValueLocator(page, /Pending Approvals/, "dashboard-kpi-value-approvals");

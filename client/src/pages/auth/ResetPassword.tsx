@@ -200,10 +200,10 @@ export default function ResetPassword() {
         {state === "success" && (
           <Alert className="mt-6 text-left">
             <AlertDescription>
-              Password updated. You can now log in.
+              Password updated. You can now sign in.
               {" "}
               <Link href="/login" className="font-medium underline">
-                Go to login
+                Go to sign in
               </Link>
               .
             </AlertDescription>

@@ -20,7 +20,7 @@ test.describe("Asset Register (live)", () => {
     await page.getByRole("columnheader", { name: /Asset Code/i }).click();
 
     await page.getByTestId("asset-filter-status").click();
-    await page.getByRole("option", { name: /In Use/i }).click();
+    await page.getByRole("option", { name: /In use/i }).click();
 
     await expect(page.getByTestId("asset-export-excel-btn")).toBeVisible();
 
