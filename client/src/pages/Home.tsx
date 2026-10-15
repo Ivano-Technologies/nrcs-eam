@@ -67,21 +67,12 @@ const DEFAULT_WIDGETS = {
 
 
 /**
- * KPI grid is sm:2 and lg:4 columns. The last tile stretches over whatever is left of its row,
- * so an odd count never leaves a lone tile with an empty gap beside it.
+ * KPI grid: 2 columns from sm, all five in one row from xl (1280). Below xl an odd last tile spans
+ * the full row (2x2 plus one); from xl it goes back to one column.
  */
-const SM_SPAN: Record<number, string> = { 2: "sm:col-span-2" };
-const LG_SPAN: Record<number, string> = { 1: "lg:col-span-1", 2: "lg:col-span-2", 3: "lg:col-span-3", 4: "lg:col-span-4" };
 export function kpiFillClass(index: number, count: number): string | undefined {
-  if (index !== count - 1) return undefined;
-  const smRem = count % 2;
-  const lgRem = count % 4;
-  const sm = smRem ? 2 - smRem + 1 : 1;
-  const lg = lgRem ? 4 - lgRem + 1 : 1;
-  const classes = [SM_SPAN[sm], sm !== lg ? LG_SPAN[lg] : undefined].filter(Boolean);
-  // Five tiles: one row of five from 2xl, so the stretched last tile goes back to a single column there.
-  if (count === 5) classes.push("2xl:col-span-1");
-  return classes.length ? classes.join(" ") : undefined;
+  if (index !== count - 1 || count % 2 === 0) return undefined;
+  return "sm:col-span-2 xl:col-span-1";
 }
 
 export default function Home() {
@@ -236,7 +227,7 @@ export default function Home() {
           title="Dashboard"
           subtitle="Loading critical metrics…"
         />
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
           {Array.from({ length: 5 }).map((_, i) => (
             <Skeleton key={i} className="h-28 rounded-xl" />
           ))}
@@ -495,7 +486,7 @@ export default function Home() {
 
         {showWidgets("kpiCards") ? (
 
-          <div className={cn("grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4", kpis.length === 5 && "2xl:grid-cols-5")} data-testid="dashboard-kpi-grid">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5" data-testid="dashboard-kpi-grid">
 
             {kpis.map((kpi, index) => (
 
