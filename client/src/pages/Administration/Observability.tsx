@@ -55,6 +55,11 @@ function redisStatusBadge(status: "connected" | "error" | "fallback" | undefined
   }
 }
 
+/** Latency for display; a missing value reads "No data" instead of crashing or showing 0. */
+function fmtMs(v: number | null | undefined): string {
+  return typeof v === "number" && Number.isFinite(v) ? `${v} ms` : "No data";
+}
+
 export default function Observability() {
   const { user } = useAuth();
   const { isMobile, showAllColumns, showAll, setShowAll } = useMobileTableColumns();
@@ -190,9 +195,9 @@ export default function Observability() {
           </CardHeader>
           <CardContent>
             <div className="mb-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
-              <span>Avg: {dashboard.data?.avgWallClockMs ?? 0} ms</span>
-              <span>p95: {dashboard.data?.p95Ms ?? 0} ms</span>
-              <span>p99: {dashboard.data?.p99Ms ?? 0} ms</span>
+              <span>Avg: {fmtMs(dashboard.data?.avgWallClockMs)}</span>
+              <span>p95: {fmtMs(dashboard.data?.p95Ms)}</span>
+              <span>p99: {fmtMs(dashboard.data?.p99Ms)}</span>
               <span>Timeouts: {dashboard.data?.timeoutRatePct ?? 0}%</span>
             </div>
             <div className="frozen-table-wrap sticky-first-col">
@@ -214,7 +219,7 @@ export default function Observability() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  dashboard.data?.last10.map((row, i) => {
+                  dashboard.data?.last10?.map((row, i) => {
                     const timedOut = row.timedOutSections.length > 0;
                     return (
                       <TableRow key={`${row.timestamp}-${i}`}>
@@ -285,10 +290,10 @@ export default function Observability() {
                 <p
                   className={cn(
                     "font-semibold",
-                    (database.data?.queryLatencies.p99 ?? 0) > 2000 && "text-red-600"
+                    (database.data?.queryLatencies?.p99 ?? 0) > 2000 && "text-red-600"
                   )}
                 >
-                  {database.data?.queryLatencies.p99 ?? 0} ms
+                  {fmtMs(database.data?.queryLatencies?.p99)}
                 </p>
               </div>
               <div>
@@ -300,9 +305,9 @@ export default function Observability() {
             <div>
               <p className="mb-1 text-sm text-muted-foreground">Tier timeouts (24h)</p>
               <div className="flex gap-3 text-xs">
-                <span>T1: {database.data?.tierTimeoutCounts24h.tier1 ?? 0}</span>
-                <span>T2: {database.data?.tierTimeoutCounts24h.tier2 ?? 0}</span>
-                <span>T3: {database.data?.tierTimeoutCounts24h.tier3 ?? 0}</span>
+                <span>T1: {database.data?.tierTimeoutCounts24h?.tier1 ?? 0}</span>
+                <span>T2: {database.data?.tierTimeoutCounts24h?.tier2 ?? 0}</span>
+                <span>T3: {database.data?.tierTimeoutCounts24h?.tier3 ?? 0}</span>
               </div>
             </div>
           </CardContent>

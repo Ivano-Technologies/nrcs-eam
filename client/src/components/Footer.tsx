@@ -11,7 +11,6 @@ export default function Footer({ className }: { className?: string }) {
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="text-sm text-muted-foreground text-center md:text-left">
             <p>© {currentYear} Nigerian Red Cross Society. All rights reserved.</p>
-            <p className="text-xs mt-1">Enterprise Asset Management System</p>
             <IvanoCopyright className="mt-2" />
           </div>
           

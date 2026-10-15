@@ -1,5 +1,5 @@
+import type React from "react";
 import { useMemo, useState } from "react";
-import { useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import PageLoader from "@/components/ui/PageLoader";
 import PageHeader from "@/components/ui/PageHeader";
@@ -19,11 +19,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import PhotoUploadZone from "@/components/PhotoUploadZone";
 import { appPath } from "@/lib/routes";
-import { Link } from "wouter";
+import { Link, useRoute } from "wouter";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { CardQrCode } from "@/components/CardQrCode";
 import { FACILITY_TYPE_DESCRIPTIONS, FACILITY_TYPE_LABELS } from "@shared/facilities";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { toast } from "sonner";
-import { Loader2, MapPin, X } from "lucide-react";
+import { Edit2, ExternalLink, Loader2, MapPin, X } from "lucide-react";
 
 const MAX_PHOTOS = 10;
 const MAX_FILE_SIZE_MB = 5;
@@ -141,6 +143,25 @@ export default function FacilityDetail() {
   if (!enabled) return <div className="text-sm text-muted-foreground">Invalid facility id.</div>;
   if (!facility) return <PageLoader />;
 
+  const lat = facility.latitude ? Number(facility.latitude) : NaN;
+  const lng = facility.longitude ? Number(facility.longitude) : NaN;
+  const hasCoords = Number.isFinite(lat) && Number.isFinite(lng);
+  const mapsHref = hasCoords
+    ? `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
+    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+        [facility.address, facility.city, facility.state].filter(Boolean).join(" ")
+      )}`;
+  const details: Array<[string, React.ReactNode]> = [
+    ["Code", formatEmpty(facility.code)],
+    ["Status", facility.isActive ? "Active" : "Inactive"],
+    ["Address", formatEmpty(facility.address)],
+    ["State", formatEmpty(facility.state)],
+    ["Postal code", formatEmpty(facility.postalCode)],
+    ["Contact", formatEmpty(facility.contactPerson)],
+    ["Phone", formatEmpty(facility.contactPhone)],
+  ];
+  const activeWorkOrders = (workOrders ?? []).filter((w) => w.status !== "completed" && w.status !== "cancelled").length;
+
   return (
     <div className="space-y-4">
       <PageHeader
@@ -148,142 +169,231 @@ export default function FacilityDetail() {
         title={
           <span className="flex flex-wrap items-center gap-2">
             {facility.name}
-            <Badge variant="outline" className="text-sm font-medium">
-              {FACILITY_TYPE_LABELS[facility.facilityType]}
-            </Badge>
+            {/* Skip the type badge when the name already says it (e.g. "National Headquarters"). */}
+            {facility.name.toLowerCase().includes(FACILITY_TYPE_LABELS[facility.facilityType].toLowerCase()) ? null : (
+              <Badge variant="outline" className="text-sm font-medium">
+                {FACILITY_TYPE_LABELS[facility.facilityType]}
+              </Badge>
+            )}
           </span>
         }
         subtitle={FACILITY_TYPE_DESCRIPTIONS[facility.facilityType]}
         actions={
-          <>
-            {isManagerOrAdmin ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={syncCoordsMutation.isPending}
-              onClick={() => syncCoordsMutation.mutate({ siteId: facility.id })}
-            >
-              {syncCoordsMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Syncing…
-                </>
-              ) : (
-                <>
-                  <MapPin className="mr-2 h-4 w-4" />
-                  Sync asset coordinates from facility
-                </>
-              )}
-            </Button>
-            ) : null}
-          </>
+          isManagerOrAdmin ? (
+            <>
+              <Button asChild size="sm" data-testid="facility-edit">
+                <Link href={`${appPath("/facilities/all")}?edit=${facility.id}`}>
+                  <Edit2 className="mr-2 h-4 w-4" aria-hidden />
+                  Edit
+                </Link>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={syncCoordsMutation.isPending}
+                onClick={() => syncCoordsMutation.mutate({ siteId: facility.id })}
+              >
+                {syncCoordsMutation.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+                ) : (
+                  <MapPin className="mr-2 h-4 w-4" aria-hidden />
+                )}
+                Sync asset coordinates
+              </Button>
+            </>
+          ) : null
         }
       />
-      <Card>
-        <CardHeader>
-          <CardTitle>Facility details</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-2 text-sm md:grid-cols-2">
-          <p><span className="font-medium">Code:</span> {formatEmpty(facility.code)}</p>
-          <p><span className="font-medium">Status:</span> {facility.isActive ? "Active" : "Inactive"}</p>
-          <p className="md:col-span-2"><span className="font-medium">Address:</span> {formatEmpty(facility.address)}</p>
-          <p><span className="font-medium">State:</span> {formatEmpty(facility.state)}</p>
-          <p><span className="font-medium">Postal code:</span> {formatEmpty(facility.postalCode)}</p>
-          <p><span className="font-medium">Contact:</span> {formatEmpty(facility.contactPerson)}</p>
-          <p><span className="font-medium">Phone:</span> {formatEmpty(facility.contactPhone)}</p>
-          <div className="md:col-span-2">
-            <a
-              className="text-primary underline-offset-4 hover:underline"
-              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                `${facility.address ?? ""} ${facility.city ?? ""} ${facility.state ?? ""}`
-              )}`}
-              target="_blank"
-              rel="noreferrer"
-            >
-              View on Google Maps
-            </a>
-          </div>
-        </CardContent>
-      </Card>
 
-      <Card>
-        <CardHeader><CardTitle>Child Facilities</CardTitle></CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          {childFacilities.length === 0 ? "No child facilities." : childFacilities.map((c) => (
-            <div key={c.id} className="flex items-center justify-between">
-              <span>{c.name}</span>
-              <Badge variant="outline">{FACILITY_TYPE_LABELS[c.facilityType]}</Badge>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base font-semibold">
-            Facility Photos
-            <span className="ml-2 text-sm font-normal text-muted-foreground">
-              ({photoCount}/{MAX_PHOTOS})
-            </span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {canUploadPhotos && (
-            <PhotoUploadZone
-              maxFiles={remainingPhotoSlots}
-              maxFileSizeMb={MAX_FILE_SIZE_MB}
-              disabled={uploading}
-              uploading={uploading}
-              onUpload={handlePhotoUpload}
-            />
-          )}
-
-          {photosQuery.isLoading ? (
-            <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Loading photos…</span>
-            </div>
-          ) : photosQuery.data?.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">
-              No photos uploaded yet.
-            </p>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-              {photosQuery.data?.map((photo) => (
-                <div key={photo.id} className="space-y-1">
-                  <div className="relative group aspect-square rounded-lg overflow-hidden border bg-muted">
-                    <img
-                      src={photo.photoUrl}
-                      alt={photo.caption ?? "Facility photo"}
-                      className="w-full h-full object-cover cursor-pointer transition-opacity group-hover:opacity-80"
-                      onClick={() => setSelectedPhoto(photo.photoUrl)}
-                    />
-                    {isManagerOrAdmin && (
-                      <button
-                        type="button"
-                        className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => setDeletePhotoId(photo.id)}
-                        disabled={deleteMutation.isPending}
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    )}
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start">
+        <div className="space-y-4">
+          <Card className="gap-4">
+            <CardHeader>
+              <CardTitle>Facility details</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <dl className="grid flex-1 grid-cols-[max-content_1fr] gap-x-4 gap-y-2 text-sm">
+                {details.map(([k, v]) => (
+                  <div key={k} className="contents">
+                    <dt className="text-muted-foreground">{k}</dt>
+                    <dd>{v}</dd>
                   </div>
-                  {photo.caption && (
-                    <p className="text-xs text-muted-foreground truncate px-0.5">{photo.caption}</p>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                ))}
+                <dt className="text-muted-foreground">Location</dt>
+                <dd>
+                  <a
+                    className="inline-flex items-center gap-1 text-primary underline-offset-4 hover:underline"
+                    href={mapsHref}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {hasCoords ? `${lat.toFixed(5)}, ${lng.toFixed(5)}` : "View on Google Maps"}
+                    <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+                  </a>
+                </dd>
+              </dl>
+              <CardQrCode
+                title={facility.name}
+                subtitle={facility.code ?? FACILITY_TYPE_LABELS[facility.facilityType]}
+                idValue={String(facility.id)}
+                encodedValue={`${window.location.origin}${appPath(`/facilities/${facility.id}`)}`}
+              />
+            </CardContent>
+          </Card>
 
-      <AlertDialog
-        open={deletePhotoId !== null}
-        onOpenChange={(open) => !open && setDeletePhotoId(null)}
-      >
+          <Card className="gap-4">
+            <CardHeader><CardTitle>Statistics</CardTitle></CardHeader>
+            <CardContent className="grid grid-cols-3 gap-3">
+              <StatLink label="Assets" value={assets?.length ?? 0} href={`${appPath("/assets")}?siteId=${facility.id}`} />
+              <StatLink
+                label="Inventory items"
+                value={inventory?.length ?? 0}
+                href={
+                  facility.facilityType === "warehouse"
+                    ? `${appPath("/inventory/stock-overview")}?siteId=${facility.id}`
+                    : appPath("/inventory/stock-overview")
+                }
+              />
+              <StatLink label="Active work orders" value={activeWorkOrders} href={`${appPath("/work-orders")}?siteId=${facility.id}`} />
+            </CardContent>
+          </Card>
+
+          <Card className="gap-4">
+            <CardHeader><CardTitle>Child facilities</CardTitle></CardHeader>
+            <CardContent className="text-sm">
+              {childFacilities.length === 0 ? (
+                <p className="text-muted-foreground">No child facilities.</p>
+              ) : (
+                <ul className="divide-y">
+                  {childFacilities.map((c) => (
+                    <li key={c.id} className="flex items-center justify-between gap-2 py-2">
+                      <Link href={appPath(`/facilities/${c.id}`)} className="font-medium text-primary underline-offset-4 hover:underline">
+                        {c.name}
+                      </Link>
+                      <Badge variant="outline">{FACILITY_TYPE_LABELS[c.facilityType]}</Badge>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="space-y-4">
+          <Card className="gap-4">
+            <CardHeader><CardTitle>Recent activity</CardTitle></CardHeader>
+            <CardContent className="space-y-4 text-sm">
+              <section>
+                <h3 className="mb-1 font-medium">Asset movements</h3>
+                {recentTransfers.length === 0 ? (
+                  <p className="text-muted-foreground">No recent asset movements.</p>
+                ) : (
+                  <ul className="space-y-1">
+                    {recentTransfers.map((t) => (
+                      <li key={t.id}>{formatEnumLabel(t.status)} transfer #{t.id}, {formatDate(t.requestDate)}</li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+              <section>
+                <h3 className="mb-1 font-medium">Work orders</h3>
+                {recentWorkOrders.length === 0 ? (
+                  <p className="text-muted-foreground">No recent work orders.</p>
+                ) : (
+                  <ul className="space-y-1">
+                    {recentWorkOrders.map((w) => (
+                      <li key={w.id}>
+                        <Link href={appPath(`/work-orders/${w.id}`)} className="text-primary underline-offset-4 hover:underline">
+                          {w.workOrderNumber}
+                        </Link>{" "}
+                        {w.title}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+              <section>
+                <h3 className="mb-1 font-medium">Inventory transactions</h3>
+                {recentMovements.length === 0 ? (
+                  <p className="text-muted-foreground">No recent inventory transactions.</p>
+                ) : (
+                  <ul className="space-y-1">
+                    {recentMovements.map((m, i) => (
+                      <li key={`${m.itemCode}-${i}`}>{m.itemCode}: {formatEnumLabel(m.type)} {m.quantity} ({formatDate(m.transactionDate)})</li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            </CardContent>
+          </Card>
+
+          <Card className="gap-4">
+            <CardHeader>
+              <CardTitle>
+                Photos
+                <span className="ml-2 text-sm font-normal text-muted-foreground">
+                  ({photoCount}/{MAX_PHOTOS})
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {canUploadPhotos && (
+                <PhotoUploadZone
+                  maxFiles={remainingPhotoSlots}
+                  maxFileSizeMb={MAX_FILE_SIZE_MB}
+                  disabled={uploading}
+                  uploading={uploading}
+                  onUpload={handlePhotoUpload}
+                />
+              )}
+              {photosQuery.isLoading ? (
+                <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                  <span>Loading photos…</span>
+                </div>
+              ) : photosQuery.data?.length === 0 ? (
+                <p className="py-4 text-center text-sm text-muted-foreground">No photos uploaded yet.</p>
+              ) : (
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {photosQuery.data?.map((photo) => (
+                    <div key={photo.id} className="space-y-1">
+                      <div className="relative aspect-square overflow-hidden rounded-lg border bg-muted">
+                        <button
+                          type="button"
+                          className="h-full w-full"
+                          aria-label={`Open ${photo.caption ?? "facility photo"}`}
+                          onClick={() => setSelectedPhoto(photo.photoUrl)}
+                        >
+                          <img
+                            src={photo.photoUrl}
+                            alt={photo.caption ?? "Facility photo"}
+                            className="h-full w-full object-cover transition-opacity hover:opacity-80"
+                          />
+                        </button>
+                        {isManagerOrAdmin && (
+                          <button
+                            type="button"
+                            aria-label={`Delete ${photo.caption ?? "photo"}`}
+                            className="absolute right-1 top-1 rounded-full bg-black/60 p-1.5 text-white hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            onClick={() => setDeletePhotoId(photo.id)}
+                            disabled={deleteMutation.isPending}
+                          >
+                            <X className="h-3.5 w-3.5" aria-hidden />
+                          </button>
+                        )}
+                      </div>
+                      {photo.caption && <p className="truncate px-0.5 text-xs text-muted-foreground">{photo.caption}</p>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      <AlertDialog open={deletePhotoId !== null} onOpenChange={(open) => !open && setDeletePhotoId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete photo?</AlertDialogTitle>
@@ -296,9 +406,7 @@ export default function FacilityDetail() {
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => {
-                if (deletePhotoId !== null) {
-                  deleteMutation.mutate({ id: deletePhotoId });
-                }
+                if (deletePhotoId !== null) deleteMutation.mutate({ id: deletePhotoId });
               }}
             >
               Delete
@@ -307,86 +415,24 @@ export default function FacilityDetail() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {selectedPhoto && (
-        <div
-          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
-          onClick={() => setSelectedPhoto(null)}
-        >
-          <div className="relative max-w-4xl max-h-full">
-            <img
-              src={selectedPhoto}
-              alt="Facility photo"
-              className="max-w-full max-h-[90vh] object-contain rounded-lg"
-              onClick={(e) => e.stopPropagation()}
-            />
-            <button
-              type="button"
-              className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-2"
-              onClick={() => setSelectedPhoto(null)}
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-      )}
-
-      <Card>
-        <CardHeader><CardTitle>Statistics</CardTitle></CardHeader>
-        <CardContent className="grid grid-cols-2 gap-3 md:grid-cols-3">
-          <StatLink label="Asset count" value={assets?.length ?? 0} href={`${appPath("/assets")}?siteId=${facility.id}`} />
-          <StatLink label="Inventory count" value={inventory?.length ?? 0} href={`${appPath("/inventory/stock-overview")}?siteId=${facility.id}`} />
-          <StatLink label="Active work orders" value={(workOrders ?? []).filter((w) => w.status !== "completed" && w.status !== "cancelled").length} href={`${appPath("/work-orders")}?siteId=${facility.id}`} />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader><CardTitle>Recent Activity</CardTitle></CardHeader>
-        <CardContent className="space-y-4 text-sm">
-          <section>
-            <h3 className="mb-1 font-medium">Recent Asset Movements</h3>
-            {recentTransfers.length === 0 ? "No recent asset movements." : (
-              <ul className="space-y-1">
-                {recentTransfers.map((t) => (
-                  <li key={t.id}>{formatEnumLabel(t.status)} transfer #{t.id}, {formatDate(t.requestDate)}</li>
-                ))}
-              </ul>
-            )}
-          </section>
-          <section>
-            <h3 className="mb-1 font-medium">Recent work orders</h3>
-            {recentWorkOrders.length === 0 ? "No recent work orders." : (
-              <ul className="space-y-1">
-                {recentWorkOrders.map((w) => (
-                  <li key={w.id}>{w.workOrderNumber} - {w.title}</li>
-                ))}
-              </ul>
-            )}
-          </section>
-          <section>
-            <h3 className="mb-1 font-medium">Recent Inventory Transactions</h3>
-            {recentMovements.length === 0 ? "No recent inventory transactions." : (
-              <ul className="space-y-1">
-                {recentMovements.map((m, i) => (
-                  <li key={`${m.itemCode}-${i}`}>{m.itemCode}: {formatEnumLabel(m.type)} {m.quantity} ({formatDate(m.transactionDate)})</li>
-                ))}
-              </ul>
-            )}
-          </section>
-        </CardContent>
-      </Card>
-
-      <Button asChild variant="outline">
-        <Link href={appPath("/facilities/all")}>Back to Facilities</Link>
-      </Button>
+      <Dialog open={selectedPhoto !== null} onOpenChange={(open) => !open && setSelectedPhoto(null)}>
+        <DialogContent className="max-w-4xl border-0 bg-transparent p-0 shadow-none">
+          <DialogTitle className="sr-only">Facility photo</DialogTitle>
+          <DialogDescription className="sr-only">Press Esc to close.</DialogDescription>
+          {selectedPhoto ? (
+            <img src={selectedPhoto} alt="Facility photo" className="max-h-[90vh] w-full rounded-lg object-contain" />
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
 function StatLink({ label, value, href }: { label: string; value: number; href: string }) {
   return (
-    <a href={href} className="rounded-md border p-3 hover:bg-muted/50">
+    <Link href={href} className="rounded-md border p-3 hover:bg-muted/50">
       <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="text-xl font-semibold">{value}</div>
-    </a>
+      <div className="text-xl font-semibold tabular-nums">{value}</div>
+    </Link>
   );
 }

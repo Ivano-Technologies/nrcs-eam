@@ -8,8 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Plus, Search, Wrench, Calendar, ClipboardList } from "lucide-react";
-import { Link } from "wouter";
+import { Loader2, Plus, Wrench, Calendar, ClipboardList } from "lucide-react";
+import { Link, useLocation, useSearch } from "wouter";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,9 +21,22 @@ export default function WorkOrders() {
   const { user } = useAuth();
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  // `?siteId=` (from a facility's Active work orders tile) filters the list to that facility.
+  const urlSearch = useSearch();
+  const [location, setLocation] = useLocation();
+  const siteParam = new URLSearchParams(urlSearch).get("siteId");
+  const siteFilter = siteParam && Number.isFinite(Number(siteParam)) ? siteParam : "all";
+  const setSiteFilter = (value: string) => {
+    const p = new URLSearchParams(urlSearch);
+    if (value === "all") p.delete("siteId");
+    else p.set("siteId", value);
+    const qs = p.toString();
+    setLocation(qs ? `${location}?${qs}` : location, { replace: true });
+  };
 
   const { data: workOrders, isLoading, refetch } = trpc.workOrders.list.useQuery({
     status: statusFilter !== "all" ? statusFilter : undefined,
+    siteId: siteFilter !== "all" ? Number(siteFilter) : undefined,
   });
 
   const { data: assets } = trpc.assets.list.useQuery();
@@ -260,29 +273,35 @@ export default function WorkOrders() {
         </Dialog>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Filters</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-2">
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="assigned">Assigned</SelectItem>
-                <SelectItem value="in_progress">In Progress</SelectItem>
-                <SelectItem value="on_hold">On Hold</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center" data-testid="work-orders-toolbar">
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="h-9 w-full sm:w-48" aria-label="Status">
+            <SelectValue placeholder="Filter by status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All statuses</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="assigned">Assigned</SelectItem>
+            <SelectItem value="in_progress">In progress</SelectItem>
+            <SelectItem value="on_hold">On hold</SelectItem>
+            <SelectItem value="completed">Completed</SelectItem>
+            <SelectItem value="cancelled">Cancelled</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={siteFilter} onValueChange={setSiteFilter}>
+          <SelectTrigger className="h-9 w-full sm:w-64" aria-label="Facility" data-testid="work-orders-site-filter">
+            <SelectValue placeholder="All facilities" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All facilities</SelectItem>
+            {(sites ?? []).map((s) => (
+              <SelectItem key={s.id} value={String(s.id)}>
+                {s.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
       {isLoading ? (
         <TableLoader className="py-8" />

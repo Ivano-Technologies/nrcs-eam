@@ -5,7 +5,6 @@ import {
   ArrowRightLeft,
   BookText,
   ClipboardList,
-  Layers,
   Package,
   RefreshCw,
   Truck,
@@ -42,12 +41,6 @@ const LINKS: { title: string; description: string; href: string; icon: typeof Pa
     description: "Cycle counts and variance review.",
     href: appPath("/inventory/counts"),
     icon: ClipboardList,
-  },
-  {
-    title: "Adjustments",
-    description: "Write offs and corrections. A combined view is coming soon.",
-    href: appPath("/inventory/adjustments"),
-    icon: Layers,
   },
   {
     title: "Expiry",
