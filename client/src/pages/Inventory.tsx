@@ -355,15 +355,16 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
         onValueChange={(v) => setMainTab(v as InventoryMainTab)}
         className="space-y-4"
       >
-        <TabsList>
-          <TabsTrigger value="overview" data-testid="inventory-tab-overview">
+        {/* Phones: the tab bar scrolls sideways instead of squeezing the labels together. */}
+        <TabsList className="max-w-full justify-start gap-1 overflow-x-auto">
+          <TabsTrigger value="overview" data-testid="inventory-tab-overview" className="flex-none px-3">
             Stock overview
           </TabsTrigger>
-          <TabsTrigger value="catalogue" data-testid="inventory-tab-catalogue">
+          <TabsTrigger value="catalogue" data-testid="inventory-tab-catalogue" className="flex-none px-3">
             Item catalogue
           </TabsTrigger>
           {isManagerOrAdmin ? (
-            <TabsTrigger value="settings" data-testid="inventory-tab-settings">
+            <TabsTrigger value="settings" data-testid="inventory-tab-settings" className="flex-none px-3">
               Settings
             </TabsTrigger>
           ) : null}
@@ -382,7 +383,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                     : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-300 dark:hover:bg-gray-900"
                 )}
               >
-                All Items · {chipCounts.total}
+                All items · {chipCounts.total}
               </button>
               {ITEM_CATEGORIES.map((c) => {
                 const active = itemCategoryParam === c.value;

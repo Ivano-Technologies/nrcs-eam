@@ -41,6 +41,7 @@ export default function ImportDraftsPage({ embedInShell = false }: { embedInShel
         <div>
           <PageHeader
             icon={Upload}
+            eyebrow="Inventory"
             title="Import drafts"
             subtitle="Review imported drafts and post them when they are ready."
             back={{ label: "Import", href: appPath("/inventory/import") }}

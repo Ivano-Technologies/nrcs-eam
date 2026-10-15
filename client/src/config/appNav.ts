@@ -66,7 +66,7 @@ export const SIDEBAR_GROUPS: AppNavGroup[] = [
     icon: Boxes,
     items: [
       { label: "Asset register", path: appPath("/assets"), icon: Landmark },
-      { label: "Asset Map", path: appPath("/asset-map"), icon: MapPin },
+      { label: "Asset map", path: appPath("/asset-map"), icon: MapPin },
       { label: "Asset scanner", path: appPath("/scanner"), icon: Scan },
     ],
   },
