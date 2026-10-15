@@ -46,7 +46,7 @@ import { HtmlTableEmptyState } from "@/components/ui/EmptyState";
 import { cn } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ViewToggle } from "@/components/ViewToggle";
-import { useMobileDefaultViewMode } from "@/hooks/useMobileDefaultViewMode";
+import { useViewMode } from "@/hooks/useViewMode";
 import { CardQrCode } from "@/components/CardQrCode";
 import { ModuleFiltersCard, ModuleFilterSearch } from "@/components/ModuleFiltersCard";
 import { useBulkImportFileInput } from "@/hooks/useBulkImportFileInput";
@@ -200,7 +200,7 @@ export default function Assets() {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState<string>("50");
-  const [viewMode, setViewMode] = useMobileDefaultViewMode("viewMode_assets");
+  const [viewMode, setViewMode] = useViewMode("assets", "table");
 
   useEffect(() => {
     if (typeof window === "undefined") return;

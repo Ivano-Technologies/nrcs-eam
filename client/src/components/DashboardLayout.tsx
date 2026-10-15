@@ -18,28 +18,29 @@ import {
 } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
 import { appPath } from "@/lib/routes";
-import { LogOut, Settings, ChevronsLeft, Search, User } from "lucide-react";
-import { CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation } from "wouter";
+import { LogOut, Settings, Search, User } from "lucide-react";
+import { CSSProperties, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useSearch } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 import { NotificationCenter } from "./NotificationCenter";
 import Footer from "./Footer";
 import { PageShell } from "@/components/ui/PageShell";
+import PageLoader from "@/components/ui/PageLoader";
 import { ThemeToggle } from "./ui/ThemeToggle";
 import { SidebarGroupedNav } from "./SidebarGroupedNav";
+import { SidebarBrand, SidebarEdgeToggle } from "./sidebar/SidebarBrand";
 import { MobileBottomNav } from "./MobileBottomNav";
 import { GlobalSearch } from "./GlobalSearch";
 import { flattenNavItems } from "@/config/appNav";
-import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { Link } from "wouter";
 import { ConnectivityIndicator } from "./ConnectivityIndicator";
 import { RoleSwitcher } from "./dashboard/RoleSwitcher";
 import { DashboardRolePreviewProvider } from "./dashboard/rolePreviewContext";
 import type { UserRole } from "./dashboard/types";
-import { SIDEBAR_FULL_WIDTH, SIDEBAR_RAIL_WIDTH, snapSidebarWidth } from "@/lib/sidebarWidth";
-import { FullBleedProvider, useAutoRail, useFullBleedRegistry } from "@/lib/fullBleed";
+import { SIDEBAR_FADE, SIDEBAR_FULL_WIDTH, SIDEBAR_RAIL_WIDTH, snapSidebarWidth } from "@/lib/sidebarWidth";
+import { FullBleedProvider, routeWantsFullBleed, useAutoRail, useFullBleedRegistry } from "@/lib/fullBleed";
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
 const PRESET_WIDTHS = {
@@ -59,7 +60,11 @@ export default function DashboardLayout({
     const saved = localStorage.getItem(SIDEBAR_WIDTH_KEY);
     return snapSidebarWidth(saved ? parseInt(saved, 10) : SIDEBAR_FULL_WIDTH);
   });
-  const { active: fullBleed, registry } = useFullBleedRegistry();
+  const { active: viewFullBleed, registry } = useFullBleedRegistry();
+  // Route driven fold: decided in the same render as the navigation, before the page chunk loads.
+  const [layoutLocation] = useLocation();
+  const layoutSearch = useSearch();
+  const fullBleed = viewFullBleed || routeWantsFullBleed(layoutLocation, layoutSearch);
   const isMobile = useIsMobile();
   const updatePrefs = trpc.userPreferences.update.useMutation();
   const { mutate: mutatePrefs } = updatePrefs;
@@ -113,7 +118,7 @@ export default function DashboardLayout({
 
 type DashboardLayoutContentProps = {
   children: React.ReactNode;
-  /** Manual toggle or drag. Saves the preference, or only sets the visit width inside a full bleed view. */
+  /** Manual toggle (edge tab or Ctrl+B). Saves the preference, or only sets the visit width inside a full bleed view. */
   setSidebarWidth: (width: number) => void;
   sidebarWidth: number;
   autoRail: boolean;
@@ -153,9 +158,6 @@ function DashboardLayoutContent({
     }
   }, [user, location, setLocation]);
   const { state } = useSidebar();
-  const [isResizing, setIsResizing] = useState(false);
-  const sidebarRef = useRef<HTMLDivElement>(null);
-  const dragWidthRef = useRef<number | null>(null);
   const menuItems = flattenNavItems(user?.role);
   const activeMenuItem =
     menuItems.find((item) => item.path === location) ??
@@ -167,6 +169,15 @@ function DashboardLayoutContent({
   const isMobile = useIsMobile();
   const [toggleFeedback, setToggleFeedback] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const rail = sidebarWidth <= PRESET_WIDTHS.narrow;
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  /** Set by the rail search button: focus the field once the sidebar has unfolded. */
+  const focusSearchOnExpandRef = useRef(false);
+  useEffect(() => {
+    if (rail || !focusSearchOnExpandRef.current) return;
+    focusSearchOnExpandRef.current = false;
+    searchInputRef.current?.focus({ preventScroll: true });
+  }, [rail]);
   const actualRole = useMemo<UserRole>(() => {
     const role = user?.role ?? "staff";
     if (role === "admin") return "Admin";
@@ -195,6 +206,11 @@ function DashboardLayoutContent({
     setTimeout(() => setToggleFeedback(false), 300);
   };
 
+  const openSearchFromRail = () => {
+    focusSearchOnExpandRef.current = true;
+    toggleSidebarWidth();
+  };
+
   // Keyboard shortcut for sidebar toggle (Ctrl+B / Cmd+B)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -208,150 +224,58 @@ function DashboardLayoutContent({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sidebarWidth, setSidebarWidth]);
 
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isResizing) return;
-
-      const sidebarLeft = sidebarRef.current?.getBoundingClientRect().left ?? 0;
-      // Snap while dragging: the sidebar is either the full width or the icon rail, never in between.
-      const snapped = snapSidebarWidth(e.clientX - sidebarLeft);
-      if (snapped !== dragWidthRef.current) {
-        dragWidthRef.current = snapped;
-        setSidebarWidth(snapped);
-      }
-    };
-
-    const handleMouseUp = () => {
-      setIsResizing(false);
-      dragWidthRef.current = null;
-    };
-
-    if (isResizing) {
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
-      document.body.style.cursor = "col-resize";
-      document.body.style.userSelect = "none";
-    }
-
-    return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-    };
-  }, [isResizing, setSidebarWidth]);
-
   return (
     <DashboardRolePreviewProvider actualRole={actualRole} effectiveRole={effectiveRole} setEffectiveRole={setEffectiveRole}>
-      <div className="relative" ref={sidebarRef} data-testid="app-sidebar" data-auto-rail={autoRail ? "true" : "false"} data-full-bleed={inVisit ? "true" : "false"} data-sidebar-width={sidebarWidth}>
-        <Sidebar
-          className="border-r-0 motion-reduce:[&_[data-slot=sidebar-gap]]:transition-none motion-reduce:[&_[data-slot=sidebar-container]]:transition-none"
-        >
+      <div className="relative" data-testid="app-sidebar" data-auto-rail={autoRail ? "true" : "false"} data-full-bleed={inVisit ? "true" : "false"} data-sidebar-width={sidebarWidth}>
+        <Sidebar className="border-r-0" data-rail={rail ? "true" : "false"}>
           <SidebarHeader
+            data-testid="sidebar-header"
             className={cn(
-              "border-b border-sidebar-border",
-              sidebarWidth <= PRESET_WIDTHS.narrow ? "min-h-[4.5rem] py-2 justify-center" : "h-20 justify-center"
+              "h-14 shrink-0 flex-row items-center border-b border-sidebar-border py-0 transition-[padding] duration-200 ease-in-out",
+              // Rail: 12 + 40px logo + 12 = 64, so the logo sits centred without changing size.
+              rail ? "px-3" : "px-2"
             )}
           >
-            {sidebarWidth <= PRESET_WIDTHS.narrow ? (
-              <div className="flex flex-col items-center gap-2 px-1 w-full">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Link href={appPath("/")} aria-label="Go to Dashboard">
-                      <div className="flex justify-center w-full rounded-md transition-opacity hover:opacity-80 cursor-pointer">
-                        <img
-                          src="/nrcs-logo-source.png"
-                          alt="Nigerian Red Cross Society"
-                          className="h-10 w-10 shrink-0 object-contain mx-auto"
-                          data-testid="sidebar-logo-collapsed"
-                        />
-                      </div>
-                    </Link>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">Go to Dashboard</TooltipContent>
-                </Tooltip>
-                <button
-                  type="button"
-                  onClick={toggleSidebarWidth}
-                  className={`h-8 w-8 flex items-center justify-center hover:bg-sidebar-accent rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring shrink-0 border border-sidebar-border hover:border-primary/50 ${toggleFeedback ? "bg-primary/20 scale-110 border-primary" : ""}`}
-                  aria-label="Toggle sidebar width (Ctrl+B)"
-                  title="Toggle sidebar width (Ctrl+B)"
-                >
-                  <ChevronsLeft
-                    className={cn(
-                      "h-3.5 w-3.5 text-sidebar-foreground transition-transform duration-200 ease-in-out",
-                      sidebarWidth <= PRESET_WIDTHS.narrow ? "rotate-180" : "rotate-0"
-                    )}
-                  />
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 px-2 transition-all w-full">
-                <div className="min-w-0 flex-1">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Link href={appPath("/")}>
-                        <div className="flex items-center gap-2 min-w-0 rounded-md px-1 py-1 transition-opacity hover:opacity-80 cursor-pointer">
-                          <img
-                            src="/nrcs-logo-source.png"
-                            alt="Nigerian Red Cross Society"
-                            className="h-10 w-10 shrink-0"
-                          />
-                          <div className="flex flex-col min-w-0 gap-0.5">
-                            <span
-                              className="font-bold text-sm leading-tight text-sidebar-foreground"
-                              data-testid="sidebar-org-name"
-                            >
-                              Nigerian Red Cross Society
-                            </span>
-                            <span className="text-xs leading-tight text-sidebar-foreground/70">
-                              Enterprise Asset Management
-                            </span>
-                          </div>
-                        </div>
-                      </Link>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom">Go to Dashboard</TooltipContent>
-                  </Tooltip>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={toggleSidebarWidth}
-                    className={`h-8 w-8 flex items-center justify-center hover:bg-sidebar-accent rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring shrink-0 border border-sidebar-border hover:border-primary/50 ${toggleFeedback ? "bg-primary/20 scale-110 border-primary" : ""}`}
-                    aria-label="Toggle sidebar width (Ctrl+B)"
-                    title="Toggle sidebar width (Ctrl+B)"
-                  >
-                    <ChevronsLeft
-                      className={cn(
-                        "h-3.5 w-3.5 text-sidebar-foreground transition-transform duration-200 ease-in-out",
-                        sidebarWidth <= PRESET_WIDTHS.narrow ? "rotate-180" : "rotate-0"
-                      )}
-                    />
-                  </button>
-                </div>
-              </div>
-            )}
+            <SidebarBrand rail={rail} />
           </SidebarHeader>
 
           <SidebarContent className="gap-0">
-            {/* Search Bar */}
-            {sidebarWidth > PRESET_WIDTHS.narrow && (
-              <div className="px-3 py-2 border-b border-sidebar-border">
-                <div className="relative">
-                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-[20px] w-[20px] text-muted-foreground" />
-                  <input
-                    type="text"
-                    placeholder="Search menu…"
+            {/* Search bar: kept mounted in the rail (same height, so nav items never jump); the
+                field fades out and the icon becomes a button that unfolds the sidebar and focuses it. */}
+            <div className="px-3 py-2 border-b border-sidebar-border">
+              <div className="relative">
+                {rail ? (
+                  <button
+                    type="button"
+                    onClick={openSearchFromRail}
                     aria-label="Search menu"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full h-9 pl-8 pr-3 text-[17px] bg-sidebar-accent/50 border border-sidebar-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground"
-                  />
-                </div>
+                    data-testid="sidebar-search-rail"
+                    className="absolute inset-0 z-10 flex items-center justify-center rounded-md text-muted-foreground hover:bg-sidebar-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <Search aria-hidden className="h-[20px] w-[20px]" />
+                  </button>
+                ) : (
+                  <Search aria-hidden className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 h-[20px] w-[20px] text-muted-foreground" />
+                )}
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  placeholder="Search menu…"
+                  aria-label="Search menu"
+                  aria-hidden={rail || undefined}
+                  tabIndex={rail ? -1 : undefined}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className={cn(
+                    "w-full h-9 pl-8 pr-3 text-[17px] bg-sidebar-accent/50 border border-sidebar-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground",
+                    SIDEBAR_FADE,
+                    rail ? "opacity-0" : "opacity-100 delay-100"
+                  )}
+                />
               </div>
-            )}
-            
+            </div>
+
+
             <SidebarGroupedNav
               location={location}
               setLocation={setLocation}
@@ -362,7 +286,7 @@ function DashboardLayoutContent({
             />
           </SidebarContent>
 
-          <SidebarFooter className="p-3 space-y-2">
+          <SidebarFooter className={cn("space-y-2 py-3 transition-[padding] duration-200 ease-in-out", rail ? "px-1" : "px-3")}>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
@@ -375,7 +299,7 @@ function DashboardLayoutContent({
                         : "User menu"
                       : undefined
                   }
-                  className={`flex items-center gap-3 rounded-lg px-1 py-1 hover:bg-accent/50 transition-colors w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${sidebarWidth === PRESET_WIDTHS.narrow ? 'justify-center' : ''}`}
+                  className="flex w-full items-center gap-3 overflow-hidden rounded-lg px-1 py-1 text-left transition-colors hover:bg-accent/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                 >
                   <Avatar className="h-[47px] w-[47px] border shrink-0">
                     {user?.avatarUrl ? (
@@ -385,16 +309,14 @@ function DashboardLayoutContent({
                       {user?.name?.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  {sidebarWidth > PRESET_WIDTHS.narrow && (
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[13.5px] font-medium truncate leading-none">
-                        {user?.name || "-"}
-                      </p>
-                      <p className="text-[12px] text-muted-foreground truncate mt-1.5">
-                        {user?.email || "-"}
-                      </p>
-                    </div>
-                  )}
+                  <div aria-hidden={rail || undefined} className={cn("min-w-0 flex-1 whitespace-nowrap", SIDEBAR_FADE, rail ? "opacity-0" : "opacity-100 delay-100")}>
+                    <p className="text-[13.5px] font-medium truncate leading-none">
+                      {user?.name || "-"}
+                    </p>
+                    <p className="text-[12px] text-muted-foreground truncate mt-1.5">
+                      {user?.email || "-"}
+                    </p>
+                  </div>
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
@@ -422,16 +344,14 @@ function DashboardLayoutContent({
             </DropdownMenu>
           </SidebarFooter>
         </Sidebar>
-        <div
-          className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-primary/20 transition-colors"
-          onMouseDown={() => {
-            setIsResizing(true);
-          }}
-          style={{ zIndex: 50 }}
+        <SidebarEdgeToggle
+          rail={rail}
+          onToggle={toggleSidebarWidth}
+          feedback={toggleFeedback}
         />
       </div>
 
-      <SidebarInset className="min-h-svh bg-background dark:bg-[#232323] transition-[margin,padding] duration-200 ease-in-out">
+      <SidebarInset className="min-h-svh bg-background dark:bg-[#232323]">
         {isMobile && (
           <div className="flex border-b h-14 items-center justify-between bg-background/95 dark:bg-[#232323]/95 px-2 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
             <div className="flex items-center gap-2">
@@ -473,7 +393,10 @@ function DashboardLayoutContent({
           data-testid="app-page-main"
           className={cn("flex-1 overflow-x-clip", isMobile && "pb-20")}
         >
-          <PageShell>{children}</PageShell>
+          <PageShell>
+            {/* Page chunks load inside the layout: the sidebar and top bar stay mounted on navigation. */}
+            <Suspense fallback={<PageLoader />}>{children}</Suspense>
+          </PageShell>
         </main>
         <Footer className={isMobile ? "pb-16" : undefined} />
         {isMobile ? (

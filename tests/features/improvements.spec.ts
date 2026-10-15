@@ -52,6 +52,13 @@ test.describe("UI improvements (live)", () => {
     if ((await byTestId.count()) > 0) {
       await expect(byTestId).toBeVisible({ timeout: 30_000 });
       await expect(byTestId).toContainText(/Nigerian Red Cross Society/i);
+      // Brand fix: each brand line sits on exactly one line (no wrap) inside a fixed 56px header.
+      const nameBox = await byTestId.boundingBox();
+      expect(nameBox?.height ?? 99).toBeLessThanOrEqual(18);
+      const subtitleBox = await page.getByTestId("sidebar-org-subtitle").boundingBox();
+      expect(subtitleBox?.height ?? 99).toBeLessThanOrEqual(18);
+      const headerBox = await page.getByTestId("sidebar-header").boundingBox();
+      expect(Math.round(headerBox?.height ?? 0)).toBe(56);
     } else {
       await expect(page.getByText(/Nigerian Red Cross Society/i).first()).toBeVisible({
         timeout: 30_000,
@@ -62,7 +69,7 @@ test.describe("UI improvements (live)", () => {
   test("dashboard sidebar shows tooltip when collapsed", async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto("/app");
-    await page.getByRole("button", { name: /Toggle sidebar width/i }).click();
+    await page.getByTestId("sidebar-edge-toggle").click();
     const navBtn = page.getByTestId("sidebar-nav-dashboard");
     await expect(navBtn).toBeVisible();
     await navBtn.scrollIntoViewIfNeeded();
@@ -75,6 +82,26 @@ test.describe("UI improvements (live)", () => {
       return;
     }
     await expect(tip).toBeVisible({ timeout: 10_000 });
+  });
+
+  test("sidebar stays mounted and folds on the first frame of the Asset Map", async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto("/app");
+    await expect(page.getByTestId("app-sidebar")).toHaveAttribute("data-sidebar-width", "256", { timeout: 30_000 });
+    const result = await page.evaluate(
+      () =>
+        new Promise<{ attached: boolean; width: string | null }>((resolve) => {
+          const sidebar = document.querySelector('[data-testid="app-sidebar"]');
+          window.history.pushState(null, "", "/app/asset-map");
+          window.dispatchEvent(new PopStateEvent("popstate"));
+          requestAnimationFrame(() =>
+            resolve({ attached: Boolean(sidebar?.isConnected), width: sidebar?.getAttribute("data-sidebar-width") ?? null })
+          );
+        })
+    );
+    // Same sidebar node (no full app spinner) and the rail decided from the route on the first frame.
+    expect(result.attached).toBe(true);
+    expect(result.width).toBe("64");
   });
 
   test("inventory page loads with grid/list toggle", async ({ page }) => {

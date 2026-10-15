@@ -22,7 +22,12 @@ test.describe("sites module (live)", () => {
     ).toBeVisible({ timeout: 30_000 });
 
     const sitesList = page.getByTestId("sites-list");
-    let firstSiteCard = page.locator("[data-testid^='facility-row-']").first();
+    // Card is the default view (polish round, Oct 2026); Table rows still count after a toggle.
+    const cardToggle = page.getByTestId("view-toggle-card").first();
+    if ((await cardToggle.count()) > 0) {
+      await expect(cardToggle).toHaveAttribute("aria-pressed", "true");
+    }
+    let firstSiteCard = page.locator("[data-testid^='facility-card-'], [data-testid^='facility-row-']").first();
     if ((await firstSiteCard.count()) === 0) firstSiteCard = page.locator("[data-testid^='site-card-']").first();
     if ((await sitesList.count()) > 0) {
       await expect(sitesList).toBeVisible({ timeout: 30_000 });
@@ -45,7 +50,7 @@ test.describe("sites module (live)", () => {
     await loginAsAdmin(page);
     const name = await resolveLiveTestSiteName(page);
     expect(name.trim().length).toBeGreaterThan(0);
-    const row = page.locator("[data-testid^='facility-row-']").filter({ hasText: name }).first();
+    const row = page.locator("[data-testid^='facility-card-'], [data-testid^='facility-row-']").filter({ hasText: name }).first();
     if ((await row.count()) > 0) {
       await expect(row).toBeVisible({ timeout: 30_000 });
     } else {

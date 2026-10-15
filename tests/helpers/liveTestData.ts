@@ -39,12 +39,17 @@ async function gotoFacilitiesPage(page: Page): Promise<void> {
   ).toBeVisible({ timeout: 30_000 });
 }
 
+/** A facility in the list: Card is the default view since the polish round; Table rows still count. */
+function facilityItems(page: Page) {
+  return page.locator("[data-testid^='facility-card-'], [data-testid^='facility-row-']");
+}
+
 /**
  * Returns true if a facility row with this display name is visible on /app/facilities.
  */
 export async function siteExistsByName(page: Page, siteName: string): Promise<boolean> {
   await gotoFacilitiesPage(page);
-  const row = page.locator("[data-testid^='facility-row-']").filter({ hasText: siteName });
+  const row = facilityItems(page).filter({ hasText: siteName });
   if ((await row.count()) > 0) return true;
   const card = page.locator("[data-testid^='site-card-']").filter({ hasText: siteName });
   if ((await card.count()) > 0) return true;
@@ -61,14 +66,12 @@ export async function siteExistsByName(page: Page, siteName: string): Promise<bo
 export async function resolveLiveTestSiteName(page: Page): Promise<string> {
   await gotoFacilitiesPage(page);
 
-  const sharedCard = page
-    .locator("[data-testid^='facility-row-']")
-    .filter({ hasText: LIVE_E2E_SHARED_SITE_NAME });
+  const sharedCard = facilityItems(page).filter({ hasText: LIVE_E2E_SHARED_SITE_NAME });
   if ((await sharedCard.count()) > 0) {
     return LIVE_E2E_SHARED_SITE_NAME;
   }
 
-  const firstRow = page.locator("[data-testid^='facility-row-']").first();
+  const firstRow = facilityItems(page).first();
   if ((await firstRow.count()) > 0) {
     await expect(firstRow, "At least one site must exist for live E2E").toBeVisible({
       timeout: 30_000,

@@ -17,7 +17,7 @@ import { downloadBase64File } from "@/lib/download";
 import { formatNaira } from "@/lib/format";
 import { appPath } from "@/lib/routes";
 import { trpc } from "@/lib/trpc";
-import { useMobileDefaultViewMode } from "@/hooks/useMobileDefaultViewMode";
+import { useViewMode } from "@/hooks/useViewMode";
 import { ArrowDown, ArrowUp, FileDown, Loader2, Trophy } from "lucide-react";
 import { useMemo } from "react";
 import { Link } from "wouter";
@@ -25,7 +25,7 @@ import { toast } from "sonner";
 import { useFullBleed } from "@/lib/fullBleed";
 
 export default function BranchScorecards() {
-  const [viewMode, setViewMode] = useMobileDefaultViewMode("viewMode_branch_scorecards");
+  const [viewMode, setViewMode] = useViewMode("branch_scorecards");
   useFullBleed(viewMode === "table");
   const { data, isLoading } = trpc.branchScorecards.list.useQuery();
   const exportXlsx = trpc.branchScorecards.exportXlsx.useMutation({

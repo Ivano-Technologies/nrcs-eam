@@ -9,32 +9,61 @@
  *   leaving the view restores whatever the user had before.
  * - A manual expand (or collapse) while the view is showing is respected for the rest of that visit
  *   only; it does not overwrite the saved preference. Leaving still restores the prior saved state.
- * - The width change uses the sidebar's existing transition, which is off under reduced motion.
+ * - The fold is decided before the first paint of the new view: routes that are always full bleed
+ *   are matched from the URL in the layout (`routeWantsFullBleed`), and view level opt ins register
+ *   in a layout effect, so a page never paints at the old width first.
+ * - The width change is a 200ms ease slide (the sidebar gap and container transitions). Under
+ *   prefers-reduced-motion it is instant (global rule in index.css).
  *
- * Opted in: the Asset Map, the Facilities Map view, the wide WMS and report tables, and the print
- * previews. See FULL_BLEED_VIEWS. The Asset Scanner (built for phones) stays off. Anything else needs
- * sign off first.
+ * Opted in (Kezie, 9 Oct 2026): the Asset Map, the Facilities Map view, and the four wide report
+ * tables. Every other page opens with the full sidebar. See FULL_BLEED_VIEWS. The Asset Scanner
+ * (built for phones) stays off, and the print previews render outside the layout (no sidebar), so
+ * they need no flag. Anything else needs sign off first.
  */
-import { createContext, useCallback, useContext, useEffect, useId, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useId, useLayoutEffect, useMemo, useState } from "react";
 import { SIDEBAR_RAIL_WIDTH } from "@/lib/sidebarWidth";
+import { FACILITIES_VIEW_NAME, FACILITIES_VIEWS, isFacilitiesListPath } from "@/lib/facilityRoutes";
+import { readSavedViewMode } from "@/hooks/useViewMode";
 
 /** Views flagged full bleed. Keep this in sync with the `useFullBleed` calls. */
 export const FULL_BLEED_VIEWS = [
   { id: "asset-map", path: "/app/asset-map", note: "Asset Map page" },
-  { id: "facilities-map", path: "/app/facilities/*", note: "Facilities, only while the Map view is showing" },
+  { id: "facilities-map", path: "/app/facilities/*?view=map", note: "Facilities list, Map view (?view=map, or a saved Map choice)" },
   // Wide WMS and report tables (9 or more columns that scroll sideways at 1280).
   { id: "wms-monthly-report", path: "/app/reports/wms/monthly-warehouse-report", note: "Monthly warehouse report table (11 columns)" },
   { id: "wms-stock-movements", path: "/app/reports/wms/stock-movements", note: "WMS stock movements table (10 columns)" },
   { id: "wms-loss-damage", path: "/app/reports/wms/loss-damage", note: "WMS loss and damage table (9 columns)" },
   { id: "branch-scorecards", path: "/app/reports/branch-scorecards", note: "Branch scorecards, only while the Table view is showing (11 columns)" },
-  // Print and form previews. These routes render outside the app layout today (no sidebar at all),
-  // so the flag only takes effect if they are ever shown inside the layout.
-  { id: "print-receipt", path: "/app/inventory/receipts/:id/print/:copyType", note: "GRN print preview" },
-  { id: "print-waybill", path: "/app/inventory/issues/:id/print/:copyType", note: "Waybill print preview" },
-  { id: "print-stock-card", path: "/app/inventory/tracking/stock-cards/:id/print", note: "Stock card print preview" },
-  { id: "print-bin-card", path: "/app/inventory/tracking/bin-cards/:id/print", note: "Bin card print preview" },
-  { id: "print-monthly-report", path: "/app/reports/wms/monthly-warehouse-report/print/:warehouseId/:year/:month", note: "Monthly report print preview" },
 ] as const;
+
+/**
+ * Routes that are full bleed on every visit, matched from the URL in the layout so the fold starts
+ * in the same render as the navigation (no frame at the old width, no wait for the page chunk).
+ * View level cases (Facilities Map view, Branch scorecards Table view) still use `useFullBleed`.
+ */
+export const ROUTE_FULL_BLEED_PATHS: readonly string[] = [
+  "/app/asset-map",
+  "/app/reports/wms/monthly-warehouse-report",
+  "/app/reports/wms/stock-movements",
+  "/app/reports/wms/loss-damage",
+];
+
+/**
+ * True when the route alone asks for the icon rail. `pathname` may carry a trailing slash; `search`
+ * is the query string with or without the leading "?".
+ * The Facilities list folds for `?view=map`, and also for a saved Map choice while the page adds
+ * `?view=map` to the URL (so the first frame is already folded).
+ */
+export function routeWantsFullBleed(pathname: string, search = ""): boolean {
+  const path = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
+  if (ROUTE_FULL_BLEED_PATHS.includes(path)) return true;
+  if (isFacilitiesListPath(path)) {
+    const view = new URLSearchParams(search).get("view");
+    if (view === "map") return true;
+    return view == null && readSavedViewMode(FACILITIES_VIEW_NAME, FACILITIES_VIEWS) === "map";
+  }
+  return false;
+}
 
 type FullBleedRegistry = { register: (id: string) => void; unregister: (id: string) => void };
 
@@ -66,7 +95,9 @@ export const FullBleedProvider = FullBleedContext.Provider;
 export function useFullBleed(active: boolean): void {
   const registry = useContext(FullBleedContext);
   const id = useId();
-  useEffect(() => {
+  // Layout effect: the registry update re-renders the layout before the browser paints, so the
+  // view never shows a frame at the full width before folding.
+  useLayoutEffect(() => {
     if (!registry || !active) return;
     registry.register(id);
     return () => registry.unregister(id);
