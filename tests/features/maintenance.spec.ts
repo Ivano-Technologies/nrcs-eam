@@ -30,7 +30,7 @@ test.describe("Maintenance module (live)", () => {
       .filter({ has: page.getByText("All schedules", { exact: true }) });
     await expect(
       allSchedulesCard
-        .getByText("No schedules found")
+        .getByText("No maintenance schedules yet")
         .or(allSchedulesCard.locator("p.font-medium").first())
     ).toBeVisible({ timeout: 30_000 });
 

@@ -98,7 +98,7 @@ export default function NotificationPreferences() {
       <Card className="border-t-4 border-t-primary">
         <CardHeader>
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
+            <div className="p-2 rounded-md bg-primary/10">
               <Bell className="h-5 w-5 text-primary" />
             </div>
             <div>
@@ -122,7 +122,7 @@ export default function NotificationPreferences() {
                   className="flex items-start justify-between space-x-4 py-4 border-b last:border-0"
                 >
                   <div className="flex items-start gap-4 flex-1">
-                    <div className={`p-2 rounded-lg bg-gray-100 ${type.color}`}>
+                    <div className={`p-2 rounded-md bg-gray-100 ${type.color}`}>
                       <Icon className="h-5 w-5" />
                     </div>
                     <div className="flex-1 space-y-1">

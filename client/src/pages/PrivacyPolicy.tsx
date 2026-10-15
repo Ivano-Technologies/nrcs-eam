@@ -140,7 +140,7 @@ export default function PrivacyPolicy() {
             <p className="text-muted-foreground mb-4">
               If you have questions or concerns about this Privacy Policy or our data practices, please contact:
             </p>
-            <div className="bg-muted p-4 rounded-lg">
+            <div className="bg-muted p-4 rounded-md">
               <p className="font-medium">Nigerian Red Cross Society</p>
               <p className="text-sm text-muted-foreground">Data protection officer, IT department</p>
               <p className="text-sm text-muted-foreground">Contact your NRCS system administrator</p>

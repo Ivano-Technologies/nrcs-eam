@@ -361,7 +361,7 @@ export function FacilitiesMap({ visibleIds, noLocation }: FacilitiesMapProps) {
     <div
       ref={frameRef}
       data-testid="facilities-map"
-      className="relative overflow-hidden rounded-[14px] border border-[#E5E7EB] bg-[#ECEEF1] dark:border-[#26364A] dark:bg-[#121B28]"
+      className="relative overflow-hidden rounded-xl border border-[#E5E7EB] bg-[#ECEEF1] dark:border-[#26364A] dark:bg-[#121B28]"
       style={{ height: frameHeight }}
     >
       {mapError ? (

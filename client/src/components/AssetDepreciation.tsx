@@ -62,7 +62,7 @@ export default function AssetDepreciation({ assetId }: AssetDepreciationProps) {
       <CardContent className="space-y-6">
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="p-4 border rounded-lg">
+          <div className="p-4 border rounded-md">
             <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
               <DollarSign className="h-4 w-4" />
               Current book value
@@ -72,7 +72,7 @@ export default function AssetDepreciation({ assetId }: AssetDepreciationProps) {
             </div>
           </div>
 
-          <div className="p-4 border rounded-lg">
+          <div className="p-4 border rounded-md">
             <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
               <TrendingDown className="h-4 w-4" />
               Accumulated depreciation
@@ -82,7 +82,7 @@ export default function AssetDepreciation({ assetId }: AssetDepreciationProps) {
             </div>
           </div>
 
-          <div className="p-4 border rounded-lg">
+          <div className="p-4 border rounded-md">
             <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
               <Percent className="h-4 w-4" />
               Depreciation %
@@ -92,7 +92,7 @@ export default function AssetDepreciation({ assetId }: AssetDepreciationProps) {
             </div>
           </div>
 
-          <div className="p-4 border rounded-lg">
+          <div className="p-4 border rounded-md">
             <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
               <Calendar className="h-4 w-4" />
               Years remaining
@@ -118,7 +118,7 @@ export default function AssetDepreciation({ assetId }: AssetDepreciationProps) {
         {/* Depreciation schedule */}
         <div>
           <h4 className="text-sm font-semibold mb-3">Depreciation schedule</h4>
-          <div className="border rounded-lg overflow-hidden">
+          <div className="border rounded-md overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow>

@@ -30,7 +30,7 @@ export function ViewToggle<M extends ViewModeWithMap = ViewMode>({
   const segments = showMap ? SEGMENTS : SEGMENTS.filter(s => s.mode !== "map");
   return (
     <div
-      className="inline-flex items-center rounded-md border bg-background"
+      className="inline-flex h-9 items-stretch overflow-hidden rounded-md border bg-background"
       role="group"
       aria-label="View"
     >
@@ -43,7 +43,7 @@ export function ViewToggle<M extends ViewModeWithMap = ViewMode>({
             onClick={() => onChange(mode as M)}
             aria-pressed={selected}
             data-state={selected ? "on" : "off"}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm transition-colors ${i === 0 ? "rounded-l-md" : ""} ${
+            className={`flex items-center gap-1.5 px-3 text-sm transition-colors ${i === 0 ? "rounded-l-md" : ""} ${
               i === segments.length - 1 ? "rounded-r-md" : ""
             } ${selected ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
             data-testid={`view-toggle-${mode}`}

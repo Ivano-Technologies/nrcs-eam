@@ -105,7 +105,7 @@ export default function TermsOfService() {
             <p className="text-muted-foreground mb-4">
               For questions regarding these Terms of Service, please contact:
             </p>
-            <div className="bg-muted p-4 rounded-lg">
+            <div className="bg-muted p-4 rounded-md">
               <p className="font-medium">Nigerian Red Cross Society</p>
               <p className="text-sm text-muted-foreground">IT department</p>
               <p className="text-sm text-muted-foreground">Contact your NRCS system administrator</p>

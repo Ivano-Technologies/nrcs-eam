@@ -1,8 +1,10 @@
+import { Activity } from "lucide-react";
 import {
   dashboardSectionState,
   useDashboardBundle,
   useDashboardRetry,
 } from "@/components/dashboard/DashboardBundleContext";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { DashboardSectionError } from "@/components/dashboard/DashboardSectionError";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
@@ -35,7 +37,7 @@ export function ActivityFeed() {
       </CardHeader>
       <CardContent className="space-y-3">
         {sectionState !== "ok" ? <DashboardSectionError onRetry={onRetry} /> : null}
-        {sectionState === "ok" && (data ?? []).length === 0 ? <p className="text-sm text-[#334155] dark:text-[hsl(0_0%_95%)]">No recent activity yet.</p> : null}
+        {sectionState === "ok" && (data ?? []).length === 0 ? <EmptyState icon={Activity} title="No recent activity yet" className="py-6" /> : null}
         {sectionState === "ok" ? (data ?? []).map((item, idx) => {
           const prevFacility = idx > 0 ? (data ?? [])[idx - 1]?.facilityName : undefined;
           const showFacility = Boolean(item.facilityName) && item.facilityName !== prevFacility;

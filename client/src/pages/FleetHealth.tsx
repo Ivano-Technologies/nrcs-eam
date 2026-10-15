@@ -147,10 +147,10 @@ export default function FleetHealth() {
                 {row.replacementPipeline.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No assets in replacement pipeline.</p>
                 ) : viewMode === "card" ? (
-                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                     {row.replacementPipeline.slice(0, 25).map((a) => (
-                      <Card key={a.assetId}>
-                        <CardContent className="space-y-2 p-4">
+                      <Card size="sm" key={a.assetId}>
+                        <CardContent className="space-y-2">
                           <div>
                             <p className="font-semibold">{a.assetName}</p>
                             <p className="text-xs text-muted-foreground">{a.assetTag}</p>

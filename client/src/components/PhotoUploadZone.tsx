@@ -181,7 +181,7 @@ export default function PhotoUploadZone({
         onDrop={handleDrop}
         onClick={() => !isBusy && inputRef.current?.click()}
         className={cn(
-          "flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 text-center transition-colors cursor-pointer",
+          "flex flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed p-6 text-center transition-colors cursor-pointer",
           dragOver ? "border-primary bg-primary/5" : "border-muted-foreground/25 hover:border-muted-foreground/50",
           isBusy && "pointer-events-none opacity-60"
         )}
@@ -225,7 +225,7 @@ export default function PhotoUploadZone({
             {selected.map((item, index) => (
               <div
                 key={`${item.file.name}-${index}`}
-                className="relative aspect-square rounded-lg overflow-hidden border bg-muted"
+                className="relative aspect-square rounded-md overflow-hidden border bg-muted"
               >
                 <img
                   src={item.previewUrl}

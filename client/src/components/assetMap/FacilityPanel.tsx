@@ -175,7 +175,7 @@ export function FacilityPanel(props: FacilityPanelProps) {
           placeholder="Search facilities or codes"
           data-testid="asset-map-search"
           className={cn(
-            "h-10 w-full rounded-[10px] border border-[#8A8F98] bg-white pl-9 pr-3 text-sm text-[#111827] placeholder:text-[#62626C] dark:border-[#64768E] dark:bg-[#0F1724] dark:text-[#E6EAF0] dark:placeholder:text-[#A3AEBD]",
+            "h-10 w-full rounded-md border border-[#8A8F98] bg-white pl-9 pr-3 text-sm text-[#111827] placeholder:text-[#62626C] dark:border-[#64768E] dark:bg-[#0F1724] dark:text-[#E6EAF0] dark:placeholder:text-[#A3AEBD]",
             "focus-visible:border-[#C8102E] focus-visible:ring-2 focus-visible:ring-[#C8102E]/30 focus-visible:outline-none"
           )}
         />
@@ -186,7 +186,7 @@ export function FacilityPanel(props: FacilityPanelProps) {
           onClick={() => setFiltersOpen((v) => !v)}
           aria-expanded={filtersOpen}
           className={cn(
-            "inline-flex h-11 items-center gap-1.5 rounded-[10px] border border-[#8A8F98] px-3 text-sm font-medium dark:border-[#64768E]",
+            "inline-flex h-11 items-center gap-1.5 rounded-md border border-[#8A8F98] px-3 text-sm font-medium dark:border-[#64768E]",
             focusRing
           )}
         >
@@ -203,7 +203,7 @@ export function FacilityPanel(props: FacilityPanelProps) {
           title="Collapse to the search card"
           data-testid="asset-map-panel-collapse"
           className={cn(
-            "grid h-10 w-10 shrink-0 place-items-center rounded-[10px] hover:bg-[#F3F4F6] dark:hover:bg-[#1E2B3C]",
+            "grid h-10 w-10 shrink-0 place-items-center rounded-md hover:bg-[#F3F4F6] dark:hover:bg-[#1E2B3C]",
             focusRing
           )}
         >
@@ -383,7 +383,7 @@ export function FacilityPanel(props: FacilityPanelProps) {
                   onClick={() => onToggleTier(t)}
                   data-tier={t}
                   className={cn(
-                    "min-h-[58px] rounded-[10px] border p-2 text-left transition-colors",
+                    "min-h-[58px] rounded-md border p-2 text-left transition-colors",
                     "border-[#E5E7EB] hover:bg-[#F3F4F6] dark:border-[#26364A] dark:hover:bg-[#1E2B3C]",
                     "aria-pressed:border-2 aria-pressed:border-[#0B2545] aria-pressed:bg-[#EEF2F8] dark:aria-pressed:border-[#E6EAF0] dark:aria-pressed:bg-[#1E2B3C]",
                     focusRing
@@ -465,7 +465,7 @@ export function FacilityPanel(props: FacilityPanelProps) {
         />
         {!loading && !loadError && filtered.length === 0 ? (
           <div className="px-6 pb-6 pt-4 text-center">
-            <span className="mx-auto mb-3 grid h-10 w-10 place-items-center rounded-[10px] bg-[#F3F4F6] dark:bg-[#1E2B3C]">
+            <span className="mx-auto mb-3 grid h-10 w-10 place-items-center rounded-md bg-[#F3F4F6] dark:bg-[#1E2B3C]">
               <SearchX className="h-5 w-5" />
             </span>
             <p className="text-sm font-semibold">No facilities match</p>
@@ -743,7 +743,7 @@ export function CompactFacilityCard({
             placeholder="Search facilities"
             data-testid="asset-map-compact-search"
             className={cn(
-              "h-10 w-full rounded-[10px] border border-[#8A8F98] bg-white pl-8 pr-2 text-sm text-[#111827] placeholder:text-[#62626C] dark:border-[#64768E] dark:bg-[#0F1724] dark:text-[#E6EAF0] dark:placeholder:text-[#A3AEBD]",
+              "h-10 w-full rounded-md border border-[#8A8F98] bg-white pl-8 pr-2 text-sm text-[#111827] placeholder:text-[#62626C] dark:border-[#64768E] dark:bg-[#0F1724] dark:text-[#E6EAF0] dark:placeholder:text-[#A3AEBD]",
               "focus-visible:border-[#C8102E] focus-visible:ring-2 focus-visible:ring-[#C8102E]/30 focus-visible:outline-none"
             )}
           />
@@ -756,7 +756,7 @@ export function CompactFacilityCard({
           title="Show filters and the facility list"
           data-testid="asset-map-panel-expand"
           className={cn(
-            "grid h-10 w-9 shrink-0 place-items-center rounded-[10px] hover:bg-[#F3F4F6] dark:hover:bg-[#1E2B3C]",
+            "grid h-10 w-9 shrink-0 place-items-center rounded-md hover:bg-[#F3F4F6] dark:hover:bg-[#1E2B3C]",
             focusRing
           )}
         >
@@ -796,7 +796,7 @@ export function DataLoadError({
             disabled={retrying}
             aria-busy={retrying || undefined}
             className={cn(
-              "mt-3 inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#0B2545] bg-white px-3 text-[13px] font-semibold text-[#0B2545] transition-colors hover:bg-[#EEF2F8] disabled:cursor-progress",
+              "mt-3 inline-flex h-9 items-center gap-1.5 rounded-md border border-[#0B2545] bg-white px-3 text-[13px] font-semibold text-[#0B2545] transition-colors hover:bg-[#EEF2F8] disabled:cursor-progress",
               "dark:border-[#E6EAF0] dark:bg-[#162130] dark:text-[#E6EAF0] dark:hover:bg-[#1E2B3C]",
               focusRing
             )}

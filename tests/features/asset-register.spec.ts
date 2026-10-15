@@ -22,7 +22,9 @@ test.describe("Asset Register (live)", () => {
     await page.getByTestId("asset-filter-status").click();
     await page.getByRole("option", { name: /In use/i }).click();
 
+    await page.getByTestId("asset-more-actions").click();
     await expect(page.getByTestId("asset-export-excel-btn")).toBeVisible();
+    await page.keyboard.press("Escape");
 
     await page.getByTestId("asset-create-btn").click();
     await expect(page.getByTestId("asset-form-item-type")).toBeVisible();

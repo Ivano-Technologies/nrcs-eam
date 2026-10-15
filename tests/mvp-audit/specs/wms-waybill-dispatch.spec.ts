@@ -48,7 +48,7 @@ test("WMS waybill create -> multi-CTN dispatch -> print copies", async ({ page }
   await page.getByTestId("waybill-line-0-ctn-1-qty").fill("2");
   await expect(page.getByText("Line total check: OK")).toBeVisible({ timeout: 15_000 });
 
-  await page.getByRole("button", { name: "Save as Draft" }).click();
+  await page.getByRole("button", { name: "Save as draft" }).click();
   // create() navigates to the detail route; toast can be missed during navigation.
   await page.waitForURL(/\/app\/inventory\/issues\/\d+/, { timeout: 30_000 });
   await expect(page.getByRole("heading", { name: /Waybill detail/i })).toBeVisible({ timeout: 15_000 });
@@ -62,7 +62,7 @@ test("WMS waybill create -> multi-CTN dispatch -> print copies", async ({ page }
 
   // Persist signatures before dispatch: a follow-up waybills.get can re-run the detail useEffect and
   // clear local signature state if names were only typed client-side.
-  await page.getByRole("button", { name: "Save as Draft" }).click();
+  await page.getByRole("button", { name: "Save as draft" }).click();
   await expect(page.getByText("Waybill draft updated.")).toBeVisible({ timeout: 20_000 });
 
   const dispatchRespPromise = page.waitForResponse(

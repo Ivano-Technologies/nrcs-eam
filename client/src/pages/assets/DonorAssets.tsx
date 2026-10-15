@@ -1,4 +1,6 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { TableEmptyState } from "@/components/ui/EmptyState";
+import { Toolbar } from "@/components/Toolbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -84,61 +86,62 @@ export default function DonorAssets() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <PageHeader
-          icon={Gift}
-          title="Donor assets report"
-          subtitle="Donor funded assets from the register, with acquisition and book values by donor."
-          className="mb-0"
-        />
-        {canExport ? (
-          <Button
-            variant="outline"
-            disabled={exportExcel.isPending}
-            onClick={() => exportExcel.mutate(filters)}
-          >
-            {exportExcel.isPending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Exporting…
-              </>
-            ) : (
-              <>
-                <FileSpreadsheet className="mr-2 h-4 w-4" />
-                Export to Excel
-              </>
-            )}
-          </Button>
-        ) : null}
-      </div>
+      <PageHeader
+        icon={Gift}
+        title="Donor assets report"
+        subtitle="Donor funded assets from the register, with acquisition and book values by donor."
+        actions={
+          <>
+            {canExport ? (
+              <Button
+                variant="outline"
+                disabled={exportExcel.isPending}
+                onClick={() => exportExcel.mutate(filters)}
+              >
+                {exportExcel.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Exporting…
+                  </>
+                ) : (
+                  <>
+                    <FileSpreadsheet className="mr-2 h-4 w-4" />
+                    Export to Excel
+                  </>
+                )}
+              </Button>
+            ) : null}
+          </>
+        }
+      />
 
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Card size="sm">
+          <CardHeader>
             <CardTitle className="text-sm">Total donor-funded assets</CardTitle>
           </CardHeader>
           <CardContent>
             <p className={KPI_VALUE_CLASS}>{report?.summary.totalAssets ?? 0}</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
+        <Card size="sm">
+          <CardHeader>
             <CardTitle className="text-sm">Total acquisition value</CardTitle>
           </CardHeader>
           <CardContent>
             <p className={KPI_VALUE_CLASS}>{formatNaira(report?.summary.totalAcquisitionNgn ?? 0)}</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
+        <Card size="sm">
+          <CardHeader>
             <CardTitle className="text-sm">Total current book value</CardTitle>
           </CardHeader>
           <CardContent>
             <p className={KPI_VALUE_CLASS}>{formatNaira(report?.summary.totalBookNgn ?? 0)}</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
+        <Card size="sm">
+          <CardHeader>
             <CardTitle className="text-sm">Distinct donors</CardTitle>
           </CardHeader>
           <CardContent>
@@ -147,15 +150,13 @@ export default function DonorAssets() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Filters</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-5">
+      <Toolbar data-testid="donor-assets-toolbar" align="end"
+        filters={
+          <>
           <div>
             <Label>Donor</Label>
             <Select value={donor} onValueChange={setDonor}>
-              <SelectTrigger>
+              <SelectTrigger className="h-9 w-36">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -171,7 +172,7 @@ export default function DonorAssets() {
           <div>
             <Label>Facility / branch</Label>
             <Select value={siteId} onValueChange={setSiteId}>
-              <SelectTrigger>
+              <SelectTrigger className="h-9 w-36">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -187,7 +188,7 @@ export default function DonorAssets() {
           <div>
             <Label>Category</Label>
             <Select value={categoryId} onValueChange={setCategoryId}>
-              <SelectTrigger>
+              <SelectTrigger className="h-9 w-36">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -202,14 +203,15 @@ export default function DonorAssets() {
           </div>
           <div>
             <Label>Year from</Label>
-            <Input value={yearFrom} onChange={(e) => setYearFrom(e.target.value)} placeholder="e.g. 2018" />
+            <Input className="h-9 w-36" value={yearFrom} onChange={(e) => setYearFrom(e.target.value)} placeholder="e.g. 2018" />
           </div>
           <div>
             <Label>Year to</Label>
-            <Input value={yearTo} onChange={(e) => setYearTo(e.target.value)} placeholder="e.g. 2026" />
+            <Input className="h-9 w-36" value={yearTo} onChange={(e) => setYearTo(e.target.value)} placeholder="e.g. 2026" />
           </div>
-        </CardContent>
-      </Card>
+                  </>
+        }
+      />
 
       <Card>
         <CardContent className="overflow-x-auto p-0">
@@ -232,11 +234,7 @@ export default function DonorAssets() {
                   </TableCell>
                 </TableRow>
               ) : (report?.donors ?? []).length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground">
-                    No donor-funded assets match these filters.
-                  </TableCell>
-                </TableRow>
+                <TableEmptyState colSpan={6} icon={Gift} title="No donor funded assets match these filters" />
               ) : (
                 (report?.donors ?? []).map((row: DonorBreakdownRow) => (
                   <Fragment key={row.donor}>

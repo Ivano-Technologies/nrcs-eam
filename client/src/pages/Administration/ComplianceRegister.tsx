@@ -248,17 +248,17 @@ export default function ComplianceRegister() {
         subtitle="Vehicle, generator, building safety, donor reporting and insurance compliance"
       />
 
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Card size="sm">
+          <CardHeader>
             <CardTitle className="text-sm">Total compliance records</CardTitle>
           </CardHeader>
           <CardContent>
             <p className={KPI_VALUE_CLASS}>{summary?.totalRecords ?? 0}</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
+        <Card size="sm">
+          <CardHeader>
             <CardTitle className="text-sm">Compliant</CardTitle>
           </CardHeader>
           <CardContent>
@@ -268,8 +268,8 @@ export default function ComplianceRegister() {
             </p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
+        <Card size="sm">
+          <CardHeader>
             <CardTitle className="text-sm">Expiring soon</CardTitle>
           </CardHeader>
           <CardContent>
@@ -278,8 +278,8 @@ export default function ComplianceRegister() {
             </p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
+        <Card size="sm">
+          <CardHeader>
             <CardTitle className="text-sm">Not compliant or overdue</CardTitle>
           </CardHeader>
           <CardContent>
@@ -396,7 +396,6 @@ export default function ComplianceRegister() {
                       colSpan={9 + (canEdit ? 1 : 0)}
                       icon={Truck}
                       title="No vehicle records yet"
-                      body="Vehicle records appear here once a vehicle is added to the register."
                     />
                   ) : null}
                 </TableBody>
@@ -467,7 +466,6 @@ export default function ComplianceRegister() {
                       colSpan={9 + (canEdit ? 1 : 0)}
                       icon={Zap}
                       title="No generator records yet"
-                      body="Generator records appear here once a generator record is added."
                     />
                   ) : null}
                 </TableBody>
@@ -536,7 +534,6 @@ export default function ComplianceRegister() {
                       colSpan={8 + (canEdit ? 1 : 0)}
                       icon={Building2}
                       title="No safety certificates yet"
-                      body="Safety certificates appear here once a certificate is added."
                     />
                   ) : null}
                 </TableBody>
@@ -603,7 +600,6 @@ export default function ComplianceRegister() {
                       colSpan={7 + (canEdit ? 1 : 0)}
                       icon={FileText}
                       title="No donor reports yet"
-                      body="Donor reports appear here once a donor report is added."
                     />
                   ) : null}
                 </TableBody>

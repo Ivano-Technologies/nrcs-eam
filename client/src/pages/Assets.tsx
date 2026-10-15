@@ -14,7 +14,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Plus, Download, Upload, Edit2, Trash2, MapPin, Package, Landmark } from "lucide-react";
+import { Loader2, Plus, Download, Upload, Edit2, Trash2, MapPin, Package, Landmark, Calculator } from "lucide-react";
+import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { useLocation } from "wouter";
 import {
   AlertDialog,
@@ -48,7 +49,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ViewToggle } from "@/components/ViewToggle";
 import { useViewMode } from "@/hooks/useViewMode";
 import { CardQrCode } from "@/components/CardQrCode";
-import { ModuleFiltersCard, ModuleFilterSearch } from "@/components/ModuleFiltersCard";
+import { Toolbar, ToolbarMore, ToolbarSearch } from "@/components/Toolbar";
 import { useBulkImportFileInput } from "@/hooks/useBulkImportFileInput";
 import {
   CONDITION_OPTIONS,
@@ -924,16 +925,21 @@ export default function Assets() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div data-testid="asset-register-heading">
           <PageHeader
             icon={Package}
             title="Asset register"
             subtitle="Centralised digital asset register for managing, tracking, and maintaining all NRCS assets across locations and departments."
-            className="mb-0"
+            actions={
+              canEditAssets ? (
+                <Button className="h-9" onClick={() => setIsCreateDialogOpen(true)} data-testid="asset-create-btn">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add asset
+                </Button>
+              ) : undefined
+            }
           />
         </div>
-        <div className="flex flex-wrap items-center gap-2">
             {canEditAssets ? (
             <Dialog
               open={isCreateDialogOpen}
@@ -956,7 +962,7 @@ export default function Assets() {
                 ) : null}
                 <div className="grid gap-4 py-4">
                   <h3 className="text-sm font-semibold text-[#1a2332] dark:text-[#E6EAF0]">Item details</h3>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label>Item type *</Label>
                       <Select
@@ -1047,7 +1053,7 @@ export default function Assets() {
                     />
                   </div>
                   <h3 className="mt-2 text-sm font-semibold text-[#1a2332] dark:text-[#E6EAF0]">Item code</h3>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label>Branch code</Label>
                       <Input value={selectedSiteCode} readOnly />
@@ -1057,7 +1063,7 @@ export default function Assets() {
                       <Input value={selectedCategoryCode} readOnly />
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label>NUM</Label>
                       <Input value={newAsset.assetNum || "Auto"} readOnly />
@@ -1068,7 +1074,7 @@ export default function Assets() {
                     </div>
                   </div>
                   <h3 className="mt-2 text-sm font-semibold text-[#1a2332] dark:text-[#E6EAF0]">Financial value</h3>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="serialNumber">Serial / product no.</Label>
                       <Input
@@ -1079,7 +1085,7 @@ export default function Assets() {
                       />
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label>Actual unit value (NGN)</Label>
                       <Input
@@ -1095,7 +1101,7 @@ export default function Assets() {
                         }
                       />
                     </div>
-                    <div className="space-y-2 col-span-2">
+                    <div className="space-y-2 sm:col-span-2">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <Label>Current depreciated value (NGN)</Label>
                         {canEditAssets ? (
@@ -1189,7 +1195,7 @@ export default function Assets() {
                       />
                     </div>
                   ) : null}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="year">Year acquired</Label>
                       <Select
@@ -1231,7 +1237,7 @@ export default function Assets() {
                       </RadioGroup>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label>Current status</Label>
                       <Select
@@ -1270,7 +1276,7 @@ export default function Assets() {
                     </div>
                   </div>
                   <h3 className="mt-2 text-sm font-semibold text-[#1a2332] dark:text-[#E6EAF0]">Assigned to</h3>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label>Assigned to</Label>
                       <Input
@@ -1321,7 +1327,7 @@ export default function Assets() {
                         ))}
                       </SelectContent>
                     </Select>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label>Date of last physical check <DateHint /></Label>
                       <Input
@@ -1372,21 +1378,19 @@ export default function Assets() {
               </DialogContent>
             </Dialog>
             ) : null}
-        </div>
-      </div>
 
-      <ModuleFiltersCard
-        filterRow={
+      <Toolbar
+        filters={
           <>
 
-            <ModuleFilterSearch
+            <ToolbarSearch
               data-testid="asset-search-input"
               placeholder="Search description, code, serial…"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="h-9 w-[170px]" data-testid="asset-filter-status">
+              <SelectTrigger className="h-9 w-36" data-testid="asset-filter-status">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -1398,7 +1402,7 @@ export default function Assets() {
               </SelectContent>
             </Select>
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="h-9 w-[170px]">
+              <SelectTrigger className="h-9 w-36">
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
               <SelectContent>
@@ -1411,7 +1415,7 @@ export default function Assets() {
               </SelectContent>
             </Select>
             <Select value={siteFilter} onValueChange={setSiteFilter}>
-              <SelectTrigger className="h-9 w-[170px]" data-testid="asset-filter-site">
+              <SelectTrigger className="h-9 w-36" data-testid="asset-filter-site">
                 <SelectValue placeholder="Facility" />
               </SelectTrigger>
               <SelectContent>
@@ -1424,7 +1428,7 @@ export default function Assets() {
               </SelectContent>
             </Select>
             <Select value={itemTypeFilter} onValueChange={setItemTypeFilter}>
-              <SelectTrigger className="h-9 w-[170px]">
+              <SelectTrigger className="h-9 w-36">
                 <SelectValue placeholder="Item type" />
               </SelectTrigger>
               <SelectContent>
@@ -1435,92 +1439,81 @@ export default function Assets() {
             </Select>
           </>
         }
-        toolbarStart={<ViewToggle value={viewMode} onChange={setViewMode} />}
-        toolbarEnd={
-          <div className="flex flex-wrap items-center gap-2 md:justify-end">
-            <Button
-              className="h-9"
-              variant="outline"
-              data-testid="asset-export-excel-btn"
-              onClick={handleExportExcel}
-              disabled={isExporting}
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Export to Excel
-            </Button>
-            {canEditAssets ? (
-              <>
-                <Button className="h-9" variant="outline" onClick={handleDownloadTemplate} disabled={isDownloading}>
-                  <Download className="mr-2 h-4 w-4" />
-                  Template
-                </Button>
-                <label className="inline-flex cursor-pointer items-center">
-                  <Button className="h-9" asChild variant="outline">
-                    <span>
-                      <Upload className="mr-2 h-4 w-4" />
-                      Import
-                    </span>
-                  </Button>
-                  <input {...assetRegisterImport.inputProps} />
-                </label>
-                <Button className="h-9" onClick={() => setIsCreateDialogOpen(true)} data-testid="asset-create-btn">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add asset
-                </Button>
-              </>
-            ) : null}
-            {isAdmin ? (
-              <Button
-                className="h-9"
-                variant="outline"
-                disabled={backfillCoordinatesMutation.isPending}
-                onClick={() => backfillCoordinatesMutation.mutate()}
-                data-testid="asset-sync-coordinates-from-facilities-btn"
+        count={`${total} ${total === 1 ? "asset" : "assets"}`}
+        end={
+          <>
+            <ViewToggle value={viewMode} onChange={setViewMode} />
+            <ToolbarMore data-testid="asset-more-actions">
+              <DropdownMenuItem
+                data-testid="asset-export-excel-btn"
+                disabled={isExporting}
+                onSelect={() => void handleExportExcel()}
               >
-                {backfillCoordinatesMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Syncing…
-                  </>
-                ) : (
-                  <>
-                    <MapPin className="mr-2 h-4 w-4" />
+                <Download className="mr-2 h-4 w-4" aria-hidden />
+                Export to Excel
+              </DropdownMenuItem>
+              {canEditAssets ? (
+                <>
+                  <DropdownMenuItem disabled={isDownloading} onSelect={() => void handleDownloadTemplate()}>
+                    <Download className="mr-2 h-4 w-4" aria-hidden />
+                    Download import template
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    data-testid="asset-import-btn"
+                    disabled={assetRegisterImport.isBusy}
+                    onSelect={() => document.getElementById(assetRegisterImport.inputId)?.click()}
+                  >
+                    <Upload className="mr-2 h-4 w-4" aria-hidden />
+                    Import from Excel
+                  </DropdownMenuItem>
+                </>
+              ) : null}
+              {isAdmin ? (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    data-testid="asset-sync-coordinates-from-facilities-btn"
+                    disabled={backfillCoordinatesMutation.isPending}
+                    onSelect={() => backfillCoordinatesMutation.mutate()}
+                  >
+                    {backfillCoordinatesMutation.isPending ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+                    ) : (
+                      <MapPin className="mr-2 h-4 w-4" aria-hidden />
+                    )}
                     Sync coordinates from facilities
-                  </>
-                )}
-              </Button>
-            ) : null}
-            {isAdmin ? (
-              <Button
-                className="h-9"
-                variant="outline"
-                disabled={recalculateDepreciationMutation.isPending}
-                onClick={() => recalculateDepreciationMutation.mutate()}
-                data-testid="asset-recalculate-depreciation-btn"
-              >
-                {recalculateDepreciationMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Recalculating…
-                  </>
-                ) : (
-                  "Recalculate all depreciation"
-                )}
-              </Button>
-            ) : null}
-          </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    data-testid="asset-recalculate-depreciation-btn"
+                    disabled={recalculateDepreciationMutation.isPending}
+                    onSelect={() => recalculateDepreciationMutation.mutate()}
+                  >
+                    {recalculateDepreciationMutation.isPending ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+                    ) : (
+                      <Calculator className="mr-2 h-4 w-4" aria-hidden />
+                    )}
+                    Recalculate all depreciation
+                  </DropdownMenuItem>
+                </>
+              ) : null}
+            </ToolbarMore>
+          </>
         }
       />
+      {canEditAssets ? (
+        <input {...assetRegisterImport.inputProps} aria-label="Import assets from Excel" data-testid="asset-import-input" />
+      ) : null}
 
       {viewMode === "card" ? (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3" data-testid="asset-list-cards">
           {rows.map((row) => (
-            <Card
+            <Card size="sm"
               key={row.id}
               className="cursor-pointer"
               onClick={() => setLocation(appPath(`/assets/${row.id}`))}
             >
-              <CardHeader className="pb-2">
+              <CardHeader>
                 <CardTitle className="text-base">{row.name}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
@@ -1597,7 +1590,6 @@ export default function Assets() {
                     colSpan={canEditAssets ? 26 : 25}
                     icon={Landmark}
                     title="No assets match these filters"
-                    body="Assets appear here once they are added to the register or match the filters."
                   />
                 ) : (
                   rows.map((row: (typeof rows)[number], i: number) => {
@@ -1753,7 +1745,7 @@ export default function Assets() {
           </DialogHeader>
           {editingAsset && (
             <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Asset code *</Label>
                   <Input
@@ -1776,7 +1768,7 @@ export default function Assets() {
                   onChange={(e) => setEditingAsset({ ...editingAsset, description: e.target.value })}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Item category *</Label>
                   <Select
@@ -1828,7 +1820,7 @@ export default function Assets() {
                   </Select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Register status</Label>
                   <Select
@@ -1877,7 +1869,7 @@ export default function Assets() {
                   </Select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Manufacturer</Label>
                   <Input
@@ -1893,7 +1885,7 @@ export default function Assets() {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Serial number</Label>
                   <Input
@@ -1912,7 +1904,7 @@ export default function Assets() {
               {canEditAssets ? (
                 <>
                   <h3 className="text-sm font-semibold text-[#1a2332] dark:text-[#E6EAF0]">Item details (register)</h3>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label>Register item type</Label>
                       <Select
@@ -1991,7 +1983,7 @@ export default function Assets() {
                     </div>
                   </div>
                   <h3 className="text-sm font-semibold text-[#1a2332] dark:text-[#E6EAF0]">Acquisition</h3>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2 md:col-span-2">
                       <Label>Method of acquisition</Label>
                       <Select
@@ -2057,7 +2049,7 @@ export default function Assets() {
                     </div>
                   </div>
                   <h3 className="text-sm font-semibold text-[#1a2332] dark:text-[#E6EAF0]">Condition (register)</h3>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label>Current status</Label>
                       <Select
@@ -2126,7 +2118,7 @@ export default function Assets() {
                     </div>
                   </div>
                   <h3 className="text-sm font-semibold text-[#1a2332] dark:text-[#E6EAF0]">Admin</h3>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2 md:col-span-2">
                       <Label>Remarks (register)</Label>
                       <Textarea
@@ -2154,7 +2146,7 @@ export default function Assets() {
                     Leave blank to inherit from the selected facility on save (via server). Enter values to
                     override.
                   </p>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label>Latitude</Label>
                       <Input
@@ -2171,7 +2163,7 @@ export default function Assets() {
                     </div>
                   </div>
                   <h3 className="text-sm font-semibold text-[#1a2332] dark:text-[#E6EAF0]">Financial (register)</h3>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label>Actual unit value (NGN)</Label>
                       <Input
@@ -2195,7 +2187,7 @@ export default function Assets() {
                       />
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label>Depreciation method</Label>
                       <Input

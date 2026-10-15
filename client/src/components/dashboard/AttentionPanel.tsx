@@ -80,7 +80,7 @@ export function AttentionPanel({ role }: Props) {
               key={`${item.label}-${idx}`}
               type={clickable ? "button" : undefined}
               className={cn(
-                "w-full rounded-lg px-2 py-2 text-left transition-colors",
+                "w-full rounded-md px-2 py-2 text-left transition-colors",
                 clickable && "cursor-pointer hover:bg-gray-50 hover:ring-1 hover:ring-primary/20 dark:hover:bg-white/5",
                 idx !== (data?.length ?? 0) - 1 ? "border-b border-border/60" : ""
               )}
@@ -90,7 +90,7 @@ export function AttentionPanel({ role }: Props) {
               <div className="flex items-center gap-3">
                 <span
                   className={cn(
-                    "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
+                    "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md",
                     TONE_MAP[item.tone] ?? TONE_MAP.blue
                   )}
                 >

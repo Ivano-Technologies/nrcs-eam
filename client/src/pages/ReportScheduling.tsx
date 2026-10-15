@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { formatDate } from "@/lib/format";
 import { trpc } from "@/lib/trpc";
 import PageHeader from "@/components/ui/PageHeader";
@@ -174,29 +175,32 @@ export default function ReportScheduling() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <PageHeader
-          icon={Calendar}
-          title="Report scheduling"
-          subtitle="Automate report generation and email delivery"
-          className="mb-0"
-        />
-        <Button onClick={() => setIsCreateDialogOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          New schedule
-        </Button>
-      </div>
-
-      {schedules.length === 0 ? (
-        <Card>
-          <CardContent className="py-8 text-center space-y-4">
-            <Calendar className="mx-auto h-12 w-12 text-muted-foreground" />
-            <p className="text-muted-foreground">No scheduled reports yet. Create your first schedule to get started.</p>
-            <Button type="button" onClick={() => setIsCreateDialogOpen(true)}>
+      <PageHeader
+        icon={Calendar}
+        title="Report scheduling"
+        subtitle="Automate report generation and email delivery"
+        actions={
+          <>
+            <Button onClick={() => setIsCreateDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
               New schedule
             </Button>
-          </CardContent>
+          </>
+        }
+      />
+
+      {schedules.length === 0 ? (
+        <Card>
+          <EmptyState
+            icon={Calendar}
+            title="No scheduled reports yet"
+            action={
+              <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                New schedule
+              </Button>
+            }
+          />
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -226,10 +230,10 @@ export default function ReportScheduling() {
               <CardContent>
                 <div className="space-y-3 text-sm">
                   <div className="flex items-center gap-2">
-                    <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">
+                    <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-md text-xs">
                       {getReportTypeLabel(schedule.reportType)}
                     </span>
-                    <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">
+                    <span className="px-2 py-1 bg-green-100 text-green-800 rounded-md text-xs">
                       {schedule.format.toUpperCase()}
                     </span>
                   </div>

@@ -171,7 +171,7 @@ export function FacilitiesToolbar(p: FacilitiesToolbarProps) {
           {count}
         </div>
         <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-          <SheetContent side="bottom" className="gap-0 rounded-t-2xl pb-[max(1rem,env(safe-area-inset-bottom))]" data-testid="facilities-filters-sheet">
+          <SheetContent side="bottom" className="gap-0 rounded-t-xl pb-[max(1rem,env(safe-area-inset-bottom))]" data-testid="facilities-filters-sheet">
             <SheetHeader className="pb-2">
               <SheetTitle>Filters</SheetTitle>
               <SheetDescription>Narrow the list and the map by state and status.</SheetDescription>

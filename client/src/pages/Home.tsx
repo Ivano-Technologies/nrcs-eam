@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils";
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 
 import { AttentionPanel } from "@/components/dashboard/AttentionPanel";
@@ -63,6 +64,16 @@ const DEFAULT_WIDGETS = {
 } as const;
 
 
+
+
+/**
+ * KPI grid: 2 columns from sm, all five in one row from xl (1280). Below xl an odd last tile spans
+ * the full row (2x2 plus one); from xl it goes back to one column.
+ */
+export function kpiFillClass(index: number, count: number): string | undefined {
+  if (index !== count - 1 || count % 2 === 0) return undefined;
+  return "sm:col-span-2 xl:col-span-1";
+}
 
 export default function Home() {
 
@@ -215,9 +226,8 @@ export default function Home() {
           icon={LayoutDashboard}
           title="Dashboard"
           subtitle="Loading critical metrics…"
-          className="mb-0"
         />
-        <div className="grid max-[359px]:grid-cols-1 grid-cols-2 gap-3 md:grid-cols-2 md:gap-4 xl:grid-cols-5">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
           {Array.from({ length: 5 }).map((_, i) => (
             <Skeleton key={i} className="h-28 rounded-xl" />
           ))}
@@ -236,21 +246,11 @@ export default function Home() {
 
         <div className="space-y-6">
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-
-            <PageHeader
-
-              icon={LayoutDashboard}
-
-              title="Dashboard"
-
-              subtitle="Field view. Your branch only."
-
-              className="mb-0"
-
-            />
-
-          </div>
+          <PageHeader
+            icon={LayoutDashboard}
+            title="Dashboard"
+            subtitle="Field view. Your branch only."
+          />
 
           <FieldDashboard metrics={metrics} metricsFailed={metricsFailed} onRetry={refetchBundle} />
 
@@ -453,33 +453,22 @@ export default function Home() {
 
       <div className="space-y-6">
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-
-          <PageHeader
-
-            icon={LayoutDashboard}
-
-            title="Dashboard"
-
-            subtitle="Overview of your asset management system"
-
-            className="mb-0"
-
-          />
-
-          <div className="max-w-full overflow-x-auto">
-
-            <PeriodSelector value={period} onChange={setPeriod} />
-
-          </div>
-
-        </div>
+        <PageHeader
+          icon={LayoutDashboard}
+          title="Dashboard"
+          subtitle="Overview of your asset management system"
+          actions={
+            <div className="max-w-full overflow-x-auto">
+              <PeriodSelector value={period} onChange={setPeriod} />
+            </div>
+          }
+        />
 
 
 
         {bundleError ? (
 
-          <div data-testid="dashboard-error-banner" className="mb-4 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300">
+          <div data-testid="dashboard-error-banner" className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300">
 
             Some dashboard data could not be loaded. Values shown may be incomplete.{" "}
 
@@ -497,10 +486,11 @@ export default function Home() {
 
         {showWidgets("kpiCards") ? (
 
-          <div className="grid max-[359px]:grid-cols-1 grid-cols-2 gap-3 md:grid-cols-2 md:gap-4 xl:grid-cols-5">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5" data-testid="dashboard-kpi-grid">
 
-            {kpis.map((kpi) => (
+            {kpis.map((kpi, index) => (
 
+              <div key={kpi.key} className={kpiFillClass(index, kpis.length)}>
               <KpiCard
 
                 key={kpi.key}
@@ -528,6 +518,7 @@ export default function Home() {
                 onRetry={refetchBundle}
 
               />
+              </div>
 
             ))}
 
@@ -567,10 +558,7 @@ export default function Home() {
           tier2Loading ? (
             <Skeleton className="h-40 rounded-xl" />
           ) : (
-            <div className="space-y-2">
-              <h2 className="text-lg font-semibold">Facility status</h2>
-              <FacilityStatusList />
-            </div>
+            <FacilityStatusList />
           )
         ) : null}
 
@@ -609,11 +597,11 @@ export default function Home() {
 
             <CardContent>
 
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 
                 {branchPerf.slice(0, 12).map((b) => (
 
-                  <div key={b.id} className="rounded-lg border px-3 py-2 text-sm">
+                  <div key={b.id} className="rounded-md border px-3 py-2 text-sm">
 
                     <p className="font-medium">{b.name}</p>
 

@@ -1,8 +1,10 @@
+import { Building2 } from "lucide-react";
 import {
   dashboardSectionState,
   useDashboardBundle,
   useDashboardRetry,
 } from "@/components/dashboard/DashboardBundleContext";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { DashboardSectionError } from "@/components/dashboard/DashboardSectionError";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
@@ -36,9 +38,9 @@ export function FacilityStatusList() {
       </CardHeader>
       <CardContent className="space-y-3">
         {sectionState !== "ok" ? <DashboardSectionError onRetry={onRetry} /> : null}
-        {sectionState === "ok" && (data ?? []).length === 0 ? <p className="text-sm text-[#334155] dark:text-[hsl(0_0%_95%)]">No facilities found.</p> : null}
+        {sectionState === "ok" && (data ?? []).length === 0 ? <EmptyState icon={Building2} title="No facilities yet" className="py-6" /> : null}
         {sectionState === "ok" ? (data ?? []).map((row) => (
-          <div key={row.id} className="flex items-center gap-4 rounded-xl border p-3">
+          <div key={row.id} className="flex items-center gap-4 rounded-md border p-3">
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold truncate">{row.name}</p>
               <p className="text-xs text-[#334155] dark:text-[hsl(0_0%_95%)]">

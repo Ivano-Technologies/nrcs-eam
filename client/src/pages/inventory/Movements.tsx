@@ -54,7 +54,7 @@ export default function Movements({ embedInShell = false }: { embedInShell?: boo
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {embedInShell ? null : (
         <>
           <PageHeader icon={ArrowLeftRightIcon} title="Stock movements" />
