@@ -89,7 +89,7 @@ export default function Issues({ embedInShell = false }: { embedInShell?: boolea
                 <SelectItem value="draft">Draft</SelectItem>
                 <SelectItem value="dispatched">Dispatched</SelectItem>
                 <SelectItem value="received">Received</SelectItem>
-                <SelectItem value="claim_raised">Claim Raised</SelectItem>
+                <SelectItem value="claim_raised">Claim raised</SelectItem>
               </SelectContent>
             </Select>
             <Select value={destinationType} onValueChange={(v) => setDestinationType(v as typeof destinationType)}>

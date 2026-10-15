@@ -46,7 +46,7 @@ export function StockMovementChart({ data, failed, onRetry }: Props) {
           <div className="dashboard-empty-state flex h-full flex-col items-center justify-center gap-2">
             <BarChart3 className="dashboard-empty-state-icon" />
             <p className="text-sm font-medium text-[#1a2332] dark:text-[hsl(0_0%_95%)]">No stock movements recorded yet</p>
-            <p className="dashboard-empty-state-subtitle text-xs">GRN and Waybill activity will appear here</p>
+            <p className="dashboard-empty-state-subtitle text-xs">GRN and waybill activity will appear here</p>
           </div>
         ) : (
           <ResponsiveContainer width="100%" minHeight={200} height="100%">

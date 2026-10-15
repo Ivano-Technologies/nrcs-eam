@@ -27,7 +27,7 @@ export function InventoryIssuesPage() {
 
 export function InventoryMovementsPage() {
   return (
-    <InventoryShell activeTab="tracking">
+    <InventoryShell activeTab="tracking" title="Stock movements">
       <Movements embedInShell />
     </InventoryShell>
   );
@@ -35,7 +35,7 @@ export function InventoryMovementsPage() {
 
 export function InventoryStockCountsPage() {
   return (
-    <InventoryShell activeTab="tracking">
+    <InventoryShell activeTab="tracking" title="Stock counts">
       <StockCounts embedInShell />
     </InventoryShell>
   );
@@ -43,7 +43,7 @@ export function InventoryStockCountsPage() {
 
 export function InventoryExpiryPage() {
   return (
-    <InventoryShell activeTab="tracking">
+    <InventoryShell activeTab="tracking" title="Expiry">
       <Expiry embedInShell />
     </InventoryShell>
   );
@@ -51,7 +51,7 @@ export function InventoryExpiryPage() {
 
 export function InventoryDistributionsPage() {
   return (
-    <InventoryShell activeTab="tracking">
+    <InventoryShell activeTab="tracking" title="Distributions">
       <Distributions embedInShell />
     </InventoryShell>
   );
@@ -59,7 +59,7 @@ export function InventoryDistributionsPage() {
 
 export function InventoryKitsPage() {
   return (
-    <InventoryShell activeTab="tracking">
+    <InventoryShell activeTab="tracking" title="Kits">
       <Kits embedInShell />
     </InventoryShell>
   );
@@ -67,7 +67,7 @@ export function InventoryKitsPage() {
 
 export function InventoryStockCardsPage() {
   return (
-    <InventoryShell activeTab="tracking">
+    <InventoryShell activeTab="tracking" title="Stock cards">
       <StockCards embedInShell />
     </InventoryShell>
   );
@@ -75,7 +75,7 @@ export function InventoryStockCardsPage() {
 
 export function InventoryBinCardsPage() {
   return (
-    <InventoryShell activeTab="tracking">
+    <InventoryShell activeTab="tracking" title="Bin cards">
       <BinCards embedInShell />
     </InventoryShell>
   );

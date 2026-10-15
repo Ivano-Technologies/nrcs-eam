@@ -97,12 +97,12 @@ export default function Maintenance() {
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Create Maintenance Schedule</DialogTitle>
+              <DialogTitle>Add maintenance schedule</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2 col-span-2">
-                  <Label htmlFor="name">Schedule Name *</Label>
+                  <Label htmlFor="name">Schedule name *</Label>
                   <Input
                     id="name"
                     value={formData.name}
@@ -150,14 +150,14 @@ export default function Maintenance() {
                       <SelectItem value="weekly">Weekly</SelectItem>
                       <SelectItem value="monthly">Monthly</SelectItem>
                       <SelectItem value="quarterly">Quarterly</SelectItem>
-                      <SelectItem value="semi_annual">Semi-Annual</SelectItem>
+                      <SelectItem value="semi_annual">Semi-annual</SelectItem>
                       <SelectItem value="annual">Annual</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="frequencyValue">Frequency Value</Label>
+                  <Label htmlFor="frequencyValue">Frequency value</Label>
                   <Input
                     id="frequencyValue"
                     type="number"
@@ -170,7 +170,7 @@ export default function Maintenance() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="nextDue">Next Due Date * <DateHint /></Label>
+                  <Label htmlFor="nextDue">Next due date * <DateHint /></Label>
                   <Input
                     id="nextDue"
                     type="date"
@@ -181,7 +181,7 @@ export default function Maintenance() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="assignedTo">Assign To</Label>
+                  <Label htmlFor="assignedTo">Assign to</Label>
                   <Select value={formData.assignedTo} onValueChange={(value) => setFormData({ ...formData, assignedTo: value })}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select user (optional)" />
@@ -197,7 +197,7 @@ export default function Maintenance() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="estimatedDuration">Estimated Duration (minutes)</Label>
+                  <Label htmlFor="estimatedDuration">Estimated duration (minutes)</Label>
                   <Input
                     id="estimatedDuration"
                     type="number"
@@ -209,7 +209,7 @@ export default function Maintenance() {
                 </div>
 
                 <div className="space-y-2 col-span-2">
-                  <Label htmlFor="taskTemplate">Task Checklist</Label>
+                  <Label htmlFor="taskTemplate">Task checklist</Label>
                   <Textarea
                     id="taskTemplate"
                     value={formData.taskTemplate}
@@ -241,7 +241,7 @@ export default function Maintenance() {
       </div>
 
       <Card>
-        <CardHeader><CardTitle>Upcoming Maintenance (Next 30 Days)</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Upcoming maintenance (next 30 days)</CardTitle></CardHeader>
         <CardContent>
           {upcoming && upcoming.length > 0 ? (
             <div className="space-y-3">
@@ -257,7 +257,7 @@ export default function Maintenance() {
       </Card>
 
       <Card>
-        <CardHeader><CardTitle>All Schedules</CardTitle></CardHeader>
+        <CardHeader><CardTitle>All schedules</CardTitle></CardHeader>
         <CardContent>
           {schedules && schedules.length > 0 ? (
             <div className="space-y-3">

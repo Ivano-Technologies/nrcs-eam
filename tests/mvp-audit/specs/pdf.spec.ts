@@ -7,9 +7,9 @@ import { shot } from "../helpers/shot";
  * emit Playwright's `download` event. We assert the report opens, data renders, and export controls work.
  */
 const REPORT_CASES = [
-  { accordionName: "Stock Reports", reportId: "stockStatus", slug: "stock-status" },
-  { accordionName: "Movement Reports", reportId: "stockMovement", slug: "stock-movement" },
-  { accordionName: "Expiry Reports", reportId: "vedAnalysis", slug: "ved-analysis" },
+  { accordionName: "Stock reports", reportId: "stockStatus", slug: "stock-status" },
+  { accordionName: "Movement reports", reportId: "stockMovement", slug: "stock-movement" },
+  { accordionName: "Expiry reports", reportId: "vedAnalysis", slug: "ved-analysis" },
 ] as const;
 
 test.describe.configure({ mode: "serial" });

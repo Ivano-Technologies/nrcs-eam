@@ -104,7 +104,6 @@ export default function CtnRegistryPage() {
   return (
     <InventoryShell activeTab="ctn-registry">
       <div className="space-y-4">
-        <h2 className="text-2xl font-bold">CTN Registry</h2>
 
         <ModuleFiltersCard
           filterRow={
@@ -341,7 +340,7 @@ export default function CtnRegistryPage() {
                 />
               </div>
               <p className="text-muted-foreground text-xs">
-                CTNs created from finalized GRNs will appear here automatically in a later phase.
+                CTNs created from finalised GRNs will appear here automatically in a later phase.
               </p>
             </div>
             <DialogFooter>

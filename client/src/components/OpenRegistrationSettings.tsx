@@ -34,7 +34,7 @@ export function OpenRegistrationSettings() {
       <CardContent>
         <div className="flex items-center justify-between gap-4 rounded-lg border p-4">
           <Label htmlFor="open-registration" className="text-base font-medium cursor-pointer">
-            Open Registration
+            Open registration
           </Label>
           <Switch
             id="open-registration"

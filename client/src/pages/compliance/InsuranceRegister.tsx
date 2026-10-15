@@ -41,7 +41,7 @@ const TYPES = ["Property", "Vehicle", "Equipment", "Liability"] as const;
 
 function statusBadge(status: "active" | "expiring" | "expired") {
   if (status === "active") return <Badge className="bg-green-100 text-green-800">Active</Badge>;
-  if (status === "expiring") return <Badge className="bg-amber-100 text-amber-800">Expiring Soon</Badge>;
+  if (status === "expiring") return <Badge className="bg-amber-100 text-amber-800">Expiring soon</Badge>;
   return <Badge className="bg-red-100 text-red-800">Expired</Badge>;
 }
 

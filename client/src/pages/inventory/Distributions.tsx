@@ -83,12 +83,12 @@ export default function Distributions({ embedInShell = false }: { embedInShell?:
           <table className="w-full text-sm">
             <thead className="bg-muted/50">
               <tr className="border-b">
-                <th className="px-2 py-2 text-left">Dist No</th>
+                <th className="px-2 py-2 text-left">Distribution no.</th>
                 <th className="px-2 py-2 text-left">Date</th>
                 <th className="px-2 py-2 text-left">Location</th>
                 <th className="px-2 py-2 text-left">Beneficiaries</th>
                 <th className="px-2 py-2 text-left">Households</th>
-                <th className="px-2 py-2 text-left">Conducted By</th>
+                <th className="px-2 py-2 text-left">Conducted by</th>
                 <th className="px-2 py-2 text-left">Incident</th>
                 <th className="px-2 py-2 text-left">Actions</th>
               </tr>
@@ -144,11 +144,11 @@ export default function Distributions({ embedInShell = false }: { embedInShell?:
               <SelectTrigger><SelectValue placeholder="Select dispatched waybill" /></SelectTrigger>
               <SelectContent>{(waybills.data ?? []).map((w) => <SelectItem key={w.id} value={String(w.id)}>{w.wbNumber}</SelectItem>)}</SelectContent>
             </Select>
-            <Label>Distribution Date <DateHint /></Label>
+            <Label>Distribution date <DateHint /></Label>
             <Input type="date" value={distributionDate} onChange={(e) => setDistributionDate(e.target.value)} />
             <Label>Location</Label>
             <Input value={location} onChange={(e) => setLocation(e.target.value)} />
-            <Label>Location Type</Label>
+            <Label>Location type</Label>
             <Select value={locationType} onValueChange={setLocationType}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -158,7 +158,7 @@ export default function Distributions({ embedInShell = false }: { embedInShell?:
                 <SelectItem value="other">other</SelectItem>
               </SelectContent>
             </Select>
-            <Label>Incident Reference</Label>
+            <Label>Incident reference</Label>
             <Input value={incident} onChange={(e) => setIncident(e.target.value)} />
             <div className="grid grid-cols-4 gap-2">
               <Input placeholder="Households" value={householdCount} onChange={(e) => setHouseholdCount(e.target.value)} />

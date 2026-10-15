@@ -39,11 +39,11 @@ export function DashboardWidgetSettings() {
   };
 
   const widgetLabels: Record<string, { title: string; description: string }> = {
-    kpiCards: { title: "KPI Cards", description: "Show top-level metric cards" },
-    stockMovement: { title: "Stock Movement", description: "Show stock movement chart" },
-    attentionPanel: { title: "Attention Panel", description: "Show role-based action items" },
-    activityFeed: { title: "Activity Feed", description: "Show recent system activity" },
-    facilityStatus: { title: "Facility Status", description: "Show facility readiness list" },
+    kpiCards: { title: "KPI cards", description: "Show top-level metric cards" },
+    stockMovement: { title: "Stock movement", description: "Show stock movement chart" },
+    attentionPanel: { title: "Attention panel", description: "Show role-based action items" },
+    activityFeed: { title: "Activity feed", description: "Show recent system activity" },
+    facilityStatus: { title: "Facility status", description: "Show facility readiness list" },
     requisitionsTable: { title: "Requisitions", description: "Show pending requisitions summary" },
   };
 
@@ -54,8 +54,8 @@ export function DashboardWidgetSettings() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-[#1a2332] dark:text-[hsl(0_0%_95%)]">Dashboard Widgets</CardTitle>
-        <CardDescription className="text-[#334155] dark:text-[hsl(0_0%_95%)]">Customize which widgets appear on your dashboard</CardDescription>
+        <CardTitle className="text-[#1a2332] dark:text-[hsl(0_0%_95%)]">Dashboard widgets</CardTitle>
+        <CardDescription className="text-[#334155] dark:text-[hsl(0_0%_95%)]">Customise which widgets appear on your dashboard</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {Object.entries(widgetLabels).map(([key, { title, description }]) => (

@@ -74,7 +74,7 @@ export default function Expiry({ embedInShell = false }: { embedInShell?: boolea
       ) : null}
       <Tabs defaultValue="soon">
         <TabsList>
-          <TabsTrigger value="soon" data-testid="expiry-tab-soon">Expiring Soon (&lt;90d)</TabsTrigger>
+          <TabsTrigger value="soon" data-testid="expiry-tab-soon">Expiring soon (&lt;90d)</TabsTrigger>
           <TabsTrigger value="horizon" data-testid="expiry-tab-horizon">CTN horizon (30/60/90)</TabsTrigger>
           <TabsTrigger value="expired" data-testid="expiry-tab-expired">Expired</TabsTrigger>
           <TabsTrigger value="disposed" data-testid="expiry-tab-disposed">Disposed</TabsTrigger>
@@ -99,7 +99,7 @@ export default function Expiry({ embedInShell = false }: { embedInShell?: boolea
                   const tone = days == null ? "outline" : days <= 30 ? "destructive" : days <= 60 ? "default" : "secondary";
                   return (
                     <tr key={row.batchId} data-testid={`expiry-row-${row.batchId}`} className="border-b">
-                      <td className="px-2 py-2">{row.itemCode} - {row.itemName}</td>
+                      <td className="px-2 py-2">{row.itemCode} · {row.itemName}</td>
                       <td className="px-2 py-2">{row.warehouseName}</td>
                       <td className="px-2 py-2">{row.batchNumber ?? ""}</td>
                       <td className="px-2 py-2">{row.expiryDate ? formatDate(row.expiryDate) : ""}</td>

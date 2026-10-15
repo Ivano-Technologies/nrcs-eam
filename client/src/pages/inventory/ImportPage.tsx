@@ -68,6 +68,7 @@ export default function ImportPage({ embedInShell = false }: { embedInShell?: bo
         <div>
           <PageHeader
             icon={Upload}
+            eyebrow="Inventory"
             title="Import"
             subtitle="Bring GRNs, waybills, monthly reports and stock cards in from Excel or typed PDF as drafts."
           />

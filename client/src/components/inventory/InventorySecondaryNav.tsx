@@ -9,7 +9,7 @@ type NavLink = { label: string; path: string };
 const PRIMARY_LINKS: NavLink[] = [
   { label: "Stock overview", path: appPath("/inventory/stock-overview") },
   { label: "Inventory tracking", path: appPath("/inventory/tracking") },
-  { label: "Order fulfillment", path: appPath("/inventory/requisitions") },
+  { label: "Order fulfilment", path: appPath("/inventory/requisitions") },
   { label: "Receiving", path: appPath("/inventory/receipts") },
   { label: "Shipping and tracking", path: appPath("/inventory/issues") },
   { label: "Import", path: appPath("/inventory/import") },

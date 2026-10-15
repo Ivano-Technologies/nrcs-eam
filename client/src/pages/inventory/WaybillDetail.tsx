@@ -316,7 +316,7 @@ export default function WaybillDetail() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Waybill / Delivery Note</CardTitle>
+          <CardTitle>Waybill / delivery note</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-3 md:grid-cols-2">
@@ -437,7 +437,7 @@ export default function WaybillDetail() {
                         <SelectContent>
                           {(catalogue ?? []).map((item) => (
                             <SelectItem key={item.id} value={String(item.id)}>
-                              {item.itemCode} - {item.name}
+                              {item.itemCode} · {item.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
