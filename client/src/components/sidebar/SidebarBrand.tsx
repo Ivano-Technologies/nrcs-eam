@@ -6,6 +6,7 @@
  * = 192px, so "Nigerian Red Cross Society" (13px/600) and "Enterprise Asset Management" (12px/400)
  * each fit on one line in every common UI font, Montserrat included (180 and 183px measured).
  * In the rail the header padding grows to 12px so the same 40px logo sits centred in 64px.
+ * max-w-none overrides the preflight img max-width:100% that squeezed the rail logo to 39px.
  * `truncate` turns an overflow (bare Linux with DejaVu) into an ellipsis instead of a third line.
  */
 import { ChevronsLeft } from "lucide-react";
@@ -34,7 +35,7 @@ export function SidebarBrand({ rail }: { rail: boolean }) {
           <img
             src={LOGO_SRC}
             alt=""
-            className="h-10 w-10 shrink-0 object-contain"
+            className="h-10 w-10 min-w-10 max-w-none shrink-0 object-contain"
             data-testid={rail ? "sidebar-logo-collapsed" : "sidebar-logo"}
           />
           <span
