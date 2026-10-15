@@ -5,57 +5,61 @@
  * chevron moved out of the row, the text column is 256 − 16 (header padding) − 40 (logo) − 8 (gap)
  * = 192px, so "Nigerian Red Cross Society" (13px/600) and "Enterprise Asset Management" (12px/400)
  * each fit on one line in every common UI font, Montserrat included (180 and 183px measured).
+ * In the rail the header padding grows to 12px so the same 40px logo sits centred in 64px.
  * `truncate` turns an overflow (bare Linux with DejaVu) into an ellipsis instead of a third line.
  */
 import { ChevronsLeft } from "lucide-react";
 import { Link } from "wouter";
 import { appPath } from "@/lib/routes";
 import { cn } from "@/lib/utils";
+import { SIDEBAR_FADE } from "@/lib/sidebarWidth";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const LOGO_SRC = "/nrcs-logo-source.png";
 const ORG_NAME = "Nigerian Red Cross Society";
 
 export function SidebarBrand({ rail }: { rail: boolean }) {
-  if (rail) {
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Link
-            href={appPath("/")}
-            aria-label="Go to dashboard"
-            className="flex w-full justify-center rounded-md transition-opacity hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <img src={LOGO_SRC} alt={ORG_NAME} className="h-10 w-10 shrink-0 object-contain mx-auto" data-testid="sidebar-logo-collapsed" />
-          </Link>
-        </TooltipTrigger>
-        <TooltipContent side="right">Go to dashboard</TooltipContent>
-      </Tooltip>
-    );
-  }
+  // One tree in both states (no remount while the width animates): the text column stays mounted,
+  // clipped by the row and faded; the tooltip only shows in the rail.
   return (
-    <Link
-      href={appPath("/")}
-      aria-label={`${ORG_NAME}, Enterprise Asset Management. Go to dashboard`}
-      data-testid="sidebar-brand"
-      className="flex min-w-0 w-full items-center gap-2 rounded-md transition-opacity hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-    >
-      <img src={LOGO_SRC} alt="" className="h-10 w-10 shrink-0" />
-      <span className="flex min-w-0 flex-col gap-0.5">
-        <span
-          className="truncate text-[13px] font-semibold leading-4 tracking-[-0.01em] text-sidebar-foreground"
-          data-testid="sidebar-org-name"
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Link
+          href={appPath("/")}
+          aria-label={rail ? "Go to dashboard" : `${ORG_NAME}, Enterprise Asset Management. Go to dashboard`}
+          data-testid="sidebar-brand"
+          data-rail={rail ? "true" : "false"}
+          className="flex min-w-0 w-full items-center gap-2 overflow-hidden rounded-md transition-opacity hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
         >
-          {ORG_NAME}
-        </span>
-        <span
-          className="truncate text-[12px] leading-4 tracking-[-0.01em] text-sidebar-foreground/75"
-          data-testid="sidebar-org-subtitle"
-        >
-          Enterprise Asset Management
-        </span>
-      </span>
-    </Link>
+          <img
+            src={LOGO_SRC}
+            alt=""
+            className="h-10 w-10 shrink-0 object-contain"
+            data-testid={rail ? "sidebar-logo-collapsed" : "sidebar-logo"}
+          />
+          <span
+            aria-hidden={rail || undefined}
+            className={cn("flex min-w-0 flex-col gap-0.5 whitespace-nowrap", SIDEBAR_FADE, rail ? "opacity-0" : "opacity-100 delay-100")}
+          >
+            <span
+              className="truncate text-[13px] font-semibold leading-4 tracking-[-0.01em] text-sidebar-foreground"
+              data-testid="sidebar-org-name"
+            >
+              {ORG_NAME}
+            </span>
+            <span
+              className="truncate text-[12px] leading-4 tracking-[-0.01em] text-sidebar-foreground/75"
+              data-testid="sidebar-org-subtitle"
+            >
+              Enterprise Asset Management
+            </span>
+          </span>
+        </Link>
+      </TooltipTrigger>
+      <TooltipContent side="right" hidden={!rail}>
+        Go to dashboard
+      </TooltipContent>
+    </Tooltip>
   );
 }
 

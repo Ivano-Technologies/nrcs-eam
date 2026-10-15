@@ -84,6 +84,26 @@ test.describe("UI improvements (live)", () => {
     await expect(tip).toBeVisible({ timeout: 10_000 });
   });
 
+  test("sidebar stays mounted and folds on the first frame of the Asset Map", async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto("/app");
+    await expect(page.getByTestId("app-sidebar")).toHaveAttribute("data-sidebar-width", "256", { timeout: 30_000 });
+    const result = await page.evaluate(
+      () =>
+        new Promise<{ attached: boolean; width: string | null }>((resolve) => {
+          const sidebar = document.querySelector('[data-testid="app-sidebar"]');
+          window.history.pushState(null, "", "/app/asset-map");
+          window.dispatchEvent(new PopStateEvent("popstate"));
+          requestAnimationFrame(() =>
+            resolve({ attached: Boolean(sidebar?.isConnected), width: sidebar?.getAttribute("data-sidebar-width") ?? null })
+          );
+        })
+    );
+    // Same sidebar node (no full app spinner) and the rail decided from the route on the first frame.
+    expect(result.attached).toBe(true);
+    expect(result.width).toBe("64");
+  });
+
   test("inventory page loads with grid/list toggle", async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto("/app/inventory");

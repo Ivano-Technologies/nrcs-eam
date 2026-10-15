@@ -22,6 +22,7 @@ import { DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM_COUNTRY } from "@/lib/mapDefaults"
 import { appPath } from "@/lib/routes";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
+import { useElementSize } from "@/hooks/useElementSize";
 
 const GAP = 16;
 const DRAWER_W = 368;
@@ -168,6 +169,8 @@ export function FacilitiesMap({ visibleIds, noLocation }: FacilitiesMapProps) {
   /* geometry */
   const frameRef = useRef<HTMLDivElement>(null);
   const frameHeight = useFillHeight(frameRef, isMobile ? 96 : 24, isMobile ? 380 : 440);
+  // ResizeObserver on the frame: settles once the sidebar fold (200ms) and the fill height are done.
+  const { stable: frameStable } = useElementSize(frameRef);
   const [showNoLocation, setShowNoLocation] = useState(false);
   const noLocationCount = noLocation.length;
   if (noLocationCount === 0 && showNoLocation) setShowNoLocation(false);
@@ -297,15 +300,17 @@ export function FacilitiesMap({ visibleIds, noLocation }: FacilitiesMapProps) {
     });
   }, [overlay, mapError, all, visibleIds, scheme, selectedId, hoveredId, touch, mapEpoch]);
 
-  // First load: fit the facilities on the map once. Later filter changes never refit (Fit does).
+  // First load: fit the facilities on the map once the frame has stopped resizing (after the
+  // sidebar fold animation ends), so the fit uses the final size. Later filter changes never refit
+  // (Fit does).
   const fittedRef = useRef(false);
   useEffect(() => {
-    if (fittedRef.current || !mapQuery.data || mapError) return;
+    if (fittedRef.current || !mapQuery.data || mapError || !frameStable) return;
     if (!mapMock && !mapRef.current) return;
     const pts = (shown.length ? shown : all).map(facilityPosition).filter((p): p is google.maps.LatLngLiteral => Boolean(p));
     fittedRef.current = true;
     if (pts.length) controllerRef.current?.fitTo(pts, insetsFor(false));
-  }, [mapQuery.data, mapEpoch, mapMock, shown, all, insetsFor, mapError]);
+  }, [mapQuery.data, mapEpoch, mapMock, shown, all, insetsFor, mapError, frameStable]);
 
   // Esc closes the drawer and returns focus to the pin that opened it.
   useEffect(() => {

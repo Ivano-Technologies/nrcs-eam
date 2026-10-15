@@ -51,7 +51,8 @@ function navBadgeValue(
 }
 
 import { useEffect, useMemo, useState } from "react";
-import { SIDEBAR_RAIL_WIDTH } from "@/lib/sidebarWidth";
+import { SIDEBAR_FADE, SIDEBAR_RAIL_WIDTH } from "@/lib/sidebarWidth";
+import { useSidebar } from "@/components/ui/sidebar";
 
 const STORAGE_KEY = "sidebar-nav-groups-open-v1";
 const NARROW_PX = SIDEBAR_RAIL_WIDTH;
@@ -93,6 +94,9 @@ export function SidebarGroupedNav({
   sidebarCounts,
 }: SidebarGroupedNavProps) {
   const isNarrow = sidebarWidth <= NARROW_PX;
+  const { isMobile } = useSidebar();
+  /** Labels stay mounted in the rail (no remount or vertical jump while the width animates) and fade. */
+  const fade = cn(SIDEBAR_FADE, isNarrow ? "opacity-0" : "opacity-100 delay-100");
   const isAdmin = userRole === "admin";
   const isManagerOrAdmin = userRole === "admin" || userRole === "manager";
 
@@ -189,22 +193,21 @@ export function SidebarGroupedNav({
           isActive={isActive}
           data-testid={sidebarNavTestId(item.path)}
           onClick={() => setLocation(item.path)}
-          tooltip={isNarrow ? item.label : undefined}
+          tooltip={{ children: item.label, hidden: !isNarrow || isMobile }}
           aria-label={isNarrow ? item.label : undefined}
-          className={cn("h-10 transition-all font-normal", isNarrow ? "justify-center" : "")}
+          // Rail: (48px button − 16px icon) / 2 = 16px left padding centres the icon in 64px.
+          className={cn("h-10 font-normal transition-[padding,background-color,color] duration-200 ease-in-out", isNarrow ? "pl-4" : "")}
         >
           <item.icon className={cn("h-[20px] w-[20px]", isActive ? "text-primary" : "")} />
-          {!isNarrow && (
+          <span aria-hidden={isNarrow || undefined} className={cn("flex min-w-0 flex-1 items-center gap-0.5 whitespace-nowrap", fade)}>
             <span className="flex min-w-0 flex-1 items-baseline gap-0.5">
               <span className="truncate text-[15px]">{item.label}</span>
               {badge != null ? (
                 <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums">· {badge}</span>
               ) : null}
             </span>
-          )}
-          {!isNarrow && TrailIcon ? (
-            <TrailIcon className="!h-3.5 !w-3.5 shrink-0 text-sidebar-foreground/40" aria-hidden />
-          ) : null}
+            {TrailIcon ? <TrailIcon className="!h-3.5 !w-3.5 shrink-0 text-sidebar-foreground/40" aria-hidden /> : null}
+          </span>
         </SidebarMenuButton>
       </SidebarMenuItem>
     );
@@ -223,17 +226,18 @@ export function SidebarGroupedNav({
         aria-label={g.label}
         title={isNarrow ? g.label : undefined}
         className={cn(
-          "flex w-full items-center gap-2 rounded-md border border-transparent px-2 py-1.5 text-left text-[15px] text-white transition-[background-color,color,transform] duration-200",
+          "flex w-full items-center gap-2 overflow-hidden whitespace-nowrap rounded-md border border-transparent py-1.5 pr-2 text-left text-[15px] text-white transition-[background-color,color,transform,padding] duration-200 ease-in-out",
           // Groups show open state (chevron + bold label) but never the active fill.
           "bg-transparent hover:bg-sidebar-accent/50 active:scale-[0.99] motion-reduce:active:scale-100",
           open ? "font-semibold" : "font-normal",
-          isNarrow && "justify-center px-0"
+          // Rail: (48px − 16px icon) / 2 = 16px left padding centres the icon in 64px.
+          isNarrow ? "pl-4" : "pl-2"
         )}
         aria-expanded={open}
       >
         <g.icon className="h-4 w-4 shrink-0 text-white" />
-        {!isNarrow && <span className="flex-1 truncate">{g.label}</span>}
-        {!isNarrow && (
+        <span aria-hidden={isNarrow || undefined} className={cn("flex min-w-0 flex-1 items-center gap-2", fade)}>
+          <span className="flex-1 truncate">{g.label}</span>
           <HeaderChevron
             className={cn(
               "h-4 w-4 shrink-0 text-white",
@@ -241,7 +245,7 @@ export function SidebarGroupedNav({
               open ? chevronDef.expanded : chevronDef.collapsed
             )}
           />
-        )}
+        </span>
       </button>
     );
 
@@ -253,20 +257,17 @@ export function SidebarGroupedNav({
         className="space-y-0"
       >
         <SidebarMenuItem>
-          {isNarrow ? (
-            <TooltipProvider delayDuration={200}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <CollapsibleTrigger asChild>{headerBtn}</CollapsibleTrigger>
-                </TooltipTrigger>
-                <TooltipContent side="right" className="font-medium">
-                  {g.label}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          ) : (
-            <CollapsibleTrigger asChild>{headerBtn}</CollapsibleTrigger>
-          )}
+          {/* Same tree in both states; the tooltip only shows in the rail. */}
+          <TooltipProvider delayDuration={200}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <CollapsibleTrigger asChild>{headerBtn}</CollapsibleTrigger>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="font-medium" hidden={!isNarrow || isMobile}>
+                {g.label}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </SidebarMenuItem>
         <CollapsibleContent className="overflow-hidden transition-[height] duration-300 ease-in-out data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0">
           <SidebarMenu className="ml-1 border-l border-sidebar-border pl-1">
