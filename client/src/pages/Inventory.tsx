@@ -938,7 +938,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                           <TableCell>{row.rowNumber}</TableCell>
                           <TableCell>{row.warehouseCode}</TableCell>
                           <TableCell>{row.itemCode}</TableCell>
-                          <TableCell>{row.status}</TableCell>
+                          <TableCell>{formatEnumLabel(row.status)}</TableCell>
                           <TableCell>{(row.messages ?? []).join(", ") || "OK"}</TableCell>
                         </TableRow>
                       ))}
@@ -1018,7 +1018,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                           <TableCell>{row.warehouseCode}</TableCell>
                           <TableCell>{row.itemCode}</TableCell>
                           <TableCell>{row.movementType}</TableCell>
-                          <TableCell>{row.status}</TableCell>
+                          <TableCell>{formatEnumLabel(row.status)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

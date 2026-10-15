@@ -39,7 +39,7 @@ export async function loadGrnFinalizeContext(db: Db, grnId: number): Promise<Grn
 export async function validateGrnFinalize(db: Db, ctx: GrnFinalizeContext): Promise<void> {
   const { grn, lines } = ctx;
   if (grn.status !== "draft" && grn.status !== "pending_approval") {
-    throw new Error("GRN is not in a finalizable state.");
+    throw new Error("GRN is not in a finalisable state.");
   }
   if (lines.length === 0) {
     throw new Error("GRN has no line items.");
@@ -48,7 +48,7 @@ export async function validateGrnFinalize(db: Db, ctx: GrnFinalizeContext): Prom
   for (const line of lines) {
     if (line.ctnId == null) {
       errors.push(
-        `Line ${line.lineOrder + 1}: CTN is required. Create the CTN in the CTN Registry first, or use the GRN form's inline CTN creator.`
+        `Line ${line.lineOrder + 1}: CTN is required. Create the CTN in the CTN registry first, or use the GRN form's inline CTN creator.`
       );
       continue;
     }

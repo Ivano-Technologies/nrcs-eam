@@ -1219,7 +1219,7 @@ export default function AssetDetail() {
                   <SelectContent>
                     {CURRENT_STATUS_OPTIONS.map((s) => (
                       <SelectItem key={s} value={s}>
-                        {s}
+                        {formatEnumLabel(s)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1248,7 +1248,7 @@ export default function AssetDetail() {
                   <SelectContent>
                     {CONDITION_OPTIONS.map((c) => (
                       <SelectItem key={c} value={c}>
-                        {c}
+                        {formatEnumLabel(c)}
                       </SelectItem>
                     ))}
                   </SelectContent>

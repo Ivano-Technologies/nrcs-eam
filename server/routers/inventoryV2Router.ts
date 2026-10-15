@@ -1465,7 +1465,7 @@ export const inventoryV2Router = router({
               throw new TRPCError({
                 code: "BAD_REQUEST",
                 message:
-                  "GRN lines must specify a CTN. Create the CTN in the CTN Registry first, or use the GRN form's inline CTN creator.",
+                  "GRN lines must specify a CTN. Create the CTN in the CTN registry first, or use the GRN form's inline CTN creator.",
               });
             }
             try {
@@ -2627,7 +2627,7 @@ export const inventoryV2Router = router({
           if (!text) {
             throw new TRPCError({
               code: "BAD_REQUEST",
-              message: "This PDF appears to be a scanned image. Please enter the data manually via the Stock Card or Bin Card form.",
+              message: "This PDF appears to be a scanned image. Please enter the data manually via the stock card or bin card form.",
             });
           }
           const parsed = parseTypedPdfText(text, input.type as "grn" | "waybill");

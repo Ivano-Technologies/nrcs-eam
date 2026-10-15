@@ -1,3 +1,4 @@
+import { formatEnumLabel } from "@/lib/format";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { appPath } from "@/lib/routes";
 import { trpc } from "@/lib/trpc";
@@ -187,7 +188,7 @@ export function GlobalSearch({ className }: { className?: string }) {
                         <div className="flex flex-col min-w-0">
                           <span className="truncate font-medium">{a.name}</span>
                           <span className="text-xs text-muted-foreground truncate">
-                            {a.assetTag} · {a.status}
+                            {a.assetTag} · {formatEnumLabel(a.status)}
                           </span>
                         </div>
                       </CommandItem>
@@ -214,7 +215,7 @@ export function GlobalSearch({ className }: { className?: string }) {
                         <div className="flex flex-col min-w-0">
                           <span className="truncate font-medium">{w.workOrderNumber}</span>
                           <span className="text-xs text-muted-foreground truncate">
-                            {w.title} · {w.status}
+                            {w.title} · {formatEnumLabel(w.status)}
                           </span>
                         </div>
                       </CommandItem>

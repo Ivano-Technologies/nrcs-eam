@@ -1,5 +1,5 @@
 import { Toolbar, ToolbarSearch } from "@/components/Toolbar";
-import { formatDate, formatEmpty } from "@/lib/format";
+import { formatDate, formatEmpty, formatEnumLabel } from "@/lib/format";
 import { ViewToggle } from "@/components/ViewToggle";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -39,7 +39,7 @@ export default function BinCards({ embedInShell = false }: Props = {}) {
               <CardContent className="space-y-2">
                 <div className="flex items-center justify-between gap-2">
                   <p className="font-mono text-sm">{row.binNumber}</p>
-                  <Badge variant="outline">{row.status}</Badge>
+                  <Badge variant="outline">{formatEnumLabel(row.status)}</Badge>
                 </div>
                 <p className="font-semibold">{formatEmpty(row.itemDescription || row.itemCode)}</p>
                 <p className="text-sm text-muted-foreground">{formatEmpty(row.stockLocation)}</p>
@@ -75,7 +75,7 @@ export default function BinCards({ embedInShell = false }: Props = {}) {
                   <TableCell className="text-right">{row.currentBalance}</TableCell>
                   <TableCell>{formatEmpty(row.storekeeper)}</TableCell>
                   <TableCell>{row.openedAt ? formatDate(row.openedAt) : ""}</TableCell>
-                  <TableCell>{row.status}</TableCell>
+                  <TableCell>{formatEnumLabel(row.status)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

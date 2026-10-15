@@ -1,6 +1,6 @@
 import { trpc } from "@/lib/trpc";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { DateHint, formatDate } from "@/lib/format";
+import { DateHint, formatDate, formatEnumLabel } from "@/lib/format";
 import PageHeader from "@/components/ui/PageHeader";
 import PageLoader from "@/components/ui/PageLoader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -248,7 +248,7 @@ export default function Maintenance() {
               {upcoming.map((s) => (
                 <div key={s.id} className="flex items-center justify-between border-b pb-3 last:border-0">
                   <div><p className="font-medium">{s.name}</p><p className="text-sm text-muted-foreground">Due: {formatDate(s.nextDue)}</p></div>
-                  <Badge>{s.frequency}</Badge>
+                  <Badge>{formatEnumLabel(s.frequency)}</Badge>
                 </div>
               ))}
             </div>
@@ -264,7 +264,7 @@ export default function Maintenance() {
               {schedules.map((s) => (
                 <div key={s.id} className="flex items-center justify-between border-b pb-3 last:border-0">
                   <div><p className="font-medium">{s.name}</p><p className="text-sm text-muted-foreground">{s.description}</p></div>
-                  <div className="flex gap-2"><Badge>{s.frequency}</Badge><Badge variant={s.isActive ? "default" : "secondary"}>{s.isActive ? "Active" : "Inactive"}</Badge></div>
+                  <div className="flex gap-2"><Badge>{formatEnumLabel(s.frequency)}</Badge><Badge variant={s.isActive ? "default" : "secondary"}>{s.isActive ? "Active" : "Inactive"}</Badge></div>
                 </div>
               ))}
             </div>

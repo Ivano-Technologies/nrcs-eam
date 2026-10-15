@@ -840,7 +840,7 @@ export async function previewNRCSAssetImport(fileBuffer: Buffer): Promise<{
     const siteBranchCode = site ? (site.code ?? "").trim() : "";
     if (site && !siteBranchCode) {
       errors.push(
-        "Resolved facility has no branch code — set the facility code in Sites before importing the register."
+        "Resolved facility has no branch code. Set the facility code in Facilities before importing the register."
       );
     }
 
