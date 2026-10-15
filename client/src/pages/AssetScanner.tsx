@@ -229,7 +229,7 @@ ${updateForm.notes}`
               <div className="flex flex-col gap-4">
                 <div className="flex flex-col gap-4">
                   <Label htmlFor="assetTag">
-                    Asset Tag{" "}
+                    Asset tag{" "}
                     /{" "}
                     Barcode
                   </Label>

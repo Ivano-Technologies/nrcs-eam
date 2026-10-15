@@ -117,6 +117,35 @@ const REGISTER_TABLE_COLUMN_ORDER = [
   "New/Used","Status","Assigned To","Department","Location","Condition","Last Check Date","Check Conducted By","Remarks",
 ] as const;
 
+/** On-screen header labels in sentence case. The printed register keeps its official capitals. */
+const REGISTER_TABLE_HEADER_LABELS: Record<(typeof REGISTER_TABLE_COLUMN_ORDER)[number], string> = {
+  "S.No": "S.No",
+  "Item Type": "Item type",
+  "Item Category": "Item category",
+  "Sub Item Category": "Sub item category",
+  "Item Description": "Item description",
+  "Branch Code": "Branch code",
+  "Category Code": "Category code",
+  "NUM": "NUM",
+  "Asset Code": "Asset code",
+  "Serial Number": "Serial number",
+  "Actual Unit Value": "Actual unit value",
+  "Depreciated Value": "Depreciated value",
+  "Method of Acquisition": "Method of acquisition",
+  "Acquisition Detail": "Acquisition detail",
+  "Project Ref": "Project ref",
+  "Year Acquired": "Year acquired",
+  "New/Used": "New/used",
+  "Status": "Status",
+  "Assigned To": "Assigned to",
+  "Department": "Department",
+  "Location": "Location",
+  "Condition": "Condition",
+  "Last Check Date": "Last check date",
+  "Check Conducted By": "Check conducted by",
+  "Remarks": "Remarks",
+};
+
 function formatMoney(n: number | null | undefined): string {
   if (n === null || n === undefined || Number.isNaN(n)) return EM_DASH;
   return formatNaira(n);
@@ -1556,7 +1585,7 @@ export default function Assets() {
                         index === 2 && "bg-background w-56 min-w-56"
                       )}
                     >
-                      {header}
+                      {REGISTER_TABLE_HEADER_LABELS[header]}
                     </th>
                   ))}
                   {canEditAssets ? <th className="px-2 py-1.5 text-left font-medium whitespace-nowrap">Actions</th> : null}
