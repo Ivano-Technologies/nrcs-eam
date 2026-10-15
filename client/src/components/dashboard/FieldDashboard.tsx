@@ -1,4 +1,6 @@
+import { ClipboardList } from "lucide-react";
 import type { DashboardBundle } from "@/components/dashboard/DashboardBundleContext";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { KPI_VALUE_CLASS } from "@/lib/kpiTypography";
@@ -73,7 +75,7 @@ export function FieldDashboard({ metrics: metricsProp, metricsFailed, onRetry }:
       </Card>
 
       <div className="flex flex-wrap gap-3">
-        <Button asChild size="lg" className="gap-2">
+        <Button asChild className="gap-2">
           <Link href={`${appPath("/inventory/requisitions")}?new=1`}>
             <PackagePlus className="h-5 w-5" />
             New requisition
@@ -93,7 +95,7 @@ export function FieldDashboard({ metrics: metricsProp, metricsFailed, onRetry }:
               <span>Loading…</span>
             </div>
           ) : !myReqs?.length ? (
-            <p className="text-sm text-muted-foreground">No requisitions yet.</p>
+            <EmptyState icon={ClipboardList} title="No requisitions yet" className="py-6" />
           ) : (
             <ul className="space-y-3">
               {myReqs.map((r) => (

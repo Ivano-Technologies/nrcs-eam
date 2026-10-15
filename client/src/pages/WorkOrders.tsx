@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { formatDate } from "@/lib/format";
 import { trpc } from "@/lib/trpc";
 import PageHeader from "@/components/ui/PageHeader";
@@ -351,10 +352,16 @@ export default function WorkOrders() {
         </div>
       ) : (
         <Card>
-          <CardContent className="flex flex-col items-center justify-center h-64">
-            <Wrench className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">No work orders found</p>
-          </CardContent>
+          <EmptyState
+            icon={Wrench}
+            title="No work orders yet"
+            action={
+              <Button variant="outline" onClick={() => setIsCreateDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Create work order
+              </Button>
+            }
+          />
         </Card>
       )}
     </div>

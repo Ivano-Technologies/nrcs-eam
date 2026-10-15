@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ViewToggle } from "@/components/ViewToggle";
@@ -170,14 +170,14 @@ export default function Distributions({ embedInShell = false }: { embedInShell?:
             </Select>
             <Label>Incident reference</Label>
             <Input value={incident} onChange={(e) => setIncident(e.target.value)} />
-            <div className="grid grid-cols-4 gap-2">
-              <Input placeholder="Households" value={householdCount} onChange={(e) => setHouseholdCount(e.target.value)} />
-              <Input placeholder="Individuals" value={beneficiaryCount} onChange={(e) => setBeneficiaryCount(e.target.value)} />
-              <Input placeholder="Male" value={maleCount} onChange={(e) => setMaleCount(e.target.value)} />
-              <Input placeholder="Female" value={femaleCount} onChange={(e) => setFemaleCount(e.target.value)} />
-              <Input placeholder="Children" value={childrenCount} onChange={(e) => setChildrenCount(e.target.value)} />
-              <Input placeholder="Elderly" value={elderlyCount} onChange={(e) => setElderlyCount(e.target.value)} />
-              <Input placeholder="PWD" value={pwdCount} onChange={(e) => setPwdCount(e.target.value)} />
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
+              <div className="space-y-1"><Label className="text-xs text-muted-foreground">Households</Label><Input aria-label="Households" placeholder="Households" value={householdCount} onChange={(e) => setHouseholdCount(e.target.value)} /></div>
+              <div className="space-y-1"><Label className="text-xs text-muted-foreground">Individuals</Label><Input aria-label="Individuals" placeholder="Individuals" value={beneficiaryCount} onChange={(e) => setBeneficiaryCount(e.target.value)} /></div>
+              <div className="space-y-1"><Label className="text-xs text-muted-foreground">Male</Label><Input aria-label="Male" placeholder="Male" value={maleCount} onChange={(e) => setMaleCount(e.target.value)} /></div>
+              <div className="space-y-1"><Label className="text-xs text-muted-foreground">Female</Label><Input aria-label="Female" placeholder="Female" value={femaleCount} onChange={(e) => setFemaleCount(e.target.value)} /></div>
+              <div className="space-y-1"><Label className="text-xs text-muted-foreground">Children</Label><Input aria-label="Children" placeholder="Children" value={childrenCount} onChange={(e) => setChildrenCount(e.target.value)} /></div>
+              <div className="space-y-1"><Label className="text-xs text-muted-foreground">Elderly</Label><Input aria-label="Elderly" placeholder="Elderly" value={elderlyCount} onChange={(e) => setElderlyCount(e.target.value)} /></div>
+              <div className="space-y-1"><Label className="text-xs text-muted-foreground">PWD</Label><Input aria-label="PWD" placeholder="PWD" value={pwdCount} onChange={(e) => setPwdCount(e.target.value)} /></div>
             </div>
             <Label>Observers</Label>
             <Input value={observers} onChange={(e) => setObservers(e.target.value)} />
@@ -185,7 +185,7 @@ export default function Distributions({ embedInShell = false }: { embedInShell?:
             <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
             <Label>Challenges</Label>
             <Textarea value={challenges} onChange={(e) => setChallenges(e.target.value)} />
-            <div className="flex justify-end gap-2">
+            <DialogFooter>
               <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
               <Button
                 onClick={() =>
@@ -213,7 +213,7 @@ export default function Distributions({ embedInShell = false }: { embedInShell?:
               >
                 Submit
               </Button>
-            </div>
+            </DialogFooter>
           </div>
         </DialogContent>
       </Dialog>

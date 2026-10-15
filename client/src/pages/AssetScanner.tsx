@@ -247,7 +247,7 @@ ${updateForm.notes}`
                     autoFocus
                   />
                 </div>
-                <Button onClick={handleScan} className="h-11 w-full text-lg">
+                <Button onClick={handleScan} className="w-full">
                   <Search className="h-5 w-5 mr-2" />
                   Find asset
                 </Button>

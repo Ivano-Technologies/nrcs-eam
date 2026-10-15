@@ -50,7 +50,7 @@
   --color-muted: #6b7280;
   --color-background-primary: var(--background);
   --color-background-secondary: oklch(0.97 0.001 286.375);
-  --radius-card: 12px;
+  --radius-card: var(--radius-xl);
   --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.06);
   --color-accent-border: #374151;
   --dashboard-contrast-text: #334155;
@@ -228,7 +228,7 @@ html.dark {
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     border: 1px solid rgba(255, 255, 255, 0.25);
-    border-radius: 12px;
+    border-radius: var(--radius-xl);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   }
 
@@ -450,9 +450,10 @@ html.dark {
 }
 
 @media (max-width: 639px) {
+  /* Stacked on phones: primary on top, Cancel below (shadcn flex-col-reverse order). */
   [data-slot="dialog-footer"] {
     display: flex;
-    flex-direction: column;
+    flex-direction: column-reverse;
     gap: 0.5rem;
   }
 

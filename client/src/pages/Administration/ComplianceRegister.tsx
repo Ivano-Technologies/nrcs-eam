@@ -396,7 +396,6 @@ export default function ComplianceRegister() {
                       colSpan={9 + (canEdit ? 1 : 0)}
                       icon={Truck}
                       title="No vehicle records yet"
-                      body="Vehicle records appear here once a vehicle is added to the register."
                     />
                   ) : null}
                 </TableBody>
@@ -467,7 +466,6 @@ export default function ComplianceRegister() {
                       colSpan={9 + (canEdit ? 1 : 0)}
                       icon={Zap}
                       title="No generator records yet"
-                      body="Generator records appear here once a generator record is added."
                     />
                   ) : null}
                 </TableBody>
@@ -536,7 +534,6 @@ export default function ComplianceRegister() {
                       colSpan={8 + (canEdit ? 1 : 0)}
                       icon={Building2}
                       title="No safety certificates yet"
-                      body="Safety certificates appear here once a certificate is added."
                     />
                   ) : null}
                 </TableBody>
@@ -603,7 +600,6 @@ export default function ComplianceRegister() {
                       colSpan={7 + (canEdit ? 1 : 0)}
                       icon={FileText}
                       title="No donor reports yet"
-                      body="Donor reports appear here once a donor report is added."
                     />
                   ) : null}
                 </TableBody>

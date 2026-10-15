@@ -1,10 +1,11 @@
 import { useState } from "react";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { formatDateTime } from "@/lib/format";
 import { trpc } from "@/lib/trpc";
 import PageHeader from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -127,7 +128,7 @@ export default function EmailNotifications() {
                     </p>
                   </div>
 
-                  <div className="flex justify-end gap-2">
+                  <DialogFooter>
                     <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                       Cancel
                     </Button>
@@ -144,7 +145,7 @@ export default function EmailNotifications() {
                         </>
                       )}
                     </Button>
-                  </div>
+                  </DialogFooter>
                 </div>
               </DialogContent>
             </Dialog>
@@ -163,10 +164,16 @@ export default function EmailNotifications() {
         </CardHeader>
         <CardContent>
           {!history || history.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Mail className="h-12 w-12 mx-auto mb-3 opacity-50" />
-              <p>No emails sent yet</p>
-            </div>
+            <EmptyState
+              icon={Mail}
+              title="No emails sent yet"
+              action={
+                <Button variant="outline" onClick={() => setIsDialogOpen(true)}>
+                  <Mail className="mr-2 h-4 w-4" />
+                  Compose email
+                </Button>
+              }
+            />
           ) : (
             <div className="space-y-3">
               {history.map((email) => (

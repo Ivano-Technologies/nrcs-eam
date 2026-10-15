@@ -250,7 +250,7 @@ export default function ActivityLog() {
       ) : (
         <Card>
           <CardContent className="p-0">
-            <EmptyState icon={Activity} title="No activity yet" body="Activity appears here once someone signs in or changes a record." />
+            <EmptyState icon={Activity} title="No activity yet" />
           </CardContent>
         </Card>
       )}

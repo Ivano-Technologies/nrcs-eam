@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { formatDate } from "@/lib/format";
 import { trpc } from "@/lib/trpc";
 import PageHeader from "@/components/ui/PageHeader";
@@ -190,14 +191,16 @@ export default function ReportScheduling() {
 
       {schedules.length === 0 ? (
         <Card>
-          <CardContent className="py-8 text-center space-y-4">
-            <Calendar className="mx-auto h-12 w-12 text-muted-foreground" />
-            <p className="text-muted-foreground">No scheduled reports yet. Create your first schedule to get started.</p>
-            <Button type="button" onClick={() => setIsCreateDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              New schedule
-            </Button>
-          </CardContent>
+          <EmptyState
+            icon={Calendar}
+            title="No scheduled reports yet"
+            action={
+              <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                New schedule
+              </Button>
+            }
+          />
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

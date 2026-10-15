@@ -217,7 +217,6 @@ export default function DepreciationSchedule() {
                     colSpan={11}
                     icon={TrendingDown}
                     title="No depreciation rows yet"
-                    body="Depreciation rows appear here once assets have a unit value, category and acquisition year."
                   />
                 ) : null}
               </TableBody>

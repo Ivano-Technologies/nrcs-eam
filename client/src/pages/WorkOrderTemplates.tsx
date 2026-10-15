@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { trpc } from "@/lib/trpc";
 import PageHeader from "@/components/ui/PageHeader";
 import PageLoader from "@/components/ui/PageLoader";
@@ -178,10 +179,16 @@ export default function WorkOrderTemplates() {
 
       {templates.length === 0 ? (
         <Card>
-          <CardContent className="py-8 text-center">
-            <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">No templates yet. Create your first template to get started.</p>
-          </CardContent>
+          <EmptyState
+            icon={FileText}
+            title="No templates yet"
+            action={
+              <Button variant="outline" onClick={() => setIsCreateDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                New template
+              </Button>
+            }
+          />
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

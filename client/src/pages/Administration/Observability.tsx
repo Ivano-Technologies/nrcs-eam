@@ -117,7 +117,7 @@ export default function Observability() {
             <div className="flex items-center gap-3">
               <MobileColumnsToggle isMobile={isMobile} showAll={showAll} onToggle={setShowAll} />
               <span className="text-xs text-muted-foreground">Updated {lastUpdated}</span>
-              <Button variant="outline" size="sm" onClick={refreshAll}>
+              <Button variant="outline" onClick={refreshAll}>
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Refresh
               </Button>
