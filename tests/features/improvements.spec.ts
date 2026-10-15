@@ -52,6 +52,13 @@ test.describe("UI improvements (live)", () => {
     if ((await byTestId.count()) > 0) {
       await expect(byTestId).toBeVisible({ timeout: 30_000 });
       await expect(byTestId).toContainText(/Nigerian Red Cross Society/i);
+      // Brand fix: each brand line sits on exactly one line (no wrap) inside a fixed 56px header.
+      const nameBox = await byTestId.boundingBox();
+      expect(nameBox?.height ?? 99).toBeLessThanOrEqual(18);
+      const subtitleBox = await page.getByTestId("sidebar-org-subtitle").boundingBox();
+      expect(subtitleBox?.height ?? 99).toBeLessThanOrEqual(18);
+      const headerBox = await page.getByTestId("sidebar-header").boundingBox();
+      expect(Math.round(headerBox?.height ?? 0)).toBe(56);
     } else {
       await expect(page.getByText(/Nigerian Red Cross Society/i).first()).toBeVisible({
         timeout: 30_000,
@@ -62,7 +69,7 @@ test.describe("UI improvements (live)", () => {
   test("dashboard sidebar shows tooltip when collapsed", async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto("/app");
-    await page.getByRole("button", { name: /Toggle sidebar width/i }).click();
+    await page.getByTestId("sidebar-edge-toggle").click();
     const navBtn = page.getByTestId("sidebar-nav-dashboard");
     await expect(navBtn).toBeVisible();
     await navBtn.scrollIntoViewIfNeeded();
