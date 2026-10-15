@@ -178,7 +178,7 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
               <CardContent className="space-y-2">
                 <div className="flex items-center justify-between">
                   <p className="font-mono text-sm">{row.reqNumber}</p>
-                  <Badge data-testid="req-priority-badge" data-priority={row.priority ?? "routine"} variant={priorityVariant(row.priority ?? undefined) as any}>{row.priority}</Badge>
+                  <Badge data-testid="req-priority-badge" data-priority={row.priority ?? "routine"} variant={priorityVariant(row.priority ?? undefined) as any}>{formatEnumLabel(row.priority)}</Badge>
                 </div>
                 <p className="font-semibold">{row.title}</p>
                 <p className="text-xs text-muted-foreground">{formatEnumLabel(row.status)}</p>
@@ -216,7 +216,7 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
                   <td className="px-2 py-2 font-mono">{row.reqNumber}</td>
                   <td className="px-2 py-2">{row.title}</td>
                   <td className="px-2 py-2">
-                    <Badge data-testid="req-priority-badge" data-priority={row.priority ?? "routine"} variant={priorityVariant(row.priority ?? undefined) as any}>{row.priority}</Badge>
+                    <Badge data-testid="req-priority-badge" data-priority={row.priority ?? "routine"} variant={priorityVariant(row.priority ?? undefined) as any}>{formatEnumLabel(row.priority)}</Badge>
                   </td>
                   <td className="px-2 py-2">{formatEnumLabel(row.status)}</td>
                   <td className="px-2 py-2">{row.requestingFacility}</td>
@@ -276,7 +276,7 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
                             Approving…
                           </>
                         ) : (
-                          "Approve Branch"
+                          "Approve branch"
                         )}
                       </Button>
                     ) : null}
