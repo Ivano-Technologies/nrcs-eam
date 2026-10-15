@@ -37,34 +37,34 @@ type ReportCard = { id: string; label: string };
 const categories: Array<{ key: string; title: string; reports: ReportCard[] }> = [
   {
     key: "stock",
-    title: "Stock Reports",
+    title: "Stock reports",
     reports: [
-      { id: "stockStatus", label: "Current Stock Status" },
-      { id: "warehouseUtilization", label: "Warehouse Performance" },
-      { id: "forecastDemand", label: "Demand Forecast" },
+      { id: "stockStatus", label: "Current stock status" },
+      { id: "warehouseUtilization", label: "Warehouse performance" },
+      { id: "forecastDemand", label: "Demand forecast" },
     ],
   },
   {
     key: "movement",
-    title: "Movement Reports",
+    title: "Movement reports",
     reports: [
-      { id: "stockMovement", label: "Movement Analysis" },
-      { id: "abcAnalysis", label: "ABC Analysis" },
-      { id: "fnsAnalysis", label: "FNS Analysis" },
+      { id: "stockMovement", label: "Movement analysis" },
+      { id: "abcAnalysis", label: "ABC analysis" },
+      { id: "fnsAnalysis", label: "FNS analysis" },
     ],
   },
   {
     key: "expiry",
-    title: "Expiry Reports",
+    title: "Expiry reports",
     reports: [
-      { id: "expiryForecast", label: "Expiry Forecast" },
-      { id: "vedAnalysis", label: "VED Analysis" },
+      { id: "expiryForecast", label: "Expiry forecast" },
+      { id: "vedAnalysis", label: "VED analysis" },
     ],
   },
   {
     key: "distribution",
-    title: "Distribution Reports",
-    reports: [{ id: "distributionSummary", label: "Distribution Summary" }],
+    title: "Distribution reports",
+    reports: [{ id: "distributionSummary", label: "Distribution summary" }],
   },
 ];
 
@@ -296,9 +296,9 @@ export default function Reports() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All categories</SelectItem>
-                <SelectItem value="relief_item">Relief Item</SelectItem>
-                <SelectItem value="medical_supply">Medical Supply</SelectItem>
-                <SelectItem value="shelter_material">Shelter Material</SelectItem>
+                <SelectItem value="relief_item">Relief item</SelectItem>
+                <SelectItem value="medical_supply">Medical supply</SelectItem>
+                <SelectItem value="shelter_material">Shelter material</SelectItem>
               </SelectContent>
             </Select>
           </div>

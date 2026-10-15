@@ -32,6 +32,6 @@ describe("Privacy Policy copy (Wave A8)", () => {
     const text = container.textContent ?? "";
     expect(text).toContain("external service providers");
     expect(text).toContain("record retention policies");
-    expect(text).toContain("Data Protection Officer, IT Department");
+    expect(text).toContain("Data protection officer, IT department");
   });
 });

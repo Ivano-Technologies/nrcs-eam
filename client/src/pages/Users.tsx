@@ -457,7 +457,7 @@ export default function Users() {
             <div className="flex items-center justify-between rounded-md border p-3">
               <div className="space-y-0.5">
                 <Label htmlFor="welcome-email">Send welcome email</Label>
-                <p className="text-xs text-muted-foreground">Includes temporary password and login link</p>
+                <p className="text-xs text-muted-foreground">Includes temporary password and sign in link</p>
               </div>
               <Switch
                 id="welcome-email"
@@ -675,7 +675,7 @@ export default function Users() {
           <DialogHeader>
             <DialogTitle>Orphaned accounts</DialogTitle>
             <DialogDescription>
-              Users in the app database with no matching Supabase Auth account. They appear in EAM but cannot log in.
+              Users in the app database with no matching Supabase Auth account. They appear in EAM but cannot sign in.
             </DialogDescription>
           </DialogHeader>
           {orphansLoading ? (

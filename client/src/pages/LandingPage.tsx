@@ -41,7 +41,7 @@ export default function LandingPage() {
           <AuthTitle>Nigerian Red Cross Society</AuthTitle>
           <AuthSubtitle>Opening your dashboard…</AuthSubtitle>
           <Button asChild className={authPrimaryButtonClass}>
-            <Link href={appPath("/")}>Go to Dashboard</Link>
+            <Link href={appPath("/")}>Go to dashboard</Link>
           </Button>
         </GlassCard>
       </AuthPageLayout>
@@ -59,7 +59,7 @@ export default function LandingPage() {
         <Button asChild className={authPrimaryButtonClass}>
           <Link href="/login">Sign in</Link>
         </Button>
-        <AuthFooterNote>Authorized personnel only.</AuthFooterNote>
+        <AuthFooterNote>Authorised personnel only.</AuthFooterNote>
       </GlassCard>
     </AuthPageLayout>
   );

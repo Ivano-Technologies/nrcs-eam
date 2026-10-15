@@ -105,12 +105,12 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
       const suggested = await utils.inventoryV2.requisitions.suggestWarehouse.fetch({ requisitionId });
       const fromWarehouseId = suggested?.id ?? warehouses[0]?.id;
       if (!fromWarehouseId) {
-        toast.error("No warehouse available for fulfillment.");
+        toast.error("No warehouse available for fulfilment.");
         return;
       }
       await fulfillMutation.mutateAsync({ requisitionId, fromWarehouseId });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Fulfillment failed.";
+      const message = error instanceof Error ? error.message : "Fulfilment failed.";
       toast.error(message);
     }
   };
@@ -119,7 +119,7 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
     <div className="space-y-4">
       {!embedInShell ? (
         <>
-          <PageHeader icon={ClipboardListIcon} title="Order fulfillment" />
+          <PageHeader icon={ClipboardListIcon} title="Order fulfilment" />
           <InventorySecondaryNav />
         </>
       ) : null}
@@ -128,7 +128,7 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
           <Select value={status} onValueChange={setStatus}>
             <SelectTrigger className="w-[170px]"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="all">All statuses</SelectItem>
               {["draft", "submitted", "branch_approved", "hq_approved", "fulfilled", "rejected", "cancelled"].map((s) => (
                 <SelectItem key={s} value={s}>{s}</SelectItem>
               ))}
@@ -191,7 +191,7 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
           >
             <thead className="bg-muted/50">
               <tr className="border-b">
-                <th className="px-2 py-2 text-left">Req No</th>
+                <th className="px-2 py-2 text-left">Requisition no.</th>
                 <th className="px-2 py-2 text-left">Title</th>
                 <th className="px-2 py-2 text-left">Priority</th>
                 <th className="px-2 py-2 text-left">Status</th>
@@ -301,7 +301,7 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
                             Fulfilling…
                           </>
                         ) : (
-                          "Fulfill"
+                          "Fulfil"
                         )}
                       </Button>
                     ) : null}
@@ -344,11 +344,11 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
-          <DialogHeader><DialogTitle>Create Requisition</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>New requisition</DialogTitle></DialogHeader>
           <div className="grid gap-3">
             <Label>Title</Label>
             <Input value={title} onChange={(e) => setTitle(e.target.value)} />
-            <Label>Requesting Facility</Label>
+            <Label>Requesting facility</Label>
             <Select value={facilityId === "all" ? "" : facilityId} onValueChange={setFacilityId}>
               <SelectTrigger><SelectValue placeholder="Select facility" /></SelectTrigger>
               <SelectContent>{(facilities ?? []).map((f) => <SelectItem key={f.id} value={String(f.id)}>{f.name}</SelectItem>)}</SelectContent>
@@ -362,9 +362,9 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
                 <SelectItem value="routine">Routine</SelectItem>
               </SelectContent>
             </Select>
-            <Label>Incident Reference</Label>
+            <Label>Incident reference</Label>
             <Input value={incidentReference} onChange={(e) => setIncidentReference(e.target.value)} />
-            <Label>Affected Population</Label>
+            <Label>Affected population</Label>
             <Input value={affectedPopulation} onChange={(e) => setAffectedPopulation(e.target.value)} />
             <Label>Justification</Label>
             <Textarea value={justification} onChange={(e) => setJustification(e.target.value)} />
@@ -373,7 +373,7 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
               <div key={idx} className="grid grid-cols-4 gap-2">
                 <Select value={line.catalogueId} onValueChange={(v) => setLines((prev) => prev.map((x, i) => (i === idx ? { ...x, catalogueId: v } : x)))}>
                   <SelectTrigger><SelectValue placeholder="Item" /></SelectTrigger>
-                  <SelectContent>{(catalogue ?? []).map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.itemCode} - {c.name}</SelectItem>)}</SelectContent>
+                  <SelectContent>{(catalogue ?? []).map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.itemCode} · {c.name}</SelectItem>)}</SelectContent>
                 </Select>
                 <Input placeholder="Qty" value={line.quantity} onChange={(e) => setLines((prev) => prev.map((x, i) => (i === idx ? { ...x, quantity: e.target.value } : x)))} />
                 <Select value={line.urgency} onValueChange={(v) => setLines((prev) => prev.map((x, i) => (i === idx ? { ...x, urgency: v } : x)))}>

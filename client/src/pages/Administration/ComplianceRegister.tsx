@@ -50,20 +50,20 @@ type TabKey = "vehicles" | "generators" | "buildings" | "donor" | "insurance";
 
 function docBadge(status: string) {
   if (status === "compliant") return <Badge className="bg-green-100 text-green-800">Compliant</Badge>;
-  if (status === "expiring") return <Badge className="bg-amber-100 text-amber-800">Expiring Soon</Badge>;
-  if (status === "non_compliant") return <Badge className="bg-red-100 text-red-800">Non-Compliant</Badge>;
+  if (status === "expiring") return <Badge className="bg-amber-100 text-amber-800">Expiring soon</Badge>;
+  if (status === "non_compliant") return <Badge className="bg-red-100 text-red-800">Non-compliant</Badge>;
   return <Badge variant="secondary">{status}</Badge>;
 }
 
 function generatorBadge(status: string) {
   if (status === "serviced") return <Badge className="bg-green-100 text-green-800">Serviced</Badge>;
-  if (status === "due_soon") return <Badge className="bg-amber-100 text-amber-800">Due Soon</Badge>;
+  if (status === "due_soon") return <Badge className="bg-amber-100 text-amber-800">Due soon</Badge>;
   return <Badge className="bg-red-100 text-red-800">Overdue</Badge>;
 }
 
 function donorBadge(status: string) {
   if (status === "submitted") return <Badge className="bg-green-100 text-green-800">Submitted</Badge>;
-  if (status === "due_soon") return <Badge className="bg-amber-100 text-amber-800">Due Soon</Badge>;
+  if (status === "due_soon") return <Badge className="bg-amber-100 text-amber-800">Due soon</Badge>;
   if (status === "overdue") return <Badge className="bg-red-100 text-red-800">Overdue</Badge>;
   return <Badge variant="secondary">Pending</Badge>;
 }

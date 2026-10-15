@@ -53,8 +53,8 @@ export default function Kits({ embedInShell = false }: { embedInShell?: boolean 
       ) : null}
       <Tabs defaultValue="catalogue">
         <TabsList>
-          <TabsTrigger value="catalogue">Kit Catalogue</TabsTrigger>
-          <TabsTrigger value="operations">Kit Operations</TabsTrigger>
+          <TabsTrigger value="catalogue">Kit catalogue</TabsTrigger>
+          <TabsTrigger value="operations">Kit operations</TabsTrigger>
         </TabsList>
         <TabsContent value="catalogue" className="space-y-3">
           {isManagerOrAdmin ? <Button onClick={() => setOpen(true)}>Add kit</Button> : null}
@@ -62,7 +62,7 @@ export default function Kits({ embedInShell = false }: { embedInShell?: boolean 
             <table className="w-full text-sm">
               <thead className="bg-muted/50">
                 <tr className="border-b">
-                  <th className="px-2 py-2 text-left">Kit Code</th>
+                  <th className="px-2 py-2 text-left">Kit code</th>
                   <th className="px-2 py-2 text-left">Name</th>
                   <th className="px-2 py-2 text-left">Type</th>
                   <th className="px-2 py-2 text-left">Components</th>
@@ -85,14 +85,14 @@ export default function Kits({ embedInShell = false }: { embedInShell?: boolean 
           <div className="grid gap-4 md:grid-cols-2">
             <Card>
               <CardContent className="space-y-2 p-4">
-                <p className="font-semibold">Assemble Kits</p>
+                <p className="font-semibold">Assemble kits</p>
                 <Select value={warehouseId} onValueChange={setWarehouseId}>
                   <SelectTrigger><SelectValue placeholder="Warehouse" /></SelectTrigger>
                   <SelectContent>{warehouses.map((w) => <SelectItem key={w.id} value={String(w.id)}>{w.name}</SelectItem>)}</SelectContent>
                 </Select>
                 <Select value={selectedKitId} onValueChange={setSelectedKitId}>
                   <SelectTrigger><SelectValue placeholder="Kit type" /></SelectTrigger>
-                  <SelectContent>{(kits.data ?? []).map((k) => <SelectItem key={k.id} value={String(k.id)}>{k.kitCode} - {k.name}</SelectItem>)}</SelectContent>
+                  <SelectContent>{(kits.data ?? []).map((k) => <SelectItem key={k.id} value={String(k.id)}>{k.kitCode} · {k.name}</SelectItem>)}</SelectContent>
                 </Select>
                 <Input placeholder="Quantity" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
                 {isStaffOrAbove ? (
@@ -115,14 +115,14 @@ export default function Kits({ embedInShell = false }: { embedInShell?: boolean 
             </Card>
             <Card>
               <CardContent className="space-y-2 p-4">
-                <p className="font-semibold">Disassemble Kits</p>
+                <p className="font-semibold">Disassemble kits</p>
                 <Select value={warehouseId} onValueChange={setWarehouseId}>
                   <SelectTrigger><SelectValue placeholder="Warehouse" /></SelectTrigger>
                   <SelectContent>{warehouses.map((w) => <SelectItem key={w.id} value={String(w.id)}>{w.name}</SelectItem>)}</SelectContent>
                 </Select>
                 <Select value={selectedKitId} onValueChange={setSelectedKitId}>
                   <SelectTrigger><SelectValue placeholder="Kit type" /></SelectTrigger>
-                  <SelectContent>{(kits.data ?? []).map((k) => <SelectItem key={k.id} value={String(k.id)}>{k.kitCode} - {k.name}</SelectItem>)}</SelectContent>
+                  <SelectContent>{(kits.data ?? []).map((k) => <SelectItem key={k.id} value={String(k.id)}>{k.kitCode} · {k.name}</SelectItem>)}</SelectContent>
                 </Select>
                 <Input placeholder="Quantity" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
                 {isStaffOrAbove ? (
@@ -151,7 +151,7 @@ export default function Kits({ embedInShell = false }: { embedInShell?: boolean 
         <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
           <DialogHeader><DialogTitle>Add kit</DialogTitle></DialogHeader>
           <div className="grid gap-3">
-            <Label>Kit Code</Label>
+            <Label>Kit code</Label>
             <Input value={kitCode} onChange={(e) => setKitCode(e.target.value)} />
             <Label>Name</Label>
             <Input value={kitName} onChange={(e) => setKitName(e.target.value)} />
@@ -172,7 +172,7 @@ export default function Kits({ embedInShell = false }: { embedInShell?: boolean 
               <div key={idx} className="grid grid-cols-2 gap-2">
                 <Select value={line.catalogueId} onValueChange={(v) => setComponents((prev) => prev.map((x, i) => (i === idx ? { ...x, catalogueId: v } : x)))}>
                   <SelectTrigger><SelectValue placeholder="Item" /></SelectTrigger>
-                  <SelectContent>{(catalogue ?? []).map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.itemCode} - {c.name}</SelectItem>)}</SelectContent>
+                  <SelectContent>{(catalogue ?? []).map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.itemCode} · {c.name}</SelectItem>)}</SelectContent>
                 </Select>
                 <Input placeholder="Qty" value={line.quantity} onChange={(e) => setComponents((prev) => prev.map((x, i) => (i === idx ? { ...x, quantity: e.target.value } : x)))} />
               </div>

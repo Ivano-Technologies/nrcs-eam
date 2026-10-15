@@ -1,3 +1,4 @@
+import PageHeader from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/button";
 import { formatEmpty, formatDate } from "@/lib/format";
 import { Input } from "@/components/ui/input";
@@ -38,12 +39,17 @@ export default function BinCardDetail() {
   const { card, ledger } = data.data;
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Bin Card Detail</h2>
-        <Button variant="outline" onClick={() => setLocation(`/app/inventory/tracking/bin-cards/${id}/print`)}>
-          Print view
-        </Button>
-      </div>
+      <PageHeader
+        className="mb-0"
+        eyebrow="Inventory"
+        title="Bin card"
+        back={{ label: "Bin cards", href: "/app/inventory/tracking/bin-cards" }}
+        actions={
+          <Button variant="outline" onClick={() => setLocation(`/app/inventory/tracking/bin-cards/${id}/print`)}>
+            Print view
+          </Button>
+        }
+      />
       <div className="grid gap-2 rounded-md border p-4 md:grid-cols-2">
         <div>Stock Location: {formatEmpty(card.stockLocation)}</div>
         <div>CTN/Donor: {card.commodityTrackingNumber || ""} / {card.donorCode || ""}</div>
@@ -91,8 +97,8 @@ export default function BinCardDetail() {
           <TableHeader>
             <TableRow>
               <TableHead>Date</TableHead>
-              <TableHead>From/To</TableHead>
-              <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>WB No.</TableHead>
+              <TableHead>From/to</TableHead>
+              <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Waybill no.</TableHead>
               <TableHead className={cn("text-right", mobileSecondaryCol(showAllColumns))}>IN (+)</TableHead>
               <TableHead className={cn("text-right", mobileSecondaryCol(showAllColumns))}>OUT (-)</TableHead>
               <TableHead className="text-right">Balance</TableHead>

@@ -179,7 +179,7 @@ ${updateForm.notes}`
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Search className="h-5 w-5" />
-              Scan Asset
+              Scan asset
             </CardTitle>
             <CardDescription>
               Enter asset tag or barcode to find asset
@@ -219,7 +219,7 @@ ${updateForm.notes}`
                   {isScanning ? "Point camera at QR code or barcode…" : "Starting camera…"}
                 </p>
                 <Button onClick={() => setScanMode("manual")} variant="outline" className="h-11 w-full">
-                  Switch to Manual entry
+                  Switch to manual entry
                 </Button>
               </div>
             )}
@@ -229,7 +229,7 @@ ${updateForm.notes}`
               <div className="flex flex-col gap-4">
                 <div className="flex flex-col gap-4">
                   <Label htmlFor="assetTag">
-                    Asset Tag{" "}
+                    Asset tag{" "}
                     /{" "}
                     Barcode
                   </Label>
@@ -263,18 +263,18 @@ ${updateForm.notes}`
               <CardHeader className="bg-green-50 dark:bg-green-950">
                 <CardTitle className="flex items-center gap-2 text-green-700 dark:text-green-300">
                   <CheckCircle className="h-5 w-5" />
-                  Asset Found
+                  Asset found
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-6 space-y-4">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Asset Name</p>
+                  <p className="text-sm font-medium text-muted-foreground">Asset name</p>
                   <p className="text-lg font-semibold">{scannedAsset.name}</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Asset Tag</p>
+                    <p className="text-sm font-medium text-muted-foreground">Asset tag</p>
                     <p>{scannedAsset.assetTag}</p>
                   </div>
                   <div>
@@ -285,7 +285,7 @@ ${updateForm.notes}`
 
                 {scannedAsset.location && (
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Current Location</p>
+                    <p className="text-sm font-medium text-muted-foreground">Current location</p>
                     <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-muted-foreground" />
                       <p>{scannedAsset.location}</p>
@@ -326,12 +326,12 @@ ${updateForm.notes}`
                     </Select>
                   </div>
                   <div>
-                    <Label>Verified at site</Label>
+                    <Label>Verified at facility</Label>
                     <Select
                       value={verifyForm.locationSiteId || undefined}
                       onValueChange={(value) => setVerifyForm((p) => ({ ...p, locationSiteId: value }))}
                     >
-                      <SelectTrigger><SelectValue placeholder="Select site" /></SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder="Select facility" /></SelectTrigger>
                       <SelectContent>
                         {(sites ?? []).map((s) => (
                           <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
@@ -375,10 +375,10 @@ ${updateForm.notes}`
               </Card>
             ) : null}
 
-            {/* Quick Update Form */}
+            {/* Quick update Form */}
             <Card>
               <CardHeader>
-                <CardTitle>Quick Update</CardTitle>
+                <CardTitle>Quick update</CardTitle>
                 <CardDescription>
                   Update asset status and location
                 </CardDescription>
@@ -464,7 +464,7 @@ ${updateForm.notes}`
         {/* Help Card */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Scanner Tips</CardTitle>
+            <CardTitle className="text-base">Scanner tips</CardTitle>
           </CardHeader>
           <CardContent className="text-sm space-y-2">
             <p>• Enter the asset tag exactly as it appears on the label</p>

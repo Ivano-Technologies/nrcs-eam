@@ -50,7 +50,7 @@ export function FieldDashboard({ metrics: metricsProp, metricsFailed, onRetry }:
     <div className="space-y-6">
       <Card className="border-2 border-primary/20 shadow-md">
         <CardHeader>
-          <CardTitle className="text-2xl">My Branch Stock Status</CardTitle>
+          <CardTitle className="text-2xl">My branch stock status</CardTitle>
           <CardDescription>Readiness for your assigned facility (warehouse stock cards)</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -83,7 +83,7 @@ export function FieldDashboard({ metrics: metricsProp, metricsFailed, onRetry }:
 
       <Card>
         <CardHeader>
-          <CardTitle>My Pending Requisitions</CardTitle>
+          <CardTitle>My pending requisitions</CardTitle>
           <CardDescription>Requests you submitted and their approval status</CardDescription>
         </CardHeader>
         <CardContent>

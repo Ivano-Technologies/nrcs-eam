@@ -36,7 +36,6 @@ export default function StockCards({ embedInShell = false }: Props = {}) {
 
   return (
     <div className="space-y-4">
-      {embedInShell ? <h2 className="text-2xl font-bold">Stock Cards</h2> : null}
       <ModuleFiltersCard
         filterRow={
           <>

@@ -64,7 +64,7 @@ export function AssetMaintenanceTimeline({ assetId }: AssetMaintenanceTimelinePr
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Calendar className="h-5 w-5" />
-          Maintenance History & Timeline
+          Maintenance history and timeline
         </CardTitle>
       </CardHeader>
       <CardContent>

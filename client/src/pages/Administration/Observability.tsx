@@ -39,17 +39,17 @@ function redisStatusBadge(status: "connected" | "error" | "fallback" | undefined
   switch (status) {
     case "connected":
       return {
-        label: "Redis: Connected",
+        label: "Redis: connected",
         className: "border-emerald-500/50 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200",
       };
     case "error":
       return {
-        label: "Redis: Error",
+        label: "Redis: error",
         className: "border-red-500/50 bg-red-500/10 text-red-800 dark:text-red-200",
       };
     default:
       return {
-        label: "Redis: In-memory fallback",
+        label: "Redis: in-memory fallback",
         className: "border-amber-500/50 bg-amber-500/10 text-amber-800 dark:text-amber-200",
       };
   }
@@ -130,7 +130,7 @@ export default function Observability() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <Activity className="h-4 w-4" />
-              Connection Pool & Cache
+              Connection pool and cache
             </CardTitle>
             <CardDescription>Polls every 500ms</CardDescription>
           </CardHeader>
@@ -248,7 +248,7 @@ export default function Observability() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <Database className="h-4 w-4" />
-              Database & Security
+              Database and security
             </CardTitle>
             <CardDescription>Refreshes every 60s</CardDescription>
           </CardHeader>

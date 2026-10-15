@@ -72,7 +72,7 @@ export default function WarrantyAlerts() {
               <CardContent>
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">Asset Tag</p>
+                    <p className="text-sm text-muted-foreground">Asset tag</p>
                     <p className="font-medium">{asset.assetTag}</p>
                   </div>
                   <div>
@@ -84,7 +84,7 @@ export default function WarrantyAlerts() {
                     <p className="font-medium">{asset.model || "N/A"}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Warranty Expiry</p>
+                    <p className="text-sm text-muted-foreground">Warranty expiry</p>
                     <p className="font-medium flex items-center gap-2">
                       <Calendar className="h-4 w-4" />
                       {formatDate(asset.warrantyExpiry!)}

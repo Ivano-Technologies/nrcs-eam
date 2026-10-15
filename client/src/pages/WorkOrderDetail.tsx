@@ -54,7 +54,7 @@ export default function WorkOrderDetail() {
         }
       />
       <Card>
-        <CardHeader><CardTitle>Work Order Details</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Work order details</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           <div><p className="text-sm font-medium text-muted-foreground">Status</p><Badge>{workOrder.status}</Badge></div>
           <div><p className="text-sm font-medium text-muted-foreground">Priority</p><Badge>{workOrder.priority}</Badge></div>
@@ -64,7 +64,7 @@ export default function WorkOrderDetail() {
       </Card>
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Update Work Order</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Edit work order</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div>
               <Label>Status</Label>
@@ -75,13 +75,13 @@ export default function WorkOrderDetail() {
                 <SelectContent>
                   <SelectItem value="pending">Pending</SelectItem>
                   <SelectItem value="assigned">Assigned</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="in_progress">In progress</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
                   <SelectItem value="cancelled">Cancelled</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div><Label>Completion Notes</Label><Textarea value={editForm.completionNotes} onChange={(e) => setEditForm({...editForm, completionNotes: e.target.value})} /></div>
+            <div><Label>Completion notes</Label><Textarea value={editForm.completionNotes} onChange={(e) => setEditForm({...editForm, completionNotes: e.target.value})} /></div>
           </div>
           <DialogFooter>
             <Button

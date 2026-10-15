@@ -266,7 +266,7 @@ export default function ReportScheduling() {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="name">Schedule Name *</Label>
+              <Label htmlFor="name">Schedule name *</Label>
               <Input
                 id="name"
                 value={formData.name}
@@ -277,18 +277,18 @@ export default function ReportScheduling() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="reportType">Report Type *</Label>
+                <Label htmlFor="reportType">Report type *</Label>
                 <Select value={formData.reportType} onValueChange={(value: any) => setFormData({ ...formData, reportType: value })}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="assetInventory">Asset Inventory</SelectItem>
-                    <SelectItem value="maintenanceSchedule">Maintenance Schedule</SelectItem>
-                    <SelectItem value="workOrders">Work Orders</SelectItem>
-                    <SelectItem value="fleetHealth">Fleet Health</SelectItem>
-                    <SelectItem value="donorStatement">Donor Statement</SelectItem>
-                    <SelectItem value="branchScorecards">Branch Scorecards</SelectItem>
+                    <SelectItem value="assetInventory">Asset inventory</SelectItem>
+                    <SelectItem value="maintenanceSchedule">Maintenance schedule</SelectItem>
+                    <SelectItem value="workOrders">Work orders</SelectItem>
+                    <SelectItem value="fleetHealth">Fleet health</SelectItem>
+                    <SelectItem value="donorStatement">Donor statement</SelectItem>
+                    <SelectItem value="branchScorecards">Branch scorecards</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -324,7 +324,7 @@ export default function ReportScheduling() {
 
             {formData.schedule === "weekly" && (
               <div>
-                <Label htmlFor="dayOfWeek">Day of Week *</Label>
+                <Label htmlFor="dayOfWeek">Day of week *</Label>
                 <Select value={formData.dayOfWeek} onValueChange={(value) => setFormData({ ...formData, dayOfWeek: value })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select day" />
@@ -344,7 +344,7 @@ export default function ReportScheduling() {
 
             {formData.schedule === "monthly" && (
               <div>
-                <Label htmlFor="dayOfMonth">Day of Month (1-31) *</Label>
+                <Label htmlFor="dayOfMonth">Day of month (1 to 31) *</Label>
                 <Input
                   id="dayOfMonth"
                   type="number"

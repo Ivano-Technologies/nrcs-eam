@@ -257,7 +257,7 @@ export function GlobalSearch({ className }: { className?: string }) {
                       id: `site-${s.id}`,
                       label: s.name,
                       href,
-                      group: "Site",
+                      group: "Facility",
                     };
                     return (
                       <CommandItem

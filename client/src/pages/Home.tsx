@@ -296,7 +296,7 @@ export default function Home() {
 
       key: "lowStock" as const,
 
-      label: "Low Stock Items",
+      label: "Low stock items",
 
       value: metrics?.lowStockItems.value ?? 0,
 
@@ -321,7 +321,7 @@ export default function Home() {
 
       key: "facilities" as const,
 
-      label: "Active Facilities",
+      label: "Active facilities",
 
       value: metrics?.activeFacilities.value ?? 0,
 
@@ -356,7 +356,7 @@ export default function Home() {
 
       key: "stock" as const,
 
-      label: "Stock Readiness",
+      label: "Stock readiness",
 
       value: `${metrics?.stockReadiness?.adequate ?? 0} of ${metrics?.stockReadiness?.total ?? 0}`,
 
@@ -381,7 +381,7 @@ export default function Home() {
 
       key: "approvals" as const,
 
-      label: "Units Distributed",
+      label: "Units distributed",
 
       value: Number(metrics?.distributionVelocity?.value ?? 0).toLocaleString(),
 
@@ -412,7 +412,7 @@ export default function Home() {
 
       key: "totalAssetValue" as const,
 
-      label: "Total Asset Value",
+      label: "Total asset value",
 
       value: formatNaira(totalAssetValue?.totalNgn ?? 0, { compact: true }),
 

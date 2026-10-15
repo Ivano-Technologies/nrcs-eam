@@ -135,7 +135,7 @@ export default function WorkOrders() {
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Create New Work Order</DialogTitle>
+              <DialogTitle>Create work order</DialogTitle>
               <DialogDescription>
                 Create a new maintenance or repair work order
               </DialogDescription>
@@ -143,7 +143,7 @@ export default function WorkOrders() {
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="workOrderNumber">Work Order Number *</Label>
+                  <Label htmlFor="workOrderNumber">Work order number *</Label>
                   <Input
                     id="workOrderNumber"
                     value={newWorkOrder.workOrderNumber}
@@ -234,7 +234,7 @@ export default function WorkOrders() {
               </div>
               {user?.role === "admin" && users && (
                 <div className="space-y-2">
-                  <Label htmlFor="assignedTo">Assign To</Label>
+                  <Label htmlFor="assignedTo">Assign to</Label>
                   <Select value={newWorkOrder.assignedTo} onValueChange={(value) => setNewWorkOrder({ ...newWorkOrder, assignedTo: value })}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select user (optional)" />

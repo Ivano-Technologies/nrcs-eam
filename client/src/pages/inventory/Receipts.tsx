@@ -109,9 +109,9 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
               <SelectContent>
                 <SelectItem value="all">All status</SelectItem>
                 <SelectItem value="draft">Draft</SelectItem>
-                <SelectItem value="pending_approval">Pending Approval</SelectItem>
-                <SelectItem value="finalized">Finalized</SelectItem>
-                <SelectItem value="claim_raised">Claim Raised</SelectItem>
+                <SelectItem value="pending_approval">Pending approval</SelectItem>
+                <SelectItem value="finalized">Finalised</SelectItem>
+                <SelectItem value="claim_raised">Claim raised</SelectItem>
               </SelectContent>
             </Select>
           </>
@@ -148,8 +148,8 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
           <thead className="bg-muted/50">
             <tr className="border-b">
               <th className="px-2 py-2 text-left">Document #</th>
-              <th className={cn("px-2 py-2 text-left", mobileSecondaryCol(showAllColumns))}>Date of Arrival</th>
-              <th className="px-2 py-2 text-left">Received From</th>
+              <th className={cn("px-2 py-2 text-left", mobileSecondaryCol(showAllColumns))}>Date of arrival</th>
+              <th className="px-2 py-2 text-left">Received from</th>
               <th className={cn("px-2 py-2 text-left", mobileSecondaryCol(showAllColumns))}>Consignment(s)</th>
               <th className={cn("px-2 py-2 text-left", mobileSecondaryCol(showAllColumns))}>Items</th>
               <th className="px-2 py-2 text-left">Status</th>
@@ -183,7 +183,7 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
                 <td className={cn("px-2 py-2", mobileSecondaryCol(showAllColumns))}>{row.lineCount}</td>
                 <td className="px-2 py-2">
                   {row.status === "finalized" || row.status === "completed" ? (
-                    <Badge className="bg-green-600">finalized</Badge>
+                    <Badge className="bg-green-600">Finalised</Badge>
                   ) : row.status === "claim_raised" ? (
                     <Badge variant="destructive">claim_raised</Badge>
                   ) : row.status === "pending_approval" ? (
@@ -269,13 +269,13 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
                 {wh.map((w) => <SelectItem key={w.id} value={String(w.id)}>{w.name}</SelectItem>)}
               </SelectContent>
             </Select>
-            <Label>Supplier / Donor</Label>
-            <Input placeholder="Supplier / Donor" value={supplierName} onChange={(e) => setSupplierName(e.target.value)} />
-            <Label>Reference Number</Label>
-            <Input placeholder="Reference Number" value={referenceDocument} onChange={(e) => setReferenceDocument(e.target.value)} />
+            <Label>Supplier / donor</Label>
+            <Input placeholder="Supplier / donor" value={supplierName} onChange={(e) => setSupplierName(e.target.value)} />
+            <Label>Reference number</Label>
+            <Input placeholder="Reference number" value={referenceDocument} onChange={(e) => setReferenceDocument(e.target.value)} />
 
             <div className="space-y-2">
-              <Label>Line Items</Label>
+              <Label>Line items</Label>
               {lines.map((line, idx) => (
                 <div key={idx} className="grid grid-cols-5 gap-2">
                   <Select
@@ -287,7 +287,7 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
                     <SelectTrigger><SelectValue placeholder="Item" /></SelectTrigger>
                     <SelectContent>
                       {(catalogue ?? []).map((c) => (
-                        <SelectItem key={c.id} value={String(c.id)}>{c.itemCode} - {c.name}</SelectItem>
+                        <SelectItem key={c.id} value={String(c.id)}>{c.itemCode} · {c.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

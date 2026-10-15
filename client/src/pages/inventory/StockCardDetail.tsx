@@ -1,3 +1,4 @@
+import PageHeader from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/button";
 import { formatEmpty, formatDate } from "@/lib/format";
 import { Input } from "@/components/ui/input";
@@ -58,20 +59,25 @@ export default function StockCardDetail() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Stock Card Detail</h2>
-        <Button variant="outline" onClick={() => setLocation(`/app/inventory/tracking/stock-cards/${id}/print`)}>
-          Print view
-        </Button>
-      </div>
+      <PageHeader
+        className="mb-0"
+        eyebrow="Inventory"
+        title="Stock card"
+        back={{ label: "Stock cards", href: "/app/inventory/tracking/stock-cards" }}
+        actions={
+          <Button variant="outline" onClick={() => setLocation(`/app/inventory/tracking/stock-cards/${id}/print`)}>
+            Print view
+          </Button>
+        }
+      />
 
       <div className="grid gap-3 rounded-md border p-4 md:grid-cols-2">
         <div><span className="text-muted-foreground">Description:</span> {card.data.card.description || card.data.card.itemName}</div>
-        <div><span className="text-muted-foreground">Item Code:</span> {card.data.card.itemCode || ""}</div>
-        <div><span className="text-muted-foreground">Measure Unit:</span> {card.data.card.measureUnit || ""}</div>
-        <div><span className="text-muted-foreground">CTN/Donor:</span> {card.data.card.ctnCode} / {card.data.card.donorCode}</div>
-        <div><span className="text-muted-foreground">Expiry Date:</span> {formatDate(card.data.card.expiryDate)}</div>
-        <div><span className="text-muted-foreground">Stock Minimum:</span> {card.data.card.stockMinimum ?? ""}</div>
+        <div><span className="text-muted-foreground">Item code:</span> {card.data.card.itemCode || ""}</div>
+        <div><span className="text-muted-foreground">Measure unit:</span> {card.data.card.measureUnit || ""}</div>
+        <div><span className="text-muted-foreground">CTN/donor:</span> {card.data.card.ctnCode} / {card.data.card.donorCode}</div>
+        <div><span className="text-muted-foreground">Expiry date:</span> {formatDate(card.data.card.expiryDate)}</div>
+        <div><span className="text-muted-foreground">Stock minimum:</span> {card.data.card.stockMinimum ?? ""}</div>
       </div>
 
       <div className="grid gap-2 rounded-md border p-4 md:grid-cols-5">
@@ -99,14 +105,14 @@ export default function StockCardDetail() {
           <TableHeader>
             <TableRow>
               <TableHead>Date</TableHead>
-              <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Document Ref</TableHead>
-              <TableHead>From/To</TableHead>
-              <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Store No.</TableHead>
+              <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Document ref</TableHead>
+              <TableHead>From/to</TableHead>
+              <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Store no.</TableHead>
               <TableHead className={cn("text-right", mobileSecondaryCol(showAllColumns))}>IN</TableHead>
               <TableHead className={cn("text-right", mobileSecondaryCol(showAllColumns))}>OUT</TableHead>
               <TableHead className="text-right">Balance</TableHead>
               <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Remarks</TableHead>
-              <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Bin Card N°</TableHead>
+              <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Bin card no.</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
