@@ -1537,12 +1537,12 @@ export default function Assets() {
             >
               <thead className="bg-background">
                 <tr className="border-b bg-muted/40">
-                  <th className="px-2 py-1 text-center uppercase" colSpan={5}>Item details</th>
-                  <th className="px-2 py-1 text-center uppercase" colSpan={4}>Item code</th>
-                  <th className="px-2 py-1 text-center uppercase" colSpan={2}>Financial value</th>
-                  <th className="px-2 py-1 text-center uppercase" colSpan={7}>Purchase and acquisition</th>
-                  <th className="px-2 py-1 text-center uppercase" colSpan={3}>Assigned to</th>
-                  <th className="px-2 py-1 text-center uppercase" colSpan={3}>Condition</th>
+                  <th className="px-2 py-1 text-center" colSpan={5}>Item details</th>
+                  <th className="px-2 py-1 text-center" colSpan={4}>Item code</th>
+                  <th className="px-2 py-1 text-center" colSpan={2}>Financial value</th>
+                  <th className="px-2 py-1 text-center" colSpan={7}>Purchase and acquisition</th>
+                  <th className="px-2 py-1 text-center" colSpan={3}>Assigned to</th>
+                  <th className="px-2 py-1 text-center" colSpan={3}>Condition</th>
                   {canEditAssets ? <th className="px-2 py-1" /> : null}
                 </tr>
                 <tr className="border-b">
