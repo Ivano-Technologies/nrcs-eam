@@ -102,7 +102,7 @@ export default function WmsReportSuite(props: Props) {
 
 function WmsReportOverview() {
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <PageHeader
         icon={Warehouse}
         title="WMS report suite"
@@ -259,7 +259,7 @@ function WmsSingleReport({ report }: { report: WmsReportKey }) {
               );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <PageHeader
         icon={meta.icon}
         title={meta.title}
@@ -307,11 +307,11 @@ function WmsSingleReport({ report }: { report: WmsReportKey }) {
             <MobileColumnsToggle isMobile={isMobile} showAll={showAll} onToggle={setShowAll} />
           </div>
         </div>
-      ) : (
+      ) : isMobile ? (
         <div className="flex justify-end">
           <MobileColumnsToggle isMobile={isMobile} showAll={showAll} onToggle={setShowAll} />
         </div>
-      )}
+      ) : null}
 
       {report === "movements" ? (
         <div className="frozen-table-wrap sticky-first-col rounded-md border">
