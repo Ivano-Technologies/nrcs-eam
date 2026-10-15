@@ -27,7 +27,7 @@ test.describe("Assets CRUD (2c)", () => {
     await page.goto("/app/assets");
     await expect(page.getByRole("heading", { name: "Asset register" })).toBeVisible();
 
-    const createDialog = page.getByRole("dialog", { name: "Add New Asset" });
+    const createDialog = page.getByRole("dialog", { name: "Add asset" });
     await page.getByTestId("asset-create-btn").click();
     await expect(createDialog).toBeVisible({ timeout: 15_000 });
     await createDialog.getByTestId("asset-form-description").fill(name);

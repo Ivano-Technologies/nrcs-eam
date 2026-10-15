@@ -357,10 +357,10 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
       >
         <TabsList>
           <TabsTrigger value="overview" data-testid="inventory-tab-overview">
-            Stock Overview
+            Stock overview
           </TabsTrigger>
           <TabsTrigger value="catalogue" data-testid="inventory-tab-catalogue">
-            Item Catalogue
+            Item catalogue
           </TabsTrigger>
           {isManagerOrAdmin ? (
             <TabsTrigger value="settings" data-testid="inventory-tab-settings">
@@ -448,7 +448,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                     <SelectItem value="normal">Normal</SelectItem>
                     <SelectItem value="low">Low</SelectItem>
                     <SelectItem value="critical">Critical</SelectItem>
-                    <SelectItem value="out_of_stock">Out of Stock</SelectItem>
+                    <SelectItem value="out_of_stock">Out of stock</SelectItem>
                   </SelectContent>
                 </Select>
                 <Select value={ved} onValueChange={setVed}>
@@ -760,7 +760,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                         {formatEnumLabel(row.vedClassification ?? "desirable")}
                       </Badge>
                       {row.hasExpiry ? <Badge variant="outline">Expiry</Badge> : null}
-                      {row.coldChainRequired ? <Badge variant="outline">Cold Chain</Badge> : null}
+                      {row.coldChainRequired ? <Badge variant="outline">Cold chain</Badge> : null}
                     </div>
                     <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
                       <CardQrCode
@@ -852,7 +852,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
             </Card>
             <Card>
               <CardHeader>
-                <CardTitle>VED Classification</CardTitle>
+                <CardTitle>VED classification</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-sm text-muted-foreground">
                 <p>
@@ -873,7 +873,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
             </Card>
             <Card>
               <CardHeader>
-                <CardTitle>Opening Stock Balances Import</CardTitle>
+                <CardTitle>Opening stock balances import</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex flex-wrap items-center gap-2">
@@ -950,7 +950,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
             </Card>
             <Card>
               <CardHeader>
-                <CardTitle>Historical Movements Import</CardTitle>
+                <CardTitle>Historical movements import</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex flex-wrap items-center gap-2">
@@ -1133,7 +1133,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
                 <p className="text-muted-foreground">
-                  Distinct from the IFRC program category above. Used for Stock Overview filters.
+                  Distinct from the IFRC programme category above. Used for Stock overview filters.
                 </p>
                 <div className="space-y-2">
                   <Label htmlFor="edit-item-taxonomy">Category</Label>
@@ -1183,7 +1183,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
           {selectedStock && isStaffOrAbove ? (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Warehouse Update Tools</CardTitle>
+                <CardTitle className="text-base">Warehouse update tools</CardTitle>
               </CardHeader>
               <CardContent className="grid gap-3 md:grid-cols-2">
                 {isManagerOrAdmin ? (
@@ -1211,7 +1211,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                   </div>
                 ) : null}
                 <div className="space-y-2 rounded-md border p-3">
-                  <Label>Set Zone Location</Label>
+                  <Label>Set zone location</Label>
                   <Input
                     value={zoneInput}
                     onChange={(e) => setZoneInput(e.target.value)}
@@ -1253,7 +1253,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>New catalogue item</DialogTitle>
-            <DialogDescription>Add a row to the item catalogue. Stock levels can be set per warehouse afterward.</DialogDescription>
+            <DialogDescription>Add a row to the item catalogue. Stock levels can be set per warehouse afterwards.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-3 py-2">
             <div className="space-y-2">
@@ -1271,7 +1271,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                 onValueChange={(v) => setNewItemProgramCategory(v as (typeof CATEGORIES)[number])}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select program category" />
+                  <SelectValue placeholder="Select programme category" />
                 </SelectTrigger>
                 <SelectContent>
                   {CATEGORIES.map((c) => (

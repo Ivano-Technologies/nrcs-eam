@@ -31,7 +31,7 @@ export default function Welcome() {
             <Card>
               <CardHeader>
                 <Package className="h-8 w-8 text-primary mb-2" />
-                <CardTitle className="text-lg">Asset Tracking</CardTitle>
+                <CardTitle className="text-lg">Asset tracking</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">
@@ -64,7 +64,7 @@ export default function Welcome() {
             <Card>
               <CardHeader>
                 <DollarSign className="h-8 w-8 text-primary mb-2" />
-                <CardTitle className="text-lg">Financial Tracking</CardTitle>
+                <CardTitle className="text-lg">Financial tracking</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">
@@ -77,7 +77,7 @@ export default function Welcome() {
       ),
     },
     {
-      title: "Quick Start Guide",
+      title: "Quick start guide",
       description: "Get started in 3 easy steps",
       icon: ArrowRight,
       content: (
@@ -87,7 +87,7 @@ export default function Welcome() {
               1
             </div>
             <div>
-              <h3 className="font-semibold text-lg mb-2">Add Your First Site</h3>
+              <h3 className="font-semibold text-lg mb-2">Add your first facility</h3>
               <p className="text-muted-foreground">
                 Navigate to <strong>Facilities</strong> and click "Add facility" to register your first location.
                 You can add multiple facilities such as branches, clinics, or warehouses.
@@ -100,7 +100,7 @@ export default function Welcome() {
               2
             </div>
             <div>
-              <h3 className="font-semibold text-lg mb-2">Register Your Assets</h3>
+              <h3 className="font-semibold text-lg mb-2">Register your assets</h3>
               <p className="text-muted-foreground">
                 Go to <strong>Asset register</strong> and add your equipment, vehicles, or inventory items.
                 You can bulk upload assets using Excel templates or add them individually.
@@ -113,7 +113,7 @@ export default function Welcome() {
               3
             </div>
             <div>
-              <h3 className="font-semibold text-lg mb-2">Schedule Maintenance</h3>
+              <h3 className="font-semibold text-lg mb-2">Schedule maintenance</h3>
               <p className="text-muted-foreground">
                 Set up preventive maintenance schedules in <strong>Maintenance</strong> to keep
                 your assets in optimal condition and avoid unexpected breakdowns.
@@ -124,22 +124,22 @@ export default function Welcome() {
       ),
     },
     {
-      title: "Ready to Go!",
+      title: "Ready to go!",
       description: "You're all set to start managing your assets",
       icon: CheckCircle2,
       content: (
         <div className="space-y-6 text-center">
           <CheckCircle2 className="h-20 w-20 text-green-500 mx-auto" />
           <div>
-            <h3 className="text-2xl font-bold mb-4">You're Ready!</h3>
+            <h3 className="text-2xl font-bold mb-4">You're ready!</h3>
             <p className="text-lg text-muted-foreground mb-6">
-              Start by exploring the dashboard or jump straight into adding your first site and assets.
+              Start by exploring the dashboard or jump straight into adding your first facility and assets.
             </p>
           </div>
           <div className="grid gap-4 md:grid-cols-2 max-w-2xl mx-auto">
             <Button size="lg" onClick={() => setLocation(appPath("/facilities"))}>
               <Package className="mr-2 h-5 w-5" />
-              Add first site
+              Add first facility
             </Button>
             <Button size="lg" variant="outline" onClick={() => setLocation(appPath("/"))}>
               View dashboard
@@ -194,7 +194,7 @@ export default function Welcome() {
                 </Button>
               ) : (
                 <Button onClick={() => completeOnboarding.mutate()}>
-                  Go to Dashboard
+                  Go to dashboard
                 </Button>
               )}
             </div>

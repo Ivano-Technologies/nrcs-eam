@@ -63,7 +63,7 @@ export function CardQrCode({
     win.document.write(`
       <html>
       <head>
-        <title>QR Label</title>
+        <title>QR label</title>
         <style>
           body { margin: 0; padding: 10px; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
           @media print { body { margin: 0; padding: 0; } }

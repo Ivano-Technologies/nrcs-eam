@@ -15,7 +15,7 @@ const TAB_DESCRIPTIONS: Partial<Record<InventoryShellTab, string>> = {
   tracking:
     "Track stock movements, transfers between warehouses, periodic counts, expiry, kits and warehouse activity.",
   "ctn-registry":
-    "Centralized registry for recording, monitoring, and validating consignment tracking numbers.",
+    "Centralised registry for recording, monitoring, and validating consignment tracking numbers.",
   requisitions:
     "Manage inventory requests, picking, packing, and dispatch operations for relief distribution.",
   receipts:
@@ -28,7 +28,7 @@ const TABS: { tab: InventoryShellTab; label: string; path: string }[] = [
   { tab: "stock-overview", label: "Stock overview", path: "/inventory/stock-overview" },
   { tab: "tracking", label: "Inventory tracking", path: "/inventory/tracking" },
   { tab: "ctn-registry", label: "CTN registry", path: "/inventory/ctn-registry" },
-  { tab: "requisitions", label: "Order fulfillment", path: "/inventory/requisitions" },
+  { tab: "requisitions", label: "Order fulfilment", path: "/inventory/requisitions" },
   { tab: "receipts", label: "Receiving", path: "/inventory/receipts" },
   { tab: "issues", label: "Shipping and tracking", path: "/inventory/issues" },
 ];
@@ -46,10 +46,12 @@ function isTabActive(tab: InventoryShellTab, path: string, locPath: string): boo
 
 type InventoryShellProps = {
   activeTab: InventoryShellTab;
+  /** Page title (h1). Defaults to the active tab's label, so the heading matches the sidebar. */
+  title?: string;
   children: React.ReactNode;
 };
 
-export function InventoryShell({ activeTab, children }: InventoryShellProps) {
+export function InventoryShell({ activeTab, title, children }: InventoryShellProps) {
   const [location] = useLocation();
   const locPath = (location.split("?")[0] || "/").replace(/\/$/, "") || "/";
 
@@ -57,7 +59,8 @@ export function InventoryShell({ activeTab, children }: InventoryShellProps) {
     <div>
       <PageHeader
         icon={Boxes}
-        title="Inventory"
+        eyebrow="Inventory"
+        title={title ?? TABS.find((t) => t.tab === activeTab)?.label ?? "Inventory"}
         subtitle={TAB_DESCRIPTIONS[activeTab] ?? DEFAULT_SUBTITLE}
       />
 

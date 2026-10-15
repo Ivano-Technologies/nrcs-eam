@@ -246,7 +246,7 @@ export default function WorkOrderTemplates() {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="name">Template Name *</Label>
+              <Label htmlFor="name">Template name *</Label>
               <Input
                 id="name"
                 value={formData.name}
@@ -299,7 +299,7 @@ export default function WorkOrderTemplates() {
             </div>
 
             <div>
-              <Label htmlFor="duration">Estimated Duration (minutes)</Label>
+              <Label htmlFor="duration">Estimated duration (minutes)</Label>
               <Input
                 id="duration"
                 type="number"
@@ -321,7 +321,7 @@ export default function WorkOrderTemplates() {
             </div>
 
             <div>
-              <Label htmlFor="checklist">Checklist Items (one per line)</Label>
+              <Label htmlFor="checklist">Checklist items (one per line)</Label>
               <Textarea
                 id="checklist"
                 value={formData.checklistItems}

@@ -31,7 +31,7 @@ export default function NotificationPreferences() {
   const notificationTypes = [
     {
       key: "maintenanceDue",
-      label: "Maintenance Due",
+      label: "Maintenance due",
       description: "Get notified when asset maintenance is due soon",
       icon: Wrench,
       color: "text-orange-600",
@@ -45,42 +45,42 @@ export default function NotificationPreferences() {
     },
     {
       key: "lowStock",
-      label: "Low Stock Alerts",
+      label: "Low stock alerts",
       description: "Receive alerts when inventory items are running low",
       icon: Package,
       color: "text-red-600",
     },
     {
       key: "workOrderAssigned",
-      label: "Work Order Assigned",
+      label: "Work order assigned",
       description: "Get notified when a work order is assigned to you",
       icon: AlertTriangle,
       color: "text-blue-600",
     },
     {
       key: "workOrderCompleted",
-      label: "Work Order Completed",
+      label: "Work order completed",
       description: "Receive notifications when work orders are completed",
       icon: CheckCircle,
       color: "text-green-600",
     },
     {
       key: "assetStatusChange",
-      label: "Asset Status Changes",
+      label: "Asset status changes",
       description: "Get notified when asset status changes",
       icon: RefreshCw,
       color: "text-purple-600",
     },
     {
       key: "complianceDue",
-      label: "Compliance Due",
+      label: "Compliance due",
       description: "Receive alerts for upcoming compliance deadlines",
       icon: FileText,
       color: "text-yellow-600",
     },
     {
       key: "systemAlert",
-      label: "System Alerts",
+      label: "System alerts",
       description: "Get important system notifications and announcements",
       icon: Info,
       color: "text-gray-600",
@@ -92,7 +92,7 @@ export default function NotificationPreferences() {
       <PageHeader
         icon={Bell}
         title="Notification preferences"
-        subtitle="Customize which notifications you want to receive"
+        subtitle="Customise which notifications you want to receive"
       />
 
       <Card className="border-t-4 border-t-primary">
@@ -102,7 +102,7 @@ export default function NotificationPreferences() {
               <Bell className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <CardTitle>Notification Settings</CardTitle>
+              <CardTitle>Notification settings</CardTitle>
               <CardDescription>
                 Enable or disable specific notification types
               </CardDescription>

@@ -23,43 +23,43 @@ export default function PrivacyPolicy() {
           </section>
 
           <section className="mb-6">
-            <h2 className="text-xl font-semibold mb-3">2. Information We Collect</h2>
+            <h2 className="text-xl font-semibold mb-3">2. Information we collect</h2>
             <p className="text-muted-foreground mb-4">
               We collect information that you provide directly to us when using the NRCS EAM system:
             </p>
             <ul className="list-disc list-inside text-muted-foreground space-y-2 ml-4">
-              <li><strong>Account Information:</strong> Name, email address, role, and authentication credentials</li>
-              <li><strong>Asset Data:</strong> Information about organizational assets, maintenance records, and work orders</li>
-              <li><strong>Financial Data:</strong> Transaction records, costs, and budget information</li>
-              <li><strong>Usage Data:</strong> System access logs, activity timestamps, and feature usage patterns</li>
-              <li><strong>Uploaded Content:</strong> Photos, documents, and other files you upload to the system</li>
+              <li><strong>Account information:</strong> Name, email address, role, and authentication credentials</li>
+              <li><strong>Asset data:</strong> Information about organisational assets, maintenance records, and work orders</li>
+              <li><strong>Financial data:</strong> Transaction records, costs, and budget information</li>
+              <li><strong>Usage data:</strong> System access logs, activity timestamps, and feature usage patterns</li>
+              <li><strong>Uploaded content:</strong> Photos, documents, and other files you upload to the system</li>
             </ul>
           </section>
 
           <section className="mb-6">
-            <h2 className="text-xl font-semibold mb-3">3. How We Use Your Information</h2>
+            <h2 className="text-xl font-semibold mb-3">3. How we use your information</h2>
             <p className="text-muted-foreground mb-4">
               We use the collected information for the following purposes:
             </p>
             <ul className="list-disc list-inside text-muted-foreground space-y-2 ml-4">
               <li>To provide and maintain the EAM system functionality</li>
               <li>To manage user accounts and authentication</li>
-              <li>To track and manage organizational assets</li>
+              <li>To track and manage organisational assets</li>
               <li>To generate reports and analytics</li>
               <li>To improve system performance and user experience</li>
-              <li>To ensure system security and prevent unauthorized access</li>
-              <li>To comply with legal obligations and organizational policies</li>
+              <li>To ensure system security and prevent unauthorised access</li>
+              <li>To comply with legal obligations and organisational policies</li>
             </ul>
           </section>
 
           <section className="mb-6">
-            <h2 className="text-xl font-semibold mb-3">4. Data Storage and Security</h2>
+            <h2 className="text-xl font-semibold mb-3">4. Data storage and security</h2>
             <p className="text-muted-foreground mb-4">
-              We implement appropriate technical and organizational measures to protect your personal information:
+              We implement appropriate technical and organisational measures to protect your personal information:
             </p>
             <ul className="list-disc list-inside text-muted-foreground space-y-2 ml-4">
               <li>Data is stored in secure cloud infrastructure with encryption</li>
-              <li>Access is restricted to authorized personnel only</li>
+              <li>Access is restricted to authorised personnel only</li>
               <li>Regular security audits and updates are performed</li>
               <li>User authentication and session management protocols are enforced</li>
               <li>Backup and disaster recovery procedures are maintained</li>
@@ -67,36 +67,36 @@ export default function PrivacyPolicy() {
           </section>
 
           <section className="mb-6">
-            <h2 className="text-xl font-semibold mb-3">5. Data Sharing and Disclosure</h2>
+            <h2 className="text-xl font-semibold mb-3">5. Data sharing and disclosure</h2>
             <p className="text-muted-foreground mb-4">
               We do not sell, trade, or rent your personal information to third parties. We may share information only in the following circumstances:
             </p>
             <ul className="list-disc list-inside text-muted-foreground space-y-2 ml-4">
-              <li><strong>Within the Organization:</strong> With authorized NRCS personnel who need access to perform their duties</li>
-              <li><strong>Service Providers:</strong> With trusted external service providers who assist in system operations (cloud hosting, etc.)</li>
-              <li><strong>Legal Requirements:</strong> When required by law, court order, or government regulations</li>
-              <li><strong>Protection of Rights:</strong> To protect the rights, property, or safety of NRCS, our users, or others</li>
+              <li><strong>Within the organisation:</strong> With authorised NRCS personnel who need access to perform their duties</li>
+              <li><strong>Service providers:</strong> With trusted external service providers who assist in system operations (cloud hosting, etc.)</li>
+              <li><strong>Legal requirements:</strong> When required by law, court order, or government regulations</li>
+              <li><strong>Protection of rights:</strong> To protect the rights, property, or safety of NRCS, our users, or others</li>
             </ul>
           </section>
 
           <section className="mb-6">
-            <h2 className="text-xl font-semibold mb-3">6. Data Retention</h2>
+            <h2 className="text-xl font-semibold mb-3">6. Data retention</h2>
             <p className="text-muted-foreground mb-4">
-              We retain your personal information for as long as necessary to fulfill the purposes outlined in this 
+              We retain your personal information for as long as necessary to fulfil the purposes outlined in this 
               Privacy Policy, unless a longer retention period is required or permitted by law. Asset and financial 
-              records are retained according to organizational record retention policies and legal requirements.
+              records are retained according to organisational record retention policies and legal requirements.
             </p>
           </section>
 
           <section className="mb-6">
-            <h2 className="text-xl font-semibold mb-3">7. Your Rights</h2>
+            <h2 className="text-xl font-semibold mb-3">7. Your rights</h2>
             <p className="text-muted-foreground mb-4">
               You have the following rights regarding your personal information:
             </p>
             <ul className="list-disc list-inside text-muted-foreground space-y-2 ml-4">
               <li><strong>Access:</strong> Request access to your personal information stored in the system</li>
               <li><strong>Correction:</strong> Request correction of inaccurate or incomplete information</li>
-              <li><strong>Deletion:</strong> Request deletion of your personal information (subject to legal and organizational requirements)</li>
+              <li><strong>Deletion:</strong> Request deletion of your personal information (subject to legal and organisational requirements)</li>
               <li><strong>Objection:</strong> Object to certain processing of your personal information</li>
             </ul>
             <p className="text-muted-foreground mt-4">
@@ -105,14 +105,14 @@ export default function PrivacyPolicy() {
           </section>
 
           <section className="mb-6">
-            <h2 className="text-xl font-semibold mb-3">8. Cookies and Tracking</h2>
+            <h2 className="text-xl font-semibold mb-3">8. Cookies and tracking</h2>
             <p className="text-muted-foreground mb-4">
               The NRCS EAM system uses cookies and similar technologies to:
             </p>
             <ul className="list-disc list-inside text-muted-foreground space-y-2 ml-4">
               <li>Maintain user sessions and authentication</li>
               <li>Remember user preferences and settings</li>
-              <li>Analyze system usage and performance</li>
+              <li>Analyse system usage and performance</li>
             </ul>
             <p className="text-muted-foreground mt-4">
               You can control cookie settings through your browser, but disabling cookies may affect system functionality.
@@ -120,7 +120,7 @@ export default function PrivacyPolicy() {
           </section>
 
           <section className="mb-6">
-            <h2 className="text-xl font-semibold mb-3">9. Children's Privacy</h2>
+            <h2 className="text-xl font-semibold mb-3">9. Children's privacy</h2>
             <p className="text-muted-foreground mb-4">
               The NRCS EAM system is not intended for use by individuals under the age of 18. We do not knowingly 
               collect personal information from children.
@@ -136,13 +136,13 @@ export default function PrivacyPolicy() {
           </section>
 
           <section className="mb-6">
-            <h2 className="text-xl font-semibold mb-3">11. Contact Information</h2>
+            <h2 className="text-xl font-semibold mb-3">11. Contact information</h2>
             <p className="text-muted-foreground mb-4">
               If you have questions or concerns about this Privacy Policy or our data practices, please contact:
             </p>
             <div className="bg-muted p-4 rounded-lg">
               <p className="font-medium">Nigerian Red Cross Society</p>
-              <p className="text-sm text-muted-foreground">Data Protection Officer, IT Department</p>
+              <p className="text-sm text-muted-foreground">Data protection officer, IT department</p>
               <p className="text-sm text-muted-foreground">Contact your NRCS system administrator</p>
             </div>
           </section>

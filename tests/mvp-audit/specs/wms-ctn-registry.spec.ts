@@ -20,7 +20,7 @@ test.describe("WMS CTN registry (Phase 1)", () => {
     await page.keyboard.press("Escape");
     await page.goto("/app/inventory/ctn-registry");
     await page.waitForURL(/\/app\/inventory\/ctn-registry/, { timeout: 20_000 });
-    await expect(page.getByRole("heading", { name: "Inventory" })).toBeVisible({
+    await expect(page.getByRole("heading", { level: 1, name: "CTN registry" })).toBeVisible({
       timeout: 20_000,
     });
     await expect(page.getByTestId("ctn-create-open")).toBeVisible({ timeout: 20_000 });

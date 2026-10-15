@@ -15,7 +15,7 @@ test("WMS GRN create -> draft -> finalize -> print", async ({ page }) => {
   await page.getByLabel("Received from").fill("E2E Donor");
   await page.getByLabel("Date of arrival").fill("2026-04-21");
 
-  await page.getByLabel("Delegation/Consignee Location").click();
+  await page.getByLabel("Delegation/consignee location").click();
   await page.getByRole("option").first().click();
 
   await page.getByRole("button", { name: "+ Create new CTN" }).first().click();
@@ -35,7 +35,7 @@ test("WMS GRN create -> draft -> finalize -> print", async ({ page }) => {
   const receivedBlock = page.getByText("Received by").first().locator("..");
   await deliveredBlock.locator("input").first().fill("Delivered User");
   await receivedBlock.locator("input").first().fill("Received User");
-  await page.getByRole("button", { name: "Finalize" }).click();
+  await page.getByRole("button", { name: "Finalise" }).click();
   await expect(page.getByRole("button", { name: "White copy" })).toBeVisible({ timeout: 20_000 });
   await page.getByRole("button", { name: "White copy" }).click();
   await page.waitForURL(/\/app\/inventory\/receipts\/\d+\/print\/white/, { timeout: 20_000 });

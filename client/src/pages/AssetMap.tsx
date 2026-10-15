@@ -547,7 +547,7 @@ export default function AssetMap() {
       <style>{SHIMMER_CSS}</style>
       <header className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1 max-sm:sr-only">
         <div className="min-w-0">
-          <h1 className="text-2xl font-semibold leading-8 tracking-tight">Asset Map</h1>
+          <h1 className="text-2xl font-semibold leading-8 tracking-tight">Asset map</h1>
           <p className={cn("text-sm", mutedText)}>Where each facility is, how ready its stock is, and where its assets are.</p>
         </div>
         {freshness ? (

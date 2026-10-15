@@ -73,13 +73,13 @@ function categoryIdForCanonicalName(
 
 const REGISTER_STATUS_FILTER = [
   { value: "all", label: "All statuses" },
-  { value: "in_use", label: "In Use" },
-  { value: "in_store", label: "In Store" },
-  { value: "under_maintenance", label: "Under Maintenance" },
+  { value: "in_use", label: "In use" },
+  { value: "in_store", label: "In store" },
+  { value: "under_maintenance", label: "Under maintenance" },
   { value: "disposed", label: "Disposed" },
-  { value: "to_be_disposed", label: "To be Disposed" },
-  { value: "out_of_order", label: "Out of Order" },
-  { value: "beyond_repair", label: "Beyond Repair" },
+  { value: "to_be_disposed", label: "To be disposed" },
+  { value: "out_of_order", label: "Out of order" },
+  { value: "beyond_repair", label: "Beyond repair" },
 ] as const;
 
 const STATUS_BADGE: Record<string, string> = {
@@ -900,7 +900,7 @@ export default function Assets() {
           <PageHeader
             icon={Package}
             title="Asset register"
-            subtitle="Centralized digital asset register for managing, tracking, and maintaining all NRCS assets across locations and departments."
+            subtitle="Centralised digital asset register for managing, tracking, and maintaining all NRCS assets across locations and departments."
             className="mb-0"
           />
         </div>
@@ -915,7 +915,7 @@ export default function Assets() {
             >
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>Add New Asset</DialogTitle>
+                  <DialogTitle>Add asset</DialogTitle>
                   <DialogDescription>
                     Create a register entry. Asset tag is optional. We create one if you leave it empty.
                   </DialogDescription>
@@ -926,10 +926,10 @@ export default function Assets() {
                   </p>
                 ) : null}
                 <div className="grid gap-4 py-4">
-                  <h3 className="text-sm font-semibold text-[#1a2332] dark:text-[#E6EAF0]">Item Details</h3>
+                  <h3 className="text-sm font-semibold text-[#1a2332] dark:text-[#E6EAF0]">Item details</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Item Type *</Label>
+                      <Label>Item type *</Label>
                       <Select
                         value={newAsset.itemType}
                         onValueChange={(v) => {
@@ -956,7 +956,7 @@ export default function Assets() {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label>Item Category *</Label>
+                      <Label>Item category *</Label>
                       <Select
                         value={newAsset.registerItemCategory}
                         onValueChange={(value) => {
@@ -983,7 +983,7 @@ export default function Assets() {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="subCategory">Sub Item Category</Label>
+                    <Label htmlFor="subCategory">Sub item category</Label>
                     <Select
                       value={newAsset.subItemCategory || "__none__"}
                       onValueChange={(value) =>
@@ -1008,7 +1008,7 @@ export default function Assets() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="name">Item Description *</Label>
+                    <Label htmlFor="name">Item description *</Label>
                     <Textarea
                       id="name"
                       data-testid="asset-form-description"
@@ -1017,14 +1017,14 @@ export default function Assets() {
                       placeholder="Full item description"
                     />
                   </div>
-                  <h3 className="mt-2 text-sm font-semibold text-[#1a2332] dark:text-[#E6EAF0]">Item Code</h3>
+                  <h3 className="mt-2 text-sm font-semibold text-[#1a2332] dark:text-[#E6EAF0]">Item code</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Branch Code</Label>
+                      <Label>Branch code</Label>
                       <Input value={selectedSiteCode} readOnly />
                     </div>
                     <div className="space-y-2">
-                      <Label>Item Category Code</Label>
+                      <Label>Item category code</Label>
                       <Input value={selectedCategoryCode} readOnly />
                     </div>
                   </div>
@@ -1034,14 +1034,14 @@ export default function Assets() {
                       <Input value={newAsset.assetNum || "Auto"} readOnly />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="assetTag">Asset Code</Label>
+                      <Label htmlFor="assetTag">Asset code</Label>
                       <Input id="assetTag" value={generatedAssetCodePreview} readOnly className="font-semibold" />
                     </div>
                   </div>
-                  <h3 className="mt-2 text-sm font-semibold text-[#1a2332] dark:text-[#E6EAF0]">Financial Value</h3>
+                  <h3 className="mt-2 text-sm font-semibold text-[#1a2332] dark:text-[#E6EAF0]">Financial value</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="serialNumber">Serial / Product No.</Label>
+                      <Label htmlFor="serialNumber">Serial / product no.</Label>
                       <Input
                         id="serialNumber"
                         data-testid="asset-form-serial"
@@ -1052,7 +1052,7 @@ export default function Assets() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Actual Unit Value (NGN)</Label>
+                      <Label>Actual unit value (NGN)</Label>
                       <Input
                         data-testid="asset-form-unit-value"
                         type="number"
@@ -1068,7 +1068,7 @@ export default function Assets() {
                     </div>
                     <div className="space-y-2 col-span-2">
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <Label>Current Depreciated Value (NGN)</Label>
+                        <Label>Current depreciated value (NGN)</Label>
                         {canEditAssets ? (
                           <div className="flex items-center gap-2">
                             <span className="text-xs text-muted-foreground">Override</span>
@@ -1116,9 +1116,9 @@ export default function Assets() {
                       )}
                     </div>
                   </div>
-                  <h3 className="mt-2 text-sm font-semibold text-[#1a2332] dark:text-[#E6EAF0]">Purchase / Acquisition Information</h3>
+                  <h3 className="mt-2 text-sm font-semibold text-[#1a2332] dark:text-[#E6EAF0]">Purchase and acquisition</h3>
                   <div className="space-y-2">
-                    <Label>Method of Acquisition</Label>
+                    <Label>Method of acquisition</Label>
                     <Select
                       value={newAsset.acquisitionMethod || "__none__"}
                       onValueChange={(v) =>
@@ -1143,7 +1143,7 @@ export default function Assets() {
                   </div>
                   {newAsset.acquisitionMethod === "Other" ? (
                     <div className="space-y-2">
-                      <Label>Method Detail</Label>
+                      <Label>Method detail</Label>
                       <Input
                         value={newAsset.acquisitionOtherDetail}
                         onChange={(e) => setNewAsset({ ...newAsset, acquisitionOtherDetail: e.target.value })}
@@ -1152,7 +1152,7 @@ export default function Assets() {
                   ) : null}
                   {newAsset.acquisitionMethod === "Purchase Through Project" ? (
                     <div className="space-y-2">
-                      <Label>Project Reference</Label>
+                      <Label>Project reference</Label>
                       <Input
                         data-testid="asset-form-project-ref"
                         value={newAsset.projectRef}
@@ -1162,7 +1162,7 @@ export default function Assets() {
                   ) : null}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="year">Year Acquired</Label>
+                      <Label htmlFor="year">Year acquired</Label>
                       <Select
                         value={newAsset.yearAcquired || "__none__"}
                         onValueChange={(value) =>
@@ -1183,7 +1183,7 @@ export default function Assets() {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label>Acquired New or Used</Label>
+                      <Label>Acquired new or used</Label>
                       <RadioGroup
                         value={newAsset.acquisitionCondition}
                         onValueChange={(v) =>
@@ -1204,7 +1204,7 @@ export default function Assets() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Current Status</Label>
+                      <Label>Current status</Label>
                       <Select
                         value={newAsset.currentStatus}
                         onValueChange={(v) => setNewAsset({ ...newAsset, currentStatus: v })}
@@ -1240,10 +1240,10 @@ export default function Assets() {
                       </Select>
                     </div>
                   </div>
-                  <h3 className="mt-2 text-sm font-semibold text-[#1a2332] dark:text-[#E6EAF0]">Assigned To</h3>
+                  <h3 className="mt-2 text-sm font-semibold text-[#1a2332] dark:text-[#E6EAF0]">Assigned to</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Assigned To</Label>
+                      <Label>Assigned to</Label>
                       <Input
                         data-testid="asset-form-assigned"
                         value={newAsset.assignedToName}
@@ -1294,7 +1294,7 @@ export default function Assets() {
                     </Select>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Date of Last Physical Check <DateHint /></Label>
+                      <Label>Date of last physical check <DateHint /></Label>
                       <Input
                         type="date"
                         value={newAsset.lastPhysicalCheck}
@@ -1302,7 +1302,7 @@ export default function Assets() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Check Conducted By</Label>
+                      <Label>Check conducted by</Label>
                       <Input
                         value={newAsset.checkConductedBy}
                         onChange={(e) => setNewAsset({ ...newAsset, checkConductedBy: e.target.value })}
@@ -1537,12 +1537,12 @@ export default function Assets() {
             >
               <thead className="bg-background">
                 <tr className="border-b bg-muted/40">
-                  <th className="px-2 py-1 text-center" colSpan={5}>ITEM DETAILS</th>
-                  <th className="px-2 py-1 text-center" colSpan={4}>ITEM CODE</th>
-                  <th className="px-2 py-1 text-center" colSpan={2}>FINANCIAL VALUE</th>
-                  <th className="px-2 py-1 text-center" colSpan={7}>PURCHASE/ACQUISITION INFORMATION</th>
-                  <th className="px-2 py-1 text-center" colSpan={3}>ASSIGNED TO</th>
-                  <th className="px-2 py-1 text-center" colSpan={3}>CONDITION</th>
+                  <th className="px-2 py-1 text-center uppercase" colSpan={5}>Item details</th>
+                  <th className="px-2 py-1 text-center uppercase" colSpan={4}>Item code</th>
+                  <th className="px-2 py-1 text-center uppercase" colSpan={2}>Financial value</th>
+                  <th className="px-2 py-1 text-center uppercase" colSpan={7}>Purchase and acquisition</th>
+                  <th className="px-2 py-1 text-center uppercase" colSpan={3}>Assigned to</th>
+                  <th className="px-2 py-1 text-center uppercase" colSpan={3}>Condition</th>
                   {canEditAssets ? <th className="px-2 py-1" /> : null}
                 </tr>
                 <tr className="border-b">
@@ -1726,14 +1726,14 @@ export default function Assets() {
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Asset Code *</Label>
+                  <Label>Asset code *</Label>
                   <Input
                     value={editingAsset.assetTag}
                     onChange={(e) => setEditingAsset({ ...editingAsset, assetTag: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Item Description *</Label>
+                  <Label>Item description *</Label>
                   <Input
                     value={editingAsset.name}
                     onChange={(e) => setEditingAsset({ ...editingAsset, name: e.target.value })}
@@ -1749,7 +1749,7 @@ export default function Assets() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Item Category *</Label>
+                  <Label>Item category *</Label>
                   <Select
                     value={editRegisterCategorySelectValue}
                     onValueChange={(value) => {
@@ -1781,7 +1781,7 @@ export default function Assets() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Site *</Label>
+                  <Label>Facility *</Label>
                   <Select
                     value={editingAsset.siteId}
                     onValueChange={(value) => setEditingAsset({ ...editingAsset, siteId: value })}
@@ -1819,7 +1819,7 @@ export default function Assets() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Item Type</Label>
+                  <Label>Item type</Label>
                   <Select
                     value={editingAsset.itemType}
                     onValueChange={(v) => {
@@ -1866,7 +1866,7 @@ export default function Assets() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Serial Number</Label>
+                  <Label>Serial number</Label>
                   <Input
                     value={editingAsset.serialNumber}
                     onChange={(e) => setEditingAsset({ ...editingAsset, serialNumber: e.target.value })}
@@ -2144,7 +2144,7 @@ export default function Assets() {
                   <h3 className="text-sm font-semibold text-[#1a2332] dark:text-[#E6EAF0]">Financial (register)</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Actual Unit Value (NGN)</Label>
+                      <Label>Actual unit value (NGN)</Label>
                       <Input
                         type="number"
                         value={editingAsset.actualUnitValue ?? ""}
@@ -2154,7 +2154,7 @@ export default function Assets() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Year Acquired</Label>
+                      <Label>Year acquired</Label>
                       <Input
                         type="number"
                         min={1900}
@@ -2210,7 +2210,7 @@ export default function Assets() {
                   </div>
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <Label>Current Depreciated Value (NGN)</Label>
+                      <Label>Current depreciated value (NGN)</Label>
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-muted-foreground">Override</span>
                         <Switch

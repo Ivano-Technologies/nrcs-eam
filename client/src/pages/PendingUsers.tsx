@@ -75,7 +75,7 @@ export default function PendingUsers() {
 
       {pending.length > 0 && (
         <div className="space-y-4">
-          <h2 className="text-xl font-semibold">Pending Requests ({pending.length})</h2>
+          <h2 className="text-xl font-semibold">Pending requests ({pending.length})</h2>
           {pending.map((user) => (
             <Card key={user.id}>
               <CardHeader>
@@ -95,7 +95,7 @@ export default function PendingUsers() {
               <CardContent>
                 <div className="space-y-4">
                   <div className="text-sm text-gray-600">
-                    <p><strong>Requested Role:</strong> {user.requestedRole || "user"}</p>
+                    <p><strong>Requested role:</strong> {user.requestedRole || "user"}</p>
                     {user.designation ? (
                       <p>
                         <strong>Designation:</strong> {user.designation}
@@ -155,7 +155,7 @@ export default function PendingUsers() {
 
       {processed.length > 0 && (
         <div className="space-y-4">
-          <h2 className="text-xl font-semibold">Processed Requests ({processed.length})</h2>
+          <h2 className="text-xl font-semibold">Processed requests ({processed.length})</h2>
           {processed.map((user) => (
             <Card key={user.id} className="opacity-75">
               <CardHeader>

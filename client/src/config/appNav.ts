@@ -136,7 +136,7 @@ export const SIDEBAR_GROUPS: AppNavGroup[] = [
         icon: ScanLine,
       },
       {
-        label: "Order fulfillment",
+        label: "Order fulfilment",
         path: appPath("/inventory/requisitions"),
         icon: ClipboardList,
         navCountBadge: "inventory.requisitions",

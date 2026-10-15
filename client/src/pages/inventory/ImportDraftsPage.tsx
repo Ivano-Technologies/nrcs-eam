@@ -17,7 +17,7 @@ export default function ImportDraftsPage({ embedInShell = false }: { embedInShel
   const finalize = trpc.inventoryV2.documents.drafts.finalize.useMutation({
     onSuccess: (res) => {
       if (res.success) {
-        toast.success("Draft finalized");
+        toast.success("Draft finalised");
       } else {
         toast.error("Draft has validation errors");
       }
@@ -86,7 +86,7 @@ export default function ImportDraftsPage({ embedInShell = false }: { embedInShel
                             Finalizing…
                           </>
                         ) : (
-                          "Finalize"
+                          "Finalise"
                         )}
                       </Button>
                       <Button

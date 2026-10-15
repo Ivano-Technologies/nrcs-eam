@@ -261,7 +261,7 @@ export default function ReceiptDetail() {
 
   const finalize = async () => {
     if (!isFinalizable) {
-      toast.error("Please complete all required fields before finalize.");
+      toast.error("Please complete all required fields before finalising.");
       return;
     }
     if (savedId == null) {
@@ -279,7 +279,7 @@ export default function ReceiptDetail() {
       documentId: id,
       source: grnSource ?? (isLegacy ? "legacy" : "relational"),
     });
-    toast.success("GRN finalized.");
+    toast.success("GRN finalised.");
     setDirty(false);
     void receiptQuery.refetch();
   };
@@ -294,7 +294,7 @@ export default function ReceiptDetail() {
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
         <Card>
           <CardHeader>
-            <CardTitle>Goods Received Note</CardTitle>
+            <CardTitle>Goods received note</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-3 md:grid-cols-2">
@@ -313,7 +313,7 @@ export default function ReceiptDetail() {
                 <Input value={form.countryCode} onChange={(e) => { setForm((p) => ({ ...p, countryCode: e.target.value })); setDirty(true); }} />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="grn-delegation-location">Delegation/Consignee Location</Label>
+                <Label htmlFor="grn-delegation-location">Delegation/consignee location</Label>
                 <Select value={form.delegationLocationId || undefined} onValueChange={(v) => { setForm((p) => ({ ...p, delegationLocationId: v })); setDirty(true); }}>
                   <SelectTrigger id="grn-delegation-location" className="h-9"><SelectValue placeholder="Select facility" /></SelectTrigger>
                   <SelectContent>
@@ -419,7 +419,7 @@ export default function ReceiptDetail() {
                     Finalizing…
                   </>
                 ) : (
-                  "Finalize"
+                  "Finalise"
                 )}
               </Button>
               {savedId && isFinalized ? (

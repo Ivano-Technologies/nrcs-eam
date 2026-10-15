@@ -107,7 +107,7 @@ test.describe("UI improvements (live)", () => {
   test("inventory page loads with grid/list toggle", async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto("/app/inventory");
-    await expect(page.getByRole("heading", { name: /Inventory/i })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("heading", { level: 1, name: /Stock overview/i })).toBeVisible({ timeout: 30_000 });
     const toggle = page.getByTestId("inventory-view-toggle");
     if ((await toggle.count()) > 0) {
       await expect(toggle).toBeVisible();
@@ -118,7 +118,7 @@ test.describe("UI improvements (live)", () => {
   test("inventory item shows QR code when items exist", async ({ page }, testInfo) => {
     await loginAsAdmin(page);
     await page.goto("/app/inventory");
-    await expect(page.getByRole("heading", { name: /Inventory/i })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("heading", { level: 1, name: /Stock overview/i })).toBeVisible({ timeout: 30_000 });
     const root = page.getByTestId("inventory-page");
     if ((await root.count()) > 0) {
       await expect(root).toBeVisible();

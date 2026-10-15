@@ -55,11 +55,9 @@ export default function Movements({ embedInShell = false }: { embedInShell?: boo
 
   return (
     <div className="space-y-4">
-      {embedInShell ? (
-        <h2 className="text-2xl font-bold">Inventory movements</h2>
-      ) : (
+      {embedInShell ? null : (
         <>
-          <PageHeader icon={ArrowLeftRightIcon} title="Inventory movements" />
+          <PageHeader icon={ArrowLeftRightIcon} title="Stock movements" />
           <InventorySecondaryNav />
         </>
       )}
@@ -76,7 +74,7 @@ export default function Movements({ embedInShell = false }: { embedInShell?: boo
             <SelectTrigger className="w-[260px]"><SelectValue placeholder="Item" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All items</SelectItem>
-              {(catalogue ?? []).map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.itemCode} - {c.name}</SelectItem>)}
+              {(catalogue ?? []).map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.itemCode} · {c.name}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={type} onValueChange={setType}>
@@ -85,8 +83,8 @@ export default function Movements({ embedInShell = false }: { embedInShell?: boo
               <SelectItem value="all">All types</SelectItem>
               <SelectItem value="receipt">Receipt</SelectItem>
               <SelectItem value="issue">Issue</SelectItem>
-              <SelectItem value="transfer_out">Transfer Out</SelectItem>
-              <SelectItem value="transfer_in">Transfer In</SelectItem>
+              <SelectItem value="transfer_out">Transfer out</SelectItem>
+              <SelectItem value="transfer_in">Transfer in</SelectItem>
             </SelectContent>
           </Select>
           <Input type="date" aria-label="From date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-[180px]" />
@@ -105,7 +103,7 @@ export default function Movements({ embedInShell = false }: { embedInShell?: boo
               <th className="px-2 py-2 text-left">From</th>
               <th className="px-2 py-2 text-left">To</th>
               <th className="px-2 py-2 text-right">Quantity</th>
-              <th className="px-2 py-2 text-right">Balance After</th>
+              <th className="px-2 py-2 text-right">Balance after</th>
               <th className="px-2 py-2 text-left">Document</th>
             </tr>
           </thead>
@@ -114,7 +112,7 @@ export default function Movements({ embedInShell = false }: { embedInShell?: boo
               <tr key={row.id} className="border-b">
                 <td className="px-2 py-2">{row.createdAt ? formatDateTime(row.createdAt) : ""}</td>
                 <td className="px-2 py-2">{row.movementType}</td>
-                <td className="px-2 py-2">{row.itemCode} - {row.itemName}</td>
+                <td className="px-2 py-2">{row.itemCode} · {row.itemName}</td>
                 <td className="px-2 py-2">{row.fromWarehouseId ?? ""}</td>
                 <td className="px-2 py-2">{row.toWarehouseId ?? ""}</td>
                 <td className="px-2 py-2 text-right">{row.quantityChange}</td>

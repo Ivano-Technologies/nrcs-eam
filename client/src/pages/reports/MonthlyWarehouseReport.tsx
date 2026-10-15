@@ -158,13 +158,13 @@ export default function MonthlyWarehouseReport() {
               <TableHead>SN</TableHead>
               <TableHead>Product</TableHead>
               <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Unit & weight</TableHead>
-              <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Opening Balance (a)</TableHead>
-              <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>IN (b)</TableHead>
-              <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>OUT TO: Distributions (c)</TableHead>
-              <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>OUT TO: Branches store (d)</TableHead>
-              <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>OUT TO: Others (e)</TableHead>
-              <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Loss/Damaged (f)</TableHead>
-              <TableHead>Closing Balance</TableHead>
+              <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Opening balance (a)</TableHead>
+              <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>In (b)</TableHead>
+              <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Out to distributions (c)</TableHead>
+              <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Out to branch stores (d)</TableHead>
+              <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Out to others (e)</TableHead>
+              <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Loss/damaged (f)</TableHead>
+              <TableHead>Closing balance</TableHead>
               <TableHead className={cn(mobileSecondaryCol(showAllColumns))}>Comments</TableHead>
             </TableRow>
           </TableHeader>

@@ -27,7 +27,7 @@ test.describe("Maintenance module (live)", () => {
 
     const allSchedulesCard = page
       .locator('[data-slot="card"]')
-      .filter({ has: page.getByText("All Schedules", { exact: true }) });
+      .filter({ has: page.getByText("All schedules", { exact: true }) });
     await expect(
       allSchedulesCard
         .getByText("No schedules found")
@@ -45,8 +45,8 @@ test.describe("Maintenance module (live)", () => {
     await expect(
       page
         .getByText("Needs your attention")
-        .or(page.getByText("Low Stock Items"))
-        .or(page.getByText("Stock Movement"))
+        .or(page.getByText("Low stock items"))
+        .or(page.getByText("Stock movement"))
         .first()
     ).toBeVisible({ timeout: 30_000 });
 
