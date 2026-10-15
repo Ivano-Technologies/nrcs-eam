@@ -131,7 +131,7 @@ export async function validateFacilityHierarchy(
   if (nextDepth > 2) {
     throw new TRPCError({
       code: "BAD_REQUEST",
-      message: "Max hierarchy depth is 2 levels (NHQ → Branch → Child).",
+      message: "Max hierarchy depth is 2 levels (NHQ → branch → child).",
     });
   }
 }

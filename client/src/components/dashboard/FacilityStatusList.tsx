@@ -1,3 +1,4 @@
+import { formatEnumLabel } from "@/lib/format";
 import { Building2 } from "lucide-react";
 import {
   dashboardSectionState,
@@ -57,7 +58,7 @@ export function FacilityStatusList() {
                 <p className="mt-2 text-xs text-[#334155] dark:text-[hsl(0_0%_95%)]">No stock data</p>
               )}
             </div>
-            <span className={cn("rounded-full px-2.5 py-1 text-xs font-medium capitalize", statusClass(row.status))}>{row.status}</span>
+            <span className={cn("rounded-full px-2.5 py-1 text-xs font-medium", statusClass(row.status))}>{formatEnumLabel(row.status)}</span>
           </div>
         )) : null}
       </CardContent>

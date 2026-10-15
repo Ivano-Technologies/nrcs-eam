@@ -93,7 +93,14 @@ const ENUM_LABELS: Record<string, string> = {
   totalAssetValue: "Total asset value",
 };
 
-/** Turn a stored enum or camelCase key into sentence case text for the UI. */
+/** Lowercase enum words that stay as acronyms on screen (for example hq_approved -> "HQ approved"). */
+const ENUM_ACRONYMS = new Set(["hq", "nhq", "grn", "ctn", "qr", "id", "nrcs", "wms", "pdf", "ved", "gps", "vhf"]);
+
+/**
+ * Shared display formatter for stored enum and status values (asset, inventory, requisition, work order and so on).
+ * Turns a stored value into sentence case text for the UI only. Never use the result as a filter value,
+ * API payload or export value; those keep the stored value.
+ */
 export function formatEnumLabel(value: string | null | undefined): string {
   if (value == null) return "";
   const raw = String(value).trim();
@@ -106,7 +113,7 @@ export function formatEnumLabel(value: string | null | undefined): string {
     .replace(/[_\-.:]+/g, " ")
     .trim()
     .split(/\s+/)
-    .map((w) => (/^[A-Z0-9]{2,}$/.test(w) ? w : w.toLowerCase()));
+    .map((w) => (/^[A-Z0-9]{2,}$/.test(w) || ENUM_ACRONYMS.has(w.toLowerCase()) ? w.toUpperCase() : w.toLowerCase()));
   if (!words.length) return "";
   words[0] = words[0].charAt(0).toUpperCase() + words[0].slice(1);
   return words.join(" ");

@@ -124,6 +124,6 @@ test.describe.skip("work orders module (live)", () => {
     }
 
     await expect(page.getByText(/Work order updated/i)).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByText("in_progress").first()).toBeVisible();
+    await expect(page.getByText("In progress", { exact: true }).first()).toBeVisible();
   });
 });

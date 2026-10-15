@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, formatEnumLabel } from "@/lib/format";
 import { useLocation } from "wouter";
 import { Html5Qrcode } from "html5-qrcode";
 import { trpc } from "@/lib/trpc";
@@ -279,7 +279,7 @@ ${updateForm.notes}`
                   </div>
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Status</p>
-                    <p className="capitalize">{scannedAsset.status}</p>
+                    <p>{formatEnumLabel(scannedAsset.status)}</p>
                   </div>
                 </div>
 
@@ -320,7 +320,7 @@ ${updateForm.notes}`
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {CONDITION_OPTIONS.map((opt) => (
-                          <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                          <SelectItem key={opt} value={opt}>{formatEnumLabel(opt)}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>

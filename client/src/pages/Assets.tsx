@@ -42,7 +42,7 @@ import { toast } from "sonner";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { calculateDepreciatedValue } from "@/lib/depreciation";
 import { appPath } from "@/lib/routes";
-import { DateHint, formatDate as formatDisplayDate, formatEmpty, formatNaira } from "@/lib/format";
+import { DateHint, formatDate as formatDisplayDate, formatEmpty, formatEnumLabel, formatNaira } from "@/lib/format";
 import { HtmlTableEmptyState } from "@/components/ui/EmptyState";
 import { cn } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -101,13 +101,13 @@ const CONDITION_BADGE: Record<string, string> = {
 };
 
 const REGISTER_LABELS: Record<string, string> = {
-  in_use: "In Use",
-  in_store: "In Store",
-  under_maintenance: "Under Maintenance",
+  in_use: "In use",
+  in_store: "In store",
+  under_maintenance: "Under maintenance",
   disposed: "Disposed",
-  to_be_disposed: "To be Disposed",
-  out_of_order: "Out of Order",
-  beyond_repair: "Beyond Repair",
+  to_be_disposed: "To be disposed",
+  out_of_order: "Out of order",
+  beyond_repair: "Beyond repair",
 };
 
 /** Optional register columns stay blank when empty (no dash placeholders). */
@@ -1250,7 +1250,7 @@ export default function Assets() {
                         <SelectContent>
                           {CURRENT_STATUS_OPTIONS.map((statusOption) => (
                             <SelectItem key={statusOption} value={statusOption}>
-                              {statusOption}
+                              {formatEnumLabel(statusOption)}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -1322,7 +1322,7 @@ export default function Assets() {
                       <SelectContent>
                         {CONDITION_OPTIONS.map((c) => (
                           <SelectItem key={c} value={c}>
-                            {c}
+                            {formatEnumLabel(c)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -2062,7 +2062,7 @@ export default function Assets() {
                         <SelectContent>
                           {CURRENT_STATUS_OPTIONS.map((s) => (
                             <SelectItem key={s} value={s}>
-                              {s}
+                              {formatEnumLabel(s)}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -2091,7 +2091,7 @@ export default function Assets() {
                         <SelectContent>
                           {CONDITION_OPTIONS.map((c) => (
                             <SelectItem key={c} value={c}>
-                              {c}
+                              {formatEnumLabel(c)}
                             </SelectItem>
                           ))}
                         </SelectContent>

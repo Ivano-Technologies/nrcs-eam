@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatEnumLabel } from "@/lib/format";
 import { trpc } from "@/lib/trpc";
 import PageHeader from "@/components/ui/PageHeader";
 import TableLoader from "@/components/ui/TableLoader";
@@ -325,10 +325,10 @@ export default function WorkOrders() {
                     </div>
                     <div className="flex flex-col gap-1">
                       <Badge className={getStatusColor(wo.status)}>
-                        {wo.status.replace("_", " ")}
+                        {formatEnumLabel(wo.status)}
                       </Badge>
                       <Badge className={getPriorityColor(wo.priority)}>
-                        {wo.priority}
+                        {formatEnumLabel(wo.priority)}
                       </Badge>
                     </div>
                   </div>

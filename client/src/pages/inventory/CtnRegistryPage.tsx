@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { DateHint, formatDate } from "@/lib/format";
+import { DateHint, formatDate, formatEnumLabel } from "@/lib/format";
 import { InventoryShell, InventoryShellActions } from "@/components/inventory/InventoryShell";
 import { Toolbar, ToolbarSearch } from "@/components/Toolbar";
 import { Button } from "@/components/ui/button";
@@ -229,7 +229,7 @@ export default function CtnRegistryPage() {
                       {r.currentBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })}{" "}
                       {r.unit}
                     </TableCell>
-                    <TableCell className="capitalize">{r.status}</TableCell>
+                    <TableCell>{formatEnumLabel(r.status)}</TableCell>
                   </TableRow>
                 ))
               )}

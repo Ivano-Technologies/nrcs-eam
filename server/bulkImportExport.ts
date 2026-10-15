@@ -137,7 +137,7 @@ export async function importAssets(fileBuffer: any, userId: number): Promise<Imp
       
       // Validate required fields
       if (!assetData.assetTag || !assetData.name) {
-        throw new Error('Asset Tag and Name are required');
+        throw new Error('Asset tag and name are required');
       }
       
       // Check for duplicate asset tag

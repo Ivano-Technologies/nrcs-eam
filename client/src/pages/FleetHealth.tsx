@@ -23,7 +23,7 @@ import {
 import { ViewToggle } from "@/components/ViewToggle";
 import { useViewMode } from "@/hooks/useViewMode";
 import { downloadBase64File } from "@/lib/download";
-import { formatNaira } from "@/lib/format";
+import { formatNaira, formatEnumLabel } from "@/lib/format";
 import { KPI_VALUE_CLASS } from "@/lib/kpiTypography";
 import { trpc } from "@/lib/trpc";
 import { AlertTriangle, Banknote, FileDown, Loader2, ShieldCheck, Wrench } from "lucide-react";
@@ -241,7 +241,7 @@ export default function FleetHealth() {
                           <p className="text-xs text-muted-foreground mt-1">{p.recommendedAction}</p>
                         </div>
                         <Badge variant={p.priority === "critical" ? "destructive" : "default"}>
-                          {p.priority} · {p.predictedFailureDate}
+                          {formatEnumLabel(p.priority)} · {p.predictedFailureDate}
                         </Badge>
                       </li>
                     ))}
