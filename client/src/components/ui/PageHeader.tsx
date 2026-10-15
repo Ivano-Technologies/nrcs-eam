@@ -46,7 +46,7 @@ export default function PageHeader({
       {back ? (
         <Link
           href={back.href}
-          className="mb-2 inline-flex items-center gap-1.5 rounded-sm text-sm text-muted-foreground hover:text-foreground focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C8102E] dark:focus-visible:outline-white"
+          className="mb-2 inline-flex items-center gap-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C8102E] dark:focus-visible:outline-white"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden />
           {back.label}
