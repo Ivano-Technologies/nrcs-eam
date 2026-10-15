@@ -273,7 +273,7 @@ export default function Maintenance() {
               icon={Wrench}
               title="No maintenance schedules yet"
               action={
-                <Button onClick={() => setOpen(true)}>
+                <Button variant="outline" onClick={() => setOpen(true)}>
                   <Plus className="mr-2 h-4 w-4" />
                   Add schedule
                 </Button>

@@ -195,7 +195,7 @@ export default function ReportScheduling() {
             icon={Calendar}
             title="No scheduled reports yet"
             action={
-              <Button type="button" onClick={() => setIsCreateDialogOpen(true)}>
+              <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 New schedule
               </Button>

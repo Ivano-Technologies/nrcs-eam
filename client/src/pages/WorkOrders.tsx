@@ -356,7 +356,7 @@ export default function WorkOrders() {
             icon={Wrench}
             title="No work orders yet"
             action={
-              <Button onClick={() => setIsCreateDialogOpen(true)}>
+              <Button variant="outline" onClick={() => setIsCreateDialogOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Create work order
               </Button>

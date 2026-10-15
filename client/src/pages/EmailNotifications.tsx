@@ -168,7 +168,7 @@ export default function EmailNotifications() {
               icon={Mail}
               title="No emails sent yet"
               action={
-                <Button onClick={() => setIsDialogOpen(true)}>
+                <Button variant="outline" onClick={() => setIsDialogOpen(true)}>
                   <Mail className="mr-2 h-4 w-4" />
                   Compose email
                 </Button>

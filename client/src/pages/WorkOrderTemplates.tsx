@@ -183,7 +183,7 @@ export default function WorkOrderTemplates() {
             icon={FileText}
             title="No templates yet"
             action={
-              <Button onClick={() => setIsCreateDialogOpen(true)}>
+              <Button variant="outline" onClick={() => setIsCreateDialogOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 New template
               </Button>
