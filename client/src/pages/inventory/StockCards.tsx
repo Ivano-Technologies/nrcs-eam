@@ -1,4 +1,4 @@
-import { ModuleFilterSearch, ModuleFiltersCard } from "@/components/ModuleFiltersCard";
+import { Toolbar, ToolbarSearch } from "@/components/Toolbar";
 import { formatDate } from "@/lib/format";
 import { ViewToggle } from "@/components/ViewToggle";
 import { Badge } from "@/components/ui/badge";
@@ -35,17 +35,17 @@ export default function StockCards({ embedInShell = false }: Props = {}) {
   const openDetail = (stockCardId: number) => setLocation(`/app/inventory/tracking/stock-cards/${stockCardId}`);
 
   return (
-    <div className="space-y-4">
-      <ModuleFiltersCard
-        filterRow={
+    <div className="space-y-6">
+      <Toolbar
+        filters={
           <>
-            <ModuleFilterSearch
+            <ToolbarSearch
               placeholder="Search item, CTN, donor code…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
             <Select value={locationId} onValueChange={setLocationId}>
-              <SelectTrigger className="h-9 w-[220px]">
+              <SelectTrigger className="h-9 w-36">
                 <SelectValue placeholder="Location" />
               </SelectTrigger>
               <SelectContent>
@@ -58,7 +58,7 @@ export default function StockCards({ embedInShell = false }: Props = {}) {
               </SelectContent>
             </Select>
             <Select value={expiryWindow} onValueChange={(v) => setExpiryWindow(v as typeof expiryWindow)}>
-              <SelectTrigger className="h-9 w-[180px]">
+              <SelectTrigger className="h-9 w-36">
                 <SelectValue placeholder="Expiry window" />
               </SelectTrigger>
               <SelectContent>
@@ -77,17 +77,17 @@ export default function StockCards({ embedInShell = false }: Props = {}) {
             </Button>
           </>
         }
-        toolbarStart={<ViewToggle value={viewMode} onChange={setViewMode} />}
+        end={<ViewToggle value={viewMode} onChange={setViewMode} />}
       />
 
       {viewMode === "card" ? (
         rows.length === 0 && !cards.isLoading ? (
           <p className="text-sm text-muted-foreground">No stock cards found.</p>
         ) : (
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {rows.map((row) => (
-              <Card key={row.stockCardId} className="cursor-pointer" onClick={() => openDetail(row.stockCardId)}>
-                <CardContent className="space-y-2 p-4">
+              <Card size="sm" key={row.stockCardId} className="cursor-pointer" onClick={() => openDetail(row.stockCardId)}>
+                <CardContent className="space-y-2">
                   <div className="flex items-start justify-between gap-2">
                     <p className="font-semibold">{row.itemName}</p>
                     {row.minStockFlag ? <Badge variant="destructive">Low stock</Badge> : null}

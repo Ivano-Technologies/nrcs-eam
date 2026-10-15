@@ -21,7 +21,7 @@ export function RoleSwitcher({ actualRole, value, onChange }: Props) {
       <Select value={value} onValueChange={(v) => onChange(v as UserRole)}>
         <SelectTrigger
           className={cn(
-            "relative h-[38px] shrink-0 overflow-visible rounded-lg border px-3",
+            "relative h-[38px] shrink-0 overflow-visible rounded-md border px-3",
             isPreviewing && "ring-2 ring-red-200 dark:ring-red-900/60"
           )}
           aria-label={isPreviewing ? `Previewing dashboard as ${value}` : "Dashboard role"}

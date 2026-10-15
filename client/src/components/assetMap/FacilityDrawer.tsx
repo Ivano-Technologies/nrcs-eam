@@ -76,7 +76,7 @@ function Gauge({ percent, tier, scheme }: { percent: number; tier: keyof typeof 
 
 function StatTile({ label, value, children }: { label: string; value: React.ReactNode; children?: React.ReactNode }) {
   return (
-    <div className="rounded-[10px] border border-[#E5E7EB] p-3 dark:border-[#26364A]">
+    <div className="rounded-md border border-[#E5E7EB] p-3 dark:border-[#26364A]">
       <p className={cn("text-xs", mutedText)}>{label}</p>
       <p className="mt-0.5 text-lg font-semibold tabular-nums">{value}</p>
       {children}
@@ -147,7 +147,7 @@ export const FacilityDrawer = forwardRef<HTMLDivElement, FacilityDrawerProps>(fu
             type="button"
             onClick={onClose}
             aria-label="Close facility details"
-            className={cn("-mr-1 -mt-1 grid h-9 w-9 place-items-center rounded-lg hover:bg-[#F3F4F6] dark:hover:bg-[#1E2B3C]", focusRing)}
+            className={cn("-mr-1 -mt-1 grid h-9 w-9 place-items-center rounded-md hover:bg-[#F3F4F6] dark:hover:bg-[#1E2B3C]", focusRing)}
           >
             <X className="h-4 w-4" />
           </button>
@@ -258,7 +258,7 @@ export const FacilityDrawer = forwardRef<HTMLDivElement, FacilityDrawerProps>(fu
               ) : null}
             </div>
             {!statsVisible ? (
-              <p className={cn("mt-2 rounded-[10px] bg-[#F3F4F6] p-3 text-xs dark:bg-[#1E2B3C]", mutedText)} data-testid="asset-map-drawer-stats-hidden">
+              <p className={cn("mt-2 rounded-md bg-[#F3F4F6] p-3 text-xs dark:bg-[#1E2B3C]", mutedText)} data-testid="asset-map-drawer-stats-hidden">
                 Asset counts, book value and work orders are shown for your own facility only.
               </p>
             ) : null}

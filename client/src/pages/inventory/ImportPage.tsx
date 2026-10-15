@@ -63,7 +63,7 @@ export default function ImportPage({ embedInShell = false }: { embedInShell?: bo
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {!embedInShell ? (
         <div>
           <PageHeader

@@ -95,7 +95,7 @@ export function CardQrCode({
             type="button"
             data-testid={`card-qr-${idValue}`}
             aria-label={`Show QR code for ${title}`}
-            className="rounded border bg-background/95 p-1 shadow-sm hover:bg-muted"
+            className="rounded-xl border bg-background/95 p-1 shadow-sm hover:bg-muted"
             onClick={(e) => e.stopPropagation()}
           >
             <QRCode value={encodedValue} size={64} />
@@ -111,10 +111,10 @@ export function CardQrCode({
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          <div ref={svgWrapRef} className="mx-auto w-fit rounded border bg-white p-3">
+          <div ref={svgWrapRef} className="mx-auto w-fit rounded-md border bg-white p-3">
             <QRCode value={encodedValue} size={256} />
           </div>
-          <div className="rounded border bg-muted/50 p-2 text-xs break-all">{encodedText}</div>
+          <div className="rounded-md border bg-muted/50 p-2 text-xs break-all">{encodedText}</div>
           <div className="flex gap-2">
             <Button data-testid="qr-print-btn" onClick={printLabel}>
               Print label

@@ -1,4 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import { Upload } from "lucide-react";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { InventoryShellActions } from "@/components/inventory/InventoryShell";
 import { DATE_INPUT_HINT, formatDate } from "@/lib/format";
 import { HtmlTableEmptyState } from "@/components/ui/EmptyState";
 import { trpc } from "@/lib/trpc";
@@ -13,7 +16,7 @@ import { PackageCheck as PackageCheckIcon } from "lucide-react";
 import { toast } from "sonner";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { Badge } from "@/components/ui/badge";
-import { ModuleFiltersCard, ModuleFilterSearch } from "@/components/ModuleFiltersCard";
+import { Toolbar, ToolbarMore, ToolbarSearch } from "@/components/Toolbar";
 import { useMobileTableColumns, MobileColumnsToggle, mobileSecondaryCol } from "@/hooks/useMobileTableColumns";
 import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
@@ -79,33 +82,40 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
     onError: (e) => toast.error(e.message),
   });
 
+  const newGrnButton = isStaffOrAbove ? (
+    <Button className="h-9" data-testid="new-grn-btn" onClick={() => setLocation("/app/inventory/receipts/new")}>
+      New GRN
+    </Button>
+  ) : null;
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      <InventoryShellActions>{newGrnButton}</InventoryShellActions>
       {!embedInShell ? (
         <>
-          <PageHeader icon={PackageCheckIcon} title="Receiving" />
+          <PageHeader icon={PackageCheckIcon} title="Receiving" actions={newGrnButton ?? undefined} />
           <InventorySecondaryNav />
         </>
       ) : null}
-      <ModuleFiltersCard
-        filterRow={
+      <Toolbar
+        filters={
           <>
-            <ModuleFilterSearch
+            <ToolbarSearch
               placeholder="Search GRN number or consignment"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
             <Input
-              className="h-9 w-[220px]"
+              className="h-9 w-36"
               placeholder="Received from"
               value={receivedFrom}
               onChange={(e) => setReceivedFrom(e.target.value)}
             />
-            <Input className="h-9 w-[170px]" type="date" aria-label="From date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-            <Input className="h-9 w-[170px]" type="date" aria-label="To date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+            <Input className="h-9 w-36" type="date" aria-label="From date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+            <Input className="h-9 w-36" type="date" aria-label="To date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
             <span className="text-xs text-muted-foreground">Dates use {DATE_INPUT_HINT}</span>
             <Select value={status} onValueChange={(v) => setStatus(v as typeof status)}>
-              <SelectTrigger className="h-9 w-[180px]"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-9 w-36"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All status</SelectItem>
                 <SelectItem value="draft">Draft</SelectItem>
@@ -116,19 +126,15 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
             </Select>
           </>
         }
-        toolbarStart={
-          <MobileColumnsToggle isMobile={isMobile} showAll={showAll} onToggle={setShowAll} />
-        }
-        toolbarEnd={
+        end={
           <>
-            <Button variant="outline" onClick={() => setLocation(appPath("/inventory/import"))}>
-              Import
-            </Button>
-            {isStaffOrAbove ? (
-              <Button data-testid="new-grn-btn" onClick={() => setLocation("/app/inventory/receipts/new")}>
-                New GRN
-              </Button>
-            ) : null}
+            <MobileColumnsToggle isMobile={isMobile} showAll={showAll} onToggle={setShowAll} />
+            <ToolbarMore>
+              <DropdownMenuItem onSelect={() => setLocation(appPath("/inventory/import"))}>
+                <Upload className="mr-2 h-4 w-4" aria-hidden />
+                Import from file
+              </DropdownMenuItem>
+            </ToolbarMore>
           </>
         }
       />

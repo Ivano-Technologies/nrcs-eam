@@ -174,18 +174,19 @@ export default function ReportScheduling() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <PageHeader
-          icon={Calendar}
-          title="Report scheduling"
-          subtitle="Automate report generation and email delivery"
-          className="mb-0"
-        />
-        <Button onClick={() => setIsCreateDialogOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          New schedule
-        </Button>
-      </div>
+      <PageHeader
+        icon={Calendar}
+        title="Report scheduling"
+        subtitle="Automate report generation and email delivery"
+        actions={
+          <>
+            <Button onClick={() => setIsCreateDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              New schedule
+            </Button>
+          </>
+        }
+      />
 
       {schedules.length === 0 ? (
         <Card>
@@ -226,10 +227,10 @@ export default function ReportScheduling() {
               <CardContent>
                 <div className="space-y-3 text-sm">
                   <div className="flex items-center gap-2">
-                    <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">
+                    <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-md text-xs">
                       {getReportTypeLabel(schedule.reportType)}
                     </span>
-                    <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">
+                    <span className="px-2 py-1 bg-green-100 text-green-800 rounded-md text-xs">
                       {schedule.format.toUpperCase()}
                     </span>
                   </div>

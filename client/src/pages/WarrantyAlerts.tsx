@@ -40,19 +40,20 @@ export default function WarrantyAlerts() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <PageHeader
-          icon={ShieldAlert}
-          title="Warranty alerts"
-          subtitle="Monitor asset warranties and receive expiration alerts"
-          className="mb-0"
-        />
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">
-            {expiringWarranties?.filter(a => getDaysUntilExpiry(a.warrantyExpiry!) <= 90).length || 0} expiring soon
-          </span>
-        </div>
-      </div>
+      <PageHeader
+        icon={ShieldAlert}
+        title="Warranty alerts"
+        subtitle="Monitor asset warranties and receive expiration alerts"
+        actions={
+          <>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">
+                {expiringWarranties?.filter(a => getDaysUntilExpiry(a.warrantyExpiry!) <= 90).length || 0} expiring soon
+              </span>
+            </div>
+          </>
+        }
+      />
 
       <div className="grid gap-4">
         {expiringWarranties?.map((asset) => {
@@ -69,8 +70,8 @@ export default function WarrantyAlerts() {
                   </Badge>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-4 mb-4">
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">Asset tag</p>
                     <p className="font-medium">{asset.assetTag}</p>

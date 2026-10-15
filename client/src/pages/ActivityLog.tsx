@@ -1,8 +1,9 @@
 import { useState } from "react";
+import { Toolbar, ToolbarSearch } from "@/components/Toolbar";
 import { trpc } from "@/lib/trpc";
 import TableLoader from "@/components/ui/TableLoader";
 import PageHeader from "@/components/ui/PageHeader";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -69,32 +70,25 @@ export default function ActivityLog() {
         subtitle="Audit trail of user actions and system changes"
       />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Filters</CardTitle>
-          <CardDescription>Filter by date range, user, action, entity type and facility</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4">
-            <div className="relative md:col-span-2">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+      <Toolbar data-testid="activity-log-toolbar"
+        filters={
+          <>
+            <ToolbarSearch
+              placeholder="Search action, resource or user"
+              aria-label="Search action, resource, details or user"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            <div className="relative w-full sm:w-48">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
               <Input
-                placeholder="Search action, resource, details, or user…"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="User name or email…"
+                placeholder="User name or email"
                 value={userQuery}
                 onChange={(e) => {
                   setUserQuery(e.target.value);
                   setPage(1);
                 }}
-                className="pl-10"
+                className="h-9 pl-9"
               />
             </div>
             <Select
@@ -104,7 +98,7 @@ export default function ActivityLog() {
                 setPage(1);
               }}
             >
-              <SelectTrigger>
+              <SelectTrigger className="h-9 w-36">
                 <SelectValue placeholder="Entity type" />
               </SelectTrigger>
               <SelectContent>
@@ -123,7 +117,7 @@ export default function ActivityLog() {
                 setPage(1);
               }}
             >
-              <SelectTrigger>
+              <SelectTrigger className="h-9 w-36">
                 <SelectValue placeholder="Action type" />
               </SelectTrigger>
               <SelectContent>
@@ -142,7 +136,7 @@ export default function ActivityLog() {
                 setPage(1);
               }}
             >
-              <SelectTrigger>
+              <SelectTrigger className="h-9 w-36">
                 <SelectValue placeholder="Facility" />
               </SelectTrigger>
               <SelectContent>
@@ -154,7 +148,7 @@ export default function ActivityLog() {
                 ))}
               </SelectContent>
             </Select>
-            <Input
+            <Input className="h-9 w-36"
               type="date"
               aria-label="Start date"
               aria-describedby="activity-date-hint"
@@ -164,7 +158,7 @@ export default function ActivityLog() {
                 setPage(1);
               }}
             />
-            <Input
+            <Input className="h-9 w-36"
               type="date"
               aria-label="End date"
               aria-describedby="activity-date-hint"
@@ -174,13 +168,11 @@ export default function ActivityLog() {
                 setPage(1);
               }}
             />
-          </div>
-          <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
-            <p id="activity-date-hint" className="text-xs text-muted-foreground">Dates use {DATE_INPUT_HINT}.</p>
-            <MobileColumnsToggle isMobile={isMobile} showAll={showAll} onToggle={setShowAll} />
-          </div>
-        </CardContent>
-      </Card>
+            <span id="activity-date-hint" className="text-xs text-muted-foreground">Dates use {DATE_INPUT_HINT}.</span>
+          </>
+        }
+        end={<MobileColumnsToggle isMobile={isMobile} showAll={showAll} onToggle={setShowAll} />}
+      />
 
       {isLoading ? (
         <TableLoader className="py-8" />
@@ -237,7 +229,7 @@ export default function ActivityLog() {
               <div className="flex gap-2">
                 <button
                   type="button"
-                  className="rounded border px-3 py-1 disabled:opacity-50"
+                  className="rounded-md border px-3 py-1 disabled:opacity-50"
                   disabled={page <= 1}
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                 >
@@ -245,7 +237,7 @@ export default function ActivityLog() {
                 </button>
                 <button
                   type="button"
-                  className="rounded border px-3 py-1 disabled:opacity-50"
+                  className="rounded-md border px-3 py-1 disabled:opacity-50"
                   disabled={page >= totalPages}
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 >

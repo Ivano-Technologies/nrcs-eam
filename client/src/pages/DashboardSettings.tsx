@@ -446,7 +446,7 @@ export default function DashboardSettings() {
         </CardHeader>
         <CardContent>
           <InstallPWAButton />
-          <div className="mt-4 rounded-lg bg-muted p-4 text-sm space-y-2 max-w-full">
+          <div className="mt-4 rounded-md bg-muted p-4 text-sm space-y-2 max-w-full">
             <p className="font-medium">Benefits of installing:</p>
             <ul className="list-disc pl-5 space-y-1 text-muted-foreground break-words">
               <li>Quick access from your home screen or desktop</li>

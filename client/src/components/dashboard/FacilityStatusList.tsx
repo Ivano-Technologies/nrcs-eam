@@ -38,7 +38,7 @@ export function FacilityStatusList() {
         {sectionState !== "ok" ? <DashboardSectionError onRetry={onRetry} /> : null}
         {sectionState === "ok" && (data ?? []).length === 0 ? <p className="text-sm text-[#334155] dark:text-[hsl(0_0%_95%)]">No facilities found.</p> : null}
         {sectionState === "ok" ? (data ?? []).map((row) => (
-          <div key={row.id} className="flex items-center gap-4 rounded-xl border p-3">
+          <div key={row.id} className="flex items-center gap-4 rounded-md border p-3">
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold truncate">{row.name}</p>
               <p className="text-xs text-[#334155] dark:text-[hsl(0_0%_95%)]">

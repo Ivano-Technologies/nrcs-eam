@@ -163,7 +163,7 @@ export default function FacilityDetail() {
   const activeWorkOrders = (workOrders ?? []).filter((w) => w.status !== "completed" && w.status !== "cancelled").length;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <PageHeader
         back={{ label: "Facilities", href: appPath("/facilities/all") }}
         title={
@@ -244,7 +244,7 @@ export default function FacilityDetail() {
 
           <Card className="gap-4">
             <CardHeader><CardTitle>Statistics</CardTitle></CardHeader>
-            <CardContent className="grid grid-cols-3 gap-3">
+            <CardContent className="grid grid-cols-3 gap-4">
               <StatLink label="Assets" value={assets?.length ?? 0} href={`${appPath("/assets")}?siteId=${facility.id}`} />
               <StatLink
                 label="Inventory items"
@@ -358,7 +358,7 @@ export default function FacilityDetail() {
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                   {photosQuery.data?.map((photo) => (
                     <div key={photo.id} className="space-y-1">
-                      <div className="relative aspect-square overflow-hidden rounded-lg border bg-muted">
+                      <div className="relative aspect-square overflow-hidden rounded-md border bg-muted">
                         <button
                           type="button"
                           className="h-full w-full"
@@ -420,7 +420,7 @@ export default function FacilityDetail() {
           <DialogTitle className="sr-only">Facility photo</DialogTitle>
           <DialogDescription className="sr-only">Press Esc to close.</DialogDescription>
           {selectedPhoto ? (
-            <img src={selectedPhoto} alt="Facility photo" className="max-h-[90vh] w-full rounded-lg object-contain" />
+            <img src={selectedPhoto} alt="Facility photo" className="max-h-[90vh] w-full rounded-md object-contain" />
           ) : null}
         </DialogContent>
       </Dialog>

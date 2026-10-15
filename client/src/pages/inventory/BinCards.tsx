@@ -1,4 +1,4 @@
-import { ModuleFilterSearch, ModuleFiltersCard } from "@/components/ModuleFiltersCard";
+import { Toolbar, ToolbarSearch } from "@/components/Toolbar";
 import { formatDate, formatEmpty } from "@/lib/format";
 import { ViewToggle } from "@/components/ViewToggle";
 import { Badge } from "@/components/ui/badge";
@@ -27,16 +27,16 @@ export default function BinCards({ embedInShell = false }: Props = {}) {
   const openDetail = (id: number) => setLocation(`/app/inventory/tracking/bin-cards/${id}`);
 
   return (
-    <div className="space-y-4">
-      <ModuleFiltersCard
-        filterRow={<ModuleFilterSearch placeholder="Search bin cards…" value={search} onChange={(e) => setSearch(e.target.value)} />}
-        toolbarStart={<ViewToggle value={viewMode} onChange={setViewMode} />}
+    <div className="space-y-6">
+      <Toolbar
+        filters={<ToolbarSearch placeholder="Search bin cards…" value={search} onChange={(e) => setSearch(e.target.value)} />}
+        end={<ViewToggle value={viewMode} onChange={setViewMode} />}
       />
       {viewMode === "card" ? (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {rows.map((row) => (
-            <Card key={row.id} className="cursor-pointer" onClick={() => openDetail(row.id)}>
-              <CardContent className="space-y-2 p-4">
+            <Card size="sm" key={row.id} className="cursor-pointer" onClick={() => openDetail(row.id)}>
+              <CardContent className="space-y-2">
                 <div className="flex items-center justify-between gap-2">
                   <p className="font-mono text-sm">{row.binNumber}</p>
                   <Badge variant="outline">{row.status}</Badge>

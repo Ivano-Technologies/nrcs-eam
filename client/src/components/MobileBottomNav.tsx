@@ -202,7 +202,7 @@ export function MobileBottomNav({ location, setLocation, userRole }: MobileBotto
                           data-testid={`mobile-sheet-nav-${item.path.replace(/^\/app\/?/, "").replace(/\//g, "-") || "home"}`}
                           onClick={() => navigate(item.path)}
                           className={cn(
-                            "flex min-h-11 w-full touch-manipulation items-center gap-3 rounded-lg px-3 py-2 text-left text-[15px]",
+                            "flex min-h-11 w-full touch-manipulation items-center gap-3 rounded-md px-3 py-2 text-left text-[15px]",
                             isActive
                               ? "bg-primary/10 font-medium text-primary"
                               : "text-foreground hover:bg-accent"
@@ -235,7 +235,7 @@ export function MobileBottomNav({ location, setLocation, userRole }: MobileBotto
                           data-testid={`mobile-sheet-nav-${item.path.replace(/^\/app\/?/, "").replace(/\//g, "-") || "home"}`}
                           onClick={() => navigate(item.path)}
                           className={cn(
-                            "flex min-h-11 w-full touch-manipulation items-center gap-3 rounded-lg px-3 py-2 text-left text-[15px]",
+                            "flex min-h-11 w-full touch-manipulation items-center gap-3 rounded-md px-3 py-2 text-left text-[15px]",
                             isActive
                               ? "bg-primary/10 font-medium text-primary"
                               : "text-foreground hover:bg-accent"

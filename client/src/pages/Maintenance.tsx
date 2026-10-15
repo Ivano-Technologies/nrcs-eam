@@ -82,163 +82,162 @@ export default function Maintenance() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <PageHeader
-            icon={Wrench}
-            title="Maintenance"
-            subtitle="Manage maintenance schedules"
-            className="mb-0"
-          />
-        </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button><Plus className="mr-2 h-4 w-4" />Add schedule</Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Add maintenance schedule</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2 col-span-2">
-                  <Label htmlFor="name">Schedule name *</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="e.g., Generator Monthly Service"
-                    required
-                  />
-                </div>
+      <PageHeader
+        icon={Wrench}
+        title="Maintenance"
+        subtitle="Manage maintenance schedules"
+        actions={
+          <>
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button><Plus className="mr-2 h-4 w-4" />Add schedule</Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Add maintenance schedule</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2 col-span-2">
+                      <Label htmlFor="name">Schedule name *</Label>
+                      <Input
+                        id="name"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        placeholder="e.g., Generator Monthly Service"
+                        required
+                      />
+                    </div>
 
-                <div className="space-y-2 col-span-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Describe the maintenance tasks…"
-                    rows={3}
-                  />
-                </div>
+                    <div className="space-y-2 col-span-2">
+                      <Label htmlFor="description">Description</Label>
+                      <Textarea
+                        id="description"
+                        value={formData.description}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        placeholder="Describe the maintenance tasks…"
+                        rows={3}
+                      />
+                    </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="assetId">Asset *</Label>
-                  <Select value={formData.assetId} onValueChange={(value) => setFormData({ ...formData, assetId: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select asset" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {assets?.map((asset) => (
-                        <SelectItem key={asset.id} value={asset.id.toString()}>
-                          {asset.name} ({asset.assetTag})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="assetId">Asset *</Label>
+                      <Select value={formData.assetId} onValueChange={(value) => setFormData({ ...formData, assetId: value })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select asset" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {assets?.map((asset) => (
+                            <SelectItem key={asset.id} value={asset.id.toString()}>
+                              {asset.name} ({asset.assetTag})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="frequency">Frequency *</Label>
-                  <Select value={formData.frequency} onValueChange={(value: any) => setFormData({ ...formData, frequency: value })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="daily">Daily</SelectItem>
-                      <SelectItem value="weekly">Weekly</SelectItem>
-                      <SelectItem value="monthly">Monthly</SelectItem>
-                      <SelectItem value="quarterly">Quarterly</SelectItem>
-                      <SelectItem value="semi_annual">Semi-annual</SelectItem>
-                      <SelectItem value="annual">Annual</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="frequency">Frequency *</Label>
+                      <Select value={formData.frequency} onValueChange={(value: any) => setFormData({ ...formData, frequency: value })}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="daily">Daily</SelectItem>
+                          <SelectItem value="weekly">Weekly</SelectItem>
+                          <SelectItem value="monthly">Monthly</SelectItem>
+                          <SelectItem value="quarterly">Quarterly</SelectItem>
+                          <SelectItem value="semi_annual">Semi-annual</SelectItem>
+                          <SelectItem value="annual">Annual</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="frequencyValue">Frequency value</Label>
-                  <Input
-                    id="frequencyValue"
-                    type="number"
-                    min="1"
-                    value={formData.frequencyValue}
-                    onChange={(e) => setFormData({ ...formData, frequencyValue: e.target.value })}
-                    placeholder="e.g., 1"
-                  />
-                  <p className="text-xs text-muted-foreground">How often (e.g., every 2 months)</p>
-                </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="frequencyValue">Frequency value</Label>
+                      <Input
+                        id="frequencyValue"
+                        type="number"
+                        min="1"
+                        value={formData.frequencyValue}
+                        onChange={(e) => setFormData({ ...formData, frequencyValue: e.target.value })}
+                        placeholder="e.g., 1"
+                      />
+                      <p className="text-xs text-muted-foreground">How often (e.g., every 2 months)</p>
+                    </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="nextDue">Next due date * <DateHint /></Label>
-                  <Input
-                    id="nextDue"
-                    type="date"
-                    value={formData.nextDue}
-                    onChange={(e) => setFormData({ ...formData, nextDue: e.target.value })}
-                    required
-                  />
-                </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="nextDue">Next due date * <DateHint /></Label>
+                      <Input
+                        id="nextDue"
+                        type="date"
+                        value={formData.nextDue}
+                        onChange={(e) => setFormData({ ...formData, nextDue: e.target.value })}
+                        required
+                      />
+                    </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="assignedTo">Assign to</Label>
-                  <Select value={formData.assignedTo} onValueChange={(value) => setFormData({ ...formData, assignedTo: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select user (optional)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {users?.map((user) => (
-                        <SelectItem key={user.id} value={user.id.toString()}>
-                          {user.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="assignedTo">Assign to</Label>
+                      <Select value={formData.assignedTo} onValueChange={(value) => setFormData({ ...formData, assignedTo: value })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select user (optional)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {users?.map((user) => (
+                            <SelectItem key={user.id} value={user.id.toString()}>
+                              {user.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="estimatedDuration">Estimated duration (minutes)</Label>
-                  <Input
-                    id="estimatedDuration"
-                    type="number"
-                    min="0"
-                    value={formData.estimatedDuration}
-                    onChange={(e) => setFormData({ ...formData, estimatedDuration: e.target.value })}
-                    placeholder="e.g., 120"
-                  />
-                </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="estimatedDuration">Estimated duration (minutes)</Label>
+                      <Input
+                        id="estimatedDuration"
+                        type="number"
+                        min="0"
+                        value={formData.estimatedDuration}
+                        onChange={(e) => setFormData({ ...formData, estimatedDuration: e.target.value })}
+                        placeholder="e.g., 120"
+                      />
+                    </div>
 
-                <div className="space-y-2 col-span-2">
-                  <Label htmlFor="taskTemplate">Task checklist</Label>
-                  <Textarea
-                    id="taskTemplate"
-                    value={formData.taskTemplate}
-                    onChange={(e) => setFormData({ ...formData, taskTemplate: e.target.value })}
-                    placeholder="Enter tasks, one per line…"
-                    rows={4}
-                  />
-                </div>
-              </div>
+                    <div className="space-y-2 col-span-2">
+                      <Label htmlFor="taskTemplate">Task checklist</Label>
+                      <Textarea
+                        id="taskTemplate"
+                        value={formData.taskTemplate}
+                        onChange={(e) => setFormData({ ...formData, taskTemplate: e.target.value })}
+                        placeholder="Enter tasks, one per line…"
+                        rows={4}
+                      />
+                    </div>
+                  </div>
 
-              <div className="flex justify-end gap-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creating…
-                    </>
-                  ) : (
-                    "Create schedule"
-                  )}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
+                  <div className="flex justify-end gap-2 pt-4">
+                    <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={createMutation.isPending}>
+                      {createMutation.isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Creating…
+                        </>
+                      ) : (
+                        "Create schedule"
+                      )}
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </>
+        }
+      />
 
       <Card>
         <CardHeader><CardTitle>Upcoming maintenance (next 30 days)</CardTitle></CardHeader>

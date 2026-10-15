@@ -99,7 +99,7 @@ export function FieldDashboard({ metrics: metricsProp, metricsFailed, onRetry }:
               {myReqs.map((r) => (
                 <li
                   key={r.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2"
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2"
                 >
                   <div>
                     <p className="font-medium">{r.reqNumber}</p>

@@ -74,72 +74,73 @@ export default function DepreciationSchedule() {
   return (
     <ManagerFinanceGate>
       <div className="space-y-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <PageHeader
-            icon={TrendingDown}
-            title="Depreciation schedule"
-            subtitle="Automated depreciation schedules and net book value reporting for organisational assets."
-            className="mb-0"
-          />
-          <div className="flex flex-wrap gap-2">
-            {isAdmin ? (
-              <Button variant="outline" disabled={recalc.isPending} onClick={() => recalc.mutate()}>
-                {recalc.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Recalculating…
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    Recalculate
-                  </>
-                )}
-              </Button>
-            ) : null}
-            <Button variant="outline" disabled={exportExcel.isPending} onClick={() => exportExcel.mutate({})}>
-              {exportExcel.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Exporting…
-                </>
-              ) : (
-                <>
-                  <FileSpreadsheet className="mr-2 h-4 w-4" />
-                  Export to Excel
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
+        <PageHeader
+          icon={TrendingDown}
+          title="Depreciation schedule"
+          subtitle="Automated depreciation schedules and net book value reporting for organisational assets."
+          actions={
+            <>
+              <div className="flex flex-wrap gap-2">
+                {isAdmin ? (
+                  <Button variant="outline" disabled={recalc.isPending} onClick={() => recalc.mutate()}>
+                    {recalc.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Recalculating…
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                        Recalculate
+                      </>
+                    )}
+                  </Button>
+                ) : null}
+                <Button variant="outline" disabled={exportExcel.isPending} onClick={() => exportExcel.mutate({})}>
+                  {exportExcel.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Exporting…
+                    </>
+                  ) : (
+                    <>
+                      <FileSpreadsheet className="mr-2 h-4 w-4" />
+                      Export to Excel
+                    </>
+                  )}
+                </Button>
+              </div>
+            </>
+          }
+        />
 
-        <div className="grid gap-4 md:grid-cols-4">
-          <Card>
-            <CardHeader className="pb-2">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Card size="sm">
+            <CardHeader>
               <CardTitle className="text-sm">Total gross asset value</CardTitle>
             </CardHeader>
             <CardContent>
               <p className={KPI_VALUE_CLASS}>{formatNaira(summary?.totalGrossAssetValue ?? 0)}</p>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="pb-2">
+          <Card size="sm">
+            <CardHeader>
               <CardTitle className="text-sm">Accumulated depreciation</CardTitle>
             </CardHeader>
             <CardContent>
               <p className={KPI_VALUE_CLASS}>{formatNaira(summary?.totalAccumulatedDepreciation ?? 0)}</p>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="pb-2">
+          <Card size="sm">
+            <CardHeader>
               <CardTitle className="text-sm">Net book value</CardTitle>
             </CardHeader>
             <CardContent>
               <p className={KPI_VALUE_CLASS}>{formatNaira(summary?.totalNetBookValue ?? 0)}</p>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="pb-2">
+          <Card size="sm">
+            <CardHeader>
               <CardTitle className="text-sm">Fully depreciated</CardTitle>
             </CardHeader>
             <CardContent>

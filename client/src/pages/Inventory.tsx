@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { InventoryShellActions } from "@/components/inventory/InventoryShell";
 import { useLocation, useSearch } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,7 +43,7 @@ import { ViewToggle } from "@/components/ViewToggle";
 import { useViewMode } from "@/hooks/useViewMode";
 import { CardQrCode } from "@/components/CardQrCode";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
-import { ModuleFiltersCard, ModuleFilterSearch } from "@/components/ModuleFiltersCard";
+import { Toolbar, ToolbarMore, ToolbarSearch } from "@/components/Toolbar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { appPath } from "@/lib/routes";
 import { useBulkImportFileInput } from "@/hooks/useBulkImportFileInput";
@@ -337,7 +339,14 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
   const catalogueRows = catalogueQuery.data ?? [];
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
+      {mainTab === "catalogue" && isManagerOrAdmin ? (
+        <InventoryShellActions>
+          <Button className="h-9" onClick={() => setCreateItemOpen(true)} data-testid="catalogue-add-item">
+            Add item
+          </Button>
+        </InventoryShellActions>
+      ) : null}
       {!embedInShell ? (
         <>
           <div>
@@ -406,16 +415,16 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
               })}
             </div>
           ) : null}
-          <ModuleFiltersCard
-            filterRow={
+          <Toolbar
+            filters={
               <>
-                <ModuleFilterSearch
+                <ToolbarSearch
                   placeholder="Search item code/name"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
                 <Select value={warehouseId} onValueChange={setWarehouseId}>
-                  <SelectTrigger className="h-9 w-[220px]">
+                  <SelectTrigger className="h-9 w-36">
                     <SelectValue placeholder="Location" />
                   </SelectTrigger>
                   <SelectContent>
@@ -428,7 +437,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                   </SelectContent>
                 </Select>
                 <Select value={category} onValueChange={setCategory}>
-                  <SelectTrigger className="h-9 w-[220px]">
+                  <SelectTrigger className="h-9 w-36">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -441,7 +450,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                   </SelectContent>
                 </Select>
                 <Select value={status} onValueChange={setStatus}>
-                  <SelectTrigger className="h-9 w-[170px]">
+                  <SelectTrigger className="h-9 w-36">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -453,7 +462,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                   </SelectContent>
                 </Select>
                 <Select value={ved} onValueChange={setVed}>
-                  <SelectTrigger className="h-9 w-[170px]">
+                  <SelectTrigger className="h-9 w-36">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -465,11 +474,11 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                 </Select>
               </>
             }
-            toolbarStart={<ViewToggle value={overviewViewMode} onChange={setOverviewViewMode} />}
+            end={<ViewToggle value={overviewViewMode} onChange={setOverviewViewMode} />}
           />
 
           {overviewViewMode === "card" ? (
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {rows.map((row) => {
                 const progress = Math.min(100, Math.round((row.quantityOnHand / maxRef(row)) * 100));
                 return (
@@ -514,8 +523,8 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                       <div className="mt-2 text-sm">
                         <span className="font-semibold">{row.quantityOnHand}</span> {row.unitOfMeasure}
                       </div>
-                      <div className="mt-2 h-2 w-full rounded bg-muted">
-                        <div className="h-2 rounded bg-primary" style={{ width: `${progress}%` }} />
+                      <div className="mt-2 h-2 w-full rounded-md bg-muted">
+                        <div className="h-2 rounded-md bg-primary" style={{ width: `${progress}%` }} />
                       </div>
                       <div className="mt-2 flex flex-wrap items-center gap-2">
                         <Badge
@@ -526,7 +535,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                         >
                           {statusLabel(row.status)}
                         </Badge>
-                        <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                        <span className="rounded-md bg-gray-100 px-2 py-0.5 text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-200">
                           {row.itemCategory == null
                             ? "Not set"
                             : row.itemCategory === "other"
@@ -619,11 +628,11 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                         {row.itemCategory == null ? (
                           <span className="text-muted-foreground">Not set</span>
                         ) : row.itemCategory === "other" ? (
-                          <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                          <span className="rounded-md bg-gray-100 px-2 py-0.5 text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-200">
                             Other
                           </span>
                         ) : (
-                          <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                          <span className="rounded-md bg-gray-100 px-2 py-0.5 text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-200">
                             {itemCategoryLabel(row.itemCategory)}
                           </span>
                         )}
@@ -667,16 +676,16 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
         </TabsContent>
 
         <TabsContent value="catalogue" className="space-y-4">
-          <ModuleFiltersCard
-            filterRow={
+          <Toolbar
+            filters={
               <>
-                <ModuleFilterSearch
+                <ToolbarSearch
                   placeholder="Search code/name"
                   value={catalogueSearch}
                   onChange={(e) => setCatalogueSearch(e.target.value)}
                 />
                 <Select value={catalogueCategory} onValueChange={setCatalogueCategory}>
-                  <SelectTrigger className="h-9 w-[220px]" data-testid="catalogue-category-filter">
+                  <SelectTrigger className="h-9 w-36" data-testid="catalogue-category-filter">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -689,7 +698,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                   </SelectContent>
                 </Select>
                 <Select value={catalogueVed} onValueChange={setCatalogueVed}>
-                  <SelectTrigger className="h-9 w-[170px]">
+                  <SelectTrigger className="h-9 w-36">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -700,7 +709,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                   </SelectContent>
                 </Select>
                 <Select value={catalogueActive} onValueChange={setCatalogueActive}>
-                  <SelectTrigger className="h-9 w-[170px]">
+                  <SelectTrigger className="h-9 w-36">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -711,37 +720,26 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                 </Select>
               </>
             }
-            toolbarStart={<ViewToggle value={catalogueViewMode} onChange={setCatalogueViewMode} />}
-            toolbarEnd={
-              isManagerOrAdmin ? (
-                <>
-                  <Button
-                    className="h-9"
-                    variant="outline"
-                    onClick={() => importMutation.mutate({})}
-                    disabled={importMutation.isPending}
-                  >
-                    {importMutation.isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Importing…
-                      </>
-                    ) : (
-                      <>
-                        <ArrowDownToLine className="mr-2 h-4 w-4" />
-                        Import
-                      </>
-                    )}
-                  </Button>
-                  <Button className="h-9" onClick={() => setCreateItemOpen(true)}>
-                    Add item
-                  </Button>
-                </>
-              ) : null
+            end={
+              <>
+                <ViewToggle value={catalogueViewMode} onChange={setCatalogueViewMode} />
+                {isManagerOrAdmin ? (
+                  <ToolbarMore data-testid="catalogue-more-actions">
+                    <DropdownMenuItem onSelect={() => importMutation.mutate({})} disabled={importMutation.isPending}>
+                      {importMutation.isPending ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+                      ) : (
+                        <ArrowDownToLine className="mr-2 h-4 w-4" aria-hidden />
+                      )}
+                      {importMutation.isPending ? "Importing…" : "Import"}
+                    </DropdownMenuItem>
+                  </ToolbarMore>
+                ) : null}
+              </>
             }
           />
           {catalogueViewMode === "card" ? (
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {catalogueRows.map((row) => (
                 <Card
                   key={row.id}
@@ -1049,7 +1047,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-3">
+          <div className="grid gap-4">
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Item details</CardTitle>
@@ -1067,11 +1065,11 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                       <TriangleAlert className="h-4 w-4 text-amber-600" aria-label="Uncategorized" />
                     </>
                   ) : selectedItemDetail.data.itemCategory === "other" ? (
-                    <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                    <span className="rounded-md bg-gray-100 px-2 py-0.5 text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-200">
                       Other
                     </span>
                   ) : (
-                    <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                    <span className="rounded-md bg-gray-100 px-2 py-0.5 text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-200">
                       {itemCategoryLabel(selectedItemDetail.data.itemCategory)}
                     </span>
                   )}

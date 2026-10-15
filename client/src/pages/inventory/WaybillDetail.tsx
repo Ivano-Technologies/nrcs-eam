@@ -308,7 +308,7 @@ export default function WaybillDetail() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div>
         <PageHeader title={waybillId ? "Waybill detail" : "New waybill"} back={{ label: "Shipping and tracking", href: appPath("/inventory/issues") }} />
         <InventorySecondaryNav />
@@ -463,7 +463,7 @@ export default function WaybillDetail() {
                     </div>
                   </div>
 
-                  <div className="space-y-2 rounded border p-2">
+                  <div className="space-y-2 rounded-md border p-2">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="text-sm font-medium">CTN sources</div>
                       <Button
@@ -478,7 +478,7 @@ export default function WaybillDetail() {
                       </Button>
                     </div>
                     {(fefoWarnings[lineIdx] ?? []).length > 0 ? (
-                      <div className="rounded border border-amber-500 bg-amber-50 p-2 text-xs text-amber-900 dark:bg-amber-950 dark:text-amber-100">
+                      <div className="rounded-md border border-amber-500 bg-amber-50 p-2 text-xs text-amber-900 dark:bg-amber-950 dark:text-amber-100">
                         <div className="mb-1 flex items-center gap-1 font-medium">
                           <AlertTriangle className="h-3.5 w-3.5" />
                           FEFO override: older stock skipped
@@ -556,7 +556,7 @@ export default function WaybillDetail() {
                               )
                             }
                           />
-                          <div className="flex h-9 items-center rounded border px-2 text-xs">
+                          <div className="flex h-9 items-center rounded-md border px-2 text-xs">
                             Balance: {ctn?.currentBalance ?? ""}
                           </div>
                           <div className="flex h-9 items-center">
@@ -673,7 +673,7 @@ export default function WaybillDetail() {
               {COPY_TYPES.map((copy) => {
                 const timestamp = (details.data?.copiesPrinted as Record<string, string | null> | undefined)?.[copy];
                 return (
-                  <div key={copy} className="rounded border px-2 py-1">
+                  <div key={copy} className="rounded-md border px-2 py-1">
                     {timestamp ? `✔ ${copy}: ${formatDateTime(timestamp)}` : `○ ${copy}: not printed`}
                   </div>
                 );

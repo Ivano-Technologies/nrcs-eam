@@ -53,104 +53,104 @@ export default function EmailNotifications() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <PageHeader
-          icon={Mail}
-          title="Email notifications"
-          subtitle="Send custom email notifications to users"
-          className="mb-0"
-        />
-
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button data-testid="email-compose-trigger">
-              <Mail className="mr-2 h-4 w-4" />
-              Compose email
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Compose email notification</DialogTitle>
-              <DialogDescription>Send a custom email to selected users</DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Recipients</Label>
-                <Select value={recipientType} onValueChange={(v) => setRecipientType(v as any)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All users</SelectItem>
-                    <SelectItem value="role">By role</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {recipientType === "role" && (
-                <div className="space-y-2">
-                  <Label>Select role</Label>
-                  <Select value={recipientRole} onValueChange={(v) => setRecipientRole(v as any)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="admin">Admins</SelectItem>
-                      <SelectItem value="manager">Managers</SelectItem>
-                      <SelectItem value="user">Users</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <Label>Subject</Label>
-                <Input
-                  data-testid="email-subject-input"
-                  placeholder="Email subject…"
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Message body</Label>
-                <Textarea
-                  data-testid="email-body-input"
-                  placeholder="Email message…"
-                  value={body}
-                  onChange={(e) => setBody(e.target.value)}
-                  rows={8}
-                  className="resize-none"
-                />
-                <p className="text-xs text-muted-foreground">
-                  HTML formatting is supported. The message will be wrapped in a professional NRCS email template.
-                </p>
-              </div>
-
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancel
+      <PageHeader
+        icon={Mail}
+        title="Email notifications"
+        subtitle="Send custom email notifications to users"
+        actions={
+          <>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button data-testid="email-compose-trigger">
+                  <Mail className="mr-2 h-4 w-4" />
+                  Compose email
                 </Button>
-                <Button data-testid="email-send-submit" onClick={handleSend} disabled={sendMutation.isPending}>
-                  {sendMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Sending…
-                    </>
-                  ) : (
-                    <>
-                      <Send className="mr-2 h-4 w-4" />
-                      Send email
-                    </>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Compose email notification</DialogTitle>
+                  <DialogDescription>Send a custom email to selected users</DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Recipients</Label>
+                    <Select value={recipientType} onValueChange={(v) => setRecipientType(v as any)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All users</SelectItem>
+                        <SelectItem value="role">By role</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {recipientType === "role" && (
+                    <div className="space-y-2">
+                      <Label>Select role</Label>
+                      <Select value={recipientRole} onValueChange={(v) => setRecipientRole(v as any)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="admin">Admins</SelectItem>
+                          <SelectItem value="manager">Managers</SelectItem>
+                          <SelectItem value="user">Users</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   )}
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
+
+                  <div className="space-y-2">
+                    <Label>Subject</Label>
+                    <Input
+                      data-testid="email-subject-input"
+                      placeholder="Email subject…"
+                      value={subject}
+                      onChange={(e) => setSubject(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Message body</Label>
+                    <Textarea
+                      data-testid="email-body-input"
+                      placeholder="Email message…"
+                      value={body}
+                      onChange={(e) => setBody(e.target.value)}
+                      rows={8}
+                      className="resize-none"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      HTML formatting is supported. The message will be wrapped in a professional NRCS email template.
+                    </p>
+                  </div>
+
+                  <div className="flex justify-end gap-2">
+                    <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button data-testid="email-send-submit" onClick={handleSend} disabled={sendMutation.isPending}>
+                      {sendMutation.isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Sending…
+                        </>
+                      ) : (
+                        <>
+                          <Send className="mr-2 h-4 w-4" />
+                          Send email
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </>
+        }
+      />
 
       {/* Email history */}
       <Card>
@@ -172,7 +172,7 @@ export default function EmailNotifications() {
               {history.map((email) => (
                 <div
                   key={email.id}
-                  className="flex items-start justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
+                  className="flex items-start justify-between p-4 border rounded-md hover:bg-accent/50 transition-colors"
                 >
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center gap-2">

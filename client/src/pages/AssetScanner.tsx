@@ -214,7 +214,7 @@ ${updateForm.notes}`
             {/* Camera scan */}
             {scanMode === "camera" && (
               <div className="flex flex-col gap-4">
-                <div id="qr-reader" className="w-full overflow-hidden rounded-lg border bg-black"></div>
+                <div id="qr-reader" className="w-full overflow-hidden rounded-md border bg-black"></div>
                 <p className="text-center text-sm text-muted-foreground">
                   {isScanning ? "Point camera at QR code or barcode…" : "Starting camera…"}
                 </p>

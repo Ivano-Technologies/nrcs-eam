@@ -627,7 +627,7 @@ export default function AssetDetail() {
                   <img
                     src={asset.qrCode}
                     alt="Asset QR Code"
-                    className="w-48 h-48 border-2 border-border rounded-lg"
+                    className="w-48 h-48 border-2 border-border rounded-md"
                   />
                 </div>
                 <div className="flex gap-2">
@@ -727,7 +727,7 @@ export default function AssetDetail() {
                   <img
                     src={photo.photoUrl}
                     alt={photo.caption || 'Asset photo'}
-                    className="w-full h-32 object-cover rounded-lg border-2 border-border cursor-pointer hover:border-primary transition-colors"
+                    className="w-full h-32 object-cover rounded-md border-2 border-border cursor-pointer hover:border-primary transition-colors"
                     onClick={() => setSelectedImage(photo.photoUrl)}
                   />
                   {canEdit && (
@@ -772,7 +772,7 @@ export default function AssetDetail() {
             <img
               src={selectedImage}
               alt="Asset photo preview"
-              className="w-full h-auto rounded-lg"
+              className="w-full h-auto rounded-md"
             />
           )}
         </DialogContent>

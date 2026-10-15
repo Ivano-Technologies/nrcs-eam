@@ -132,13 +132,13 @@ export default function VerificationCampaigns() {
                   />
                 ) : null}
                 {(campaigns ?? []).map((c) => (
-                  <Card
+                  <Card size="sm"
                     key={c.id}
                     className={`cursor-pointer ${selectedId === c.id ? "ring-2 ring-primary" : ""}`}
                     data-testid={`campaign-row-${c.id}`}
                     onClick={() => setSelectedId(c.id)}
                   >
-                    <CardContent className="space-y-2 p-4">
+                    <CardContent className="space-y-2">
                       <div className="flex items-center justify-between gap-2">
                         <p className="font-semibold">{c.name}</p>
                         {statusBadge(c.status)}
@@ -234,7 +234,7 @@ export default function VerificationCampaigns() {
                   <div>
                     <h4 className="mb-2 text-sm font-medium">Location discrepancies</h4>
                     {viewMode === "card" ? (
-                      <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="grid gap-4 sm:grid-cols-2">
                         {(discrepancies.data ?? []).map((row) => (
                           <Card key={row.assetId}>
                             <CardContent className="space-y-1 p-3 text-sm">

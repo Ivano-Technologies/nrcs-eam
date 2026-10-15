@@ -119,159 +119,160 @@ export default function WorkOrders() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <PageHeader
-          icon={ClipboardList}
-          title="Work orders"
-          subtitle="Manage maintenance and repair work orders"
-          className="mb-0"
-        />
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button data-testid="work-order-create-btn">
-              <Plus className="mr-2 h-4 w-4" />
-              Create work order
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Create work order</DialogTitle>
-              <DialogDescription>
-                Create a new maintenance or repair work order
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="workOrderNumber">Work order number *</Label>
-                  <Input
-                    id="workOrderNumber"
-                    value={newWorkOrder.workOrderNumber}
-                    onChange={(e) => setNewWorkOrder({ ...newWorkOrder, workOrderNumber: e.target.value })}
-                    placeholder="e.g., WO-2024-001"
-                  />
+      <PageHeader
+        icon={ClipboardList}
+        title="Work orders"
+        subtitle="Manage maintenance and repair work orders"
+        actions={
+          <>
+            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button data-testid="work-order-create-btn">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create work order
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Create work order</DialogTitle>
+                  <DialogDescription>
+                    Create a new maintenance or repair work order
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="workOrderNumber">Work order number *</Label>
+                      <Input
+                        id="workOrderNumber"
+                        value={newWorkOrder.workOrderNumber}
+                        onChange={(e) => setNewWorkOrder({ ...newWorkOrder, workOrderNumber: e.target.value })}
+                        placeholder="e.g., WO-2024-001"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="title">Title *</Label>
+                      <Input
+                        id="title"
+                        value={newWorkOrder.title}
+                        onChange={(e) => setNewWorkOrder({ ...newWorkOrder, title: e.target.value })}
+                        placeholder="Brief description"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      value={newWorkOrder.description}
+                      onChange={(e) => setNewWorkOrder({ ...newWorkOrder, description: e.target.value })}
+                      placeholder="Detailed work order description…"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="asset">Asset *</Label>
+                      <Select value={newWorkOrder.assetId} onValueChange={(value) => setNewWorkOrder({ ...newWorkOrder, assetId: value })}>
+                        <SelectTrigger data-testid="work-order-form-asset">
+                          <SelectValue placeholder="Select asset" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {assets?.map((asset) => (
+                            <SelectItem key={asset.id} value={asset.id.toString()}>
+                              {asset.name} ({asset.assetTag})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="site">Facility *</Label>
+                      <Select value={newWorkOrder.siteId} onValueChange={(value) => setNewWorkOrder({ ...newWorkOrder, siteId: value })}>
+                        <SelectTrigger data-testid="work-order-form-site">
+                          <SelectValue placeholder="Select facility" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {sites?.map((site) => (
+                            <SelectItem key={site.id} value={site.id.toString()}>
+                              {site.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="type">Type</Label>
+                      <Select value={newWorkOrder.type} onValueChange={(value: any) => setNewWorkOrder({ ...newWorkOrder, type: value })}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="corrective">Corrective</SelectItem>
+                          <SelectItem value="preventive">Preventive</SelectItem>
+                          <SelectItem value="inspection">Inspection</SelectItem>
+                          <SelectItem value="emergency">Emergency</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="priority">Priority</Label>
+                      <Select value={newWorkOrder.priority} onValueChange={(value: any) => setNewWorkOrder({ ...newWorkOrder, priority: value })}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="low">Low</SelectItem>
+                          <SelectItem value="medium">Medium</SelectItem>
+                          <SelectItem value="high">High</SelectItem>
+                          <SelectItem value="critical">Critical</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  {user?.role === "admin" && users && (
+                    <div className="space-y-2">
+                      <Label htmlFor="assignedTo">Assign to</Label>
+                      <Select value={newWorkOrder.assignedTo} onValueChange={(value) => setNewWorkOrder({ ...newWorkOrder, assignedTo: value })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select user (optional)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {users.map((u) => (
+                            <SelectItem key={u.id} value={u.id.toString()}>
+                              {u.name || u.email}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="title">Title *</Label>
-                  <Input
-                    id="title"
-                    value={newWorkOrder.title}
-                    onChange={(e) => setNewWorkOrder({ ...newWorkOrder, title: e.target.value })}
-                    placeholder="Brief description"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={newWorkOrder.description}
-                  onChange={(e) => setNewWorkOrder({ ...newWorkOrder, description: e.target.value })}
-                  placeholder="Detailed work order description…"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="asset">Asset *</Label>
-                  <Select value={newWorkOrder.assetId} onValueChange={(value) => setNewWorkOrder({ ...newWorkOrder, assetId: value })}>
-                    <SelectTrigger data-testid="work-order-form-asset">
-                      <SelectValue placeholder="Select asset" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {assets?.map((asset) => (
-                        <SelectItem key={asset.id} value={asset.id.toString()}>
-                          {asset.name} ({asset.assetTag})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="site">Facility *</Label>
-                  <Select value={newWorkOrder.siteId} onValueChange={(value) => setNewWorkOrder({ ...newWorkOrder, siteId: value })}>
-                    <SelectTrigger data-testid="work-order-form-site">
-                      <SelectValue placeholder="Select facility" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {sites?.map((site) => (
-                        <SelectItem key={site.id} value={site.id.toString()}>
-                          {site.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="type">Type</Label>
-                  <Select value={newWorkOrder.type} onValueChange={(value: any) => setNewWorkOrder({ ...newWorkOrder, type: value })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="corrective">Corrective</SelectItem>
-                      <SelectItem value="preventive">Preventive</SelectItem>
-                      <SelectItem value="inspection">Inspection</SelectItem>
-                      <SelectItem value="emergency">Emergency</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="priority">Priority</Label>
-                  <Select value={newWorkOrder.priority} onValueChange={(value: any) => setNewWorkOrder({ ...newWorkOrder, priority: value })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="low">Low</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                      <SelectItem value="critical">Critical</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              {user?.role === "admin" && users && (
-                <div className="space-y-2">
-                  <Label htmlFor="assignedTo">Assign to</Label>
-                  <Select value={newWorkOrder.assignedTo} onValueChange={(value) => setNewWorkOrder({ ...newWorkOrder, assignedTo: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select user (optional)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {users.map((u) => (
-                        <SelectItem key={u.id} value={u.id.toString()}>
-                          {u.name || u.email}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button
-                data-testid="work-order-form-submit"
-                onClick={handleCreateWorkOrder}
-                disabled={createWorkOrderMutation.isPending}
-              >
-                {createWorkOrderMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating…
-                  </>
-                ) : (
-                  "Create work order"
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    data-testid="work-order-form-submit"
+                    onClick={handleCreateWorkOrder}
+                    disabled={createWorkOrderMutation.isPending}
+                  >
+                    {createWorkOrderMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Creating…
+                      </>
+                    ) : (
+                      "Create work order"
+                    )}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </>
+        }
+      />
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center" data-testid="work-orders-toolbar">
         <Select value={statusFilter} onValueChange={setStatusFilter}>

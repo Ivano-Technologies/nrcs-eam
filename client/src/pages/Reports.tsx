@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Toolbar } from "@/components/Toolbar";
 import { DateHint } from "@/lib/format";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import PageHeader from "@/components/ui/PageHeader";
@@ -256,24 +257,21 @@ export default function Reports() {
         </Card>
       ) : null}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Filters</CardTitle>
-          <CardDescription>Date range, warehouse, and category filters</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-wrap items-end gap-3">
+      <Toolbar data-testid="reports-toolbar" align="end"
+        filters={
+          <>
           <div className="space-y-1">
             <Label>Start date <DateHint /></Label>
-            <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            <Input className="h-9 w-36" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
           </div>
           <div className="space-y-1">
             <Label>End date <DateHint /></Label>
-            <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+            <Input className="h-9 w-36" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
           </div>
           <div className="space-y-1">
             <Label>Warehouse</Label>
             <Select value={warehouseId} onValueChange={setWarehouseId}>
-              <SelectTrigger className="w-[220px]">
+              <SelectTrigger className="h-9 w-36">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -291,7 +289,7 @@ export default function Reports() {
           <div className="space-y-1">
             <Label>Category</Label>
             <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger className="w-[220px]">
+              <SelectTrigger className="h-9 w-36">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -302,6 +300,9 @@ export default function Reports() {
               </SelectContent>
             </Select>
           </div>
+                  </>
+        }
+        end={
           <ExportMenu
             testId="report-export-menu"
             formats={[
@@ -317,8 +318,8 @@ export default function Reports() {
               },
             ]}
           />
-        </CardContent>
-      </Card>
+        }
+      />
 
       <Accordion type="multiple" className="space-y-3">
         {categories.map((categoryGroup) => (

@@ -248,17 +248,17 @@ export default function ComplianceRegister() {
         subtitle="Vehicle, generator, building safety, donor reporting and insurance compliance"
       />
 
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Card size="sm">
+          <CardHeader>
             <CardTitle className="text-sm">Total compliance records</CardTitle>
           </CardHeader>
           <CardContent>
             <p className={KPI_VALUE_CLASS}>{summary?.totalRecords ?? 0}</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
+        <Card size="sm">
+          <CardHeader>
             <CardTitle className="text-sm">Compliant</CardTitle>
           </CardHeader>
           <CardContent>
@@ -268,8 +268,8 @@ export default function ComplianceRegister() {
             </p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
+        <Card size="sm">
+          <CardHeader>
             <CardTitle className="text-sm">Expiring soon</CardTitle>
           </CardHeader>
           <CardContent>
@@ -278,8 +278,8 @@ export default function ComplianceRegister() {
             </p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
+        <Card size="sm">
+          <CardHeader>
             <CardTitle className="text-sm">Not compliant or overdue</CardTitle>
           </CardHeader>
           <CardContent>

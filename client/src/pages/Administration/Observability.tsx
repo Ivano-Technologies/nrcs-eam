@@ -108,22 +108,23 @@ export default function Observability() {
 
   return (
     <div className="space-y-6" data-testid="admin-observability-page">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <PageHeader
-          icon={BarChart3}
-          title="System health"
-          subtitle="Real-time pool, cache, and dashboard performance"
-          className="mb-0"
-        />
-        <div className="flex items-center gap-3">
-          <MobileColumnsToggle isMobile={isMobile} showAll={showAll} onToggle={setShowAll} />
-          <span className="text-xs text-muted-foreground">Updated {lastUpdated}</span>
-          <Button variant="outline" size="sm" onClick={refreshAll}>
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Refresh
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        icon={BarChart3}
+        title="System health"
+        subtitle="Real-time pool, cache, and dashboard performance"
+        actions={
+          <>
+            <div className="flex items-center gap-3">
+              <MobileColumnsToggle isMobile={isMobile} showAll={showAll} onToggle={setShowAll} />
+              <span className="text-xs text-muted-foreground">Updated {lastUpdated}</span>
+              <Button variant="outline" size="sm" onClick={refreshAll}>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Refresh
+              </Button>
+            </div>
+          </>
+        }
+      />
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card>

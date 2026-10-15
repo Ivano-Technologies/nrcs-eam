@@ -36,7 +36,7 @@ export default function ImportDraftsPage({ embedInShell = false }: { embedInShel
   });
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {!embedInShell ? (
         <div>
           <PageHeader

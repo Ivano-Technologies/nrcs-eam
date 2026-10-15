@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { Toolbar } from "@/components/Toolbar";
+import { InventoryShellActions } from "@/components/inventory/InventoryShell";
 import { DateHint, formatEmpty } from "@/lib/format";
 import { trpc } from "@/lib/trpc";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
@@ -50,27 +52,35 @@ export default function Distributions({ embedInShell = false }: { embedInShell?:
     onError: (e) => toast.error(e.message),
   });
 
+  const newDistributionButton = (
+    <Button className="h-9" data-testid="new-dist-btn" onClick={() => setOpen(true)}>
+      New distribution
+    </Button>
+  );
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      <InventoryShellActions>{newDistributionButton}</InventoryShellActions>
       {!embedInShell ? (
         <>
-          <PageHeader icon={HandHeartIcon} title="Distributions" />
+          <PageHeader icon={HandHeartIcon} title="Distributions" actions={newDistributionButton} />
           <InventorySecondaryNav />
         </>
       ) : null}
-      <Card>
-        <CardContent className="flex flex-wrap items-center gap-2 pt-4">
-          <Input placeholder="Incident" className="w-[220px]" value={incident} onChange={(e) => setIncident(e.target.value)} />
-          <Input placeholder="Location" className="w-[220px]" value={location} onChange={(e) => setLocation(e.target.value)} />
-          <ViewToggle value={viewMode} onChange={setViewMode} />
-          <Button data-testid="new-dist-btn" className="ml-auto" onClick={() => setOpen(true)}>New distribution</Button>
-        </CardContent>
-      </Card>
+      <Toolbar
+        filters={
+          <>
+            <Input placeholder="Incident" aria-label="Incident" className="h-9 w-36" value={incident} onChange={(e) => setIncident(e.target.value)} />
+            <Input placeholder="Location" aria-label="Location" className="h-9 w-36" value={location} onChange={(e) => setLocation(e.target.value)} />
+          </>
+        }
+        end={<ViewToggle value={viewMode} onChange={setViewMode} />}
+      />
       {viewMode === "card" ? (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {(list.data ?? []).map((row) => (
-            <Card key={row.id} data-testid={`dist-row-${row.distributionNumber}`}>
-              <CardContent className="space-y-2 p-4">
+            <Card size="sm" key={row.id} data-testid={`dist-row-${row.distributionNumber}`}>
+              <CardContent className="space-y-2">
                 <p className="font-mono text-sm">{row.distributionNumber}</p>
                 <p className="font-semibold">{row.location}</p>
                 <p className="text-xs text-muted-foreground">{row.distributionDate}</p>

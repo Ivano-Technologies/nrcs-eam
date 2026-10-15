@@ -160,7 +160,7 @@ export default function Transfers({ embedInShell = false }: { embedInShell?: boo
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {!embedInShell ? (
         <>
           <PageHeader icon={ArrowLeftRightIcon} title="Transfers" />

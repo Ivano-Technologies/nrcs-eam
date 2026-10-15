@@ -110,7 +110,7 @@ export function GlobalSearch({ className }: { className?: string }) {
       >
         <Search className="h-4 w-4 shrink-0" />
         <span className="truncate text-sm">Search…</span>
-        <kbd className="pointer-events-none ml-auto hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
+        <kbd className="pointer-events-none ml-auto hidden h-5 select-none items-center gap-1 rounded-md border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
           {shortcut}
         </kbd>
       </Button>

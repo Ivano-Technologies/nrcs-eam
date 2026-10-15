@@ -22,6 +22,8 @@ interface PageHeaderProps {
   titleTestId?: string;
   /** Small label above the title naming the module, e.g. "Inventory" above "Receiving". */
   eyebrow?: string;
+  /** Lets a shell portal a child page's primary action into the header (see InventoryShellActions). */
+  actionsRef?: React.Ref<HTMLDivElement>;
 }
 
 /**
@@ -37,6 +39,7 @@ export default function PageHeader({
   className,
   titleTestId,
   eyebrow,
+  actionsRef,
 }: PageHeaderProps) {
   return (
     <div className={cn("mb-6", className)} data-testid="page-header">
@@ -72,7 +75,11 @@ export default function PageHeader({
             </p>
           ) : null}
         </div>
-        {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
+        {actions || actionsRef ? (
+          <div ref={actionsRef} className="flex shrink-0 flex-wrap items-center gap-2 empty:hidden" data-testid="page-header-actions">
+            {actions}
+          </div>
+        ) : null}
       </div>
     </div>
   );

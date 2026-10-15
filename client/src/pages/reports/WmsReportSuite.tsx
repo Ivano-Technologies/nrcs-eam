@@ -110,7 +110,7 @@ function WmsReportOverview() {
       />
       <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(16rem,1fr))]" data-testid="wms-report-overview">
         {[...WMS_REPORTS, ...OTHER_WMS_REPORTS].map((r) => (
-          <Link key={r.path} href={r.path} className="group rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+          <Link key={r.path} href={r.path} className="group rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
             <Card className="h-full transition-colors group-hover:border-primary/40">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
@@ -269,13 +269,12 @@ function WmsSingleReport({ report }: { report: WmsReportKey }) {
       />
 
       {report === "movements" || showDateFilters ? (
-        <div className="rounded-md border p-4" data-testid="wms-filters">
-          <div className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(11rem,1fr))]">
+        <div data-testid="wms-filters" className="flex flex-wrap items-end gap-2">
             {report === "movements" ? (
               <div className="space-y-1">
                 <Label>Warehouse</Label>
                 <Select value={warehouseId} onValueChange={setWarehouseId}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-9 w-36"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All warehouses</SelectItem>
                     {warehouses.map((w) => <SelectItem key={w.id} value={String(w.id)}>{w.name}</SelectItem>)}
@@ -287,12 +286,12 @@ function WmsSingleReport({ report }: { report: WmsReportKey }) {
             <DateField label="End date" value={endDate} onChange={setEndDate} />
             {report === "movements" ? (
               <>
-                <div className="space-y-1"><Label>Search</Label><Input value={search} onChange={(e) => setSearch(e.target.value)} /></div>
-                <div className="space-y-1"><Label>Source</Label><Input value={sourceType === "all" ? "" : sourceType} placeholder="All" onChange={(e) => setSourceType(e.target.value || "all")} /></div>
+                <div className="space-y-1"><Label>Search</Label><Input className="h-9 w-36" value={search} onChange={(e) => setSearch(e.target.value)} /></div>
+                <div className="space-y-1"><Label>Source</Label><Input className="h-9 w-36" value={sourceType === "all" ? "" : sourceType} placeholder="All" onChange={(e) => setSourceType(e.target.value || "all")} /></div>
                 <div className="space-y-1">
                   <Label>Direction</Label>
                   <Select value={direction} onValueChange={(value: "all" | "in" | "out") => setDirection(value)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-9 w-36"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All</SelectItem>
                       <SelectItem value="in">In</SelectItem>
@@ -302,7 +301,7 @@ function WmsSingleReport({ report }: { report: WmsReportKey }) {
                 </div>
               </>
             ) : null}
-          </div>
+          
           <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
             <p id="wms-date-hint" className="text-xs text-muted-foreground">Dates use {DATE_INPUT_HINT}.</p>
             <MobileColumnsToggle isMobile={isMobile} showAll={showAll} onToggle={setShowAll} />

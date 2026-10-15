@@ -475,7 +475,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
   const saving = createMutation.isPending || updateMutation.isPending;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <FacilitiesToolbar
         search={search}
         onSearch={setSearch}
@@ -818,8 +818,9 @@ function FacilityCard({
   ];
   return (
     <Card
+      size="sm"
       data-testid={`facility-card-${f.id}`}
-      className="relative flex h-full flex-col gap-3 p-4 transition-colors hover:bg-muted/40 focus-within:ring-2 focus-within:ring-ring"
+      className="relative h-full px-4 transition-colors hover:bg-muted/40 focus-within:ring-2 focus-within:ring-ring"
     >
       <div className="flex items-start justify-between gap-2">
         <h3 className="min-w-0 text-base font-semibold leading-6" data-testid={`facility-name-${f.id}`}>

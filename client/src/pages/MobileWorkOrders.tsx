@@ -123,12 +123,12 @@ export default function MobileWorkOrders() {
           </Card>
         ) : (
           workOrders.map((wo: any) => (
-            <Card
+            <Card size="sm"
               key={wo.id}
               className="cursor-pointer active:scale-98 transition-transform"
               onClick={() => setLocation(appPath(`/mobile-work-order/${wo.id}`))}
             >
-              <CardContent className="p-4">
+              <CardContent>
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
