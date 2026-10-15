@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useState, type ComponentProps } from "react";
 import { useFullBleed } from "@/lib/fullBleed";
 import { formatEmpty } from "@/lib/format";
-import { useLocation, useSearch } from "wouter";
+import { Link, useLocation, useSearch } from "wouter";
 import type { FacilitiesSegment } from "@/lib/facilityRoutes";
 import {
   FACILITIES_VIEW_NAME,
@@ -14,8 +14,24 @@ import {
 } from "@/lib/facilityRoutes";
 import { readSavedViewMode, saveViewMode, useDropLegacyViewMode } from "@/hooks/useViewMode";
 import { trpc } from "@/lib/trpc";
-import PageLoader from "@/components/ui/PageLoader";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -53,7 +69,7 @@ import {
   type FacilityType,
 } from "@shared/facilities";
 import { cn } from "@/lib/utils";
-import { Edit2, Loader2, Save, Trash2, X } from "lucide-react";
+import { Edit2, Loader2, MoreHorizontal, Trash2 } from "lucide-react";
 import { CardQrCode } from "@/components/CardQrCode";
 import { FacilitiesToolbar } from "@/components/facilities/FacilitiesToolbar";
 import { FacilitiesMap } from "@/components/facilities/FacilitiesMap";
@@ -129,7 +145,7 @@ const emptyForm = (): FacilityForm => ({
 
 export type FacilitiesPageProps = {
   segment: FacilitiesSegment;
-  /** Open create dialog on mount (e.g. `/facilities/new`) and apply `?type=`. */
+  /** Legacy: `/facilities/new` now redirects to `?new=1` on the current segment. */
   autoOpenCreate?: boolean;
 };
 
@@ -176,10 +192,14 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<PageSize>("50");
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  // One dialog for Add and Edit. Add opens in place from `?new=1` (and `&type=`), so the page
+  // keeps its view and the sidebar fold; closing clears the param.
+  const [dialogMode, setDialogMode] = useState<"create" | "edit" | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [createForm, setCreateForm] = useState<FacilityForm>(emptyForm());
-  const [editForm, setEditForm] = useState<FacilityForm>(emptyForm());
+  const [form, setForm] = useState<FacilityForm>(emptyForm());
+  const [pendingDelete, setPendingDelete] = useState<{ id: number; name: string } | null>(null);
+  const searchParams = new URLSearchParams(urlSearch);
+  const wantsNew = searchParams.get("new") === "1";
 
   const { data: allSites, isLoading, refetch } = trpc.sites.list.useQuery(undefined, {
     staleTime: 120_000,
@@ -198,17 +218,18 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
   }, [allSites, effectiveTypeFilter]);
   const createMutation = trpc.sites.create.useMutation({
     onSuccess: async () => {
-      toast.success("Facility created successfully");
-      setIsCreateOpen(false);
-      setCreateForm(emptyForm());
+      toast.success("Facility created");
+      closeDialog();
       await refetch();
     },
     onError: (e) => toast.error(`Failed to create facility: ${e.message}`),
   });
+  const trpcUtils = trpc.useUtils();
   const updateMutation = trpc.sites.update.useMutation({
     onSuccess: async () => {
-      toast.success("Facility updated successfully");
-      setEditingId(null);
+      toast.success("Facility updated");
+      void trpcUtils.sites.getById.invalidate();
+      closeDialog();
       await refetch();
     },
     onError: (e) => toast.error(`Failed to update facility: ${e.message}`),
@@ -248,16 +269,73 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
   const parentOptions = allSites ?? [];
 
   useEffect(() => {
-    if (!autoOpenCreate) return;
-    const parsed = parseFacilityTypeFromSearch(
-      typeof window !== "undefined" ? window.location.search : ""
-    );
-    setCreateForm({
-      ...emptyForm(),
-      ...(parsed ? { facilityType: parsed } : {}),
+    if (!(wantsNew || autoOpenCreate) || !canEditFacilities) return;
+    const parsed = parseFacilityTypeFromSearch(urlSearch);
+    setForm({ ...emptyForm(), ...(parsed ? { facilityType: parsed } : {}) });
+    setEditingId(null);
+    setDialogMode("create");
+  }, [wantsNew, autoOpenCreate, canEditFacilities, urlSearch]);
+
+  // `?edit=<id>` (the Edit action on a facility's detail page) opens the same dialog for that row;
+  // closing or saving returns to the detail page.
+  const editParam = searchParams.get("edit");
+  useEffect(() => {
+    if (!editParam || !canEditFacilities || !allSites) return;
+    const row = allSites.find((s) => String(s.id) === editParam);
+    if (row) openEdit(row);
+  }, [editParam, canEditFacilities, allSites]);
+
+  function closeDialog() {
+    setDialogMode(null);
+    setEditingId(null);
+    if (editParam) {
+      setLocation(appPath(`/facilities/${editParam}`), { replace: true });
+      return;
+    }
+    if (wantsNew) {
+      const params = new URLSearchParams(urlSearch);
+      params.delete("new");
+      params.delete("type");
+      const qs = params.toString();
+      setLocation(location + (qs ? `?${qs}` : ""), { replace: true });
+    }
+  }
+
+  function openEdit(f: NonNullable<typeof allSites>[number]) {
+    setEditingId(f.id);
+    setForm({
+      code: f.code ?? "",
+      name: f.name,
+      facilityType: f.facilityType,
+      parentFacilityId: f.parentFacilityId ? String(f.parentFacilityId) : "",
+      address: f.address ?? "",
+      city: f.city ?? "",
+      state: f.state ?? "",
+      latitude: f.latitude ?? "",
+      longitude: f.longitude ?? "",
+      postalCode: f.postalCode ?? "",
+      contactPerson: f.contactPerson ?? "",
+      contactPhone: f.contactPhone ?? "",
+      contactEmail: f.contactEmail ?? "",
+      isActive: f.isActive,
     });
-    setIsCreateOpen(true);
-  }, [autoOpenCreate]);
+    setDialogMode("edit");
+  }
+
+  function submitDialog() {
+    if (!form.name.trim()) return toast.error("Facility name is required");
+    const hierarchyError = validateHierarchyBeforeSubmit(form);
+    if (hierarchyError) return toast.error(hierarchyError);
+    const coordinateError = validateCoordinates(form);
+    if (coordinateError) return toast.error(coordinateError);
+    if (dialogMode === "edit" && editingId != null) {
+      updateMutation.mutate({ id: editingId, ...toPayload(form) });
+    } else {
+      createMutation.mutate(toPayload(form));
+    }
+  }
+
+  const qrOrigin = typeof window !== "undefined" ? window.location.origin : "";
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -398,7 +476,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
     URL.revokeObjectURL(url);
   };
 
-  if (isLoading) return <PageLoader />;
+  const saving = createMutation.isPending || updateMutation.isPending;
 
   return (
     <div className="space-y-4">
@@ -430,35 +508,25 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
       <input {...facilitiesImportFile.inputProps} aria-label="Import facilities from Excel" data-testid="facilities-import-input" />
 
       {canEditFacilities && (
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+        <Dialog open={dialogMode !== null} onOpenChange={(open) => (open ? null : closeDialog())}>
           <DialogContent className="max-w-3xl">
             <DialogHeader>
-              <DialogTitle>Add facility</DialogTitle>
-              <DialogDescription>Create a new facility record</DialogDescription>
+              <DialogTitle>{dialogMode === "edit" ? "Edit facility" : "Add facility"}</DialogTitle>
+              <DialogDescription>
+                {dialogMode === "edit" ? "Update this facility record" : "Create a new facility record"}
+              </DialogDescription>
             </DialogHeader>
-            <FacilityFormFields
-              form={createForm}
-              setForm={setCreateForm}
-              parentOptions={parentOptions}
-            />
+            <FacilityFormFields form={form} setForm={setForm} parentOptions={parentOptions} />
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
-              <Button
-                disabled={createMutation.isPending}
-                onClick={() => {
-                  if (!createForm.name.trim()) return toast.error("Facility name is required");
-                  const hierarchyError = validateHierarchyBeforeSubmit(createForm);
-                  if (hierarchyError) return toast.error(hierarchyError);
-                  const coordinateError = validateCoordinates(createForm);
-                  if (coordinateError) return toast.error(coordinateError);
-                  createMutation.mutate(toPayload(createForm));
-                }}
-              >
-                {createMutation.isPending ? (
+              <Button variant="outline" onClick={closeDialog}>Cancel</Button>
+              <Button disabled={saving} onClick={submitDialog} data-testid="facility-dialog-save">
+                {saving ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving…
+                    Saving
                   </>
+                ) : dialogMode === "edit" ? (
+                  "Save changes"
                 ) : (
                   "Create facility"
                 )}
@@ -468,39 +536,48 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
         </Dialog>
       )}
 
-      {viewMode === "map" ? (
+      <AlertDialog open={pendingDelete !== null} onOpenChange={(open) => (open ? null : setPendingDelete(null))}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete facility</AlertDialogTitle>
+            <AlertDialogDescription>
+              Delete {pendingDelete?.name}? This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              data-testid="facility-delete-confirm"
+              onClick={() => {
+                if (pendingDelete) deleteMutation.mutate({ ids: [pendingDelete.id] });
+                setPendingDelete(null);
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {isLoading && viewMode !== "map" ? (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" data-testid="sites-list-loading" aria-busy="true">
+          {Array.from({ length: 6 }, (_, i) => (
+            <Skeleton key={i} className="h-40 rounded-xl" />
+          ))}
+        </div>
+      ) : viewMode === "map" ? (
         <FacilitiesMap visibleIds={visibleIds} noLocation={noLocationRows} />
       ) : viewMode === "card" ? (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3" data-testid="sites-list">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" data-testid="sites-list">
           {pageRows.map((f) => (
-            <Card key={f.id} data-testid={`facility-card-${f.id}`} onClick={() => setLocation(appPath(`/facilities/${f.id}`))} className="cursor-pointer">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base" data-testid={`facility-name-${f.id}`}>{f.name}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className={cn("border whitespace-nowrap", TYPE_BADGE[f.facilityType])}>
-                    {TYPE_BADGE_LABEL[f.facilityType]}
-                  </Badge>
-                  <Badge variant={f.isActive ? "default" : "secondary"}>
-                    {f.isActive ? "Active" : "Inactive"}
-                  </Badge>
-                </div>
-                <div className="text-muted-foreground">{f.code ?? ""}</div>
-                <div className="text-muted-foreground">{f.address ?? ""}</div>
-                <div className="text-muted-foreground">{f.contactPerson ?? ""}</div>
-                <div className="text-muted-foreground">Parent: {formatEmpty(f.parentFacilityName)}</div>
-                <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
-                  <CardQrCode
-                    idValue={String(f.id)}
-                    title={f.name}
-                    subtitle={f.code ?? `Facility #${f.id}`}
-                    encodedValue={`https://nrcseam.techivano.com/app/facilities/${f.id}`}
-                    labelSize="50x50"
-                  />
-                </div>
-              </CardContent>
-            </Card>
+            <FacilityCard
+              key={f.id}
+              facility={f}
+              qrOrigin={qrOrigin}
+              canEdit={canEditFacilities}
+              onEdit={() => openEdit(f)}
+              onDelete={() => setPendingDelete({ id: f.id, name: f.name })}
+            />
           ))}
         </div>
       ) : (
@@ -523,7 +600,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
                 <StickyHead onClick={() => sort("name")} className="w-[9rem] min-w-[9rem] md:w-auto md:min-w-[12rem] px-2 py-1.5 text-left font-medium whitespace-nowrap">Name</StickyHead>
                 <TableHead onClick={() => sort("facilityType")} className="cursor-pointer px-3 py-1.5 text-left font-medium whitespace-nowrap">Type</TableHead>
                 <TableHead onClick={() => sort("code")} className="cursor-pointer px-2 py-1.5 text-left font-medium whitespace-nowrap">Code</TableHead>
-                <TableHead onClick={() => sort("state")} className="cursor-pointer px-2 py-1.5 text-left font-medium whitespace-nowrap">State or region</TableHead>
+                <TableHead onClick={() => sort("state")} className="cursor-pointer px-2 py-1.5 text-left font-medium whitespace-nowrap">State</TableHead>
                 <TableHead className="px-2 py-1.5 text-left font-medium whitespace-nowrap">Address</TableHead>
                 <TableHead onClick={() => sort("parentFacilityName")} className="cursor-pointer px-2 py-1.5 text-left font-medium whitespace-nowrap">Parent facility</TableHead>
                 <TableHead className="px-2 py-1.5 text-left font-medium whitespace-nowrap">Contact</TableHead>
@@ -545,7 +622,11 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
                     onClick={() => setLocation(appPath(`/facilities/${f.id}`))}
                   >
                     <StickyCell className="px-2 py-1 text-muted-foreground">{rowNo}</StickyCell>
-                    <StickyCell className="px-2 py-1 w-[9rem] min-w-[9rem] md:w-auto md:min-w-[12rem] whitespace-normal font-medium" data-testid={`facility-name-${f.id}`}>{f.name}</StickyCell>
+                    <StickyCell className="px-2 py-1 w-[9rem] min-w-[9rem] md:w-auto md:min-w-[12rem] whitespace-normal font-medium" data-testid={`facility-name-${f.id}`}>
+                      <Link href={appPath(`/facilities/${f.id}`)} className="hover:underline focus-visible:underline focus-visible:outline-none" onClick={(e) => e.stopPropagation()}>
+                        {f.name}
+                      </Link>
+                    </StickyCell>
                     {/* Type sits right after the pinned columns so the badge is always reachable in full (1280 and 390). */}
                     <TableCell className="px-3 py-1 whitespace-nowrap" data-testid={`facility-type-${f.id}`}>
                       <Badge variant="outline" className={cn("border whitespace-nowrap", TYPE_BADGE[f.facilityType])}>
@@ -568,76 +649,12 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
                     </TableCell>
                     <TableCell className="px-2 pr-4 py-1" onClick={(e) => e.stopPropagation()}>
                       {canEditFacilities && (
-                        <div className="flex items-center gap-1">
-                          {editingId === f.id ? (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                disabled={updateMutation.isPending}
-                                onClick={() => {
-                                  const hierarchyError = validateHierarchyBeforeSubmit(editForm);
-                                  if (hierarchyError) return toast.error(hierarchyError);
-                                  const coordinateError = validateCoordinates(editForm);
-                                  if (coordinateError) return toast.error(coordinateError);
-                                  updateMutation.mutate({ id: f.id, ...toPayload(editForm) });
-                                }}
-                              >
-                                {updateMutation.isPending ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <Save className="h-4 w-4" />
-                                )}
-                              </Button>
-                              <Button variant="ghost" size="icon" onClick={() => setEditingId(null)}>
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </>
-                          ) : (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => {
-                                  setEditingId(f.id);
-                                  setEditForm({
-                                    code: f.code ?? "",
-                                    name: f.name,
-                                    facilityType: f.facilityType,
-                                    parentFacilityId: f.parentFacilityId ? String(f.parentFacilityId) : "",
-                                    address: f.address ?? "",
-                                    city: f.city ?? "",
-                                    state: f.state ?? "",
-                                    latitude: f.latitude ?? "",
-                                    longitude: f.longitude ?? "",
-                                    postalCode: f.postalCode ?? "",
-                                    contactPerson: f.contactPerson ?? "",
-                                    contactPhone: f.contactPhone ?? "",
-                                    contactEmail: f.contactEmail ?? "",
-                                    isActive: f.isActive,
-                                  });
-                                }}
-                              >
-                                <Edit2 className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                disabled={deleteMutation.isPending}
-                                onClick={() => {
-                                  if (!window.confirm(`Delete facility "${f.name}"?`)) return;
-                                  deleteMutation.mutate({ ids: [f.id] });
-                                }}
-                              >
-                                {deleteMutation.isPending ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <Trash2 className="h-4 w-4" />
-                                )}
-                              </Button>
-                            </>
-                          )}
-                        </div>
+                        <FacilityRowMenu
+                          name={f.name}
+                          onEdit={() => openEdit(f)}
+                          onDelete={() => setPendingDelete({ id: f.id, name: f.name })}
+                          busy={deleteMutation.isPending}
+                        />
                       )}
                     </TableCell>
                   </TableRow>
@@ -648,19 +665,9 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
         </div>
       )}
 
-      {editingId && (
-        <Card>
-          <CardHeader><CardTitle>Edit Facility</CardTitle></CardHeader>
-          <CardContent className="space-y-3">
-            <FacilityFormFields form={editForm} setForm={setEditForm} parentOptions={parentOptions} />
-          </CardContent>
-        </Card>
-      )}
-
-      {viewMode !== "map" ? (
-      <div className="flex items-center justify-between">
-        <div className="text-sm text-muted-foreground">{sorted.length} facilities</div>
-        <div className="flex items-center gap-2">
+      {viewMode !== "map" && !isLoading ? (
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Select value={pageSize} onValueChange={(v) => setPageSize(v as PageSize)}>
             <SelectTrigger className="w-[130px]"><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -697,7 +704,7 @@ function FacilityFormFields(props: {
       <div><Label>Code</Label><Input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} placeholder="ABI-BRN-001" /></div>
       <div><Label>Name *</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
       <div>
-        <Label>Facility Type *</Label>
+        <Label>Facility type *</Label>
         <Select value={form.facilityType} onValueChange={(v) => setForm({ ...form, facilityType: v as FacilityType, parentFacilityId: v === "national_headquarters" ? "" : form.parentFacilityId })}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
@@ -708,7 +715,7 @@ function FacilityFormFields(props: {
         </Select>
       </div>
       <div className={canChooseParent ? "" : "hidden"}>
-        <Label>Parent Facility *</Label>
+        <Label>Parent facility *</Label>
         <Select
           disabled={!canChooseParent}
           value={form.parentFacilityId || undefined}
@@ -722,7 +729,7 @@ function FacilityFormFields(props: {
           </SelectContent>
         </Select>
       </div>
-      <div className="md:col-span-2"><Label>Address</Label><Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></div>
+      <div className="md:col-span-2"><Label>Address</Label><Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Plot 1 Example Street, Abuja Nigeria" /></div>
       <div><Label>City</Label><Input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} /></div>
       <div><Label>State</Label><Input value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} /></div>
       <div>
@@ -741,7 +748,7 @@ function FacilityFormFields(props: {
           placeholder="-180 to 180 (optional)"
         />
       </div>
-      <div><Label>Postal Code</Label><Input value={form.postalCode} onChange={(e) => setForm({ ...form, postalCode: e.target.value })} /></div>
+      <div><Label>Postal code</Label><Input value={form.postalCode} onChange={(e) => setForm({ ...form, postalCode: e.target.value })} /></div>
       <div><Label>Contact</Label><Input value={form.contactPerson} onChange={(e) => setForm({ ...form, contactPerson: e.target.value })} /></div>
       <div><Label>Phone</Label><Input value={form.contactPhone} onChange={(e) => setForm({ ...form, contactPhone: e.target.value })} /></div>
       <div><Label>Email</Label><Input value={form.contactEmail} onChange={(e) => setForm({ ...form, contactEmail: e.target.value })} /></div>
@@ -776,5 +783,118 @@ function StickyCell(props: ComponentProps<typeof TableCell>) {
       className={cn("border-r", className)}
       {...rest}
     />
+  );
+}
+
+type FacilityRow = {
+  id: number;
+  name: string;
+  code: string | null;
+  facilityType: FacilityType;
+  isActive: boolean;
+  address: string | null;
+  state: string | null;
+  contactPerson: string | null;
+  contactPhone: string | null;
+  parentFacilityName?: string | null;
+};
+
+/** List card (IVA-146 A2 to A5): labelled rows, empty fields skipped, title link, small QR icon. */
+function FacilityCard({
+  facility: f,
+  qrOrigin,
+  canEdit,
+  onEdit,
+  onDelete,
+}: {
+  facility: FacilityRow;
+  qrOrigin: string;
+  canEdit: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const rows: Array<[string, string | null | undefined]> = [
+    ["Code", f.code],
+    ["Address", f.address],
+    ["State", f.state],
+    ["Contact", f.contactPerson],
+    ["Phone", f.contactPhone],
+    ["Parent", f.parentFacilityName],
+  ];
+  return (
+    <Card
+      data-testid={`facility-card-${f.id}`}
+      className="relative min-h-44 gap-3 p-4 transition-colors hover:bg-muted/40 focus-within:ring-2 focus-within:ring-ring"
+    >
+      <div className="flex items-start justify-between gap-2">
+        <h3 className="min-w-0 text-base font-semibold leading-6" data-testid={`facility-name-${f.id}`}>
+          <Link
+            href={appPath(`/facilities/${f.id}`)}
+            className="after:absolute after:inset-0 after:content-[''] focus-visible:outline-none"
+          >
+            {f.name}
+          </Link>
+        </h3>
+        <div className="relative z-10 flex shrink-0 items-center gap-1">
+          <CardQrCode
+            variant="icon"
+            idValue={String(f.id)}
+            title={f.name}
+            subtitle={f.code ?? `Facility #${f.id}`}
+            encodedValue={`${qrOrigin}/app/facilities/${f.id}`}
+            labelSize="50x50"
+          />
+          {canEdit ? <FacilityRowMenu name={f.name} onEdit={onEdit} onDelete={onDelete} /> : null}
+        </div>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge variant="outline" className={cn("border whitespace-nowrap", TYPE_BADGE[f.facilityType])}>
+          {TYPE_BADGE_LABEL[f.facilityType]}
+        </Badge>
+        <Badge variant={f.isActive ? "default" : "secondary"}>{f.isActive ? "Active" : "Inactive"}</Badge>
+      </div>
+      <dl className="grid grid-cols-[5rem_minmax(0,1fr)] gap-x-3 gap-y-1 text-sm">
+        {rows
+          .filter(([, value]) => value != null && String(value).trim() !== "")
+          .map(([label, value]) => (
+            <div key={label} className="contents">
+              <dt className="text-muted-foreground">{label}</dt>
+              <dd className={cn("min-w-0", label === "Address" ? "line-clamp-2" : "truncate")}>{value}</dd>
+            </div>
+          ))}
+      </dl>
+    </Card>
+  );
+}
+
+function FacilityRowMenu({
+  name,
+  onEdit,
+  onDelete,
+  busy = false,
+}: {
+  name: string;
+  onEdit: () => void;
+  onDelete: () => void;
+  busy?: boolean;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={`Actions for ${name}`} disabled={busy}>
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreHorizontal className="h-4 w-4" />}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onSelect={onEdit}>
+          <Edit2 className="mr-2 h-4 w-4" />
+          Edit
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={onDelete} className="text-destructive focus:text-destructive">
+          <Trash2 className="mr-2 h-4 w-4" />
+          Delete
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

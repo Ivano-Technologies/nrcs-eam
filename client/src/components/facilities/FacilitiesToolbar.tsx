@@ -123,7 +123,7 @@ export function FacilitiesToolbar(p: FacilitiesToolbarProps) {
   };
 
   const search = (
-    <div className={cn("relative", p.compact ? "min-w-0 flex-1" : "w-[288px] shrink-0")}>
+    <div className={cn("relative", p.compact ? "min-w-0 flex-1" : "w-64 shrink-0")}>
       <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
       <Input
         type="search"
@@ -151,7 +151,7 @@ export function FacilitiesToolbar(p: FacilitiesToolbarProps) {
           variant="outline"
           size="icon"
           className="h-9 w-9 shrink-0"
-          aria-label="More actions: Export to Excel, Template, Import"
+          aria-label="More actions"
           data-testid="facilities-more"
         >
           <MoreHorizontal className="h-4 w-4" aria-hidden />
@@ -164,7 +164,7 @@ export function FacilitiesToolbar(p: FacilitiesToolbarProps) {
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={p.onTemplate} data-testid="facilities-template">
           <Download className="mr-2 h-4 w-4" aria-hidden />
-          Template
+          Download import template
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={p.onImport} disabled={p.importBusy} data-testid="facilities-import">
           <Upload className="mr-2 h-4 w-4" aria-hidden />
@@ -219,13 +219,15 @@ export function FacilitiesToolbar(p: FacilitiesToolbarProps) {
     );
   }
 
+  // Desktop: one row at 1280 with the full sidebar (A1). Below xl the toggle is icon only and the
+  // count sits under the toolbar; from xl it joins the right cluster.
   return (
-    <div className={cn("flex flex-wrap items-center gap-2", p.className)} data-testid="facilities-toolbar">
+    <div className={cn("flex flex-wrap items-center gap-x-2 gap-y-1", p.className)} data-testid="facilities-toolbar">
       {search}
       <FilterSelects {...selects} />
-      <div className="ml-auto flex items-center gap-2">
-        {count}
-        <ViewToggle value={p.view} onChange={p.onView} showMap />
+      <div className="order-last w-full xl:order-none xl:ml-auto xl:w-auto">{count}</div>
+      <div className="ml-auto flex items-center gap-2 xl:ml-0">
+        <ViewToggle value={p.view} onChange={p.onView} showMap compactBelowXl />
         {more}
       </div>
     </div>

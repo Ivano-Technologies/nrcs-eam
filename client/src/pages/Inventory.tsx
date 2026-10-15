@@ -118,6 +118,9 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
     if (st && (STATUS_OPTIONS as readonly string[]).includes(st)) {
       setStatus(st);
     }
+    // `?siteId=` from a warehouse's Inventory count tile preselects that warehouse.
+    const site = params.get("siteId");
+    if (site && Number.isFinite(Number(site))) setWarehouseId(site);
   }, [urlSearch]);
   const [overviewViewMode, setOverviewViewMode] = useViewMode("inventory", "table");
   const [catalogueViewMode, setCatalogueViewMode] = useViewMode("inventory_catalogue");

@@ -77,10 +77,10 @@ describe("Facilities toolbar", () => {
 
   it("the More actions menu has a label and runs Export, Template and Import", async () => {
     const p = setup();
-    expect(screen.getByTestId("facilities-more")).toHaveAttribute("aria-label", "More actions: Export to Excel, Template, Import");
+    expect(screen.getByTestId("facilities-more")).toHaveAttribute("aria-label", "More actions");
     for (const [name, fn] of [
       ["Export to Excel", p.onExport],
-      ["Template", p.onTemplate],
+      ["Download import template", p.onTemplate],
       ["Import", p.onImport],
     ] as const) {
       const menu = openMenu();
