@@ -700,7 +700,7 @@ function FacilityFormFields(props: {
       <div>
         <Label>Facility type *</Label>
         <Select value={form.facilityType} onValueChange={(v) => setForm({ ...form, facilityType: v as FacilityType, parentFacilityId: v === "national_headquarters" ? "" : form.parentFacilityId })}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
           <SelectContent>
             {FACILITY_TYPE_VALUES.map((t) => (
               <SelectItem key={t} value={t}>{FACILITY_TYPE_LABELS[t]} ({FACILITY_TYPE_EXAMPLES[t]})</SelectItem>
@@ -715,7 +715,7 @@ function FacilityFormFields(props: {
           value={form.parentFacilityId || undefined}
           onValueChange={(v) => setForm({ ...form, parentFacilityId: v })}
         >
-          <SelectTrigger><SelectValue placeholder="Select parent facility" /></SelectTrigger>
+          <SelectTrigger className="w-full"><SelectValue placeholder="Select parent facility" /></SelectTrigger>
           <SelectContent>
             {filteredParents.map((p) => (
               <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
@@ -749,7 +749,7 @@ function FacilityFormFields(props: {
       <div>
         <Label>Status</Label>
         <Select value={form.isActive ? "active" : "inactive"} onValueChange={(v) => setForm({ ...form, isActive: v === "active" })}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="active">Active</SelectItem>
             <SelectItem value="inactive">Inactive</SelectItem>
