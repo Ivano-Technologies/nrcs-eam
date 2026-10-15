@@ -562,7 +562,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
       ) : viewMode === "map" ? (
         <FacilitiesMap visibleIds={visibleIds} noLocation={noLocationRows} />
       ) : viewMode === "card" ? (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" data-testid="sites-list">
+        <div className="grid items-start gap-4 md:grid-cols-2 xl:grid-cols-3" data-testid="sites-list">
           {pageRows.map((f) => (
             <FacilityCard
               key={f.id}
@@ -660,10 +660,11 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
       )}
 
       {viewMode !== "map" && !isLoading ? (
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="flex items-center justify-end">
+        {/* One line on phones too: rows, Previous, page count and Next never wrap. */}
+        <div className="flex flex-nowrap items-center gap-2" data-testid="facilities-pagination">
           <Select value={pageSize} onValueChange={(v) => setPageSize(v as PageSize)}>
-            <SelectTrigger className="w-[130px]"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-9 w-[104px] sm:w-[130px]" aria-label="Rows per page"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="25">25 rows</SelectItem>
               <SelectItem value="50">50 rows</SelectItem>
@@ -671,9 +672,9 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
               <SelectItem value="all">All rows</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>Previous</Button>
-          <span className="text-sm">Page {page} of {totalPages}</span>
-          <Button variant="outline" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>Next</Button>
+          <Button variant="outline" className="h-9 px-3" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>Previous</Button>
+          <span className="whitespace-nowrap text-sm tabular-nums">Page {page} of {totalPages}</span>
+          <Button variant="outline" className="h-9 px-3" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>Next</Button>
         </div>
       </div>
       ) : null}
@@ -818,7 +819,7 @@ function FacilityCard({
   return (
     <Card
       data-testid={`facility-card-${f.id}`}
-      className="relative min-h-44 gap-3 p-4 transition-colors hover:bg-muted/40 focus-within:ring-2 focus-within:ring-ring"
+      className="relative gap-3 p-4 transition-colors hover:bg-muted/40 focus-within:ring-2 focus-within:ring-ring"
     >
       <div className="flex items-start justify-between gap-2">
         <h3 className="min-w-0 text-base font-semibold leading-6" data-testid={`facility-name-${f.id}`}>

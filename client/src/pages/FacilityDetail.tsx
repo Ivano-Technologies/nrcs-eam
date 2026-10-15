@@ -169,9 +169,12 @@ export default function FacilityDetail() {
         title={
           <span className="flex flex-wrap items-center gap-2">
             {facility.name}
-            <Badge variant="outline" className="text-sm font-medium">
-              {FACILITY_TYPE_LABELS[facility.facilityType]}
-            </Badge>
+            {/* Skip the type badge when the name already says it (e.g. "National Headquarters"). */}
+            {facility.name.toLowerCase().includes(FACILITY_TYPE_LABELS[facility.facilityType].toLowerCase()) ? null : (
+              <Badge variant="outline" className="text-sm font-medium">
+                {FACILITY_TYPE_LABELS[facility.facilityType]}
+              </Badge>
+            )}
           </span>
         }
         subtitle={FACILITY_TYPE_DESCRIPTIONS[facility.facilityType]}

@@ -99,7 +99,7 @@ export function FacilitiesToolbar(p: FacilitiesToolbarProps) {
         type="search"
         value={p.search}
         onChange={(e) => p.onSearch(e.target.value)}
-        placeholder="Search name, code or address"
+        placeholder="Search facilities"
         aria-label="Search facilities"
         className={cn("pl-9", p.compact ? "h-11" : "h-9")}
         data-testid="facilities-search"

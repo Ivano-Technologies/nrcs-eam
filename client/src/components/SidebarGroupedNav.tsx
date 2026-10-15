@@ -269,7 +269,9 @@ export function SidebarGroupedNav({
             </Tooltip>
           </TooltipProvider>
         </SidebarMenuItem>
-        <CollapsibleContent className="overflow-hidden transition-[height] duration-300 ease-in-out data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0">
+        {/* No enter or exit animation on the sub-items: the fade could leave the opened group as an
+            empty gap. */}
+        <CollapsibleContent className="overflow-hidden">
           <SidebarMenu className="ml-1 border-l border-sidebar-border pl-1">
             {g.items.map((item, idx) => renderItemButton(item, idx))}
           </SidebarMenu>
