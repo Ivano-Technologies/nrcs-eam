@@ -59,7 +59,6 @@ const DEFAULT_WIDGETS = {
 
   requisitionsTable: true,
 
-  fleetHealth: true,
 
 } as const;
 
@@ -99,7 +98,6 @@ export default function Home() {
 
   const fixedLayout = rawRole === "staff" || rawRole === "field";
 
-  const isManagerOrAdmin = rawRole === "manager" || rawRole === "admin";
 
   const stockMovementWeeks = period === "Today" ? 4 : 12;
 
@@ -582,33 +580,13 @@ export default function Home() {
           tier2Loading ? <Skeleton className="h-48 rounded-xl" /> : <RequisitionsTable />
         ) : null}
 
-        {isManagerOrAdmin && showWidgets("fleetHealth") ? (
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <ShieldCheck className="h-5 w-5" />
-                  Fleet health
-                </CardTitle>
-                <CardDescription>
-                  Open the fleet health report for book value, end-of-life assets, and overdue work orders.
-                  It is not loaded on this page so the asset register stays responsive.
-                </CardDescription>
-              </div>
-              <Link href="/app/fleet-health" className="text-sm text-primary underline">
-                View report
-              </Link>
-            </CardHeader>
-          </Card>
-        ) : null}
-
         {(effectiveRole === "Manager" || effectiveRole === "Admin") && (tier3Loading || branchFailed || (branchPerf?.length ?? 0) > 0) ? (
           tier3Loading ? (
             <Skeleton className="h-56 rounded-xl" />
           ) : branchFailed ? (
           <Card>
             <CardHeader>
-              <CardTitle>Branch Performance</CardTitle>
+              <CardTitle>Branch performance</CardTitle>
               <CardDescription>Stock readiness by branch (warehouse stock cards)</CardDescription>
             </CardHeader>
             <CardContent>
@@ -619,12 +597,14 @@ export default function Home() {
 
           <Card>
 
-            <CardHeader>
-
-              <CardTitle>Branch Performance</CardTitle>
-
-              <CardDescription>Stock readiness by branch (warehouse stock cards)</CardDescription>
-
+            <CardHeader className="flex flex-row items-start justify-between gap-2">
+              <div>
+                <CardTitle>Branch performance</CardTitle>
+                <CardDescription>Stock readiness by branch (warehouse stock cards)</CardDescription>
+              </div>
+              <Link href="/app/reports/branch-scorecards" className="text-sm text-primary underline-offset-4 hover:underline">
+                View scorecards
+              </Link>
             </CardHeader>
 
             <CardContent>

@@ -1,11 +1,10 @@
 /**
- * One toolbar shared by the Facilities Table, Card and Map views: search, type, state and status
- * selects, the "N facilities · M on the map" count, the view toggle and a "More actions" menu.
+ * One toolbar shared by the Facilities Table, Card and Map views: search, state and status selects
+ * (the facility type comes from the sidebar route), the "N facilities · M on the map" count, the view toggle and a "More actions" menu.
  * Phones get a Filters button that opens the three selects in a bottom sheet.
  */
 import { useState } from "react";
 import { Download, ListFilter, MoreHorizontal, Search, Upload } from "lucide-react";
-import { FACILITY_TYPE_LABELS, FACILITY_TYPE_VALUES, type FacilityType } from "@shared/facilities";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -22,21 +21,9 @@ import type { FacilityCounts, FacilityStatusFilter } from "@/lib/facilitiesList"
 
 export type FacilitiesView = "table" | "card" | "map";
 
-/** Plural labels for the type select (National HQ matches the sidebar). */
-const TYPE_OPTION_LABEL: Record<FacilityType, string> = {
-  national_headquarters: "National HQ",
-  branch: "Branches",
-  division: "Divisions",
-  clinic: "Clinics",
-  warehouse: "Warehouses",
-};
-const TYPE_ORDER: FacilityType[] = ["national_headquarters", "branch", "division", "clinic", "warehouse"];
-
 export type FacilitiesToolbarProps = {
   search: string;
   onSearch: (q: string) => void;
-  type: FacilityType | "all";
-  onType: (type: FacilityType | "all") => void;
   state: string;
   states: string[];
   onState: (state: string) => void;
@@ -55,33 +42,18 @@ export type FacilitiesToolbarProps = {
 };
 
 function FilterSelects({
-  type,
-  onType,
   state,
   states,
   onState,
   status,
   onStatus,
   stacked,
-}: Pick<FacilitiesToolbarProps, "type" | "onType" | "state" | "states" | "onState" | "status" | "onStatus"> & {
+}: Pick<FacilitiesToolbarProps, "state" | "states" | "onState" | "status" | "onStatus"> & {
   stacked?: boolean;
 }) {
   const trigger = (w: string) => cn("h-9", stacked ? "w-full" : w);
   return (
     <>
-      <Select value={type} onValueChange={(v) => onType(v as FacilityType | "all")}>
-        <SelectTrigger className={trigger("w-[112px]")} aria-label="Facility type" data-testid="facilities-type-select">
-          <SelectValue placeholder="All types" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All types</SelectItem>
-          {TYPE_ORDER.filter((t) => FACILITY_TYPE_VALUES.includes(t)).map((t) => (
-            <SelectItem key={t} value={t}>
-              {TYPE_OPTION_LABEL[t] ?? FACILITY_TYPE_LABELS[t]}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
       <Select value={state} onValueChange={onState}>
         <SelectTrigger className={trigger("w-[116px]")} aria-label="State" data-testid="facilities-state-select">
           <SelectValue placeholder="All states" />
@@ -111,10 +83,8 @@ function FilterSelects({
 
 export function FacilitiesToolbar(p: FacilitiesToolbarProps) {
   const [sheetOpen, setSheetOpen] = useState(false);
-  const activeFilters = (p.type !== "all" ? 1 : 0) + (p.state !== "all" ? 1 : 0) + (p.status !== "all" ? 1 : 0);
+  const activeFilters = (p.state !== "all" ? 1 : 0) + (p.status !== "all" ? 1 : 0);
   const selects = {
-    type: p.type,
-    onType: p.onType,
     state: p.state,
     states: p.states,
     onState: p.onState,
@@ -123,13 +93,13 @@ export function FacilitiesToolbar(p: FacilitiesToolbarProps) {
   };
 
   const search = (
-    <div className={cn("relative", p.compact ? "min-w-0 flex-1" : "w-[288px] shrink-0")}>
+    <div className={cn("relative", p.compact ? "min-w-0 flex-1" : "w-64 shrink-0")}>
       <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
       <Input
         type="search"
         value={p.search}
         onChange={(e) => p.onSearch(e.target.value)}
-        placeholder="Search name, code or address"
+        placeholder="Search facilities"
         aria-label="Search facilities"
         className={cn("pl-9", p.compact ? "h-11" : "h-9")}
         data-testid="facilities-search"
@@ -151,7 +121,7 @@ export function FacilitiesToolbar(p: FacilitiesToolbarProps) {
           variant="outline"
           size="icon"
           className="h-9 w-9 shrink-0"
-          aria-label="More actions: Export to Excel, Template, Import"
+          aria-label="More actions"
           data-testid="facilities-more"
         >
           <MoreHorizontal className="h-4 w-4" aria-hidden />
@@ -164,7 +134,7 @@ export function FacilitiesToolbar(p: FacilitiesToolbarProps) {
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={p.onTemplate} data-testid="facilities-template">
           <Download className="mr-2 h-4 w-4" aria-hidden />
-          Template
+          Download import template
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={p.onImport} disabled={p.importBusy} data-testid="facilities-import">
           <Upload className="mr-2 h-4 w-4" aria-hidden />
@@ -204,7 +174,7 @@ export function FacilitiesToolbar(p: FacilitiesToolbarProps) {
           <SheetContent side="bottom" className="gap-0 rounded-t-2xl pb-[max(1rem,env(safe-area-inset-bottom))]" data-testid="facilities-filters-sheet">
             <SheetHeader className="pb-2">
               <SheetTitle>Filters</SheetTitle>
-              <SheetDescription>Narrow the list and the map by type, state and status.</SheetDescription>
+              <SheetDescription>Narrow the list and the map by state and status.</SheetDescription>
             </SheetHeader>
             <div className="flex flex-col gap-3 px-4">
               <FilterSelects {...selects} stacked />
@@ -219,13 +189,15 @@ export function FacilitiesToolbar(p: FacilitiesToolbarProps) {
     );
   }
 
+  // Desktop: one row at 1280 with the full sidebar (A1). Below 2xl the toggle is icon only and the
+  // count sits under the toolbar; from 2xl it joins the right cluster.
   return (
-    <div className={cn("flex flex-wrap items-center gap-2", p.className)} data-testid="facilities-toolbar">
+    <div className={cn("flex flex-wrap items-center gap-x-2 gap-y-1", p.className)} data-testid="facilities-toolbar">
       {search}
       <FilterSelects {...selects} />
-      <div className="ml-auto flex items-center gap-2">
-        {count}
-        <ViewToggle value={p.view} onChange={p.onView} showMap />
+      <div className="order-last w-full 2xl:order-none 2xl:ml-auto 2xl:w-auto">{count}</div>
+      <div className="ml-auto flex items-center gap-2 2xl:ml-0">
+        <ViewToggle value={p.view} onChange={p.onView} showMap compactBelow2xl />
         {more}
       </div>
     </div>

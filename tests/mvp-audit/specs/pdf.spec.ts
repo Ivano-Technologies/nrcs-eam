@@ -26,7 +26,7 @@ test.describe("Reports export (2e)", () => {
       await expect(page.getByRole("heading", { name: /Reports & Analytics/i })).toBeVisible();
 
       await page.getByRole("button", { name: accordionName }).click();
-      await page.getByTestId(`report-card-${reportId}`).getByRole("button", { name: "Open" }).click();
+      await page.getByTestId(`report-card-${reportId}`).click();
 
       await expect(page.getByText("Chart + table view for selected report")).toBeVisible({
         timeout: 60_000,

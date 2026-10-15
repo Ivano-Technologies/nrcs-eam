@@ -30,12 +30,12 @@ test.describe("Inventory reports (live)", () => {
     await page.locator("input[type='date']").nth(0).fill("2026-01-01");
     await page.locator("input[type='date']").nth(1).fill("2026-12-31");
     await page.getByTestId("report-category-expiry").getByRole("button").first().click();
-    await page.getByTestId("report-card-vedAnalysis").getByRole("button", { name: "Open" }).click();
+    await page.getByTestId("report-card-vedAnalysis").click();
     await expect(page.getByTestId("ved-chart")).toBeVisible();
     await page.getByTestId("report-category-movement").getByRole("button").first().click();
-    await page.getByTestId("report-card-abcAnalysis").getByRole("button", { name: "Open" }).click();
+    await page.getByTestId("report-card-abcAnalysis").click();
     await expect(page.getByTestId("abc-chart")).toBeVisible();
-    await page.getByTestId("report-card-fnsAnalysis").getByRole("button", { name: "Open" }).click();
+    await page.getByTestId("report-card-fnsAnalysis").click();
     await expect(page.getByTestId("fns-chart")).toBeVisible();
   });
 

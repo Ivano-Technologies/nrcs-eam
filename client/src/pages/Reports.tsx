@@ -311,13 +311,8 @@ export default function Reports() {
                 onSelect: () => downloadCsv(tableRows as any[], `report-${selectedReport}.csv`),
               },
               {
-                id: "excel",
-                label: "Export to Excel",
-                onSelect: () => downloadCsv(tableRows as any[], `report-${selectedReport}.xlsx.csv`),
-              },
-              {
                 id: "pdf",
-                label: "Export PDF",
+                label: "Print",
                 onSelect: () => window.print(),
               },
             ]}
@@ -337,20 +332,18 @@ export default function Reports() {
             <AccordionContent>
               <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                 {categoryGroup.reports.map((r) => (
-                  <Card
+                  <button
                     key={r.id}
+                    type="button"
                     data-testid={`report-card-${r.id}`}
-                    className={selectedReport === r.id ? "border-primary" : ""}
+                    aria-pressed={selectedReport === r.id}
+                    onClick={() => setSelectedReport(r.id)}
+                    className={`rounded-xl border bg-card p-4 text-left text-base font-semibold transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                      selectedReport === r.id ? "border-primary" : ""
+                    }`}
                   >
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base">{r.label}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <Button variant="secondary" size="sm" onClick={() => setSelectedReport(r.id)}>
-                        Open
-                      </Button>
-                    </CardContent>
-                  </Card>
+                    {r.label}
+                  </button>
                 ))}
               </div>
             </AccordionContent>
@@ -360,8 +353,9 @@ export default function Reports() {
 
       <Card>
         <CardHeader>
-          <CardTitle>{selectedReport}</CardTitle>
-          <CardDescription>Chart + table view for selected report</CardDescription>
+          <CardTitle>
+            {categories.flatMap((c) => c.reports).find((r) => r.id === selectedReport)?.label ?? selectedReport}
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {selectedReport === "vedAnalysis" && (

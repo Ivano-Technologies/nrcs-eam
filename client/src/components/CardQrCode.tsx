@@ -3,6 +3,7 @@ import QRCode from "react-qr-code";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { QRLabel } from "@/components/QRLabel";
+import { QrCode } from "lucide-react";
 
 type CardQrCodeProps = {
   idValue: string;
@@ -10,6 +11,8 @@ type CardQrCodeProps = {
   subtitle: string;
   encodedValue: string;
   labelSize?: "50x50" | "100x50";
+  /** "icon": small labelled QR icon trigger (list cards). "preview": the 64px live QR (default). */
+  variant?: "icon" | "preview";
 };
 
 export function CardQrCode({
@@ -18,6 +21,7 @@ export function CardQrCode({
   subtitle,
   encodedValue,
   labelSize = "100x50",
+  variant = "preview",
 }: CardQrCodeProps) {
   const printId = useId().replace(/:/g, "-");
   const svgWrapRef = useRef<HTMLDivElement | null>(null);
@@ -76,14 +80,27 @@ export function CardQrCode({
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <button
-          type="button"
-          data-testid={`card-qr-${idValue}`}
-          className="rounded border bg-background/95 p-1 shadow-sm hover:bg-muted"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <QRCode value={encodedValue} size={64} />
-        </button>
+        {variant === "icon" ? (
+          <button
+            type="button"
+            data-testid={`card-qr-${idValue}`}
+            aria-label={`Show QR code for ${title}`}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <QrCode className="h-4 w-4" aria-hidden />
+          </button>
+        ) : (
+          <button
+            type="button"
+            data-testid={`card-qr-${idValue}`}
+            aria-label={`Show QR code for ${title}`}
+            className="rounded border bg-background/95 p-1 shadow-sm hover:bg-muted"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <QRCode value={encodedValue} size={64} />
+          </button>
+        )}
       </DialogTrigger>
       <DialogContent
         data-testid={`qr-modal-${idValue}`}
