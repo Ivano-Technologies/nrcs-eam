@@ -29,6 +29,8 @@ describe("Sidebar brand", () => {
     unmount();
     wrap(<SidebarBrand rail />);
     expect(screen.getByTestId("sidebar-logo-collapsed").className).toContain("h-10 w-10");
+    // Square 40x40 in the rail: preflight img max-width must not squeeze it.
+    expect(screen.getByTestId("sidebar-logo-collapsed").className).toContain("max-w-none");
   });
 });
 

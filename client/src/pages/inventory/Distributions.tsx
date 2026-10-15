@@ -12,13 +12,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ViewToggle } from "@/components/ViewToggle";
-import { useMobileDefaultViewMode } from "@/hooks/useMobileDefaultViewMode";
+import { useViewMode } from "@/hooks/useViewMode";
 import { toast } from "sonner";
 import { downloadBase64File } from "@/lib/download";
 import { Loader2 } from "lucide-react";
 
 export default function Distributions({ embedInShell = false }: { embedInShell?: boolean } = {}) {
-  const [viewMode, setViewMode] = useMobileDefaultViewMode("viewMode_inventory_distributions");
+  const [viewMode, setViewMode] = useViewMode("inventory_distributions");
   const [open, setOpen] = useState(false);
   const [incident, setIncident] = useState("");
   const [location, setLocation] = useState("");

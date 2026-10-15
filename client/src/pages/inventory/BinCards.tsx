@@ -4,7 +4,7 @@ import { ViewToggle } from "@/components/ViewToggle";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useMobileDefaultViewMode } from "@/hooks/useMobileDefaultViewMode";
+import { useViewMode } from "@/hooks/useViewMode";
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
 import { useLocation } from "wouter";
@@ -12,7 +12,7 @@ import { useLocation } from "wouter";
 type Props = { embedInShell?: boolean };
 
 export default function BinCards({ embedInShell = false }: Props = {}) {
-  const [viewMode, setViewMode] = useMobileDefaultViewMode("viewMode_bin_cards");
+  const [viewMode, setViewMode] = useViewMode("bin_cards");
   const [search, setSearch] = useState("");
   const [, setLocation] = useLocation();
   const cards = trpc.inventoryV2.binCards.list.useQuery();

@@ -1,9 +1,18 @@
-import { useEffect, useMemo, useState, type ComponentProps } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState, type ComponentProps } from "react";
 import { useFullBleed } from "@/lib/fullBleed";
 import { formatEmpty } from "@/lib/format";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import type { FacilitiesSegment } from "@/lib/facilityRoutes";
-import { parseFacilityTypeFromSearch, segmentToListFilter, typeToSegment } from "@/lib/facilityRoutes";
+import {
+  FACILITIES_VIEW_NAME,
+  FACILITIES_VIEWS,
+  isFacilitiesMapSearch,
+  parseFacilityTypeFromSearch,
+  segmentToListFilter,
+  typeToSegment,
+  withFacilitiesView,
+} from "@/lib/facilityRoutes";
+import { readSavedViewMode, saveViewMode, useDropLegacyViewMode } from "@/hooks/useViewMode";
 import { trpc } from "@/lib/trpc";
 import PageLoader from "@/components/ui/PageLoader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -129,16 +138,36 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
   const { canEditFacilities } = usePermissions();
   const lockedFacilityType = segmentToListFilter(segment);
   const isMobile = useIsMobile();
-  const [storedViewMode, setStoredViewMode] = useState<"table" | "card">(() => {
-    if (typeof window === "undefined") return "table";
-    return window.localStorage.getItem("viewMode_facilities") === "card" ? "card" : "table";
-  });
-  const [viewOverride, setViewOverride] = useState<FacilitiesViewMode | null>(null);
-  const viewMode: FacilitiesViewMode = viewOverride ?? (isMobile ? "card" : storedViewMode);
+  // View: Map lives in the URL (?view=map) so the layout folds the sidebar from the route; Table
+  // and Card come from the saved choice (Card by default). The choice, Map included, is saved only
+  // on a toggle; a saved Map reopens as ?view=map on desktop and tablet.
+  const urlSearch = useSearch();
+  const urlMap = isFacilitiesMapSearch(urlSearch);
+  const [savedView, setSavedView] = useState<FacilitiesViewMode | null>(() =>
+    readSavedViewMode<FacilitiesViewMode>(FACILITIES_VIEW_NAME, FACILITIES_VIEWS)
+  );
+  const [listOverride, setListOverride] = useState<"table" | "card" | null>(null);
+  useDropLegacyViewMode(FACILITIES_VIEW_NAME);
+  const listView: "table" | "card" = listOverride ?? (isMobile ? "card" : savedView === "table" ? "table" : "card");
+  const urlHasView = new URLSearchParams(urlSearch).has("view");
+  const restoreMap = !urlHasView && !isMobile && listOverride == null && savedView === "map";
+  const viewMode: FacilitiesViewMode = urlMap || restoreMap ? "map" : listView;
+  useLayoutEffect(() => {
+    if (restoreMap) setLocation(withFacilitiesView(location, urlSearch, "map"), { replace: true });
+  }, [restoreMap, location, urlSearch, setLocation]);
+  // The layout already folds from the URL (routeWantsFullBleed); this keeps the view opt in explicit.
   useFullBleed(viewMode === "map");
   const setViewMode = (mode: FacilitiesViewMode) => {
-    setViewOverride(mode);
-    if (mode === "table" || mode === "card") setStoredViewMode(mode);
+    setSavedView(mode);
+    saveViewMode(FACILITIES_VIEW_NAME, mode);
+    // Replace, not push: switching views never adds a Back step.
+    if (mode === "map") {
+      setListOverride(null);
+      setLocation(withFacilitiesView(location, urlSearch, "map"), { replace: true });
+      return;
+    }
+    setListOverride(mode);
+    if (urlMap) setLocation(withFacilitiesView(location, urlSearch, null), { replace: true });
   };
   const [statusFilter, setStatusFilter] = useState<FacilityStatusFilter>("all");
   const [stateFilter, setStateFilter] = useState<string>("all");
@@ -159,8 +188,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
   // The type select drives the route (/facilities/<segment>), so links and the sidebar stay in step.
   const effectiveTypeFilter: FacilityType | "all" = lockedFacilityType ?? "all";
   const onTypeChange = (type: FacilityType | "all") => {
-    const search = typeof window !== "undefined" ? window.location.search : "";
-    setLocation(appPath(`/facilities/${typeToSegment(type)}`) + search);
+    setLocation(appPath(`/facilities/${typeToSegment(type)}`) + (urlSearch ? `?${urlSearch}` : ""));
   };
 
   const facilities = useMemo(() => {
@@ -287,12 +315,6 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
   useEffect(() => {
     if (page > totalPages) setPage(totalPages);
   }, [page, totalPages]);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem("viewMode_facilities", storedViewMode);
-    }
-  }, [storedViewMode]);
 
   const sort = (k: SortKey) => {
     if (sortKey === k) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -451,9 +473,9 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
       ) : viewMode === "card" ? (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3" data-testid="sites-list">
           {pageRows.map((f) => (
-            <Card key={f.id} onClick={() => setLocation(appPath(`/facilities/${f.id}`))} className="cursor-pointer">
+            <Card key={f.id} data-testid={`facility-card-${f.id}`} onClick={() => setLocation(appPath(`/facilities/${f.id}`))} className="cursor-pointer">
               <CardHeader className="pb-2">
-                <CardTitle className="text-base">{f.name}</CardTitle>
+                <CardTitle className="text-base" data-testid={`facility-name-${f.id}`}>{f.name}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
                 <div className="flex items-center gap-2">

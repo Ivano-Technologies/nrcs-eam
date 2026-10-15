@@ -20,7 +20,7 @@ import { useIsMobile } from "@/hooks/useMobile";
 import { appPath } from "@/lib/routes";
 import { LogOut, Settings, Search, User } from "lucide-react";
 import { CSSProperties, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
@@ -63,7 +63,8 @@ export default function DashboardLayout({
   const { active: viewFullBleed, registry } = useFullBleedRegistry();
   // Route driven fold: decided in the same render as the navigation, before the page chunk loads.
   const [layoutLocation] = useLocation();
-  const fullBleed = viewFullBleed || routeWantsFullBleed(layoutLocation);
+  const layoutSearch = useSearch();
+  const fullBleed = viewFullBleed || routeWantsFullBleed(layoutLocation, layoutSearch);
   const isMobile = useIsMobile();
   const updatePrefs = trpc.userPreferences.update.useMutation();
   const { mutate: mutatePrefs } = updatePrefs;
