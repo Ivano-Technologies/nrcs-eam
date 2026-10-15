@@ -562,7 +562,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
       ) : viewMode === "map" ? (
         <FacilitiesMap visibleIds={visibleIds} noLocation={noLocationRows} />
       ) : viewMode === "card" ? (
-        <div className="grid items-start gap-4 md:grid-cols-2 xl:grid-cols-3" data-testid="sites-list">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" data-testid="sites-list">
           {pageRows.map((f) => (
             <FacilityCard
               key={f.id}
@@ -819,7 +819,7 @@ function FacilityCard({
   return (
     <Card
       data-testid={`facility-card-${f.id}`}
-      className="relative gap-3 p-4 transition-colors hover:bg-muted/40 focus-within:ring-2 focus-within:ring-ring"
+      className="relative flex h-full flex-col gap-3 p-4 transition-colors hover:bg-muted/40 focus-within:ring-2 focus-within:ring-ring"
     >
       <div className="flex items-start justify-between gap-2">
         <h3 className="min-w-0 text-base font-semibold leading-6" data-testid={`facility-name-${f.id}`}>
