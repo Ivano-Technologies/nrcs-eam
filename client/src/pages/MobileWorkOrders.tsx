@@ -1,3 +1,4 @@
+import { formatEnumLabel } from "@/lib/format";
 import { Wrench } from "lucide-react";
 import { useState } from "react";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -109,7 +110,7 @@ export default function MobileWorkOrders() {
               onClick={() => setStatusFilter(status)}
               className="whitespace-nowrap"
             >
-              {status.replace("_", " ").toUpperCase()}
+              {formatEnumLabel(status)}
             </Button>
           ))}
         </div>
@@ -144,10 +145,10 @@ export default function MobileWorkOrders() {
 
                 <div className="flex flex-wrap gap-2 mb-3">
                   <Badge className={getStatusColor(wo.status)}>
-                    {wo.status.replace("_", " ")}
+                    {formatEnumLabel(wo.status)}
                   </Badge>
                   <Badge className={getPriorityColor(wo.priority)} variant="outline">
-                    {wo.priority}
+                    {formatEnumLabel(wo.priority)}
                   </Badge>
                 </div>
 

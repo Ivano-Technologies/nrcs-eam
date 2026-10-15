@@ -71,7 +71,7 @@ describe("validateGrnFinalize", () => {
 
   it("rejects finalized GRN", async () => {
     await expect(validateGrnFinalize(mockDb, ctx("finalized", [lineWithCtn]))).rejects.toThrow(
-      "not in a finalizable state"
+      "not in a finalisable state"
     );
   });
 

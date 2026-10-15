@@ -141,7 +141,7 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
               <SelectContent>
                 <SelectItem value="all">All statuses</SelectItem>
                 {["draft", "submitted", "branch_approved", "hq_approved", "fulfilled", "rejected", "cancelled"].map((s) => (
-                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                  <SelectItem key={s} value={s}>{formatEnumLabel(s)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -218,7 +218,7 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
                   <td className="px-2 py-2">
                     <Badge data-testid="req-priority-badge" data-priority={row.priority ?? "routine"} variant={priorityVariant(row.priority ?? undefined) as any}>{row.priority}</Badge>
                   </td>
-                  <td className="px-2 py-2">{row.status}</td>
+                  <td className="px-2 py-2">{formatEnumLabel(row.status)}</td>
                   <td className="px-2 py-2">{row.requestingFacility}</td>
                   <td className="px-2 py-2">{Array.isArray(row.items) ? row.items.length : 0}</td>
                   <td className="px-2 py-2 space-x-2">

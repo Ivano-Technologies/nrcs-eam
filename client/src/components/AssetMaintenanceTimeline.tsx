@@ -1,5 +1,5 @@
 import { trpc } from "@/lib/trpc";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, formatEnumLabel } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Wrench, AlertCircle, CheckCircle, Loader2 } from "lucide-react";
@@ -99,7 +99,7 @@ export function AssetMaintenanceTimeline({ assetId }: AssetMaintenanceTimelinePr
                       </p>
                     </div>
                     <Badge className={getStatusColor(event.status)}>
-                      {event.status}
+                      {formatEnumLabel(event.status)}
                     </Badge>
                   </div>
                 </div>

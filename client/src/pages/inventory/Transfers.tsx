@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatEnumLabel } from "@/lib/format";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -210,7 +210,7 @@ export default function Transfers({ embedInShell = false }: { embedInShell?: boo
               return (
                 <tr key={`${transfer.source}-${transfer.id}`} data-testid={`transfer-row-${transfer.documentNumber}`} className="border-b">
                   <td className="px-2 py-2 font-mono">{transfer.documentNumber}</td>
-                  <td className="px-2 py-2">{transfer.status}</td>
+                  <td className="px-2 py-2">{formatEnumLabel(transfer.status)}</td>
                   <td className="px-2 py-2">{transfer.fromWarehouseId ?? ""}</td>
                   <td className="px-2 py-2">{transfer.toWarehouseId ?? ""}</td>
                   <td className="px-2 py-2 space-x-2">

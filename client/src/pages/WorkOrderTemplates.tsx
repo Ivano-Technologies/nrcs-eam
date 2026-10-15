@@ -1,3 +1,4 @@
+import { formatEnumLabel } from "@/lib/format";
 import { useState } from "react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { trpc } from "@/lib/trpc";
@@ -228,7 +229,7 @@ export default function WorkOrderTemplates() {
                       template.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
                       'bg-green-100 text-green-800'
                     }`}>
-                      {template.priority}
+                      {formatEnumLabel(template.priority)}
                     </span>
                   </div>
                   {template.estimatedDuration && (

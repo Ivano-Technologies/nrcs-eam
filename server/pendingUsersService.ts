@@ -167,7 +167,7 @@ export async function approvePendingUser(
       success: false,
       message:
         error?.message ??
-        "Failed to create auth user. They may already exist in Authentication — remove the duplicate and try again.",
+        "Failed to create the auth user. They may already exist in authentication, so remove the duplicate and try again.",
     };
   }
 
@@ -224,7 +224,7 @@ export async function approvePendingUser(
     success: true,
     message: sent
       ? "User approved. They received an email with sign-in instructions."
-      : "User approved. Email could not be sent — share the temporary password with them manually or configure email.",
+      : "User approved. The email could not be sent, so share the temporary password with them manually or configure email.",
     userId,
   };
 }

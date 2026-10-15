@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatEnumLabel } from "@/lib/format";
 import { useRoute, useLocation, useSearch } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -227,10 +227,10 @@ export default function MobileWorkOrderDetail() {
           <CardContent>
             <div className="flex gap-2 mb-4">
               <Badge className={getStatusColor(workOrder.status)}>
-                {workOrder.status.replace("_", " ")}
+                {formatEnumLabel(workOrder.status)}
               </Badge>
               <Badge className={getPriorityColor(workOrder.priority)} variant="outline">
-                {workOrder.priority}
+                {formatEnumLabel(workOrder.priority)}
               </Badge>
             </div>
 

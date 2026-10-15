@@ -68,3 +68,19 @@ describe("formatEmpty (Wave B10)", () => {
     expect(container.textContent).toBe("Abuja Nigeria");
   });
 });
+
+describe("formatEnumLabel status display", () => {
+  it("puts stored status values into sentence case for display", () => {
+    expect(formatEnumLabel("In Use")).toBe("In use");
+    expect(formatEnumLabel("To be Disposed")).toBe("To be disposed");
+    expect(formatEnumLabel("Out of Order (To be repaired)")).toBe("Out of order (to be repaired)");
+    expect(formatEnumLabel("in_progress")).toBe("In progress");
+    expect(formatEnumLabel("branch_approved")).toBe("Branch approved");
+  });
+
+  it("keeps acronyms uppercase", () => {
+    expect(formatEnumLabel("hq_approved")).toBe("HQ approved");
+    expect(formatEnumLabel("grn_posted")).toBe("GRN posted");
+    expect(formatEnumLabel("PDF")).toBe("PDF");
+  });
+});

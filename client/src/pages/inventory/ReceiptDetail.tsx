@@ -464,7 +464,7 @@ export default function ReceiptDetail() {
             <div><span className="font-medium">Received from:</span> {form.receivedFrom || ""}</div>
             <div><span className="font-medium">Arrival:</span> {form.dateOfArrival || ""}</div>
             <div><span className="font-medium">Lines:</span> {lines.length}</div>
-            <div><span className="font-medium">Status:</span> {savedId ? "draft/finalizable" : "new draft"}</div>
+            <div><span className="font-medium">Status:</span> {savedId ? "Draft, ready to finalise" : "New draft"}</div>
           </CardContent>
         </Card>
       </div>
