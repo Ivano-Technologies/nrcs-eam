@@ -161,7 +161,6 @@ export default function Issues({ embedInShell = false }: { embedInShell?: boolea
                 colSpan={7}
                 icon={TruckIcon}
                 title="No waybills yet"
-                body="Waybills appear here once stock is dispatched from a warehouse."
               />
             ) : null}
           </tbody>

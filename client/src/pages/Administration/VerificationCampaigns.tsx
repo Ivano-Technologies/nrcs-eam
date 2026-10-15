@@ -128,7 +128,6 @@ export default function VerificationCampaigns() {
                     className="col-span-full"
                     icon={ClipboardCheck}
                     title="No campaigns yet"
-                    body="Start a verification campaign to check assets in the field."
                   />
                 ) : null}
                 {(campaigns ?? []).map((c) => (
@@ -179,7 +178,6 @@ export default function VerificationCampaigns() {
                     colSpan={3}
                     icon={ClipboardCheck}
                     title="No campaigns yet"
-                    body="Start a verification campaign to check assets in the field."
                   />
                 ) : null}
               </TableBody>

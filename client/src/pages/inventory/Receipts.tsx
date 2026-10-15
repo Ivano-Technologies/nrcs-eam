@@ -257,7 +257,6 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
                 colSpan={7}
                 icon={PackageCheckIcon}
                 title="No receipts yet"
-                body="Receipts appear here once a GRN is posted."
               />
             ) : null}
           </tbody>
@@ -283,46 +282,46 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
             <div className="space-y-2">
               <Label>Line items</Label>
               {lines.map((line, idx) => (
-                <div key={idx} className="grid grid-cols-5 gap-2">
-                  <Select
+                <div key={idx} className="grid grid-cols-1 gap-2 rounded-md border p-3 sm:grid-cols-3" data-testid={`grn-line-${idx}`}>
+                  <div className="space-y-1"><Label className="text-xs text-muted-foreground">Item</Label><Select
                     value={line.catalogueId}
                     onValueChange={(v) =>
                       setLines((prev) => prev.map((x, i) => (i === idx ? { ...x, catalogueId: v } : x)))
                     }
                   >
-                    <SelectTrigger><SelectValue placeholder="Item" /></SelectTrigger>
+                    <SelectTrigger aria-label="Item"><SelectValue placeholder="Item" /></SelectTrigger>
                     <SelectContent>
                       {(catalogue ?? []).map((c) => (
                         <SelectItem key={c.id} value={String(c.id)}>{c.itemCode} · {c.name}</SelectItem>
                       ))}
                     </SelectContent>
-                  </Select>
-                  <Input
+                  </Select></div>
+                  <div className="space-y-1"><Label className="text-xs text-muted-foreground">CTN ID</Label><Input aria-label="CTN ID"
                     placeholder="CTN ID"
                     value={line.ctnId}
                     onChange={(e) => setLines((prev) => prev.map((x, i) => (i === idx ? { ...x, ctnId: e.target.value } : x)))}
-                  />
-                  <Input
+                  /></div>
+                  <div className="space-y-1"><Label className="text-xs text-muted-foreground">Qty</Label><Input aria-label="Qty"
                     placeholder="Qty"
                     value={line.quantity}
                     onChange={(e) => setLines((prev) => prev.map((x, i) => (i === idx ? { ...x, quantity: e.target.value } : x)))}
-                  />
-                  <Input
+                  /></div>
+                  <div className="space-y-1"><Label className="text-xs text-muted-foreground">Batch #</Label><Input aria-label="Batch #"
                     placeholder="Batch #"
                     value={line.batchNumber}
                     onChange={(e) => setLines((prev) => prev.map((x, i) => (i === idx ? { ...x, batchNumber: e.target.value } : x)))}
-                  />
-                  <Input
+                  /></div>
+                  <div className="space-y-1"><Label className="text-xs text-muted-foreground">Expiry date</Label><Input
                     type="date"
                     aria-label="Expiry date"
                     value={line.expiryDate}
                     onChange={(e) => setLines((prev) => prev.map((x, i) => (i === idx ? { ...x, expiryDate: e.target.value } : x)))}
-                  />
-                  <Input
+                  /></div>
+                  <div className="space-y-1"><Label className="text-xs text-muted-foreground">Notes</Label><Input aria-label="Notes"
                     placeholder="Notes"
                     value={line.notes}
                     onChange={(e) => setLines((prev) => prev.map((x, i) => (i === idx ? { ...x, notes: e.target.value } : x)))}
-                  />
+                  /></div>
                 </div>
               ))}
               <Button

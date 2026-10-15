@@ -1,4 +1,5 @@
 import { DashboardSectionError } from "@/components/dashboard/DashboardSectionError";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart3 } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
@@ -43,11 +44,7 @@ export function StockMovementChart({ data, failed, onRetry }: Props) {
         {failed ? (
           <DashboardSectionError onRetry={onRetry} />
         ) : !hasMovementData ? (
-          <div className="dashboard-empty-state flex h-full flex-col items-center justify-center gap-2">
-            <BarChart3 className="dashboard-empty-state-icon" />
-            <p className="text-sm font-medium text-[#1a2332] dark:text-[hsl(0_0%_95%)]">No stock movements recorded yet</p>
-            <p className="dashboard-empty-state-subtitle text-xs">GRN and waybill activity will appear here</p>
-          </div>
+          <EmptyState icon={BarChart3} title="No stock movements yet" className="h-full py-0" />
         ) : (
           <ResponsiveContainer width="100%" minHeight={200} height="100%">
             <AreaChart data={data}>

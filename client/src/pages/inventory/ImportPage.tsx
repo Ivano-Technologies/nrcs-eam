@@ -169,7 +169,6 @@ export default function ImportPage({ embedInShell = false }: { embedInShell?: bo
                 colSpan={4}
                 icon={Upload}
                 title="No rows yet"
-                body="Rows appear here once you upload a file to preview."
               />
             ) : null}
           </tbody>

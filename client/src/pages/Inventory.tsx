@@ -1116,7 +1116,6 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                         colSpan={6}
                         icon={Warehouse}
                         title="No stock held yet"
-                        body="Stock levels appear here once this item is received into a warehouse."
                       />
                     ) : null}
                   </tbody>

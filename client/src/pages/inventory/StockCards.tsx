@@ -1,4 +1,6 @@
+import { BookOpen } from "lucide-react";
 import { Toolbar, ToolbarSearch } from "@/components/Toolbar";
+import { EmptyState, TableEmptyState } from "@/components/ui/EmptyState";
 import { formatDate } from "@/lib/format";
 import { ViewToggle } from "@/components/ViewToggle";
 import { Badge } from "@/components/ui/badge";
@@ -82,7 +84,9 @@ export default function StockCards({ embedInShell = false }: Props = {}) {
 
       {viewMode === "card" ? (
         rows.length === 0 && !cards.isLoading ? (
-          <p className="text-sm text-muted-foreground">No stock cards found.</p>
+          <Card>
+            <EmptyState icon={BookOpen} title="No stock cards yet" />
+          </Card>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {rows.map((row) => (
@@ -140,11 +144,7 @@ export default function StockCards({ embedInShell = false }: Props = {}) {
                 </TableRow>
               ))}
               {!cards.isLoading && rows.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={9} className="text-muted-foreground">
-                    No stock cards found.
-                  </TableCell>
-                </TableRow>
+                <TableEmptyState colSpan={9} icon={BookOpen} title="No stock cards yet" />
               ) : null}
             </TableBody>
           </Table>

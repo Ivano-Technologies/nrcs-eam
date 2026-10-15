@@ -1,4 +1,6 @@
+import { Image as ImageIcon } from "lucide-react";
 import type React from "react";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import PageLoader from "@/components/ui/PageLoader";
@@ -353,7 +355,7 @@ export default function FacilityDetail() {
                   <span>Loading photos…</span>
                 </div>
               ) : photosQuery.data?.length === 0 ? (
-                <p className="py-4 text-center text-sm text-muted-foreground">No photos uploaded yet.</p>
+                <EmptyState icon={ImageIcon} title="No photos yet" className="py-6" />
               ) : (
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                   {photosQuery.data?.map((photo) => (

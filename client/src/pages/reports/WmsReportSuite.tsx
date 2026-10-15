@@ -320,7 +320,7 @@ function WmsSingleReport({ report }: { report: WmsReportKey }) {
             <TableBody>
               {movementRows.map((row, idx) => <TableRow key={idx}><TableCell>{formatDate(row.date) || row.date}</TableCell><TableCell className={sec}>{row.documentRef ?? ""}</TableCell><TableCell className={WIDE}>{row.item}</TableCell><TableCell className={sec}>{row.ctn}</TableCell><TableCell className={sec}>{row.donor}</TableCell><TableCell className={cn(sec, WIDE)}>{row.fromTo ?? ""}</TableCell><TableCell className={cn(sec, NUM)}>{row.qtyIn}</TableCell><TableCell className={cn(sec, NUM)}>{row.qtyOut}</TableCell><TableCell className={NUM}>{row.balanceAfter}</TableCell><TableCell className={sec}>{formatEnumLabel(row.sourceType)}</TableCell></TableRow>)}
               {!movementsQuery.isLoading && movementRows.length === 0 ? (
-                <TableEmptyState colSpan={10} icon={ArrowLeftRight} title="No stock movements yet" body="Stock movements appear here once a GRN, waybill or transfer is posted." />
+                <TableEmptyState colSpan={10} icon={ArrowLeftRight} title="No stock movements yet" />
               ) : null}
             </TableBody>
           </Table>
@@ -334,7 +334,7 @@ function WmsSingleReport({ report }: { report: WmsReportKey }) {
             <TableBody>
               {agingRows.map((row, idx) => <TableRow key={idx}><TableCell>{row.ctnCode}</TableCell><TableCell className={WIDE}>{row.item}</TableCell><TableCell className={sec}>{row.donor}</TableCell><TableCell className={cn(sec, WIDE)}>{row.warehouse}</TableCell><TableCell className={NUM}>{row.balance}</TableCell><TableCell className={sec}>{formatDate(row.expiryDate)}</TableCell><TableCell className={cn(row.color === "red" ? "text-red-600" : row.color === "amber" ? "text-amber-600" : "text-green-600", sec, NUM)}>{row.daysUntilExpiry ?? ""}</TableCell></TableRow>)}
               {!ctnAgingQuery.isLoading && agingRows.length === 0 ? (
-                <TableEmptyState colSpan={7} icon={ScanLine} title="No CTNs yet" body="CTNs appear here once stock is received with a CTN code." />
+                <TableEmptyState colSpan={7} icon={ScanLine} title="No CTNs yet" />
               ) : null}
             </TableBody>
           </Table>
@@ -407,7 +407,7 @@ function WmsSingleReport({ report }: { report: WmsReportKey }) {
                       </TableRow>
                     ))}
                     {donorStatementQuery.data.lines.length === 0 ? (
-                      <TableEmptyState colSpan={6} icon={HandHeart} title="No statement lines yet" body="Statement lines appear here once this donor's stock is received." />
+                      <TableEmptyState colSpan={6} icon={HandHeart} title="No statement lines yet" />
                     ) : null}
                   </TableBody>
                 </Table>
@@ -420,7 +420,7 @@ function WmsSingleReport({ report }: { report: WmsReportKey }) {
               <TableBody>
                 {donorRows.map((row, idx) => <TableRow key={idx}><TableCell className={WIDE}>{row.donor}</TableCell><TableCell className={WIDE}>{row.item}</TableCell><TableCell className={cn(sec, NUM)}>{row.received}</TableCell><TableCell className={cn(sec, NUM)}>{row.distributed}</TableCell><TableCell className={NUM}>{row.inStock}</TableCell><TableCell className={cn(sec, NUM)}>{row.percentDistributed.toFixed(2)}%</TableCell></TableRow>)}
                 {!donorQuery.isLoading && donorRows.length === 0 ? (
-                  <TableEmptyState colSpan={6} icon={HandHeart} title="No donor contributions yet" body="Donor contributions appear here once donor stock is received." />
+                  <TableEmptyState colSpan={6} icon={HandHeart} title="No donor contributions yet" />
                 ) : null}
               </TableBody>
             </Table>
@@ -435,7 +435,7 @@ function WmsSingleReport({ report }: { report: WmsReportKey }) {
             <TableBody>
               {lossRows.map((row, idx) => <TableRow key={idx}><TableCell>{formatDate(row.date) || row.date}</TableCell><TableCell className={WIDE}>{row.item}</TableCell><TableCell className={sec}>{row.ctn}</TableCell><TableCell className={sec}>{row.donor}</TableCell><TableCell className={cn(sec, WIDE)}>{row.warehouse}</TableCell><TableCell className={NUM}>{row.qty}</TableCell><TableCell className={sec}>{formatEnumLabel(row.sourceType)}</TableCell><TableCell className={sec}>{row.documentRef ?? ""}</TableCell><TableCell className={cn(sec, "max-w-[16rem] truncate")} title={row.reason ?? undefined}>{row.reason ?? ""}</TableCell></TableRow>)}
               {!lossQuery.isLoading && lossRows.length === 0 ? (
-                <TableEmptyState colSpan={9} icon={ShieldAlert} title="No losses recorded yet" body="Losses appear here once stock is written off as lost or damaged." />
+                <TableEmptyState colSpan={9} icon={ShieldAlert} title="No losses recorded yet" />
               ) : null}
             </TableBody>
           </Table>
@@ -449,7 +449,7 @@ function WmsSingleReport({ report }: { report: WmsReportKey }) {
             <TableBody>
               {kitRows.map((row, idx) => <TableRow key={idx}><TableCell>{formatDate(row.date) || row.date}</TableCell><TableCell className={WIDE}>{row.kitItem}</TableCell><TableCell className={sec}>{row.kitCtn}</TableCell><TableCell className={NUM}>{row.qtyAssembled}</TableCell><TableCell className={cn(sec, WIDE)}>{row.contributingCtnAndDonor}</TableCell><TableCell className={sec}>{row.assemblerName ?? ""}</TableCell></TableRow>)}
               {!kitQuery.isLoading && kitRows.length === 0 ? (
-                <TableEmptyState colSpan={6} icon={Boxes} title="No kits assembled yet" body="Kits appear here once a kit is assembled from CTN stock." />
+                <TableEmptyState colSpan={6} icon={Boxes} title="No kits assembled yet" />
               ) : null}
             </TableBody>
           </Table>

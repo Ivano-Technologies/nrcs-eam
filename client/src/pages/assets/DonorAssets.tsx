@@ -1,4 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { TableEmptyState } from "@/components/ui/EmptyState";
 import { Toolbar } from "@/components/Toolbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -233,11 +234,7 @@ export default function DonorAssets() {
                   </TableCell>
                 </TableRow>
               ) : (report?.donors ?? []).length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground">
-                    No donor-funded assets match these filters.
-                  </TableCell>
-                </TableRow>
+                <TableEmptyState colSpan={6} icon={Gift} title="No donor funded assets match these filters" />
               ) : (
                 (report?.donors ?? []).map((row: DonorBreakdownRow) => (
                   <Fragment key={row.donor}>

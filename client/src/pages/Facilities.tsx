@@ -542,6 +542,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               data-testid="facility-delete-confirm"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => {
                 if (pendingDelete) deleteMutation.mutate({ ids: [pendingDelete.id] });
                 setPendingDelete(null);

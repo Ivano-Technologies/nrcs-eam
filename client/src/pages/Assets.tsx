@@ -962,7 +962,7 @@ export default function Assets() {
                 ) : null}
                 <div className="grid gap-4 py-4">
                   <h3 className="text-sm font-semibold text-[#1a2332] dark:text-[#E6EAF0]">Item details</h3>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label>Item type *</Label>
                       <Select
@@ -1053,7 +1053,7 @@ export default function Assets() {
                     />
                   </div>
                   <h3 className="mt-2 text-sm font-semibold text-[#1a2332] dark:text-[#E6EAF0]">Item code</h3>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label>Branch code</Label>
                       <Input value={selectedSiteCode} readOnly />
@@ -1063,7 +1063,7 @@ export default function Assets() {
                       <Input value={selectedCategoryCode} readOnly />
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label>NUM</Label>
                       <Input value={newAsset.assetNum || "Auto"} readOnly />
@@ -1074,7 +1074,7 @@ export default function Assets() {
                     </div>
                   </div>
                   <h3 className="mt-2 text-sm font-semibold text-[#1a2332] dark:text-[#E6EAF0]">Financial value</h3>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="serialNumber">Serial / product no.</Label>
                       <Input
@@ -1085,7 +1085,7 @@ export default function Assets() {
                       />
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label>Actual unit value (NGN)</Label>
                       <Input
@@ -1101,7 +1101,7 @@ export default function Assets() {
                         }
                       />
                     </div>
-                    <div className="space-y-2 col-span-2">
+                    <div className="space-y-2 sm:col-span-2">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <Label>Current depreciated value (NGN)</Label>
                         {canEditAssets ? (
@@ -1195,7 +1195,7 @@ export default function Assets() {
                       />
                     </div>
                   ) : null}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="year">Year acquired</Label>
                       <Select
@@ -1237,7 +1237,7 @@ export default function Assets() {
                       </RadioGroup>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label>Current status</Label>
                       <Select
@@ -1276,7 +1276,7 @@ export default function Assets() {
                     </div>
                   </div>
                   <h3 className="mt-2 text-sm font-semibold text-[#1a2332] dark:text-[#E6EAF0]">Assigned to</h3>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label>Assigned to</Label>
                       <Input
@@ -1327,7 +1327,7 @@ export default function Assets() {
                         ))}
                       </SelectContent>
                     </Select>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label>Date of last physical check <DateHint /></Label>
                       <Input
@@ -1590,7 +1590,6 @@ export default function Assets() {
                     colSpan={canEditAssets ? 26 : 25}
                     icon={Landmark}
                     title="No assets match these filters"
-                    body="Assets appear here once they are added to the register or match the filters."
                   />
                 ) : (
                   rows.map((row: (typeof rows)[number], i: number) => {
@@ -1746,7 +1745,7 @@ export default function Assets() {
           </DialogHeader>
           {editingAsset && (
             <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Asset code *</Label>
                   <Input
@@ -1769,7 +1768,7 @@ export default function Assets() {
                   onChange={(e) => setEditingAsset({ ...editingAsset, description: e.target.value })}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Item category *</Label>
                   <Select
@@ -1821,7 +1820,7 @@ export default function Assets() {
                   </Select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Register status</Label>
                   <Select
@@ -1870,7 +1869,7 @@ export default function Assets() {
                   </Select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Manufacturer</Label>
                   <Input
@@ -1886,7 +1885,7 @@ export default function Assets() {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Serial number</Label>
                   <Input
@@ -1905,7 +1904,7 @@ export default function Assets() {
               {canEditAssets ? (
                 <>
                   <h3 className="text-sm font-semibold text-[#1a2332] dark:text-[#E6EAF0]">Item details (register)</h3>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label>Register item type</Label>
                       <Select
@@ -1984,7 +1983,7 @@ export default function Assets() {
                     </div>
                   </div>
                   <h3 className="text-sm font-semibold text-[#1a2332] dark:text-[#E6EAF0]">Acquisition</h3>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2 md:col-span-2">
                       <Label>Method of acquisition</Label>
                       <Select
@@ -2050,7 +2049,7 @@ export default function Assets() {
                     </div>
                   </div>
                   <h3 className="text-sm font-semibold text-[#1a2332] dark:text-[#E6EAF0]">Condition (register)</h3>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label>Current status</Label>
                       <Select
@@ -2119,7 +2118,7 @@ export default function Assets() {
                     </div>
                   </div>
                   <h3 className="text-sm font-semibold text-[#1a2332] dark:text-[#E6EAF0]">Admin</h3>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2 md:col-span-2">
                       <Label>Remarks (register)</Label>
                       <Textarea
@@ -2147,7 +2146,7 @@ export default function Assets() {
                     Leave blank to inherit from the selected facility on save (via server). Enter values to
                     override.
                   </p>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label>Latitude</Label>
                       <Input
@@ -2164,7 +2163,7 @@ export default function Assets() {
                     </div>
                   </div>
                   <h3 className="text-sm font-semibold text-[#1a2332] dark:text-[#E6EAF0]">Financial (register)</h3>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label>Actual unit value (NGN)</Label>
                       <Input
@@ -2188,7 +2187,7 @@ export default function Assets() {
                       />
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label>Depreciation method</Label>
                       <Input

@@ -1,4 +1,5 @@
 import { trpc } from "@/lib/trpc";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { DateHint, formatDate } from "@/lib/format";
 import PageHeader from "@/components/ui/PageHeader";
 import PageLoader from "@/components/ui/PageLoader";
@@ -97,8 +98,8 @@ export default function Maintenance() {
                   <DialogTitle>Add maintenance schedule</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2 col-span-2">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="space-y-2 sm:col-span-2">
                       <Label htmlFor="name">Schedule name *</Label>
                       <Input
                         id="name"
@@ -109,7 +110,7 @@ export default function Maintenance() {
                       />
                     </div>
 
-                    <div className="space-y-2 col-span-2">
+                    <div className="space-y-2 sm:col-span-2">
                       <Label htmlFor="description">Description</Label>
                       <Textarea
                         id="description"
@@ -205,7 +206,7 @@ export default function Maintenance() {
                       />
                     </div>
 
-                    <div className="space-y-2 col-span-2">
+                    <div className="space-y-2 sm:col-span-2">
                       <Label htmlFor="taskTemplate">Task checklist</Label>
                       <Textarea
                         id="taskTemplate"
@@ -267,7 +268,18 @@ export default function Maintenance() {
                 </div>
               ))}
             </div>
-          ) : <p className="text-muted-foreground">No schedules found</p>}
+          ) : (
+            <EmptyState
+              icon={Wrench}
+              title="No maintenance schedules yet"
+              action={
+                <Button onClick={() => setOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add schedule
+                </Button>
+              }
+            />
+          )}
         </CardContent>
       </Card>
     </div>
