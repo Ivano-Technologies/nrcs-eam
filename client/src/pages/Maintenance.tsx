@@ -6,7 +6,7 @@ import PageLoader from "@/components/ui/PageLoader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -218,7 +218,7 @@ export default function Maintenance() {
                     </div>
                   </div>
 
-                  <div className="flex justify-end gap-2 pt-4">
+                  <DialogFooter className="pt-4">
                     <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                       Cancel
                     </Button>
@@ -232,7 +232,7 @@ export default function Maintenance() {
                         "Create schedule"
                       )}
                     </Button>
-                  </div>
+                  </DialogFooter>
                 </form>
               </DialogContent>
             </Dialog>

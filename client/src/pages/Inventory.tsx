@@ -1304,7 +1304,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
               <Input id="new-item-uom" value={newItemUom} onChange={(e) => setNewItemUom(e.target.value)} placeholder="e.g. pcs, kg" />
             </div>
           </div>
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter>
             <Button variant="outline" onClick={() => setCreateItemOpen(false)}>
               Cancel
             </Button>

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
 import PageHeader from "@/components/ui/PageHeader";
 import { PackageCheck as PackageCheckIcon } from "lucide-react";
@@ -333,7 +333,7 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
                 Add line
               </Button>
             </div>
-            <div className="flex justify-end gap-2">
+            <DialogFooter>
               <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
               <Button
                 disabled={createMutation.isPending}
@@ -365,7 +365,7 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
                   "Submit for Approval"
                 )}
               </Button>
-            </div>
+            </DialogFooter>
           </div>
         </DialogContent>
       </Dialog>

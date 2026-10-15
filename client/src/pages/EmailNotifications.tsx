@@ -5,7 +5,7 @@ import { trpc } from "@/lib/trpc";
 import PageHeader from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -128,7 +128,7 @@ export default function EmailNotifications() {
                     </p>
                   </div>
 
-                  <div className="flex justify-end gap-2">
+                  <DialogFooter>
                     <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                       Cancel
                     </Button>
@@ -145,7 +145,7 @@ export default function EmailNotifications() {
                         </>
                       )}
                     </Button>
-                  </div>
+                  </DialogFooter>
                 </div>
               </DialogContent>
             </Dialog>
