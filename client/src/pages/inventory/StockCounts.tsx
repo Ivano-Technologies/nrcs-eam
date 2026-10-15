@@ -1,3 +1,4 @@
+import { formatEnumLabel } from "@/lib/format";
 import { useEffect, useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent } from "@/components/ui/card";
@@ -116,7 +117,7 @@ export default function StockCounts({ embedInShell = false }: { embedInShell?: b
               <tr key={row.id} data-testid={`count-row-${row.countNumber}`} className="border-b">
                 <td className="px-2 py-2 font-mono">{row.countNumber}</td>
                 <td className="px-2 py-2">{row.countType}</td>
-                <td className="px-2 py-2">{row.status}</td>
+                <td className="px-2 py-2">{formatEnumLabel(row.status)}</td>
                 <td className="px-2 py-2">{row.varianceCount ?? 0}</td>
                 <td className="px-2 py-2 space-x-2">
                   {isStaffOrAbove && row.status === "in_progress" ? (

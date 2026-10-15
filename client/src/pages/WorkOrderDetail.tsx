@@ -1,3 +1,4 @@
+import { formatEnumLabel } from "@/lib/format";
 import { useState } from "react";
 import { appPath } from "@/lib/routes";
 import PageHeader from "@/components/ui/PageHeader";
@@ -56,8 +57,8 @@ export default function WorkOrderDetail() {
       <Card>
         <CardHeader><CardTitle>Work order details</CardTitle></CardHeader>
         <CardContent className="space-y-4">
-          <div><p className="text-sm font-medium text-muted-foreground">Status</p><Badge>{workOrder.status}</Badge></div>
-          <div><p className="text-sm font-medium text-muted-foreground">Priority</p><Badge>{workOrder.priority}</Badge></div>
+          <div><p className="text-sm font-medium text-muted-foreground">Status</p><Badge>{formatEnumLabel(workOrder.status)}</Badge></div>
+          <div><p className="text-sm font-medium text-muted-foreground">Priority</p><Badge>{formatEnumLabel(workOrder.priority)}</Badge></div>
           <div><p className="text-sm font-medium text-muted-foreground">Type</p><p>{workOrder.type}</p></div>
           {workOrder.description && <div><p className="text-sm font-medium text-muted-foreground">Description</p><p>{workOrder.description}</p></div>}
         </CardContent>
