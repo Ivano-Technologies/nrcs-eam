@@ -662,9 +662,9 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
       {viewMode !== "map" && !isLoading ? (
       <div className="flex items-center justify-end">
         {/* One line on phones too: rows, Previous, page count and Next never wrap. */}
-        <div className="flex flex-nowrap items-center gap-2" data-testid="facilities-pagination">
+        <div className="flex flex-nowrap items-center gap-1.5 sm:gap-2" data-testid="facilities-pagination">
           <Select value={pageSize} onValueChange={(v) => setPageSize(v as PageSize)}>
-            <SelectTrigger className="h-9 w-[104px] sm:w-[130px]" aria-label="Rows per page"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-9 w-[112px] shrink-0 sm:w-[130px]" aria-label="Rows per page"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="25">25 rows</SelectItem>
               <SelectItem value="50">50 rows</SelectItem>
@@ -672,9 +672,9 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
               <SelectItem value="all">All rows</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" className="h-9 px-3" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>Previous</Button>
+          <Button variant="outline" className="h-9 shrink-0 px-2.5 sm:px-3" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>Previous</Button>
           <span className="whitespace-nowrap text-sm tabular-nums">Page {page} of {totalPages}</span>
-          <Button variant="outline" className="h-9 px-3" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>Next</Button>
+          <Button variant="outline" className="h-9 shrink-0 px-2.5 sm:px-3" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>Next</Button>
         </div>
       </div>
       ) : null}
