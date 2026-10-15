@@ -409,7 +409,7 @@ export default function ReceiptDetail() {
                     Saving…
                   </>
                 ) : (
-                  "Save as Draft"
+                  "Save as draft"
                 )}
               </Button>
               <Button onClick={() => void finalize()} disabled={!isFinalizable || finalizePending || isLegacy || isFinalized}>

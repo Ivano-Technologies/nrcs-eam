@@ -28,7 +28,7 @@ test("WMS GRN create -> draft -> finalize -> print", async ({ page }) => {
   await page.getByRole("button", { name: "Save CTN" }).click();
 
   await page.getByLabel("Number of units").first().fill("5");
-  await page.getByRole("button", { name: "Save as Draft" }).click();
+  await page.getByRole("button", { name: "Save as draft" }).click();
   await expect(page.getByText("GRN draft saved.")).toBeVisible({ timeout: 10_000 });
 
   const deliveredBlock = page.getByText("Delivered by").first().locator("..");

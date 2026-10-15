@@ -646,7 +646,7 @@ export default function WaybillDetail() {
                   Saving…
                 </>
               ) : (
-                "Save as Draft"
+                "Save as draft"
               )}
             </Button>
             <Button disabled={dispatchPending} onClick={() => void dispatch()}>

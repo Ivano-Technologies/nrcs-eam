@@ -12,7 +12,7 @@ test.describe("Inventory Phase 4 workflow (live)", () => {
     await dialog.getByRole("textbox").first().fill(`REQ live ${Date.now()}`);
     await dialog.getByRole("combobox").first().click();
     await page.getByRole("option").first().click();
-    await dialog.getByText("Save as Draft").click();
+    await dialog.getByText("Save as draft").click();
     const row = page.locator("[data-testid^='req-row-']").first();
     await expect(row).toBeVisible();
     const submit = page.getByRole("button", { name: "Submit" }).first();
