@@ -20,6 +20,8 @@ import {
   BarChart3,
   FileBarChart,
   ShieldCheck,
+  Mail,
+  Smartphone,
   Users,
   History,
   SlidersHorizontal,
@@ -165,6 +167,7 @@ export const SIDEBAR_GROUPS: AppNavGroup[] = [
     items: [
       { label: "Maintenance", path: appPath("/maintenance"), icon: Wrench },
       { label: "Work orders", path: appPath("/work-orders"), icon: ListChecks },
+      { label: "Mobile work orders", path: appPath("/mobile-work-orders"), icon: Smartphone },
       { label: "Work order templates", path: appPath("/work-order-templates"), icon: ClipboardList },
       { label: "Warranty alerts", path: appPath("/warranty-alerts"), icon: AlertTriangle },
       {
@@ -187,13 +190,13 @@ export const SIDEBAR_GROUPS: AppNavGroup[] = [
     icon: FileBarChart,
     items: [
       { label: "Reports overview", path: appPath("/reports"), icon: FileBarChart },
-      { label: "WMS report suite", path: appPath("/reports/wms"), icon: FileBarChart },
       { label: "Monthly warehouse report", path: appPath("/reports/wms/monthly-warehouse-report"), icon: FileBarChart },
       { label: "WMS stock movements", path: appPath("/reports/wms/stock-movements"), icon: ArrowLeftRight },
       { label: "WMS CTN aging", path: appPath("/reports/wms/ctn-aging"), icon: ScanLine },
       { label: "WMS donor contribution", path: appPath("/reports/wms/donor-contribution"), icon: FileBarChart },
       { label: "WMS loss and damage", path: appPath("/reports/wms/loss-damage"), icon: FileBarChart },
       { label: "WMS kit assembly", path: appPath("/reports/wms/kit-assembly"), icon: Boxes },
+      { label: "WMS expiry", path: appPath("/reports/wms/expiry"), icon: AlertTriangle },
       { label: "Report scheduling", path: appPath("/report-scheduling"), icon: FileBarChart },
       {
         label: "Donor assets report",
@@ -223,6 +226,7 @@ export const SIDEBAR_GROUPS_ADMIN: AppNavGroup[] = [
     items: [
       { label: "Users", path: appPath("/settings/users"), icon: Users },
       { label: "Pending users", path: appPath("/settings/pending-users"), icon: UserPlus },
+      { label: "Email notifications", path: appPath("/email-notifications"), icon: Mail },
       {
         label: "Compliance register",
         path: appPath("/administration/compliance-register"),
@@ -290,6 +294,7 @@ const GROUP_PREFIXES: { groupId: string; pathPrefix: string }[] = [
   { groupId: "administration", pathPrefix: appPath("/administration/observability") },
   // Legacy aliases still routed in app shell.
   { groupId: "administration", pathPrefix: appPath("/pending-users") },
+  { groupId: "administration", pathPrefix: appPath("/email-notifications") },
   { groupId: "settings", pathPrefix: appPath("/settings") },
   { groupId: "settings", pathPrefix: appPath("/dashboard-settings") },
 ];

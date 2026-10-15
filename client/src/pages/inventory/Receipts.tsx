@@ -121,8 +121,6 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
         }
         toolbarEnd={
           <>
-            <Button variant="outline">Export to Excel</Button>
-            <Button variant="outline">Template</Button>
             <Button variant="outline" onClick={() => setLocation(appPath("/inventory/import"))}>
               Import
             </Button>

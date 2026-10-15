@@ -17,8 +17,6 @@ function setup(over: Partial<FacilitiesToolbarProps> = {}) {
   const props: FacilitiesToolbarProps = {
     search: "",
     onSearch: vi.fn(),
-    type: "all",
-    onType: vi.fn(),
     state: "all",
     states: ["FCT", "Kano", "Lagos"],
     onState: vi.fn(),
@@ -49,10 +47,11 @@ function openMenu() {
 }
 
 describe("Facilities toolbar", () => {
-  it("shows search, the three selects, the count and the view toggle", () => {
+  it("shows search, the state and status selects, the count and the view toggle", () => {
     setup();
     expect(screen.getByPlaceholderText("Search name, code or address")).toBeInTheDocument();
-    expect(screen.getByTestId("facilities-type-select")).toHaveTextContent("All types");
+    // The facility type comes from the sidebar route, so there is no type select (E21).
+    expect(screen.queryByTestId("facilities-type-select")).not.toBeInTheDocument();
     expect(screen.getByTestId("facilities-state-select")).toHaveTextContent("All states");
     expect(screen.getByTestId("facilities-status-select")).toHaveTextContent("All statuses");
     expect(screen.getByTestId("facilities-count")).toHaveTextContent("12 facilities · 10 on the map");
@@ -65,10 +64,8 @@ describe("Facilities toolbar", () => {
     expect(p.onSearch).toHaveBeenCalledWith("kano");
   });
 
-  it("type, state and status selects report the picked value", () => {
+  it("state and status selects report the picked value", () => {
     const p = setup();
-    fireEvent.click(within(openSelect("facilities-type-select")).getByRole("option", { name: "Warehouses" }));
-    expect(p.onType).toHaveBeenCalledWith("warehouse");
     fireEvent.click(within(openSelect("facilities-state-select")).getByRole("option", { name: "Kano" }));
     expect(p.onState).toHaveBeenCalledWith("Kano");
     fireEvent.click(within(openSelect("facilities-status-select")).getByRole("option", { name: "Inactive" }));
@@ -100,12 +97,11 @@ describe("Facilities toolbar", () => {
 
   it("phones: a Filters button opens the selects in a sheet", () => {
     setup({ compact: true, state: "Kano" });
-    expect(screen.queryByTestId("facilities-type-select")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("facilities-state-select")).not.toBeInTheDocument();
     const button = screen.getByTestId("facilities-filters-button");
     expect(button).toHaveAttribute("aria-label", "Filters, 1 on");
     fireEvent.click(button);
     const sheet = screen.getByTestId("facilities-filters-sheet");
-    expect(within(sheet).getByTestId("facilities-type-select")).toBeInTheDocument();
     expect(within(sheet).getByTestId("facilities-state-select")).toHaveTextContent("Kano");
     expect(within(sheet).getByTestId("facilities-status-select")).toBeInTheDocument();
   });

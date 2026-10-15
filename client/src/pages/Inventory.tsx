@@ -28,7 +28,6 @@ import { usePermissions } from "@/_core/hooks/usePermissions";
 import { toast } from "sonner";
 import {
   ArrowDownToLine,
-  ArrowUpFromLine,
   Loader2,
   Package,
   ShieldAlert,
@@ -733,10 +732,6 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                       </>
                     )}
                   </Button>
-                  <Button className="h-9" variant="outline" disabled>
-                    <ArrowUpFromLine className="mr-2 h-4 w-4" />
-                    Export to Excel
-                  </Button>
                   <Button className="h-9" onClick={() => setCreateItemOpen(true)}>
                     Add item
                   </Button>
@@ -872,16 +867,6 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                 <div className="flex gap-2 pt-2">
                   <Button variant="outline" onClick={() => importMutation.mutate({})}>
                     Import IFRC catalogue
-                  </Button>
-                  <Button variant="outline" disabled>
-                    Export catalogue to Excel
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    disabled={!isAdmin}
-                    onClick={() => toast.info("Reset stock levels will be enabled in a later phase.")}
-                  >
-                    Reset stock levels
                   </Button>
                 </div>
               </CardContent>

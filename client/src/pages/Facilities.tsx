@@ -9,7 +9,6 @@ import {
   isFacilitiesMapSearch,
   parseFacilityTypeFromSearch,
   segmentToListFilter,
-  typeToSegment,
   withFacilitiesView,
 } from "@/lib/facilityRoutes";
 import { readSavedViewMode, saveViewMode, useDropLegacyViewMode } from "@/hooks/useViewMode";
@@ -205,11 +204,8 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
     staleTime: 120_000,
   });
 
-  // The type select drives the route (/facilities/<segment>), so links and the sidebar stay in step.
+  // The facility type comes from the route (/facilities/<segment>), set by the sidebar.
   const effectiveTypeFilter: FacilityType | "all" = lockedFacilityType ?? "all";
-  const onTypeChange = (type: FacilityType | "all") => {
-    setLocation(appPath(`/facilities/${typeToSegment(type)}`) + (urlSearch ? `?${urlSearch}` : ""));
-  };
 
   const facilities = useMemo(() => {
     const rows = allSites ?? [];
@@ -483,8 +479,6 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
       <FacilitiesToolbar
         search={search}
         onSearch={setSearch}
-        type={effectiveTypeFilter}
-        onType={onTypeChange}
         state={stateFilter}
         states={stateOptions}
         onState={setStateFilter}
