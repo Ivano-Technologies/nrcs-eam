@@ -56,6 +56,7 @@ import type { ReadinessTier } from "@/lib/facilityMapHelpers";
 import { DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM_COUNTRY } from "@/lib/mapDefaults";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
+import { useElementSize } from "@/hooks/useElementSize";
 
 const TABLET_DRAWER_W = 360;
 const RAIL_W = 56;
@@ -93,34 +94,6 @@ const SHIMMER_CSS = `
 function readInitialUrl() {
   if (typeof window === "undefined") return parseMapSearch("");
   return parseMapSearch(window.location.search);
-}
-
-/** Element size, plus whether it has held still for 250ms (layout settles after mount). */
-function useElementSize(ref: React.RefObject<HTMLElement | null>): { width: number; height: number; stable: boolean } {
-  const [h, setH] = useState(0);
-  const [w, setW] = useState(0);
-  const [stable, setStable] = useState(false);
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    let timer = 0;
-    const update = () => {
-      setH(el.clientHeight);
-      setW(el.clientWidth);
-      setStable(false);
-      window.clearTimeout(timer);
-      timer = window.setTimeout(() => setStable(true), 250);
-    };
-    update();
-    if (typeof ResizeObserver === "undefined") return () => window.clearTimeout(timer);
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    return () => {
-      ro.disconnect();
-      window.clearTimeout(timer);
-    };
-  }, [ref]);
-  return { width: w, height: h, stable };
 }
 
 /** Width and height of an element (or its first child) that may mount later (0 until it exists). */

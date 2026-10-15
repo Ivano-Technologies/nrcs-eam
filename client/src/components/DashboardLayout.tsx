@@ -19,7 +19,7 @@ import {
 import { useIsMobile } from "@/hooks/useMobile";
 import { appPath } from "@/lib/routes";
 import { LogOut, Settings, Search, User } from "lucide-react";
-import { CSSProperties, useCallback, useEffect, useMemo, useState } from "react";
+import { CSSProperties, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
@@ -27,6 +27,7 @@ import { Button } from "./ui/button";
 import { NotificationCenter } from "./NotificationCenter";
 import Footer from "./Footer";
 import { PageShell } from "@/components/ui/PageShell";
+import PageLoader from "@/components/ui/PageLoader";
 import { ThemeToggle } from "./ui/ThemeToggle";
 import { SidebarGroupedNav } from "./SidebarGroupedNav";
 import { SidebarBrand, SidebarEdgeToggle } from "./sidebar/SidebarBrand";
@@ -38,8 +39,8 @@ import { ConnectivityIndicator } from "./ConnectivityIndicator";
 import { RoleSwitcher } from "./dashboard/RoleSwitcher";
 import { DashboardRolePreviewProvider } from "./dashboard/rolePreviewContext";
 import type { UserRole } from "./dashboard/types";
-import { SIDEBAR_FULL_WIDTH, SIDEBAR_RAIL_WIDTH, snapSidebarWidth } from "@/lib/sidebarWidth";
-import { FullBleedProvider, useAutoRail, useFullBleedRegistry } from "@/lib/fullBleed";
+import { SIDEBAR_FADE, SIDEBAR_FULL_WIDTH, SIDEBAR_RAIL_WIDTH, snapSidebarWidth } from "@/lib/sidebarWidth";
+import { FullBleedProvider, routeWantsFullBleed, useAutoRail, useFullBleedRegistry } from "@/lib/fullBleed";
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
 const PRESET_WIDTHS = {
@@ -59,7 +60,10 @@ export default function DashboardLayout({
     const saved = localStorage.getItem(SIDEBAR_WIDTH_KEY);
     return snapSidebarWidth(saved ? parseInt(saved, 10) : SIDEBAR_FULL_WIDTH);
   });
-  const { active: fullBleed, registry } = useFullBleedRegistry();
+  const { active: viewFullBleed, registry } = useFullBleedRegistry();
+  // Route driven fold: decided in the same render as the navigation, before the page chunk loads.
+  const [layoutLocation] = useLocation();
+  const fullBleed = viewFullBleed || routeWantsFullBleed(layoutLocation);
   const isMobile = useIsMobile();
   const updatePrefs = trpc.userPreferences.update.useMutation();
   const { mutate: mutatePrefs } = updatePrefs;
@@ -164,6 +168,15 @@ function DashboardLayoutContent({
   const isMobile = useIsMobile();
   const [toggleFeedback, setToggleFeedback] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const rail = sidebarWidth <= PRESET_WIDTHS.narrow;
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  /** Set by the rail search button: focus the field once the sidebar has unfolded. */
+  const focusSearchOnExpandRef = useRef(false);
+  useEffect(() => {
+    if (rail || !focusSearchOnExpandRef.current) return;
+    focusSearchOnExpandRef.current = false;
+    searchInputRef.current?.focus({ preventScroll: true });
+  }, [rail]);
   const actualRole = useMemo<UserRole>(() => {
     const role = user?.role ?? "staff";
     if (role === "admin") return "Admin";
@@ -192,6 +205,11 @@ function DashboardLayoutContent({
     setTimeout(() => setToggleFeedback(false), 300);
   };
 
+  const openSearchFromRail = () => {
+    focusSearchOnExpandRef.current = true;
+    toggleSidebarWidth();
+  };
+
   // Keyboard shortcut for sidebar toggle (Ctrl+B / Cmd+B)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -208,37 +226,55 @@ function DashboardLayoutContent({
   return (
     <DashboardRolePreviewProvider actualRole={actualRole} effectiveRole={effectiveRole} setEffectiveRole={setEffectiveRole}>
       <div className="relative" data-testid="app-sidebar" data-auto-rail={autoRail ? "true" : "false"} data-full-bleed={inVisit ? "true" : "false"} data-sidebar-width={sidebarWidth}>
-        <Sidebar
-          className="border-r-0 motion-reduce:[&_[data-slot=sidebar-gap]]:transition-none motion-reduce:[&_[data-slot=sidebar-container]]:transition-none"
-        >
+        <Sidebar className="border-r-0" data-rail={rail ? "true" : "false"}>
           <SidebarHeader
             data-testid="sidebar-header"
             className={cn(
-              "h-14 shrink-0 flex-row items-center border-b border-sidebar-border py-0",
-              sidebarWidth <= PRESET_WIDTHS.narrow ? "justify-center px-1" : "px-2"
+              "h-14 shrink-0 flex-row items-center border-b border-sidebar-border py-0 transition-[padding] duration-200 ease-in-out",
+              // Rail: 12 + 40px logo + 12 = 64, so the logo sits centred without changing size.
+              rail ? "px-3" : "px-2"
             )}
           >
-            <SidebarBrand rail={sidebarWidth <= PRESET_WIDTHS.narrow} />
+            <SidebarBrand rail={rail} />
           </SidebarHeader>
 
           <SidebarContent className="gap-0">
-            {/* Search Bar */}
-            {sidebarWidth > PRESET_WIDTHS.narrow && (
-              <div className="px-3 py-2 border-b border-sidebar-border">
-                <div className="relative">
-                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-[20px] w-[20px] text-muted-foreground" />
-                  <input
-                    type="text"
-                    placeholder="Search menu…"
+            {/* Search bar: kept mounted in the rail (same height, so nav items never jump); the
+                field fades out and the icon becomes a button that unfolds the sidebar and focuses it. */}
+            <div className="px-3 py-2 border-b border-sidebar-border">
+              <div className="relative">
+                {rail ? (
+                  <button
+                    type="button"
+                    onClick={openSearchFromRail}
                     aria-label="Search menu"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full h-9 pl-8 pr-3 text-[17px] bg-sidebar-accent/50 border border-sidebar-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground"
-                  />
-                </div>
+                    data-testid="sidebar-search-rail"
+                    className="absolute inset-0 z-10 flex items-center justify-center rounded-md text-muted-foreground hover:bg-sidebar-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <Search aria-hidden className="h-[20px] w-[20px]" />
+                  </button>
+                ) : (
+                  <Search aria-hidden className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 h-[20px] w-[20px] text-muted-foreground" />
+                )}
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  placeholder="Search menu…"
+                  aria-label="Search menu"
+                  aria-hidden={rail || undefined}
+                  tabIndex={rail ? -1 : undefined}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className={cn(
+                    "w-full h-9 pl-8 pr-3 text-[17px] bg-sidebar-accent/50 border border-sidebar-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground",
+                    SIDEBAR_FADE,
+                    rail ? "opacity-0" : "opacity-100 delay-100"
+                  )}
+                />
               </div>
-            )}
-            
+            </div>
+
+
             <SidebarGroupedNav
               location={location}
               setLocation={setLocation}
@@ -249,7 +285,7 @@ function DashboardLayoutContent({
             />
           </SidebarContent>
 
-          <SidebarFooter className="p-3 space-y-2">
+          <SidebarFooter className={cn("space-y-2 py-3 transition-[padding] duration-200 ease-in-out", rail ? "px-1" : "px-3")}>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
@@ -262,7 +298,7 @@ function DashboardLayoutContent({
                         : "User menu"
                       : undefined
                   }
-                  className={`flex items-center gap-3 rounded-lg px-1 py-1 hover:bg-accent/50 transition-colors w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${sidebarWidth === PRESET_WIDTHS.narrow ? 'justify-center' : ''}`}
+                  className="flex w-full items-center gap-3 overflow-hidden rounded-lg px-1 py-1 text-left transition-colors hover:bg-accent/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                 >
                   <Avatar className="h-[47px] w-[47px] border shrink-0">
                     {user?.avatarUrl ? (
@@ -272,16 +308,14 @@ function DashboardLayoutContent({
                       {user?.name?.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  {sidebarWidth > PRESET_WIDTHS.narrow && (
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[13.5px] font-medium truncate leading-none">
-                        {user?.name || "-"}
-                      </p>
-                      <p className="text-[12px] text-muted-foreground truncate mt-1.5">
-                        {user?.email || "-"}
-                      </p>
-                    </div>
-                  )}
+                  <div aria-hidden={rail || undefined} className={cn("min-w-0 flex-1 whitespace-nowrap", SIDEBAR_FADE, rail ? "opacity-0" : "opacity-100 delay-100")}>
+                    <p className="text-[13.5px] font-medium truncate leading-none">
+                      {user?.name || "-"}
+                    </p>
+                    <p className="text-[12px] text-muted-foreground truncate mt-1.5">
+                      {user?.email || "-"}
+                    </p>
+                  </div>
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
@@ -310,13 +344,13 @@ function DashboardLayoutContent({
           </SidebarFooter>
         </Sidebar>
         <SidebarEdgeToggle
-          rail={sidebarWidth <= PRESET_WIDTHS.narrow}
+          rail={rail}
           onToggle={toggleSidebarWidth}
           feedback={toggleFeedback}
         />
       </div>
 
-      <SidebarInset className="min-h-svh bg-background dark:bg-[#232323] transition-[margin,padding] duration-200 ease-in-out">
+      <SidebarInset className="min-h-svh bg-background dark:bg-[#232323]">
         {isMobile && (
           <div className="flex border-b h-14 items-center justify-between bg-background/95 dark:bg-[#232323]/95 px-2 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
             <div className="flex items-center gap-2">
@@ -358,7 +392,10 @@ function DashboardLayoutContent({
           data-testid="app-page-main"
           className={cn("flex-1 overflow-x-clip", isMobile && "pb-20")}
         >
-          <PageShell>{children}</PageShell>
+          <PageShell>
+            {/* Page chunks load inside the layout: the sidebar and top bar stay mounted on navigation. */}
+            <Suspense fallback={<PageLoader />}>{children}</Suspense>
+          </PageShell>
         </main>
         <Footer className={isMobile ? "pb-16" : undefined} />
         {isMobile ? (

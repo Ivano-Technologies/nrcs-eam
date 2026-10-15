@@ -1,7 +1,15 @@
 import { act, cleanup, render, screen } from "@testing-library/react";
 import React, { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { FULL_BLEED_VIEWS, FullBleedProvider, useAutoRail, useFullBleed, useFullBleedRegistry } from "./fullBleed";
+import {
+  FULL_BLEED_VIEWS,
+  FullBleedProvider,
+  ROUTE_FULL_BLEED_PATHS,
+  routeWantsFullBleed,
+  useAutoRail,
+  useFullBleed,
+  useFullBleedRegistry,
+} from "./fullBleed";
 import { SIDEBAR_FULL_WIDTH, SIDEBAR_RAIL_WIDTH } from "./sidebarWidth";
 
 afterEach(() => cleanup());
@@ -164,5 +172,34 @@ describe("full bleed auto rail (Wave B)", () => {
 
   it("useFullBleed is a no op outside the app layout", () => {
     expect(() => render(<MapPage />)).not.toThrow();
+  });
+});
+
+describe("route driven fold (polish phase 1)", () => {
+  it("matches the always full bleed routes from the URL, with or without a trailing slash", () => {
+    expect(routeWantsFullBleed("/app/asset-map")).toBe(true);
+    expect(routeWantsFullBleed("/app/asset-map/")).toBe(true);
+    expect(routeWantsFullBleed("/app/reports/wms/monthly-warehouse-report")).toBe(true);
+    expect(routeWantsFullBleed("/app/reports/wms/stock-movements")).toBe(true);
+    expect(routeWantsFullBleed("/app/reports/wms/loss-damage")).toBe(true);
+  });
+
+  it("never matches other pages, the report hub, print previews or the Asset Scanner", () => {
+    for (const path of [
+      "/app",
+      "/app/assets",
+      "/app/facilities",
+      "/app/reports/wms",
+      "/app/reports/wms/monthly-warehouse-report/print/1/2026/9",
+      "/app/asset-scanner",
+      "/app/asset-map-legacy",
+    ]) {
+      expect(routeWantsFullBleed(path)).toBe(false);
+    }
+  });
+
+  it("every route driven path is also listed in FULL_BLEED_VIEWS", () => {
+    const listed = FULL_BLEED_VIEWS.map((v) => v.path as string);
+    for (const path of ROUTE_FULL_BLEED_PATHS) expect(listed).toContain(path);
   });
 });

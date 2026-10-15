@@ -32,6 +32,20 @@ describe("Sidebar brand", () => {
   });
 });
 
+describe("Sidebar brand across the fold", () => {
+  it("keeps the same nodes mounted and fades the text instead of removing it", () => {
+    const { rerender } = wrap(<SidebarBrand rail={false} />);
+    const link = screen.getByTestId("sidebar-brand");
+    const name = screen.getByTestId("sidebar-org-name");
+    rerender(<TooltipProvider><SidebarBrand rail /></TooltipProvider>);
+    expect(screen.getByTestId("sidebar-brand")).toBe(link);
+    expect(screen.getByTestId("sidebar-org-name")).toBe(name);
+    expect(name.parentElement?.className).toContain("opacity-0");
+    expect(name.parentElement).toHaveAttribute("aria-hidden", "true");
+    expect(link).toHaveAttribute("aria-label", "Go to dashboard");
+  });
+});
+
 describe("Sidebar edge toggle", () => {
   it("labels the action for each state and calls back", () => {
     const onToggle = vi.fn();

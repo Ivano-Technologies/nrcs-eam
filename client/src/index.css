@@ -533,3 +533,15 @@ html.dark {
 :where(html:not(.dark)) [data-sidebar="sidebar"] {
   --muted-foreground: #b8c4d6;
 }
+
+/* Sidebar fold: a 200ms ease slide normally, instant under reduced motion (gap, fixed container,
+   content, and the padding and fade changes inside the sidebar). */
+@media (prefers-reduced-motion: reduce) {
+  [data-slot="sidebar-gap"],
+  [data-slot="sidebar-container"],
+  [data-slot="sidebar-container"] *,
+  [data-slot="sidebar-inset"] {
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+  }
+}
