@@ -18,8 +18,8 @@ import {
 } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
 import { appPath } from "@/lib/routes";
-import { LogOut, Settings, ChevronsLeft, Search, User } from "lucide-react";
-import { CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { LogOut, Settings, Search, User } from "lucide-react";
+import { CSSProperties, useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
@@ -29,10 +29,10 @@ import Footer from "./Footer";
 import { PageShell } from "@/components/ui/PageShell";
 import { ThemeToggle } from "./ui/ThemeToggle";
 import { SidebarGroupedNav } from "./SidebarGroupedNav";
+import { SidebarBrand, SidebarEdgeToggle } from "./sidebar/SidebarBrand";
 import { MobileBottomNav } from "./MobileBottomNav";
 import { GlobalSearch } from "./GlobalSearch";
 import { flattenNavItems } from "@/config/appNav";
-import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { Link } from "wouter";
 import { ConnectivityIndicator } from "./ConnectivityIndicator";
 import { RoleSwitcher } from "./dashboard/RoleSwitcher";
@@ -113,7 +113,7 @@ export default function DashboardLayout({
 
 type DashboardLayoutContentProps = {
   children: React.ReactNode;
-  /** Manual toggle or drag. Saves the preference, or only sets the visit width inside a full bleed view. */
+  /** Manual toggle (edge tab or Ctrl+B). Saves the preference, or only sets the visit width inside a full bleed view. */
   setSidebarWidth: (width: number) => void;
   sidebarWidth: number;
   autoRail: boolean;
@@ -153,9 +153,6 @@ function DashboardLayoutContent({
     }
   }, [user, location, setLocation]);
   const { state } = useSidebar();
-  const [isResizing, setIsResizing] = useState(false);
-  const sidebarRef = useRef<HTMLDivElement>(null);
-  const dragWidthRef = useRef<number | null>(null);
   const menuItems = flattenNavItems(user?.role);
   const activeMenuItem =
     menuItems.find((item) => item.path === location) ??
@@ -208,130 +205,20 @@ function DashboardLayoutContent({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sidebarWidth, setSidebarWidth]);
 
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isResizing) return;
-
-      const sidebarLeft = sidebarRef.current?.getBoundingClientRect().left ?? 0;
-      // Snap while dragging: the sidebar is either the full width or the icon rail, never in between.
-      const snapped = snapSidebarWidth(e.clientX - sidebarLeft);
-      if (snapped !== dragWidthRef.current) {
-        dragWidthRef.current = snapped;
-        setSidebarWidth(snapped);
-      }
-    };
-
-    const handleMouseUp = () => {
-      setIsResizing(false);
-      dragWidthRef.current = null;
-    };
-
-    if (isResizing) {
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
-      document.body.style.cursor = "col-resize";
-      document.body.style.userSelect = "none";
-    }
-
-    return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-    };
-  }, [isResizing, setSidebarWidth]);
-
   return (
     <DashboardRolePreviewProvider actualRole={actualRole} effectiveRole={effectiveRole} setEffectiveRole={setEffectiveRole}>
-      <div className="relative" ref={sidebarRef} data-testid="app-sidebar" data-auto-rail={autoRail ? "true" : "false"} data-full-bleed={inVisit ? "true" : "false"} data-sidebar-width={sidebarWidth}>
+      <div className="relative" data-testid="app-sidebar" data-auto-rail={autoRail ? "true" : "false"} data-full-bleed={inVisit ? "true" : "false"} data-sidebar-width={sidebarWidth}>
         <Sidebar
           className="border-r-0 motion-reduce:[&_[data-slot=sidebar-gap]]:transition-none motion-reduce:[&_[data-slot=sidebar-container]]:transition-none"
         >
           <SidebarHeader
+            data-testid="sidebar-header"
             className={cn(
-              "border-b border-sidebar-border",
-              sidebarWidth <= PRESET_WIDTHS.narrow ? "min-h-[4.5rem] py-2 justify-center" : "h-20 justify-center"
+              "h-14 shrink-0 flex-row items-center border-b border-sidebar-border py-0",
+              sidebarWidth <= PRESET_WIDTHS.narrow ? "justify-center px-1" : "px-2"
             )}
           >
-            {sidebarWidth <= PRESET_WIDTHS.narrow ? (
-              <div className="flex flex-col items-center gap-2 px-1 w-full">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Link href={appPath("/")} aria-label="Go to Dashboard">
-                      <div className="flex justify-center w-full rounded-md transition-opacity hover:opacity-80 cursor-pointer">
-                        <img
-                          src="/nrcs-logo-source.png"
-                          alt="Nigerian Red Cross Society"
-                          className="h-10 w-10 shrink-0 object-contain mx-auto"
-                          data-testid="sidebar-logo-collapsed"
-                        />
-                      </div>
-                    </Link>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">Go to Dashboard</TooltipContent>
-                </Tooltip>
-                <button
-                  type="button"
-                  onClick={toggleSidebarWidth}
-                  className={`h-8 w-8 flex items-center justify-center hover:bg-sidebar-accent rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring shrink-0 border border-sidebar-border hover:border-primary/50 ${toggleFeedback ? "bg-primary/20 scale-110 border-primary" : ""}`}
-                  aria-label="Toggle sidebar width (Ctrl+B)"
-                  title="Toggle sidebar width (Ctrl+B)"
-                >
-                  <ChevronsLeft
-                    className={cn(
-                      "h-3.5 w-3.5 text-sidebar-foreground transition-transform duration-200 ease-in-out",
-                      sidebarWidth <= PRESET_WIDTHS.narrow ? "rotate-180" : "rotate-0"
-                    )}
-                  />
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 px-2 transition-all w-full">
-                <div className="min-w-0 flex-1">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Link href={appPath("/")}>
-                        <div className="flex items-center gap-2 min-w-0 rounded-md px-1 py-1 transition-opacity hover:opacity-80 cursor-pointer">
-                          <img
-                            src="/nrcs-logo-source.png"
-                            alt="Nigerian Red Cross Society"
-                            className="h-10 w-10 shrink-0"
-                          />
-                          <div className="flex flex-col min-w-0 gap-0.5">
-                            <span
-                              className="font-bold text-sm leading-tight text-sidebar-foreground"
-                              data-testid="sidebar-org-name"
-                            >
-                              Nigerian Red Cross Society
-                            </span>
-                            <span className="text-xs leading-tight text-sidebar-foreground/70">
-                              Enterprise Asset Management
-                            </span>
-                          </div>
-                        </div>
-                      </Link>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom">Go to Dashboard</TooltipContent>
-                  </Tooltip>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={toggleSidebarWidth}
-                    className={`h-8 w-8 flex items-center justify-center hover:bg-sidebar-accent rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring shrink-0 border border-sidebar-border hover:border-primary/50 ${toggleFeedback ? "bg-primary/20 scale-110 border-primary" : ""}`}
-                    aria-label="Toggle sidebar width (Ctrl+B)"
-                    title="Toggle sidebar width (Ctrl+B)"
-                  >
-                    <ChevronsLeft
-                      className={cn(
-                        "h-3.5 w-3.5 text-sidebar-foreground transition-transform duration-200 ease-in-out",
-                        sidebarWidth <= PRESET_WIDTHS.narrow ? "rotate-180" : "rotate-0"
-                      )}
-                    />
-                  </button>
-                </div>
-              </div>
-            )}
+            <SidebarBrand rail={sidebarWidth <= PRESET_WIDTHS.narrow} />
           </SidebarHeader>
 
           <SidebarContent className="gap-0">
@@ -422,12 +309,10 @@ function DashboardLayoutContent({
             </DropdownMenu>
           </SidebarFooter>
         </Sidebar>
-        <div
-          className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-primary/20 transition-colors"
-          onMouseDown={() => {
-            setIsResizing(true);
-          }}
-          style={{ zIndex: 50 }}
+        <SidebarEdgeToggle
+          rail={sidebarWidth <= PRESET_WIDTHS.narrow}
+          onToggle={toggleSidebarWidth}
+          feedback={toggleFeedback}
         />
       </div>
 
