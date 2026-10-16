@@ -850,7 +850,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
           <Dialog open={reorderDialogOpen} onOpenChange={(open) => { if (!open && !bulkReorderMutation.isPending) setReorderDialogOpen(false); }}>
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
-                <DialogTitle>Set reorder level for {stockRowCount(stockSelectedCount)}</DialogTitle>
+                <DialogTitle className="pr-8">Set reorder level for {stockRowCount(stockSelectedCount)}</DialogTitle>
                 <DialogDescription>
                   Stock at or below this level shows as low. It replaces the current reorder level on each selected row and
                   is recorded in the audit log.
