@@ -68,8 +68,11 @@ import {
   type FacilityType,
 } from "@shared/facilities";
 import { cn } from "@/lib/utils";
-import { Edit2, Loader2, MoreHorizontal, Trash2 } from "lucide-react";
+import { CircleCheck, CircleOff, Edit2, Loader2, MoreHorizontal, Trash2 } from "lucide-react";
 import { CardQrCode } from "@/components/CardQrCode";
+import { BulkActionsToolbar } from "@/components/BulkActionsToolbar";
+import { Checkbox } from "@/components/ui/checkbox";
+import { downloadCsv, toCsv } from "@/lib/csv";
 import { FacilitiesToolbar } from "@/components/facilities/FacilitiesToolbar";
 import { FacilitiesMap } from "@/components/facilities/FacilitiesMap";
 import {
@@ -232,10 +235,11 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
   });
   const deleteMutation = trpc.sites.bulkDelete.useMutation({
     onSuccess: async ({ deleted }) => {
-      toast.success(`Deleted ${deleted} facility${deleted === 1 ? "" : "ies"}`);
+      if (deleted === 0) toast.error("Facility not deleted. It may still have assets or child facilities.");
+      else toast.success(deleted === 1 ? "Facility deleted" : `Deleted ${deleted} facilities`);
       await refetch();
     },
-    onError: (e) => toast.error(`Delete failed: ${e.message}`),
+    onError: (e) => toast.error(`Could not delete the facility: ${e.message}`),
   });
   const importMutation = trpc.bulkOperations.importSites.useMutation({
     onSuccess: async (result) => {
@@ -389,6 +393,75 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
   useEffect(() => {
     if (page > totalPages) setPage(totalPages);
   }, [page, totalPages]);
+
+  // Bulk selection covers the visible page only and clears when the page, filters or sort change,
+  // so nothing is acted on that the user cannot see.
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set());
+  const pageIdsKey = pageRows.map((f) => f.id).join(",");
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [pageIdsKey, viewMode]);
+  const selectedOnPage = pageRows.filter((f) => selectedIds.has(f.id)).map((f) => f.id);
+  const selectedCount = selectedOnPage.length;
+  const allOnPageSelected = pageRows.length > 0 && selectedCount === pageRows.length;
+  const someOnPageSelected = selectedCount > 0 && !allOnPageSelected;
+  const toggleSelected = (id: number, on: boolean) =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  const togglePageSelected = (on: boolean) => setSelectedIds(on ? new Set(pageRows.map((f) => f.id)) : new Set());
+  const clearSelection = () => setSelectedIds(new Set());
+  const facilityCount = (n: number) => `${n} ${n === 1 ? "facility" : "facilities"}`;
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkActiveTarget, setBulkActiveTarget] = useState<boolean | null>(null);
+
+  const bulkDeleteMutation = trpc.sites.bulkDelete.useMutation({
+    onSuccess: async (res) => {
+      if (res.deleted === res.total) toast.success(`Deleted ${facilityCount(res.deleted)}`);
+      else if (res.deleted === 0) toast.error("No facilities were deleted. They may still have assets, stock or child facilities.");
+      else toast.warning(`Deleted ${res.deleted} of ${facilityCount(res.total)}. ${res.total - res.deleted} could not be deleted.`);
+      setBulkDeleteOpen(false);
+      clearSelection();
+      await refetch();
+    },
+    onError: (e) => toast.error(`Could not delete the selected facilities: ${e.message}`),
+  });
+  const bulkActiveMutation = trpc.sites.bulkSetActive.useMutation({
+    onSuccess: async (res, vars) => {
+      const label = vars.isActive ? "active" : "inactive";
+      if (res.updated === res.total) toast.success(`Marked ${facilityCount(res.updated)} as ${label}`);
+      else if (res.updated === 0) toast.error("No facilities were updated.");
+      else toast.warning(`Marked ${res.updated} of ${facilityCount(res.total)} as ${label}.`);
+      setBulkActiveTarget(null);
+      clearSelection();
+      await refetch();
+    },
+    onError: (e) => toast.error(`Could not update the selected facilities: ${e.message}`),
+  });
+  const bulkPending = bulkDeleteMutation.isPending || bulkActiveMutation.isPending;
+  const exportSelected = () => {
+    const chosen = pageRows.filter((f) => selectedIds.has(f.id));
+    const csv = toCsv(
+      ["Name", "Type", "Code", "State", "Address", "Parent facility", "Contact", "Phone", "Postal code", "Status"],
+      chosen.map((f) => [
+        f.name,
+        TYPE_BADGE_LABEL[f.facilityType],
+        f.code,
+        f.state,
+        f.address,
+        f.parentFacilityName,
+        f.contactPerson,
+        f.contactPhone,
+        f.postalCode,
+        f.isActive ? "Active" : "Inactive",
+      ])
+    );
+    downloadCsv(csv, `facilities_selected_${new Date().toISOString().slice(0, 10)}.csv`);
+    toast.success(`Exported ${facilityCount(chosen.length)} to CSV`);
+  };
 
   const sort = (k: SortKey) => {
     if (sortKey === k) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -570,6 +643,8 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
               facility={f}
               qrOrigin={qrOrigin}
               canEdit={canEditFacilities}
+              selected={selectedIds.has(f.id)}
+              onSelectedChange={(on) => toggleSelected(f.id, on)}
               onEdit={() => openEdit(f)}
               onDelete={() => setPendingDelete({ id: f.id, name: f.name })}
             />
@@ -580,7 +655,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
           className="frozen-table-wrap sticky-lead-cols rounded-md border bg-card px-2 md:px-3"
           style={
             {
-              "--col1-width": "56px",
+              "--col1-width": "84px",
               "--col2-width": "260px",
             } as Record<string, string>
           }
@@ -591,7 +666,18 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
           >
             <TableHeader className="bg-background">
               <TableRow>
-                <StickyHead className="px-2 py-1.5 text-left font-medium whitespace-nowrap">S/No</StickyHead>
+                <StickyHead className="px-2 py-1.5 text-left font-medium whitespace-nowrap">
+                  <span className="flex items-center gap-2">
+                    <Checkbox
+                      aria-label="Select all facilities on this page"
+                      data-testid="facility-select-all"
+                      disabled={pageRows.length === 0}
+                      checked={allOnPageSelected ? true : someOnPageSelected ? "indeterminate" : false}
+                      onCheckedChange={(v) => togglePageSelected(v === true)}
+                    />
+                    S/No
+                  </span>
+                </StickyHead>
                 <StickyHead onClick={() => sort("name")} className="w-[9rem] min-w-[9rem] md:w-auto md:min-w-[12rem] px-2 py-1.5 text-left font-medium whitespace-nowrap">Name</StickyHead>
                 <TableHead onClick={() => sort("facilityType")} className="cursor-pointer px-3 py-1.5 text-left font-medium whitespace-nowrap">Type</TableHead>
                 <TableHead onClick={() => sort("code")} className="cursor-pointer px-2 py-1.5 text-left font-medium whitespace-nowrap">Code</TableHead>
@@ -616,7 +702,17 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
                     className={cn("relative z-10 h-9 cursor-pointer hover:bg-muted/50", rowCls)}
                     onClick={() => setLocation(appPath(`/facilities/${f.id}`))}
                   >
-                    <StickyCell className="px-2 py-1 text-muted-foreground">{rowNo}</StickyCell>
+                    <StickyCell className="px-2 py-1 text-muted-foreground" onClick={(e) => e.stopPropagation()}>
+                      <span className="flex items-center gap-2">
+                        <Checkbox
+                          aria-label={`Select ${f.name}`}
+                          data-testid={`facility-select-${f.id}`}
+                          checked={selectedIds.has(f.id)}
+                          onCheckedChange={(v) => toggleSelected(f.id, v === true)}
+                        />
+                        {rowNo}
+                      </span>
+                    </StickyCell>
                     <StickyCell className="px-2 py-1 w-[9rem] min-w-[9rem] md:w-auto md:min-w-[12rem] whitespace-normal font-medium" data-testid={`facility-name-${f.id}`}>
                       <Link href={appPath(`/facilities/${f.id}`)} className="hover:underline focus-visible:underline focus-visible:outline-none" onClick={(e) => e.stopPropagation()}>
                         {f.name}
@@ -679,6 +775,83 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
         </div>
       </div>
       ) : null}
+
+      {viewMode !== "map" ? (
+        <BulkActionsToolbar
+          selectedCount={selectedCount}
+          itemLabel="facilities"
+          onClearSelection={clearSelection}
+          onExport={exportSelected}
+          onDelete={canEditFacilities ? () => setBulkDeleteOpen(true) : undefined}
+          disabled={bulkPending}
+        >
+          {canEditFacilities ? (
+            <>
+              <Button variant="secondary" size="sm" className="gap-2" disabled={bulkPending} onClick={() => setBulkActiveTarget(true)} data-testid="bulk-actions-activate">
+                <CircleCheck className="h-4 w-4" />
+                Mark active
+              </Button>
+              <Button variant="secondary" size="sm" className="gap-2" disabled={bulkPending} onClick={() => setBulkActiveTarget(false)} data-testid="bulk-actions-deactivate">
+                <CircleOff className="h-4 w-4" />
+                Mark inactive
+              </Button>
+            </>
+          ) : null}
+        </BulkActionsToolbar>
+      ) : null}
+
+      <AlertDialog open={bulkDeleteOpen} onOpenChange={(open) => { if (!open && !bulkDeleteMutation.isPending) setBulkDeleteOpen(false); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {facilityCount(selectedCount)}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes the selected facilities. Facilities that still have assets, stock or child
+              facilities are skipped. Each deletion is recorded in the audit log. You cannot undo this.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkDeleteMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              data-testid="facility-bulk-delete-confirm"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={bulkDeleteMutation.isPending || selectedCount === 0}
+              onClick={(e) => {
+                e.preventDefault();
+                bulkDeleteMutation.mutate({ ids: selectedOnPage });
+              }}
+            >
+              {bulkDeleteMutation.isPending ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Deleting…</>) : `Delete ${selectedCount}`}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={bulkActiveTarget !== null} onOpenChange={(open) => { if (!open && !bulkActiveMutation.isPending) setBulkActiveTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mark {facilityCount(selectedCount)} as {bulkActiveTarget ? "active" : "inactive"}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {bulkActiveTarget
+                ? "Active facilities appear in pickers, reports and the map."
+                : "Inactive facilities stay on record but are hidden from pickers. Their assets and stock are not changed."}{" "}
+              Each change is recorded in the audit log.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkActiveMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              data-testid="facility-bulk-active-confirm"
+              disabled={bulkActiveMutation.isPending || selectedCount === 0 || bulkActiveTarget === null}
+              onClick={(e) => {
+                e.preventDefault();
+                if (bulkActiveTarget !== null) bulkActiveMutation.mutate({ ids: selectedOnPage, isActive: bulkActiveTarget });
+              }}
+            >
+              {bulkActiveMutation.isPending ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Updating…</>) : bulkActiveTarget ? "Mark active" : "Mark inactive"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -800,12 +973,16 @@ function FacilityCard({
   facility: f,
   qrOrigin,
   canEdit,
+  selected,
+  onSelectedChange,
   onEdit,
   onDelete,
 }: {
   facility: FacilityRow;
   qrOrigin: string;
   canEdit: boolean;
+  selected: boolean;
+  onSelectedChange: (on: boolean) => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
@@ -824,7 +1001,15 @@ function FacilityCard({
       className="relative h-full px-4 transition-colors hover:bg-muted/40 focus-within:ring-2 focus-within:ring-ring"
     >
       <div className="flex items-start justify-between gap-2">
-        <h3 className="min-w-0 text-base font-semibold leading-6" data-testid={`facility-name-${f.id}`}>
+        <div className="relative z-10 flex h-6 shrink-0 items-center">
+          <Checkbox
+            aria-label={`Select ${f.name}`}
+            data-testid={`facility-select-${f.id}`}
+            checked={selected}
+            onCheckedChange={(v) => onSelectedChange(v === true)}
+          />
+        </div>
+        <h3 className="min-w-0 flex-1 text-base font-semibold leading-6" data-testid={`facility-name-${f.id}`}>
           <Link
             href={appPath(`/facilities/${f.id}`)}
             className="after:absolute after:inset-0 after:content-[''] focus-visible:outline-none"
