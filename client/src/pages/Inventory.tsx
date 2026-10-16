@@ -35,11 +35,18 @@ import {
   ShieldAlert,
   TriangleAlert,
   Warehouse,
+  CircleCheck,
+  CircleOff,
+  SlidersHorizontal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatEnumLabel } from "@/lib/format";
 import { HtmlTableEmptyState } from "@/components/ui/EmptyState";
 import { ViewToggle } from "@/components/ViewToggle";
+import { BULK_BAR_BUTTON_CLASS, BulkActionsToolbar } from "@/components/BulkActionsToolbar";
+import { Checkbox } from "@/components/ui/checkbox";
+import { downloadCsv, toCsv } from "@/lib/csv";
+import { parseReorderLevel, stockKeyId } from "@shared/stockKeys";
 import { useViewMode } from "@/hooks/useViewMode";
 import { CardQrCode } from "@/components/CardQrCode";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
@@ -320,6 +327,81 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
   });
 
   const rows = overviewQuery.data ?? [];
+
+  // Bulk selection on the stock overview: the rows on screen only. It clears when filters or the view change.
+  const [selectedStockKeys, setSelectedStockKeys] = useState<Set<string>>(() => new Set());
+  const rowKeysSignature = rows.map(stockKeyId).join(",");
+  useEffect(() => {
+    setSelectedStockKeys(new Set());
+  }, [rowKeysSignature, overviewViewMode, mainTab]);
+  const selectedStockRows = rows.filter((r) => selectedStockKeys.has(stockKeyId(r)));
+  const stockSelectedCount = selectedStockRows.length;
+  const allStockSelected = rows.length > 0 && stockSelectedCount === rows.length;
+  const someStockSelected = stockSelectedCount > 0 && !allStockSelected;
+  const toggleStockSelected = (key: string, on: boolean) =>
+    setSelectedStockKeys((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(key);
+      else next.delete(key);
+      return next;
+    });
+  const toggleAllStock = (on: boolean) => setSelectedStockKeys(on ? new Set(rows.map(stockKeyId)) : new Set());
+  const clearStockSelection = () => setSelectedStockKeys(new Set());
+  const stockRowCount = (n: number) => `${n} stock ${n === 1 ? "row" : "rows"}`;
+  const itemCount = (n: number) => `${n} ${n === 1 ? "item" : "items"}`;
+  const [reorderDialogOpen, setReorderDialogOpen] = useState(false);
+  const [reorderInput, setReorderInput] = useState("");
+  const [reorderTouched, setReorderTouched] = useState(false);
+  const reorderValue = parseReorderLevel(reorderInput);
+  const [activeTarget, setActiveTarget] = useState<boolean | null>(null);
+  const selectedCatalogueIds = Array.from(new Set(selectedStockRows.map((r) => r.catalogueId)));
+
+  const bulkReorderMutation = trpc.inventoryV2.stock.bulkSetReorderLevel.useMutation({
+    onSuccess: async (res, vars) => {
+      if (res.updated === res.total) toast.success(`Reorder level set to ${vars.minLevel} for ${stockRowCount(res.updated)}`);
+      else if (res.updated === 0) toast.error("No reorder levels were updated.");
+      else toast.warning(`Reorder level set for ${res.updated} of ${stockRowCount(res.total)}.`);
+      setReorderDialogOpen(false);
+      clearStockSelection();
+      await overviewQuery.refetch();
+    },
+    onError: (e) => toast.error(`Could not set the reorder level: ${e.message}`),
+  });
+  const bulkActiveMutation = trpc.inventoryV2.catalogue.bulkSetActive.useMutation({
+    onSuccess: async (res, vars) => {
+      const label = vars.isActive ? "active" : "inactive";
+      if (res.updated === res.total) toast.success(`Marked ${itemCount(res.updated)} as ${label}`);
+      else if (res.updated === 0) toast.error("No items were updated.");
+      else toast.warning(`Marked ${res.updated} of ${itemCount(res.total)} as ${label}.`);
+      setActiveTarget(null);
+      clearStockSelection();
+      await overviewQuery.refetch();
+    },
+    onError: (e) => toast.error(`Could not update the selected items: ${e.message}`),
+  });
+  const stockBulkPending = bulkReorderMutation.isPending || bulkActiveMutation.isPending;
+  const exportSelectedStock = () => {
+    const csv = toCsv(
+      ["Item code", "Item name", "Location", "Category", "Program", "On hand", "Unit", "Reorder level", "Max", "Safety", "Status", "VED", "Active"],
+      selectedStockRows.map((r) => [
+        r.itemCode,
+        r.itemName,
+        r.warehouseName,
+        r.itemCategory == null ? "" : itemCategoryLabel(r.itemCategory),
+        r.category,
+        r.quantityOnHand,
+        r.unitOfMeasure,
+        r.minLevel,
+        r.maxLevel,
+        r.safetyStockLevel,
+        statusLabel(r.status),
+        formatEnumLabel(r.vedClassification ?? "desirable"),
+        r.isActive === false ? "No" : "Yes",
+      ])
+    );
+    downloadCsv(csv, `stock_selected_${new Date().toISOString().slice(0, 10)}.csv`);
+    toast.success(`Exported ${stockRowCount(selectedStockRows.length)} to CSV`);
+  };
   const rowsForChipCounts = overviewCountQueryEnabled ? (overviewCountQuery.data ?? []) : rows;
   const chipCounts = useMemo(() => {
     const by = new Map<ItemCategory, number>();
@@ -478,6 +560,17 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
           />
 
           {overviewViewMode === "card" ? (
+            <div className="space-y-3">
+            {rows.length > 0 ? (
+              <label className="flex w-fit cursor-pointer items-center gap-2 text-sm text-muted-foreground">
+                <Checkbox
+                  data-testid="stock-select-all-cards"
+                  checked={allStockSelected ? true : someStockSelected ? "indeterminate" : false}
+                  onCheckedChange={(v) => toggleAllStock(v === true)}
+                />
+                Select all on this page
+              </label>
+            ) : null}
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {rows.map((row) => {
                 const progress = Math.min(100, Math.round((row.quantityOnHand / maxRef(row)) * 100));
@@ -485,7 +578,10 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                   <Card
                     key={`${row.catalogueId}-${row.warehouseId}`}
                     data-testid={`stock-card-${row.itemCode}`}
-                    className="cursor-pointer"
+                    className={cn(
+                      "cursor-pointer",
+                      selectedStockKeys.has(stockKeyId(row)) && "border-primary bg-primary/5 ring-1 ring-primary"
+                    )}
                     onClick={() => {
                       setSelectedStock(row);
                       setZoneInput(row.zoneLocation ?? "");
@@ -497,6 +593,14 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                     <CardContent className="pt-4">
                       <div className="mb-2 flex items-start justify-between gap-2">
                         <div className="flex min-w-0 items-center gap-2">
+                          <span className="flex shrink-0 items-center" onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              aria-label={`Select ${row.itemName} at ${row.warehouseName}`}
+                              data-testid={`stock-select-${row.catalogueId}-${row.warehouseId}`}
+                              checked={selectedStockKeys.has(stockKeyId(row))}
+                              onCheckedChange={(v) => toggleStockSelected(stockKeyId(row), v === true)}
+                            />
+                          </span>
                           <Package className="h-5 w-5 shrink-0 text-primary" />
                           <div className="min-w-0">
                             <p className="flex min-w-0 items-center gap-1 truncate font-medium">
@@ -535,6 +639,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                         >
                           {statusLabel(row.status)}
                         </Badge>
+                        {row.isActive === false ? <Badge variant="secondary">Inactive</Badge> : null}
                         <span className="rounded-md bg-gray-100 px-2 py-0.5 text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-200">
                           {row.itemCategory == null
                             ? "Not set"
@@ -562,12 +667,13 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                 );
               })}
             </div>
+            </div>
           ) : (
             <div
               className="frozen-table-wrap sticky-first-col rounded-md border px-2 md:px-3"
               style={
                 {
-                  "--col1-width": "120px",
+                  "--col1-width": "148px",
                   "--col2-width": "200px",
                 } as Record<string, string>
               }
@@ -577,8 +683,17 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
               >
                 <thead className="bg-background">
                   <tr className="border-b">
-                    <th className="w-[120px] min-w-[120px] border-r bg-background px-2 py-2 text-left">
-                      Item code
+                    <th className="w-[148px] min-w-[148px] border-r bg-background px-2 py-2 text-left">
+                      <span className="flex items-center gap-2">
+                        <Checkbox
+                          aria-label="Select all stock rows on this page"
+                          data-testid="stock-select-all"
+                          disabled={rows.length === 0}
+                          checked={allStockSelected ? true : someStockSelected ? "indeterminate" : false}
+                          onCheckedChange={(v) => toggleAllStock(v === true)}
+                        />
+                        Item code
+                      </span>
                     </th>
                     <th className="min-w-[12rem] border-r bg-background px-2 py-2 text-left">
                       Location
@@ -601,7 +716,11 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                   {rows.map((row) => (
                     <tr
                       key={`${row.catalogueId}-${row.warehouseId}`}
-                      className="relative z-10 cursor-pointer border-b hover:bg-muted/50"
+                      aria-selected={selectedStockKeys.has(stockKeyId(row))}
+                      className={cn(
+                        "relative z-10 cursor-pointer border-b hover:bg-muted/50",
+                        selectedStockKeys.has(stockKeyId(row)) && "bg-[color-mix(in_oklab,var(--primary)_7%,var(--background))]"
+                      )}
                       onClick={() => {
                         setSelectedStock(row);
                         setZoneInput(row.zoneLocation ?? "");
@@ -610,8 +729,24 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                         setSafetyInput(row.safetyStockLevel == null ? "" : String(row.safetyStockLevel));
                       }}
                     >
-                      <td className="w-[120px] min-w-[120px] border-r bg-background px-2 py-2">
-                        {row.itemCode}
+                      <td
+                        className={cn(
+                          "w-[148px] min-w-[148px] border-r px-2 py-2",
+                          selectedStockKeys.has(stockKeyId(row))
+                            ? "bg-[color-mix(in_oklab,var(--primary)_7%,var(--background))]"
+                            : "bg-background"
+                        )}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <span className="flex items-center gap-2">
+                          <Checkbox
+                            aria-label={`Select ${row.itemName} at ${row.warehouseName}`}
+                            data-testid={`stock-select-${row.catalogueId}-${row.warehouseId}`}
+                            checked={selectedStockKeys.has(stockKeyId(row))}
+                            onCheckedChange={(v) => toggleStockSelected(stockKeyId(row), v === true)}
+                          />
+                          {row.itemCode}
+                        </span>
                       </td>
                       <td className="min-w-[12rem] whitespace-normal border-r bg-background px-2 py-2">
                         {row.warehouseName}
@@ -656,6 +791,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                         >
                           {statusLabel(row.status)}
                         </Badge>
+                        {row.isActive === false ? <Badge variant="secondary" className="ml-1">Inactive</Badge> : null}
                       </td>
                       <td className="px-2 py-2">
                         <Badge
@@ -673,6 +809,130 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
               </table>
             </div>
           )}
+
+          <BulkActionsToolbar
+            selectedCount={stockSelectedCount}
+            itemLabel="stock rows"
+            onClearSelection={clearStockSelection}
+            onExport={exportSelectedStock}
+            disabled={stockBulkPending}
+          >
+            {isManagerOrAdmin ? (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={BULK_BAR_BUTTON_CLASS}
+                  disabled={stockBulkPending}
+                  onClick={() => {
+                    setReorderInput("");
+                    setReorderTouched(false);
+                    setReorderDialogOpen(true);
+                  }}
+                  data-testid="bulk-actions-reorder"
+                >
+                  <SlidersHorizontal className="h-4 w-4" />
+                  Set reorder level
+                </Button>
+                <Button variant="outline" size="sm" className={BULK_BAR_BUTTON_CLASS} disabled={stockBulkPending} onClick={() => setActiveTarget(true)} data-testid="bulk-actions-activate">
+                  <CircleCheck className="h-4 w-4" />
+                  Mark active
+                </Button>
+                <Button variant="outline" size="sm" className={BULK_BAR_BUTTON_CLASS} disabled={stockBulkPending} onClick={() => setActiveTarget(false)} data-testid="bulk-actions-deactivate">
+                  <CircleOff className="h-4 w-4" />
+                  Mark inactive
+                </Button>
+              </>
+            ) : null}
+          </BulkActionsToolbar>
+
+          <Dialog open={reorderDialogOpen} onOpenChange={(open) => { if (!open && !bulkReorderMutation.isPending) setReorderDialogOpen(false); }}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Set reorder level for {stockRowCount(stockSelectedCount)}</DialogTitle>
+                <DialogDescription>
+                  Stock at or below this level shows as low. It replaces the current reorder level on each selected row and
+                  is recorded in the audit log.
+                </DialogDescription>
+              </DialogHeader>
+              <form
+                id="bulk-reorder-form"
+                className="space-y-2"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  setReorderTouched(true);
+                  if (reorderValue == null || stockSelectedCount === 0) return;
+                  bulkReorderMutation.mutate({
+                    items: selectedStockRows.map((r) => ({ catalogueId: r.catalogueId, warehouseId: r.warehouseId })),
+                    minLevel: reorderValue,
+                  });
+                }}
+              >
+                <Label htmlFor="bulk-reorder-input">Reorder level</Label>
+                <Input
+                  id="bulk-reorder-input"
+                  data-testid="bulk-reorder-input"
+                  inputMode="decimal"
+                  autoFocus
+                  value={reorderInput}
+                  onChange={(e) => setReorderInput(e.target.value)}
+                  onBlur={() => setReorderTouched(true)}
+                  aria-invalid={reorderTouched && reorderValue == null}
+                  aria-describedby="bulk-reorder-hint"
+                  placeholder="For example 50"
+                />
+                <p
+                  id="bulk-reorder-hint"
+                  className={cn("text-xs", reorderTouched && reorderValue == null ? "text-destructive" : "text-muted-foreground")}
+                >
+                  {reorderTouched && reorderValue == null ? "Enter a number of 0 or more." : "Use the item's unit of measure."}
+                </p>
+              </form>
+              <DialogFooter>
+                <Button variant="outline" disabled={bulkReorderMutation.isPending} onClick={() => setReorderDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  form="bulk-reorder-form"
+                  data-testid="bulk-reorder-confirm"
+                  disabled={bulkReorderMutation.isPending || stockSelectedCount === 0 || (reorderTouched && reorderValue == null)}
+                >
+                  {bulkReorderMutation.isPending ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving…</>) : "Set reorder level"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={activeTarget !== null} onOpenChange={(open) => { if (!open && !bulkActiveMutation.isPending) setActiveTarget(null); }}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>
+                  Mark {itemCount(selectedCatalogueIds.length)} as {activeTarget ? "active" : "inactive"}?
+                </DialogTitle>
+                <DialogDescription>
+                  {activeTarget
+                    ? "Active items can be requested, received and issued again."
+                    : "Inactive items stay in the catalogue with their stock history but are hidden from new requests and pickers."}{" "}
+                  This applies to the item in every warehouse. Each change is recorded in the audit log.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button variant="outline" disabled={bulkActiveMutation.isPending} onClick={() => setActiveTarget(null)}>
+                  Cancel
+                </Button>
+                <Button
+                  data-testid="bulk-active-confirm"
+                  disabled={bulkActiveMutation.isPending || selectedCatalogueIds.length === 0 || activeTarget === null}
+                  onClick={() => {
+                    if (activeTarget !== null) bulkActiveMutation.mutate({ ids: selectedCatalogueIds, isActive: activeTarget });
+                  }}
+                >
+                  {bulkActiveMutation.isPending ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Updating…</>) : activeTarget ? "Mark active" : "Mark inactive"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
 
         <TabsContent value="catalogue" className="space-y-4">

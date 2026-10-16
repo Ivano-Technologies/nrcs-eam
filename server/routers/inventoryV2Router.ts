@@ -34,6 +34,7 @@ import {
 import { getDb, getAllUsers, createNotification, getUserById } from "../db";
 import { AUDIT_ACTIONS, logAuditEvent } from "../_core/auditHelper";
 import { protectedProcedure, requireRole, router } from "../_core/trpc";
+import { dedupeStockKeys } from "../../shared/stockKeys";
 import {
   enforceFacilityScope,
   assertFacilityAccess,
@@ -867,6 +868,47 @@ export const inventoryV2Router = router({
         return { success: true as const };
       }),
 
+    /**
+     * Bulk mark catalogue items active or inactive (applies to the item in every warehouse).
+     * Manager/admin only; audited per item with old and new values.
+     */
+    bulkSetActive: protectedProcedure
+      .input(z.object({ ids: z.array(z.number().int().positive()).min(1).max(500), isActive: z.boolean() }))
+      .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["manager", "admin"]);
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        const ids = Array.from(new Set(input.ids));
+        let updated = 0;
+        const failedIds: number[] = [];
+        for (const id of ids) {
+          try {
+            const [existing] = await db
+              .select({ id: inventoryCatalogue.id, isActive: inventoryCatalogue.isActive })
+              .from(inventoryCatalogue)
+              .where(eq(inventoryCatalogue.id, id))
+              .limit(1);
+            if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Catalogue item not found." });
+            await db
+              .update(inventoryCatalogue)
+              .set({ isActive: input.isActive, updatedAt: new Date() })
+              .where(eq(inventoryCatalogue.id, id));
+            await logAuditEvent({
+              userId: ctx.user.id,
+              action: "inventory.bulk_set_catalogue_active",
+              entityType: "inventory_catalogue",
+              entityId: id,
+              changes: { from: existing.isActive ?? null, to: input.isActive },
+            });
+            updated++;
+          } catch (error) {
+            failedIds.push(id);
+            console.error(`Failed to update catalogue item ${id}:`, error);
+          }
+        }
+        return { updated, total: ids.length, failedIds };
+      }),
+
     import: protectedProcedure
       .input(z.object({ csvData: z.string().optional() }).optional())
       .mutation(async ({ input, ctx }) => {
@@ -1007,6 +1049,7 @@ export const inventoryV2Router = router({
               vedClassification: item.vedClassification,
               unitOfMeasure: item.unitOfMeasure,
               photoUrl: item.photoUrl,
+              isActive: item.isActive ?? true,
               warehouseId: warehouse.id,
               warehouseName: warehouse.name,
               parentBranchName: warehouse.parentFacilityId ? (parentMap.get(warehouse.parentFacilityId) ?? null) : null,
@@ -1151,6 +1194,71 @@ export const inventoryV2Router = router({
           })
           .returning();
         return created;
+      }),
+
+    /**
+     * Bulk set the reorder level (stock settings min level) for stock overview rows (catalogue item per
+     * warehouse). Manager/admin only; per row facility access check, upsert and audit with old and new.
+     */
+    bulkSetReorderLevel: protectedProcedure
+      .input(
+        z.object({
+          items: z
+            .array(z.object({ catalogueId: z.number().int().positive(), warehouseId: z.number().int().positive() }))
+            .min(1)
+            .max(500),
+          minLevel: z.number().finite().min(0).max(1_000_000_000),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        requireRole(ctx, ["manager", "admin"]);
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+        const unique = dedupeStockKeys(input.items);
+        let updated = 0;
+        const failed: Array<{ catalogueId: number; warehouseId: number }> = [];
+        for (const item of unique) {
+          try {
+            assertFacilityAccess(ctx.user, item.warehouseId);
+            const [warehouse] = await db.select({ id: sites.id }).from(sites).where(eq(sites.id, item.warehouseId)).limit(1);
+            const [catalogueItem] = await db
+              .select({ id: inventoryCatalogue.id })
+              .from(inventoryCatalogue)
+              .where(eq(inventoryCatalogue.id, item.catalogueId))
+              .limit(1);
+            if (!warehouse || !catalogueItem) throw new TRPCError({ code: "NOT_FOUND", message: "Stock item not found." });
+            const [existing] = await db
+              .select()
+              .from(stockSettings)
+              .where(and(eq(stockSettings.catalogueId, item.catalogueId), eq(stockSettings.warehouseId, item.warehouseId)))
+              .limit(1);
+            if (existing) {
+              await db
+                .update(stockSettings)
+                .set({ minLevel: input.minLevel, updatedAt: new Date() })
+                .where(eq(stockSettings.id, existing.id));
+            } else {
+              await db.insert(stockSettings).values({ catalogueId: item.catalogueId, warehouseId: item.warehouseId, minLevel: input.minLevel });
+            }
+            await logAuditEvent({
+              userId: ctx.user.id,
+              action: "inventory.bulk_set_reorder_level",
+              entityType: "stock_settings",
+              entityId: existing?.id,
+              changes: {
+                catalogueId: item.catalogueId,
+                warehouseId: item.warehouseId,
+                from: existing?.minLevel ?? null,
+                to: input.minLevel,
+              },
+            });
+            updated++;
+          } catch (error) {
+            failed.push(item);
+            console.error(`Failed to set reorder level for ${item.catalogueId}:${item.warehouseId}:`, error);
+          }
+        }
+        return { updated, total: unique.length, failed };
       }),
 
     setZoneLocation: protectedProcedure
