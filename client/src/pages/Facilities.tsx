@@ -421,7 +421,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
   const bulkDeleteMutation = trpc.sites.bulkDelete.useMutation({
     onSuccess: async (res) => {
       if (res.deleted === res.total) toast.success(`Deleted ${facilityCount(res.deleted)}`);
-      else if (res.deleted === 0) toast.error("No facilities were deleted. They may still have assets, stock or child facilities.");
+      else if (res.deleted === 0) toast.error("No facilities were deleted. They may still have assets or child facilities.");
       else toast.warning(`Deleted ${res.deleted} of ${facilityCount(res.total)}. ${res.total - res.deleted} could not be deleted.`);
       setBulkDeleteOpen(false);
       clearSelection();
@@ -805,8 +805,8 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
           <AlertDialogHeader>
             <AlertDialogTitle>Delete {facilityCount(selectedCount)}?</AlertDialogTitle>
             <AlertDialogDescription>
-              This permanently removes the selected facilities. Facilities that still have assets, stock or child
-              facilities are skipped. Each deletion is recorded in the audit log. You cannot undo this.
+              This permanently removes the selected facilities. Facilities that still have assets or child facilities
+              are skipped. Each deletion is recorded in the audit log. You cannot undo this.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
