@@ -770,7 +770,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
                     className={cn("relative z-10 h-9 cursor-pointer hover:bg-muted/50", rowCls)}
                     onClick={() => setLocation(appPath(`/facilities/${f.id}`))}
                   >
-                    <StickyCell className="px-2 py-1 text-muted-foreground" onClick={(e) => e.stopPropagation()}>
+                    <StickyCell className={cn("px-2 py-1 text-muted-foreground", selectedIds.has(f.id) && rowCls)} onClick={(e) => e.stopPropagation()}>
                       <span className="flex items-center gap-2">
                         <Checkbox
                           aria-label={`Select ${f.name}`}
@@ -781,7 +781,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
                         {rowNo}
                       </span>
                     </StickyCell>
-                    <StickyCell className="px-2 py-1 w-[9rem] min-w-[9rem] md:w-auto md:min-w-[12rem] whitespace-normal font-medium" data-testid={`facility-name-${f.id}`}>
+                    <StickyCell className={cn("px-2 py-1 w-[9rem] min-w-[9rem] md:w-auto md:min-w-[12rem] whitespace-normal font-medium", selectedIds.has(f.id) && rowCls)} data-testid={`facility-name-${f.id}`}>
                       <Link href={appPath(`/facilities/${f.id}`)} className="hover:underline focus-visible:underline focus-visible:outline-none" onClick={(e) => e.stopPropagation()}>
                         {f.name}
                       </Link>

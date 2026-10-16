@@ -1617,7 +1617,7 @@ export default function Assets() {
             ) : null}
           </>
         }
-        count={`${total} ${total === 1 ? "asset" : "assets"}`}
+        count={`${formatCount(total)} ${total === 1 ? "asset" : "assets"}`}
         end={
           <>
             <ViewToggle value={viewMode} onChange={setViewMode} />
