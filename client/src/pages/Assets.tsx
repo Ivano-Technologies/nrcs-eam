@@ -1775,9 +1775,7 @@ export default function Assets() {
                     const statusLabel = REGISTER_LABELS[rs] ?? rs;
                     const cond = row.physicalCondition?.trim() || "";
                     const isSelected = selectedIds.has(row.id);
-                    const rowBgClass = isSelected
-                      ? "bg-primary/10"
-                      : i % 2 === 1
+                    const rowBgClass = i % 2 === 1
                         ? "bg-muted/30"
                         : "bg-background";
 
