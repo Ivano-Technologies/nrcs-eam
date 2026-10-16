@@ -3,6 +3,7 @@ import { Toolbar, ToolbarSearch } from "@/components/Toolbar";
 import { InventoryShellActions } from "@/components/inventory/InventoryShell";
 import { EmptyState, HtmlTableEmptyState } from "@/components/ui/EmptyState";
 import { formatEnumLabel } from "@/lib/format";
+import { requisitionPriorityBadgeClass } from "@/lib/requisitionPriority";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
@@ -25,12 +26,6 @@ import { Download, Loader2, MoreHorizontal } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 type ReqLine = { catalogueId: string; quantity: string; urgency: string; notes: string };
-
-function priorityVariant(priority?: string) {
-  if (priority === "emergency") return "destructive";
-  if (priority === "urgent") return "default";
-  return "secondary";
-}
 
 export default function Requisitions({ embedInShell = false }: { embedInShell?: boolean } = {}) {
   const [location, setLocation] = useLocation();
@@ -189,7 +184,7 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
               <CardContent className="space-y-2">
                 <div className="flex items-center justify-between">
                   <p className="font-mono text-sm">{row.reqNumber}</p>
-                  <Badge data-testid="req-priority-badge" data-priority={row.priority ?? "routine"} variant={priorityVariant(row.priority ?? undefined) as any}>{formatEnumLabel(row.priority)}</Badge>
+                  <Badge data-testid="req-priority-badge" data-priority={row.priority ?? "routine"} variant="outline" className={requisitionPriorityBadgeClass(row.priority)}>{formatEnumLabel(row.priority)}</Badge>
                 </div>
                 <p className="font-semibold">{row.title}</p>
                 <p className="text-xs text-muted-foreground">{formatEnumLabel(row.status)}</p>
@@ -227,7 +222,7 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
                   <td className="px-2 py-2 font-mono">{row.reqNumber}</td>
                   <td className="px-2 py-2">{row.title}</td>
                   <td className="px-2 py-2">
-                    <Badge data-testid="req-priority-badge" data-priority={row.priority ?? "routine"} variant={priorityVariant(row.priority ?? undefined) as any}>{formatEnumLabel(row.priority)}</Badge>
+                    <Badge data-testid="req-priority-badge" data-priority={row.priority ?? "routine"} variant="outline" className={requisitionPriorityBadgeClass(row.priority)}>{formatEnumLabel(row.priority)}</Badge>
                   </td>
                   <td className="px-2 py-2">{formatEnumLabel(row.status)}</td>
                   <td className="px-2 py-2">{row.requestingFacility}</td>
