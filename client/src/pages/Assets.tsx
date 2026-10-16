@@ -1683,6 +1683,7 @@ export default function Assets() {
         <input {...assetRegisterImport.inputProps} aria-label="Import assets from Excel" data-testid="asset-import-input" />
       ) : null}
 
+      {canEditAssets ? (
       <SelectAllMatchingStrip
         pageCount={pageIds.length}
         matchingCount={total}
@@ -1691,10 +1692,11 @@ export default function Assets() {
         onSelectAllMatching={() => setAllMatchingKey(selectionKey)}
         onClearSelection={clearSelection}
       />
+      ) : null}
 
       {viewMode === "card" ? (
         <div className="space-y-3">
-        {rows.length > 0 ? (
+        {canEditAssets && rows.length > 0 ? (
           <label className="flex w-fit cursor-pointer items-center gap-2 text-sm text-muted-foreground">
             <Checkbox
               data-testid="asset-select-all"
@@ -1713,6 +1715,7 @@ export default function Assets() {
             >
               <CardHeader>
                 <div className="flex items-start gap-3">
+                  {canEditAssets ? (
                   <div onClick={(e) => e.stopPropagation()} className="pt-0.5">
                     <Checkbox
                       aria-label={`Select ${row.assetCode?.trim() || row.assetTag?.trim() || row.name}`}
@@ -1721,6 +1724,7 @@ export default function Assets() {
                       onCheckedChange={(v) => toggleRowSelected(row.id, v === true)}
                     />
                   </div>
+                  ) : null}
                   <CardTitle className="text-base">{row.name}</CardTitle>
                 </div>
               </CardHeader>
@@ -1768,7 +1772,7 @@ export default function Assets() {
             >
               <thead className="bg-background">
                 <tr className="border-b bg-muted/40">
-                  <th className="px-2 py-1 w-10 min-w-10" aria-hidden />
+                  {canEditAssets ? <th className="px-2 py-1 w-10 min-w-10" aria-hidden /> : null}
                   <th className="px-2 py-1 text-center" colSpan={5}>Item details</th>
                   <th className="px-2 py-1 text-center" colSpan={4}>Item code</th>
                   <th className="px-2 py-1 text-center" colSpan={2}>Financial value</th>
@@ -1778,6 +1782,7 @@ export default function Assets() {
                   {canEditAssets ? <th className="px-2 py-1" /> : null}
                 </tr>
                 <tr className="border-b">
+                  {canEditAssets ? (
                   <th className="px-2 py-1.5 w-10 min-w-10 bg-background">
                     <Checkbox
                       aria-label="Select all assets on this page"
@@ -1787,6 +1792,7 @@ export default function Assets() {
                       onCheckedChange={(v) => togglePageSelected(v === true)}
                     />
                   </th>
+                  ) : null}
                   {REGISTER_TABLE_COLUMN_ORDER.map((header, index) => (
                     <th
                       key={header}
@@ -1806,7 +1812,7 @@ export default function Assets() {
               <tbody>
                 {rows.length === 0 ? (
                   <HtmlTableEmptyState
-                    colSpan={canEditAssets ? 27 : 26}
+                    colSpan={canEditAssets ? 27 : 25}
                     icon={Landmark}
                     title="No assets match these filters"
                   />
@@ -1850,6 +1856,7 @@ export default function Assets() {
                         aria-selected={isSelected}
                         onClick={() => setLocation(appPath(`/assets/${row.id}`))}
                       >
+                        {canEditAssets ? (
                         <td
                           className={cn("px-2 py-1 w-10 min-w-10", rowBgClass)}
                           onClick={(e) => e.stopPropagation()}
@@ -1861,6 +1868,7 @@ export default function Assets() {
                             onCheckedChange={(v) => toggleRowSelected(row.id, v === true)}
                           />
                         </td>
+                        ) : null}
                         <td className={cn("px-2 py-1 w-16 min-w-16", rowBgClass)}>{offset + i + 1}</td>
                         <td className={cn("px-2 py-1 w-32 min-w-32", rowBgClass)}>
                           {row.registerItemType ?? (row.itemType === "inventory" ? "Inventory" : "Asset")}
@@ -2549,6 +2557,7 @@ export default function Assets() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {canEditAssets ? (
       <BulkActionsToolbar
         selectedCount={selectedCount}
         itemLabel="assets"
@@ -2580,6 +2589,7 @@ export default function Assets() {
           </Select>
         ) : null}
       </BulkActionsToolbar>
+      ) : null}
 
       <AlertDialog
         open={bulkDeleteOpen}
