@@ -93,7 +93,18 @@ let fixtureSitePromise: Promise<{ id: number }> | null = null;
 
 function ensureFixtureSite(admin: ReturnType<typeof appRouter.createCaller>) {
   fixtureSitePromise ??= admin.sites
-    .create({ code: FIXTURE_BRANCH_CODE, name: `WO photo test ${FIXTURE_BRANCH_CODE}`, facilityType: "branch" })
+    .list()
+    .then((sites) => {
+      // A branch must sit under national headquarters (facility hierarchy rules).
+      const nhq = sites.find((s) => s.facilityType === "national_headquarters");
+      if (!nhq) throw new Error("Seed data missing national headquarters");
+      return admin.sites.create({
+        code: FIXTURE_BRANCH_CODE,
+        name: `WO photo test ${FIXTURE_BRANCH_CODE}`,
+        facilityType: "branch",
+        parentFacilityId: nhq.id,
+      });
+    })
     .then((site) => {
       if (!site?.id) throw new Error("Failed to create fixture site");
       return { id: site.id };
