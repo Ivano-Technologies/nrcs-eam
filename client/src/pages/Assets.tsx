@@ -40,6 +40,8 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { BULK_BAR_BUTTON_CLASS, BulkActionsToolbar } from "@/components/BulkActionsToolbar";
+import { SelectAllMatchingStrip } from "@/components/SelectAllMatchingStrip";
+import { chunk, formatCount } from "@/lib/formatCount";
 import { useAssetRegisterUrlState } from "@/hooks/useAssetRegisterUrlState";
 import { ASSET_REGISTER_SORT_KEYS, type AssetRegisterSortKey } from "@/lib/assetRegisterUrlState";
 import { downloadCsv, toCsv, type CsvCell } from "@/lib/csv";
@@ -132,7 +134,9 @@ type BulkRegisterStatus = (typeof BULK_REGISTER_STATUS_OPTIONS)[number];
 /** Selection styling shared by cards and rows: primary border on cards, faint opaque primary tint on rows. */
 const SELECTED_CARD_CLASS = "border-primary ring-1 ring-primary bg-primary/5";
 const SELECTED_ROW_CLASS = "bg-[color-mix(in_oklab,var(--primary)_7%,var(--background))]";
-const assetCount = (n: number) => `${n} asset${n === 1 ? "" : "s"}`;
+const assetCount = (n: number) => `${formatCount(n)} asset${n === 1 ? "" : "s"}`;
+/** Bulk endpoints accept at most 500 ids, so wider selections are sent in chunks. */
+const BULK_CHUNK = 500;
 const REGISTER_TABLE_COLUMN_ORDER = [
   "S.No","Item Type","Item Category","Sub Item Category","Item Description","Branch Code","Category Code","NUM","Asset Code",
   "Serial Number","Actual Unit Value","Depreciated Value","Method of Acquisition","Acquisition Detail","Project Ref","Year Acquired",
@@ -487,44 +491,72 @@ export default function Assets() {
     });
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkStatusTarget, setBulkStatusTarget] = useState<BulkRegisterStatus | null>(null);
-  const clearSelection = () => setSelectedIds(new Set());
+  const clearSelection = () => {
+    setAllMatchingKey(null);
+    setSelectedIds(new Set());
+  };
 
-  const bulkDeleteSelectedMutation = trpc.assets.bulkDelete.useMutation({
-    onSuccess: (res) => {
-      if (res.deleted === res.total) {
-        toast.success(`Deleted ${assetCount(res.deleted)}`);
-      } else if (res.deleted === 0) {
-        toast.error(`No assets were deleted. They may be linked to other records.`);
-      } else {
-        toast.warning(`Deleted ${res.deleted} of ${assetCount(res.total)}. ${res.total - res.deleted} could not be deleted.`);
+  /** "Select all N matching": widens the selection to every row matching the filters (Coco spec). */
+  const [allMatchingKey, setAllMatchingKey] = useState<string | null>(null);
+  const allMatchingSelected = allMatchingKey === selectionKey;
+  const [bulkRunning, setBulkRunning] = useState(false);
+  const bulkDeleteSelectedMutation = trpc.assets.bulkDelete.useMutation();
+  const bulkUpdateStatusMutation = trpc.assets.bulkUpdateRegisterStatus.useMutation();
+
+  /** Ids the next bulk action applies to: the ticked rows, or every matching row when widened. */
+  const resolveBulkIds = async (): Promise<number[]> => {
+    if (!allMatchingSelected) return selectedOnPage;
+    const { limit: _l, offset: _o, sortBy: _s, sortDir: _d, ...filters } = listInput;
+    const res = await utils.assets.registerMatchingIds.fetch(filters);
+    return res.ids;
+  };
+  const finishBulk = () => {
+    setBulkRunning(false);
+    setAllMatchingKey(null);
+    clearSelection();
+    refetch();
+  };
+
+  const runBulkDelete = async () => {
+    setBulkRunning(true);
+    try {
+      const ids = await resolveBulkIds();
+      let deleted = 0;
+      for (const part of chunk(ids, BULK_CHUNK)) {
+        const res = await bulkDeleteSelectedMutation.mutateAsync({ ids: part });
+        deleted += res.deleted;
       }
+      if (deleted === ids.length) toast.success(`Deleted ${assetCount(deleted)}`);
+      else if (deleted === 0) toast.error("No assets were deleted. They may be linked to other records.");
+      else toast.warning(`Deleted ${formatCount(deleted)} of ${assetCount(ids.length)}. ${formatCount(ids.length - deleted)} could not be deleted.`);
       setBulkDeleteOpen(false);
-      clearSelection();
-      refetch();
-    },
-    onError: (error: { message?: string }) => {
-      toast.error(`Could not delete the selected assets: ${error.message}`);
-    },
-  });
+      finishBulk();
+    } catch (error) {
+      setBulkRunning(false);
+      toast.error(`Could not delete the selected assets: ${error instanceof Error ? error.message : "error"}`);
+    }
+  };
 
-  const bulkUpdateStatusMutation = trpc.assets.bulkUpdateRegisterStatus.useMutation({
-    onSuccess: (res, vars) => {
-      const label = (REGISTER_LABELS[vars.registerStatus] ?? formatEnumLabel(vars.registerStatus)).toLowerCase();
-      if (res.updated === res.total) {
-        toast.success(`Status set to ${label} for ${assetCount(res.updated)}`);
-      } else if (res.updated === 0) {
-        toast.error(`No assets were updated.`);
-      } else {
-        toast.warning(`Status set to ${label} for ${res.updated} of ${assetCount(res.total)}.`);
+  const runBulkStatus = async (registerStatus: BulkRegisterStatus) => {
+    setBulkRunning(true);
+    try {
+      const ids = await resolveBulkIds();
+      let updated = 0;
+      for (const part of chunk(ids, BULK_CHUNK)) {
+        const res = await bulkUpdateStatusMutation.mutateAsync({ ids: part, registerStatus });
+        updated += res.updated;
       }
+      const label = (REGISTER_LABELS[registerStatus] ?? formatEnumLabel(registerStatus)).toLowerCase();
+      if (updated === ids.length) toast.success(`Status set to ${label} for ${assetCount(updated)}`);
+      else if (updated === 0) toast.error("No assets were updated.");
+      else toast.warning(`Status set to ${label} for ${formatCount(updated)} of ${assetCount(ids.length)}.`);
       setBulkStatusTarget(null);
-      clearSelection();
-      refetch();
-    },
-    onError: (error: { message?: string }) => {
-      toast.error(`Could not update the status: ${error.message}`);
-    },
-  });
+      finishBulk();
+    } catch (error) {
+      setBulkRunning(false);
+      toast.error(`Could not update the status: ${error instanceof Error ? error.message : "error"}`);
+    }
+  };
 
   const updateAssetMutation = trpc.assets.update.useMutation({
     onSuccess: () => {
@@ -964,10 +996,11 @@ export default function Assets() {
   const selectedOnPage = pageIds.filter((id) => selectedIds.has(id));
   const allOnPageSelected = pageIds.length > 0 && selectedOnPage.length === pageIds.length;
   const someOnPageSelected = selectedOnPage.length > 0 && !allOnPageSelected;
-  const selectedCount = selectedOnPage.length;
-  const bulkPending = bulkDeleteSelectedMutation.isPending || bulkUpdateStatusMutation.isPending;
+  const selectedCount = allMatchingSelected ? total : selectedOnPage.length;
+  const bulkPending = bulkRunning;
 
   const toggleRowSelected = (id: number, checked: boolean) => {
+    setAllMatchingKey(null);
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (checked) next.add(id);
@@ -977,13 +1010,26 @@ export default function Assets() {
   };
 
   const togglePageSelected = (checked: boolean) => {
+    setAllMatchingKey(null);
     setSelectedIds(checked ? new Set(pageIds) : new Set());
   };
 
-  const handleExportSelected = () => {
-    const selectedRows = rows
-      .map((row, i) => ({ row, sNo: offset + i + 1 }))
-      .filter(({ row }) => selectedIds.has(row.id));
+  const handleExportSelected = async () => {
+    let sourceRows: typeof rows = rows;
+    let firstSNo = offset + 1;
+    if (allMatchingSelected) {
+      try {
+        const all = await utils.assets.registerList.fetch({ ...listInput, limit: Math.max(1, Math.min(total, 10_000)), offset: 0 });
+        sourceRows = all.rows;
+        firstSNo = 1;
+      } catch (error) {
+        toast.error(`Could not export the selected assets: ${error instanceof Error ? error.message : "error"}`);
+        return;
+      }
+    }
+    const selectedRows = sourceRows
+      .map((row, i) => ({ row, sNo: firstSNo + i }))
+      .filter(({ row }) => allMatchingSelected || selectedIds.has(row.id));
     if (!selectedRows.length) return;
     const csvRows: CsvCell[][] = selectedRows.map(({ row, sNo }) => {
       const rs = row.registerStatus as string;
@@ -1636,6 +1682,15 @@ export default function Assets() {
       {canEditAssets ? (
         <input {...assetRegisterImport.inputProps} aria-label="Import assets from Excel" data-testid="asset-import-input" />
       ) : null}
+
+      <SelectAllMatchingStrip
+        pageCount={pageIds.length}
+        matchingCount={total}
+        pageFullySelected={allOnPageSelected}
+        allMatchingSelected={allMatchingSelected}
+        onSelectAllMatching={() => setAllMatchingKey(selectionKey)}
+        onClearSelection={clearSelection}
+      />
 
       {viewMode === "card" ? (
         <div className="space-y-3">
@@ -2498,7 +2553,7 @@ export default function Assets() {
         selectedCount={selectedCount}
         itemLabel="assets"
         onClearSelection={clearSelection}
-        onExport={handleExportSelected}
+        onExport={() => void handleExportSelected()}
         onDelete={canEditAssets ? () => setBulkDeleteOpen(true) : undefined}
         disabled={bulkPending}
       >
@@ -2529,7 +2584,7 @@ export default function Assets() {
       <AlertDialog
         open={bulkDeleteOpen}
         onOpenChange={(open) => {
-          if (!open && !bulkDeleteSelectedMutation.isPending) setBulkDeleteOpen(false);
+          if (!open && !bulkRunning) setBulkDeleteOpen(false);
         }}
       >
         <AlertDialogContent>
@@ -2543,23 +2598,23 @@ export default function Assets() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={bulkDeleteSelectedMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={bulkRunning}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               data-testid="asset-bulk-delete-confirm"
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={bulkDeleteSelectedMutation.isPending || selectedCount === 0}
+              disabled={bulkRunning || selectedCount === 0}
               onClick={(e) => {
                 e.preventDefault();
-                bulkDeleteSelectedMutation.mutate({ ids: selectedOnPage });
+                void runBulkDelete();
               }}
             >
-              {bulkDeleteSelectedMutation.isPending ? (
+              {bulkRunning ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Deleting…
                 </>
               ) : (
-                `Delete ${selectedCount}`
+                `Delete ${formatCount(selectedCount)}`
               )}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -2569,7 +2624,7 @@ export default function Assets() {
       <AlertDialog
         open={bulkStatusTarget !== null}
         onOpenChange={(open) => {
-          if (!open && !bulkUpdateStatusMutation.isPending) setBulkStatusTarget(null);
+          if (!open && !bulkRunning) setBulkStatusTarget(null);
         }}
       >
         <AlertDialogContent>
@@ -2584,18 +2639,16 @@ export default function Assets() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={bulkUpdateStatusMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={bulkRunning}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               data-testid="asset-bulk-status-confirm"
-              disabled={bulkUpdateStatusMutation.isPending || selectedCount === 0 || bulkStatusTarget === null}
+              disabled={bulkRunning || selectedCount === 0 || bulkStatusTarget === null}
               onClick={(e) => {
                 e.preventDefault();
-                if (bulkStatusTarget) {
-                  bulkUpdateStatusMutation.mutate({ ids: selectedOnPage, registerStatus: bulkStatusTarget });
-                }
+                if (bulkStatusTarget) void runBulkStatus(bulkStatusTarget);
               }}
             >
-              {bulkUpdateStatusMutation.isPending ? (
+              {bulkRunning ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Updating…
