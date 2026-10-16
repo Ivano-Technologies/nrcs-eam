@@ -670,7 +670,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
         </AlertDialogContent>
       </AlertDialog>
 
-      {viewMode !== "map" && !isLoading ? (
+      {canEditFacilities && viewMode !== "map" && !isLoading ? (
         <SelectAllMatchingStrip
           pageCount={pageRows.length}
           matchingCount={sorted.length}
@@ -691,7 +691,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
         <FacilitiesMap visibleIds={visibleIds} noLocation={noLocationRows} />
       ) : viewMode === "card" ? (
         <div className="space-y-3">
-        {pageRows.length > 0 ? (
+        {canEditFacilities && pageRows.length > 0 ? (
           <label className="flex w-fit cursor-pointer items-center gap-2 text-sm text-muted-foreground">
             <Checkbox
               data-testid="facility-select-all-cards"
@@ -721,7 +721,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
           className="frozen-table-wrap sticky-lead-cols rounded-md border bg-card px-2 md:px-3"
           style={
             {
-              "--col1-width": "84px",
+              "--col1-width": canEditFacilities ? "84px" : "56px",
               "--col2-width": "260px",
             } as Record<string, string>
           }
@@ -734,6 +734,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
               <TableRow>
                 <StickyHead className="px-2 py-1.5 text-left font-medium whitespace-nowrap">
                   <span className="flex items-center gap-2">
+                    {canEditFacilities ? (
                     <Checkbox
                       aria-label="Select all facilities on this page"
                       data-testid="facility-select-all"
@@ -741,6 +742,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
                       checked={allOnPageSelected ? true : someOnPageSelected ? "indeterminate" : false}
                       onCheckedChange={(v) => togglePageSelected(v === true)}
                     />
+                    ) : null}
                     S/No
                   </span>
                 </StickyHead>
@@ -772,12 +774,14 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
                   >
                     <StickyCell className={cn("px-2 py-1 text-muted-foreground", selectedIds.has(f.id) && rowCls)} onClick={(e) => e.stopPropagation()}>
                       <span className="flex items-center gap-2">
+                        {canEditFacilities ? (
                         <Checkbox
                           aria-label={`Select ${f.name}`}
                           data-testid={`facility-select-${f.id}`}
                           checked={selectedIds.has(f.id)}
                           onCheckedChange={(v) => toggleSelected(f.id, v === true)}
                         />
+                        ) : null}
                         {rowNo}
                       </span>
                     </StickyCell>
@@ -844,7 +848,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
       </div>
       ) : null}
 
-      {viewMode !== "map" ? (
+      {canEditFacilities && viewMode !== "map" ? (
         <BulkActionsToolbar
           selectedCount={selectedCount}
           itemLabel="facilities"
@@ -1072,6 +1076,7 @@ function FacilityCard({
       )}
     >
       <div className="flex items-start justify-between gap-2">
+        {canEdit ? (
         <div className="relative z-10 flex h-6 shrink-0 items-center">
           <Checkbox
             aria-label={`Select ${f.name}`}
@@ -1080,6 +1085,7 @@ function FacilityCard({
             onCheckedChange={(v) => onSelectedChange(v === true)}
           />
         </div>
+        ) : null}
         <h3 className="min-w-0 flex-1 text-base font-semibold leading-6" data-testid={`facility-name-${f.id}`}>
           <Link
             href={appPath(`/facilities/${f.id}`)}
