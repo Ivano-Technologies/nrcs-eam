@@ -20,8 +20,9 @@ interface BulkActionsToolbarProps {
   nowrapActions?: boolean;
 }
 
-/** Light buttons on the navy bar. Delete is the only red action. */
-export const BULK_BAR_BUTTON_CLASS = "gap-2 border-0 bg-background text-foreground shadow-none hover:bg-muted";
+import { BULK_BAR_BUTTON_CLASS, BulkBarAction } from "@/components/BulkBarAction";
+
+export { BULK_BAR_BUTTON_CLASS, BulkBarAction };
 
 /**
  * Shared bulk actions bar: sidebar navy, bottom centre, above the phone bottom nav.
@@ -132,17 +133,7 @@ function BulkActionsBar({
           {children}
 
           {onExport && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onExport}
-              disabled={disabled}
-              className={BULK_BAR_BUTTON_CLASS}
-              data-testid="bulk-actions-export"
-            >
-              <Download className="h-4 w-4" />
-              Export
-            </Button>
+            <BulkBarAction icon={Download} label="Export" onClick={onExport} disabled={disabled} data-testid="bulk-actions-export" />
           )}
 
           {onDelete && (

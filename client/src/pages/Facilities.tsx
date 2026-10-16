@@ -70,7 +70,7 @@ import {
 import { cn } from "@/lib/utils";
 import { CircleCheck, CircleOff, Edit2, Loader2, MoreHorizontal, Trash2 } from "lucide-react";
 import { CardQrCode } from "@/components/CardQrCode";
-import { BULK_BAR_BUTTON_CLASS, BulkActionsToolbar } from "@/components/BulkActionsToolbar";
+import { BulkActionsToolbar, BulkBarAction } from "@/components/BulkActionsToolbar";
 import { SelectAllMatchingStrip } from "@/components/SelectAllMatchingStrip";
 import { chunk, formatCount } from "@/lib/formatCount";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -852,6 +852,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
         <BulkActionsToolbar
           selectedCount={selectedCount}
           itemLabel="facilities"
+          nowrapActions
           onClearSelection={clearSelection}
           onExport={exportSelected}
           onDelete={canEditFacilities ? () => setBulkDeleteOpen(true) : undefined}
@@ -859,14 +860,8 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
         >
           {canEditFacilities ? (
             <>
-              <Button variant="outline" size="sm" className={BULK_BAR_BUTTON_CLASS} disabled={bulkPending} onClick={() => setBulkActiveTarget(true)} data-testid="bulk-actions-activate">
-                <CircleCheck className="h-4 w-4" />
-                Mark active
-              </Button>
-              <Button variant="outline" size="sm" className={BULK_BAR_BUTTON_CLASS} disabled={bulkPending} onClick={() => setBulkActiveTarget(false)} data-testid="bulk-actions-deactivate">
-                <CircleOff className="h-4 w-4" />
-                Mark inactive
-              </Button>
+              <BulkBarAction icon={CircleCheck} label="Mark active" disabled={bulkPending} onClick={() => setBulkActiveTarget(true)} data-testid="bulk-actions-activate" />
+              <BulkBarAction icon={CircleOff} label="Mark inactive" disabled={bulkPending} onClick={() => setBulkActiveTarget(false)} data-testid="bulk-actions-deactivate" />
             </>
           ) : null}
         </BulkActionsToolbar>
