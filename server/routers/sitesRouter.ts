@@ -253,24 +253,69 @@ export const sitesRouter = router({
         return updated;
       }),
 
+    /**
+     * Bulk delete facilities (manager/admin). Each id is checked, deleted and audited one by one so a single
+     * failure (for example a facility still linked to assets) does not block the rest.
+     */
     bulkDelete: managerOrAdminProcedure
-      .input(z.object({ ids: z.array(z.number()) }))
+      .input(z.object({ ids: z.array(z.number().int().positive()).min(1).max(500) }))
       .mutation(async ({ input, ctx }) => {
         let deleted = 0;
-        for (const id of input.ids) {
+        const failedIds: number[] = [];
+        for (const id of Array.from(new Set(input.ids))) {
           try {
+            const existing = await db.getSiteById(id);
+            if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Facility not found." });
+            // assets.siteId has no foreign key, so guard here rather than orphan assets or child facilities.
+            const handle = await db.getDb();
+            if (handle) {
+              const [linkedAsset] = await handle.select({ id: assets.id }).from(assets).where(eq(assets.siteId, id)).limit(1);
+              const [child] = await handle.select({ id: sites.id }).from(sites).where(eq(sites.parentFacilityId, id)).limit(1);
+              if (linkedAsset || child) {
+                throw new TRPCError({ code: "CONFLICT", message: "Facility still has assets or child facilities." });
+              }
+            }
             await db.deleteSite(id);
             await db.createAuditLog({
               userId: ctx.user.id,
               action: "bulk_delete_site",
               entityType: "site",
               entityId: id,
+              changes: JSON.stringify({ code: existing.code ?? null, name: existing.name ?? null }),
             });
             deleted++;
           } catch (error) {
+            failedIds.push(id);
             console.error(`Failed to delete facility ${id}:`, error);
           }
         }
-        return { deleted, total: input.ids.length };
+        return { deleted, total: input.ids.length, failedIds };
+      }),
+
+    /** Bulk mark facilities active or inactive (manager/admin), audited per facility. */
+    bulkSetActive: managerOrAdminProcedure
+      .input(z.object({ ids: z.array(z.number().int().positive()).min(1).max(500), isActive: z.boolean() }))
+      .mutation(async ({ input, ctx }) => {
+        let updated = 0;
+        const failedIds: number[] = [];
+        for (const id of Array.from(new Set(input.ids))) {
+          try {
+            const existing = await db.getSiteById(id);
+            if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Facility not found." });
+            await db.updateSite(id, { isActive: input.isActive });
+            await db.createAuditLog({
+              userId: ctx.user.id,
+              action: "bulk_set_site_active",
+              entityType: "site",
+              entityId: id,
+              changes: JSON.stringify({ from: existing.isActive ?? null, to: input.isActive }),
+            });
+            updated++;
+          } catch (error) {
+            failedIds.push(id);
+            console.error(`Failed to update facility ${id}:`, error);
+          }
+        }
+        return { updated, total: input.ids.length, failedIds };
       }),
   });
