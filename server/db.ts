@@ -1944,7 +1944,7 @@ export async function listWorkOrderFieldPhotos(workOrderId: number): Promise<Wor
     .select()
     .from(workOrderPhotos)
     .where(eq(workOrderPhotos.workOrderId, workOrderId))
-    .orderBy(desc(workOrderPhotos.createdAt));
+    .orderBy(desc(workOrderPhotos.createdAt), desc(workOrderPhotos.id));
 }
 
 export async function addWorkOrderFieldPhoto(data: NewWorkOrderPhoto): Promise<WorkOrderPhoto> {

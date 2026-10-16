@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
@@ -78,7 +79,18 @@ async function createTestContext(
 const TINY_JPEG_BASE64 =
   "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAn/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIQAxAAAAGcP//EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAQUCf//EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQMBAT8Bf//EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQIBAT8Bf//EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEABj8Cf//EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAT8hf//Z";
 
+/**
+ * The assets insert trigger (nrcs_generate_asset_code) numbers rows with max(asset_num) + 1 per
+ * branch_code + item_category_code and overwrites assetTag with NRCS_<branch><cat><####>. Other test
+ * files insert assets for the same seeded site and category in parallel workers, so two inserts can
+ * read the same max and collide on assets_assetTag_unique. A branch code unique to this file run gives
+ * these fixtures their own sequence, so nothing else can race them.
+ */
+const FIXTURE_BRANCH_CODE = `WOP${randomUUID().replace(/-/g, "").slice(0, 12).toUpperCase()}`;
+let fixtureSeq = 0;
+
 async function createWorkOrderFixture() {
+  fixtureSeq += 1;
   const admin = appRouter.createCaller(await createTestContext("admin"));
   const categories = await admin.assetCategories.list();
   const sites = await admin.sites.list();
@@ -88,7 +100,8 @@ async function createWorkOrderFixture() {
   }
 
   const asset = await admin.assets.create({
-    assetTag: `WO-PHOTO-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    assetTag: `WO-PHOTO-${FIXTURE_BRANCH_CODE}-${fixtureSeq}`,
+    branchCode: FIXTURE_BRANCH_CODE,
     name: "Photo test asset",
     categoryId: categories[0]!.id,
     siteId: site.id,
@@ -98,7 +111,7 @@ async function createWorkOrderFixture() {
   });
 
   const wo = await admin.workOrders.create({
-    workOrderNumber: `WO-PHOTO-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    workOrderNumber: `WO-PHOTO-${FIXTURE_BRANCH_CODE}-${fixtureSeq}`,
     title: "Photo capture test",
     assetId: asset.id,
     siteId: site.id,
