@@ -562,7 +562,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
 
           {overviewViewMode === "card" ? (
             <div className="space-y-3">
-            {rows.length > 0 ? (
+            {isManagerOrAdmin && rows.length > 0 ? (
               <label className="flex w-fit cursor-pointer items-center gap-2 text-sm text-muted-foreground">
                 <Checkbox
                   data-testid="stock-select-all-cards"
@@ -594,6 +594,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                     <CardContent className="pt-4">
                       <div className="mb-2 flex items-start justify-between gap-2">
                         <div className="flex min-w-0 items-center gap-2">
+                          {isManagerOrAdmin ? (
                           <span className="flex shrink-0 items-center" onClick={(e) => e.stopPropagation()}>
                             <Checkbox
                               aria-label={`Select ${row.itemName} at ${row.warehouseName}`}
@@ -602,6 +603,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                               onCheckedChange={(v) => toggleStockSelected(stockKeyId(row), v === true)}
                             />
                           </span>
+                          ) : null}
                           <Package className="h-5 w-5 shrink-0 text-primary" />
                           <div className="min-w-0">
                             <p className="flex min-w-0 items-center gap-1 truncate font-medium">
@@ -674,7 +676,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
               className="frozen-table-wrap sticky-first-col rounded-md border px-2 md:px-3"
               style={
                 {
-                  "--col1-width": "148px",
+                  "--col1-width": isManagerOrAdmin ? "148px" : "120px",
                   "--col2-width": "200px",
                 } as Record<string, string>
               }
@@ -684,8 +686,9 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
               >
                 <thead className="bg-background">
                   <tr className="border-b">
-                    <th className="w-[148px] min-w-[148px] border-r bg-background px-2 py-2 text-left">
+                    <th className={cn("border-r bg-background px-2 py-2 text-left", isManagerOrAdmin ? "w-[148px] min-w-[148px]" : "w-[120px] min-w-[120px]")}>
                       <span className="flex items-center gap-2">
+                        {isManagerOrAdmin ? (
                         <Checkbox
                           aria-label="Select all stock rows on this page"
                           data-testid="stock-select-all"
@@ -693,6 +696,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                           checked={allStockSelected ? true : someStockSelected ? "indeterminate" : false}
                           onCheckedChange={(v) => toggleAllStock(v === true)}
                         />
+                        ) : null}
                         Item code
                       </span>
                     </th>
@@ -732,20 +736,23 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                     >
                       <td
                         className={cn(
-                          "w-[148px] min-w-[148px] border-r px-2 py-2",
+                          "border-r px-2 py-2",
+                          isManagerOrAdmin ? "w-[148px] min-w-[148px]" : "w-[120px] min-w-[120px]",
                           selectedStockKeys.has(stockKeyId(row))
                             ? "bg-[color-mix(in_oklab,var(--primary)_7%,var(--background))]"
                             : "bg-background"
                         )}
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={isManagerOrAdmin ? (e) => e.stopPropagation() : undefined}
                       >
                         <span className="flex items-center gap-2">
+                          {isManagerOrAdmin ? (
                           <Checkbox
                             aria-label={`Select ${row.itemName} at ${row.warehouseName}`}
                             data-testid={`stock-select-${row.catalogueId}-${row.warehouseId}`}
                             checked={selectedStockKeys.has(stockKeyId(row))}
                             onCheckedChange={(v) => toggleStockSelected(stockKeyId(row), v === true)}
                           />
+                          ) : null}
                           {row.itemCode}
                         </span>
                       </td>
@@ -811,6 +818,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
             </div>
           )}
 
+          {isManagerOrAdmin ? (
           <BulkActionsToolbar
             selectedCount={stockSelectedCount}
             itemLabel="stock rows"
@@ -846,6 +854,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
               </>
             ) : null}
           </BulkActionsToolbar>
+          ) : null}
 
           <Dialog open={reorderDialogOpen} onOpenChange={(open) => { if (!open && !bulkReorderMutation.isPending) setReorderDialogOpen(false); }}>
             <DialogContent className="sm:max-w-md">
