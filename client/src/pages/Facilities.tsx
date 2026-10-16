@@ -70,7 +70,7 @@ import {
 import { cn } from "@/lib/utils";
 import { CircleCheck, CircleOff, Edit2, Loader2, MoreHorizontal, Trash2 } from "lucide-react";
 import { CardQrCode } from "@/components/CardQrCode";
-import { BulkActionsToolbar } from "@/components/BulkActionsToolbar";
+import { BULK_BAR_BUTTON_CLASS, BulkActionsToolbar } from "@/components/BulkActionsToolbar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { downloadCsv, toCsv } from "@/lib/csv";
 import { FacilitiesToolbar } from "@/components/facilities/FacilitiesToolbar";
@@ -636,6 +636,17 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
       ) : viewMode === "map" ? (
         <FacilitiesMap visibleIds={visibleIds} noLocation={noLocationRows} />
       ) : viewMode === "card" ? (
+        <div className="space-y-3">
+        {pageRows.length > 0 ? (
+          <label className="flex w-fit cursor-pointer items-center gap-2 text-sm text-muted-foreground">
+            <Checkbox
+              data-testid="facility-select-all-cards"
+              checked={allOnPageSelected ? true : someOnPageSelected ? "indeterminate" : false}
+              onCheckedChange={(v) => togglePageSelected(v === true)}
+            />
+            Select all on this page
+          </label>
+        ) : null}
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" data-testid="sites-list">
           {pageRows.map((f) => (
             <FacilityCard
@@ -649,6 +660,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
               onDelete={() => setPendingDelete({ id: f.id, name: f.name })}
             />
           ))}
+        </div>
         </div>
       ) : (
         <div
@@ -694,7 +706,9 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
             <TableBody>
               {pageRows.map((f, idx) => {
                 const rowNo = (page - 1) * pageSizeNum + idx + 1;
-                const rowCls = idx % 2 ? "bg-muted/30" : "bg-background";
+                const rowCls = selectedIds.has(f.id)
+                  ? "bg-[color-mix(in_oklab,var(--primary)_7%,var(--background))]"
+                  : idx % 2 ? "bg-muted/30" : "bg-background";
                 return (
                   <TableRow
                     key={f.id}
@@ -787,11 +801,11 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
         >
           {canEditFacilities ? (
             <>
-              <Button variant="secondary" size="sm" className="gap-2" disabled={bulkPending} onClick={() => setBulkActiveTarget(true)} data-testid="bulk-actions-activate">
+              <Button variant="outline" size="sm" className={BULK_BAR_BUTTON_CLASS} disabled={bulkPending} onClick={() => setBulkActiveTarget(true)} data-testid="bulk-actions-activate">
                 <CircleCheck className="h-4 w-4" />
                 Mark active
               </Button>
-              <Button variant="secondary" size="sm" className="gap-2" disabled={bulkPending} onClick={() => setBulkActiveTarget(false)} data-testid="bulk-actions-deactivate">
+              <Button variant="outline" size="sm" className={BULK_BAR_BUTTON_CLASS} disabled={bulkPending} onClick={() => setBulkActiveTarget(false)} data-testid="bulk-actions-deactivate">
                 <CircleOff className="h-4 w-4" />
                 Mark inactive
               </Button>
@@ -998,7 +1012,10 @@ function FacilityCard({
     <Card
       size="sm"
       data-testid={`facility-card-${f.id}`}
-      className="relative h-full px-4 transition-colors hover:bg-muted/40 focus-within:ring-2 focus-within:ring-ring"
+      className={cn(
+        "relative h-full px-4 transition-colors hover:bg-muted/40 focus-within:ring-2 focus-within:ring-ring",
+        selected && "border-primary bg-primary/5 ring-1 ring-primary focus-within:ring-primary"
+      )}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="relative z-10 flex h-6 shrink-0 items-center">
