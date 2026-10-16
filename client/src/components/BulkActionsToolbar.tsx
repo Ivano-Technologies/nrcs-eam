@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
 import { Trash2, Download, X } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 
 interface BulkActionsToolbarProps {
   selectedCount: number;
@@ -14,6 +13,14 @@ interface BulkActionsToolbarProps {
   children?: React.ReactNode;
 }
 
+/** Light buttons on the navy bar. Delete is the only red action. */
+export const BULK_BAR_BUTTON_CLASS = "gap-2 border-0 bg-background text-foreground shadow-none hover:bg-muted";
+
+/**
+ * Shared bulk actions bar: sidebar navy, bottom centre, above the phone bottom nav.
+ * At 390 it is at most two rows: count and an icon-only Clear on row 1, actions on row 2.
+ * A spacer the height of the bar is rendered in flow so pagination and last rows can scroll into view.
+ */
 export function BulkActionsToolbar({
   selectedCount,
   onClearSelection,
@@ -26,58 +33,63 @@ export function BulkActionsToolbar({
   if (selectedCount === 0) return null;
 
   return (
-    <div
-      role="toolbar"
-      aria-label={`Bulk actions for ${selectedCount} selected ${itemLabel}`}
-      data-testid="bulk-actions-toolbar"
-      className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] md:bottom-6 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground shadow-lg rounded-xl px-4 py-3 md:px-6 md:py-4 flex flex-wrap items-center justify-center gap-3 md:gap-4 z-50 w-max max-w-[calc(100vw-2rem)] animate-in slide-in-from-bottom-5"
-    >
-      <Badge variant="secondary" className="text-sm px-3 py-1" data-testid="bulk-actions-count">
-        {selectedCount} selected
-      </Badge>
-      
-      <div className="flex flex-wrap items-center gap-2">
-        {children}
-        
-        {onExport && (
+    <>
+      <div aria-hidden className="h-36 md:h-24" data-testid="bulk-actions-spacer" />
+      <div
+        role="toolbar"
+        aria-label={`Bulk actions for ${selectedCount} selected ${itemLabel}`}
+        data-testid="bulk-actions-toolbar"
+        className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] md:bottom-6 left-1/2 z-50 flex w-[calc(100vw-2rem)] -translate-x-1/2 flex-col gap-3 rounded-xl bg-sidebar px-4 py-3 text-sidebar-foreground shadow-lg animate-in slide-in-from-bottom-5 md:w-max md:max-w-[calc(100vw-2rem)] md:flex-row md:items-center md:gap-4 md:px-5"
+      >
+        <div className="flex items-center justify-between gap-3 md:contents">
+          <span className="text-sm font-medium tabular-nums" data-testid="bulk-actions-count">
+            {selectedCount} selected
+          </span>
           <Button
-            variant="secondary"
-            size="sm"
-            onClick={onExport}
-            disabled={disabled}
-            className="gap-2"
-            data-testid="bulk-actions-export"
+            variant="ghost"
+            size="icon"
+            onClick={onClearSelection}
+            aria-label="Clear selection"
+            title="Clear selection"
+            className="size-8 text-sidebar-foreground hover:bg-white/10 hover:text-sidebar-foreground md:order-last"
+            data-testid="bulk-actions-clear"
           >
-            <Download className="h-4 w-4" />
-            Export
+            <X className="h-4 w-4" />
           </Button>
-        )}
-        
-        {onDelete && (
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={onDelete}
-            disabled={disabled}
-            className="gap-2"
-            data-testid="bulk-actions-delete"
-          >
-            <Trash2 className="h-4 w-4" />
-            Delete
-          </Button>
-        )}
-        
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onClearSelection}
-          className="gap-2"
-          data-testid="bulk-actions-clear"
-        >
-          <X className="h-4 w-4" />
-          Clear selection
-        </Button>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {children}
+
+          {onExport && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onExport}
+              disabled={disabled}
+              className={BULK_BAR_BUTTON_CLASS}
+              data-testid="bulk-actions-export"
+            >
+              <Download className="h-4 w-4" />
+              Export
+            </Button>
+          )}
+
+          {onDelete && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={onDelete}
+              disabled={disabled}
+              className="gap-2"
+              data-testid="bulk-actions-delete"
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete
+            </Button>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }

@@ -39,7 +39,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { BulkActionsToolbar } from "@/components/BulkActionsToolbar";
+import { BULK_BAR_BUTTON_CLASS, BulkActionsToolbar } from "@/components/BulkActionsToolbar";
 import { useAssetRegisterUrlState } from "@/hooks/useAssetRegisterUrlState";
 import { ASSET_REGISTER_SORT_KEYS, type AssetRegisterSortKey } from "@/lib/assetRegisterUrlState";
 import { downloadCsv, toCsv, type CsvCell } from "@/lib/csv";
@@ -129,6 +129,9 @@ const BULK_REGISTER_STATUS_OPTIONS = [
   "disposed",
 ] as const;
 type BulkRegisterStatus = (typeof BULK_REGISTER_STATUS_OPTIONS)[number];
+/** Selection styling shared by cards and rows: primary border on cards, faint opaque primary tint on rows. */
+const SELECTED_CARD_CLASS = "border-primary ring-1 ring-primary bg-primary/5";
+const SELECTED_ROW_CLASS = "bg-[color-mix(in_oklab,var(--primary)_7%,var(--background))]";
 const assetCount = (n: number) => `${n} asset${n === 1 ? "" : "s"}`;
 const REGISTER_TABLE_COLUMN_ORDER = [
   "S.No","Item Type","Item Category","Sub Item Category","Item Description","Branch Code","Category Code","NUM","Asset Code",
@@ -1650,7 +1653,7 @@ export default function Assets() {
           {rows.map((row) => (
             <Card size="sm"
               key={row.id}
-              className={cn("cursor-pointer", selectedIds.has(row.id) && "ring-2 ring-primary")}
+              className={cn("cursor-pointer", selectedIds.has(row.id) && SELECTED_CARD_CLASS)}
               onClick={() => setLocation(appPath(`/assets/${row.id}`))}
             >
               <CardHeader>
@@ -1775,7 +1778,9 @@ export default function Assets() {
                     const statusLabel = REGISTER_LABELS[rs] ?? rs;
                     const cond = row.physicalCondition?.trim() || "";
                     const isSelected = selectedIds.has(row.id);
-                    const rowBgClass = i % 2 === 1
+                    const rowBgClass = isSelected
+                      ? SELECTED_ROW_CLASS
+                      : i % 2 === 1
                         ? "bg-muted/30"
                         : "bg-background";
 
@@ -2504,7 +2509,7 @@ export default function Assets() {
             onValueChange={(v) => setBulkStatusTarget(v as BulkRegisterStatus)}
           >
             <SelectTrigger
-              className="h-8 w-[190px] bg-secondary text-secondary-foreground"
+              className={cn("h-8 w-[190px]", BULK_BAR_BUTTON_CLASS)}
               data-testid="bulk-actions-status"
               aria-label="Set status for selected assets"
             >
