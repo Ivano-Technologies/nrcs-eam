@@ -39,8 +39,8 @@ describe("asset code generation under concurrency (IVA-158)", () => {
       Array.from({ length: N }, (_, i) =>
         sql.begin(async (tx) => {
           const [row] = await tx`
-            INSERT INTO assets ("assetTag", name, "categoryId", "siteId", branch_code, item_category, item_category_code)
-            VALUES (${`RACE-${BRANCH}-${i}`}, ${"Race asset " + i}, ${categoryId}, ${siteId}, ${BRANCH}, 'Office Equipment', 'OE')
+            INSERT INTO assets ("assetTag", name, "categoryId", "siteId", "itemType", item_type, branch_code, item_category, item_category_code)
+            VALUES (${`RACE-${BRANCH}-${i}`}, ${"Race asset " + i}, ${categoryId}, ${siteId}, 'Asset', 'Asset', ${BRANCH}, 'Office Equipment', 'OE')
             RETURNING asset_num, "assetTag"`;
           await tx`SELECT pg_sleep(0.05)`;
           return row;
