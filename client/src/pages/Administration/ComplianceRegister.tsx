@@ -78,6 +78,8 @@ function parseQuery(location: string) {
 export default function ComplianceRegister() {
   const { user } = useAuth();
   const canEdit = user?.role === "admin" || user?.role === "manager";
+  // IVA-160: non-admins can only add papers for vehicles at their own facility, so hide Add without one.
+  const canAddVehicle = canEdit && (user?.role === "admin" || user?.siteId != null);
   const [location, setLocation] = useLocation();
   const { tab: initialTab, status: urlStatus } = useMemo(() => parseQuery(location), [location]);
   const [tab, setTab] = useState<TabKey>(initialTab);
@@ -144,6 +146,7 @@ export default function ComplianceRegister() {
       void utils.complianceTracking.vehicles.list.invalidate();
       void utils.complianceTracking.summary.invalidate();
     },
+    onError: (e) => toast.error(e.message),
   });
 
   const [genOpen, setGenOpen] = useState(false);
@@ -172,6 +175,7 @@ export default function ComplianceRegister() {
       void utils.complianceTracking.generators.list.invalidate();
       void utils.complianceTracking.summary.invalidate();
     },
+    onError: (e) => toast.error(e.message),
   });
 
   const [buildingOpen, setBuildingOpen] = useState(false);
@@ -199,6 +203,7 @@ export default function ComplianceRegister() {
       void utils.complianceTracking.buildings.list.invalidate();
       void utils.complianceTracking.summary.invalidate();
     },
+    onError: (e) => toast.error(e.message),
   });
 
   const [donorOpen, setDonorOpen] = useState(false);
@@ -225,6 +230,7 @@ export default function ComplianceRegister() {
       void utils.complianceTracking.donor.list.invalidate();
       void utils.complianceTracking.summary.invalidate();
     },
+    onError: (e) => toast.error(e.message),
   });
 
   async function resolveAssetCode(code: string): Promise<number | null> {
@@ -300,7 +306,7 @@ export default function ComplianceRegister() {
         </TabsList>
 
         <TabsContent value="vehicles" className="space-y-4">
-          {canEdit ? (
+          {canAddVehicle ? (
             <Button
               onClick={() => {
                 setVehicleForm({

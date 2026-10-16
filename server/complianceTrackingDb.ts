@@ -149,6 +149,8 @@ export type VehicleComplianceRow = {
 
 export async function listVehicleCompliance(filters?: {
   status?: DocComplianceStatus;
+  /** Restrict to vehicles whose asset sits at this facility (IVA-160). */
+  siteId?: number;
 }): Promise<VehicleComplianceRow[]> {
   const database = await db.getDb();
   if (!database) return [];
@@ -170,6 +172,7 @@ export async function listVehicleCompliance(filters?: {
     .from(vehicleCompliance)
     .innerJoin(assets, eq(vehicleCompliance.assetId, assets.id))
     .leftJoin(sites, eq(assets.siteId, sites.id))
+    .where(filters?.siteId !== undefined ? eq(assets.siteId, filters.siteId) : undefined)
     .orderBy(asc(assets.assetCode));
 
   const out: VehicleComplianceRow[] = [];
@@ -570,4 +573,25 @@ export async function lookupAssetByCode(assetCode: string) {
     .where(eq(assets.assetCode, assetCode))
     .limit(1);
   return row ?? null;
+}
+
+/** Facility of an asset, or null when the asset has none. undefined when the asset does not exist. */
+export async function getAssetSiteId(assetId: number): Promise<number | null | undefined> {
+  const database = await db.getDb();
+  if (!database) throw new Error("Database unavailable");
+  const [row] = await database.select({ siteId: assets.siteId }).from(assets).where(eq(assets.id, assetId)).limit(1);
+  return row ? row.siteId : undefined;
+}
+
+/** Facility of the vehicle behind a vehicle papers record. undefined when the record does not exist. */
+export async function getVehicleComplianceSiteId(id: number): Promise<number | null | undefined> {
+  const database = await db.getDb();
+  if (!database) throw new Error("Database unavailable");
+  const [row] = await database
+    .select({ siteId: assets.siteId })
+    .from(vehicleCompliance)
+    .innerJoin(assets, eq(vehicleCompliance.assetId, assets.id))
+    .where(eq(vehicleCompliance.id, id))
+    .limit(1);
+  return row ? row.siteId : undefined;
 }
