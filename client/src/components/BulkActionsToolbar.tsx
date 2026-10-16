@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Trash2, Download, X } from "lucide-react";
 import { formatCount } from "@/lib/formatCount";
@@ -38,11 +39,70 @@ export function BulkActionsToolbar({
   nowrapActions = false,
 }: BulkActionsToolbarProps) {
   if (selectedCount === 0) return null;
+  return (
+    <BulkActionsBar
+      selectedCount={selectedCount}
+      onClearSelection={onClearSelection}
+      onDelete={onDelete}
+      onExport={onExport}
+      disabled={disabled}
+      itemLabel={itemLabel}
+      nowrapActions={nowrapActions}
+    >
+      {children}
+    </BulkActionsBar>
+  );
+}
+
+/** Gap kept between the last content row and the top of the bar. */
+export const BULK_BAR_GAP_PX = 16;
+export const BULK_BAR_HEIGHT_VAR = "--bulk-bar-h";
+
+function BulkActionsBar({
+  selectedCount,
+  onClearSelection,
+  onDelete,
+  onExport,
+  disabled = false,
+  itemLabel = "items",
+  children,
+  nowrapActions = false,
+}: BulkActionsToolbarProps) {
+  const barRef = useRef<HTMLDivElement>(null);
+  const [barHeight, setBarHeight] = useState<number | null>(null);
+
+  // Track the bar's rendered height so the in-flow spacer always clears it (nothing hidden behind the bar).
+  useLayoutEffect(() => {
+    const el = barRef.current;
+    if (!el) return;
+    const root = document.documentElement;
+    const update = () => {
+      const h = Math.ceil(el.getBoundingClientRect().height);
+      if (h > 0) {
+        setBarHeight(h);
+        root.style.setProperty(BULK_BAR_HEIGHT_VAR, `${h}px`);
+      }
+    };
+    update();
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(update) : null;
+    ro?.observe(el);
+    return () => {
+      ro?.disconnect();
+      root.style.removeProperty(BULK_BAR_HEIGHT_VAR);
+    };
+  }, []);
 
   return (
     <>
-      <div aria-hidden className="h-36 md:h-24" data-testid="bulk-actions-spacer" />
       <div
+        aria-hidden
+        // Fallback floor until measured: 176px + gap below md, 96px at md and up.
+        className={barHeight == null ? "h-[192px] md:h-24" : undefined}
+        style={barHeight == null ? undefined : { height: `calc(var(${BULK_BAR_HEIGHT_VAR}, ${barHeight}px) + ${BULK_BAR_GAP_PX}px)` }}
+        data-testid="bulk-actions-spacer"
+      />
+      <div
+        ref={barRef}
         role="toolbar"
         aria-label={`Bulk actions for ${formatCount(selectedCount)} selected ${itemLabel}`}
         data-testid="bulk-actions-toolbar"
