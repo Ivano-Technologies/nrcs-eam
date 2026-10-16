@@ -2561,6 +2561,7 @@ export default function Assets() {
       <BulkActionsToolbar
         selectedCount={selectedCount}
         itemLabel="assets"
+        nowrapActions
         onClearSelection={clearSelection}
         onExport={() => void handleExportSelected()}
         onDelete={canEditAssets ? () => setBulkDeleteOpen(true) : undefined}
@@ -2573,7 +2574,7 @@ export default function Assets() {
             onValueChange={(v) => setBulkStatusTarget(v as BulkRegisterStatus)}
           >
             <SelectTrigger
-              className={cn("h-8 w-[190px]", BULK_BAR_BUTTON_CLASS)}
+              className={cn("h-8 min-w-0 flex-1 md:w-[190px] md:flex-none", BULK_BAR_BUTTON_CLASS)}
               data-testid="bulk-actions-status"
               aria-label="Set status for selected assets"
             >

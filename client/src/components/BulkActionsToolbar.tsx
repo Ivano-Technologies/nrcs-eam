@@ -12,6 +12,11 @@ interface BulkActionsToolbarProps {
   /** Noun used in the accessible toolbar label, e.g. "assets". */
   itemLabel?: string;
   children?: React.ReactNode;
+  /**
+   * Keep the actions on one row below md (two-row rule at 390). Only set this when the
+   * actions are known to fit at 390 (Assets); other bars still wrap rather than clip.
+   */
+  nowrapActions?: boolean;
 }
 
 /** Light buttons on the navy bar. Delete is the only red action. */
@@ -30,6 +35,7 @@ export function BulkActionsToolbar({
   disabled = false,
   itemLabel = "items",
   children,
+  nowrapActions = false,
 }: BulkActionsToolbarProps) {
   if (selectedCount === 0) return null;
 
@@ -59,7 +65,10 @@ export function BulkActionsToolbar({
           </Button>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div
+          className={nowrapActions ? "flex flex-nowrap items-center gap-2 md:flex-wrap" : "flex flex-wrap items-center gap-2"}
+          data-testid="bulk-actions-row"
+        >
           {children}
 
           {onExport && (
