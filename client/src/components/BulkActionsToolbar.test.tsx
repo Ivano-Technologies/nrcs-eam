@@ -54,4 +54,20 @@ describe("BulkActionsToolbar layout", () => {
     expect(screen.getByTestId("bulk-actions-row")).toHaveClass("flex-wrap");
     expect(screen.getByTestId("bulk-actions-row")).not.toHaveClass("flex-nowrap");
   });
+
+  it("sizes the spacer from the measured bar height and cleans up on unmount", () => {
+    const orig = HTMLElement.prototype.getBoundingClientRect;
+    HTMLElement.prototype.getBoundingClientRect = function () {
+      return { height: this.getAttribute("role") === "toolbar" ? 176 : 0, width: 0, top: 0, left: 0, right: 0, bottom: 0, x: 0, y: 0, toJSON() {} } as DOMRect;
+    };
+    try {
+      const { unmount } = render(<BulkActionsToolbar selectedCount={2} onClearSelection={() => {}} onExport={() => {}} />);
+      expect(document.documentElement.style.getPropertyValue("--bulk-bar-h")).toBe("176px");
+      expect(screen.getByTestId("bulk-actions-spacer").style.height).toContain("16px");
+      unmount();
+      expect(document.documentElement.style.getPropertyValue("--bulk-bar-h")).toBe("");
+    } finally {
+      HTMLElement.prototype.getBoundingClientRect = orig;
+    }
+  });
 });
