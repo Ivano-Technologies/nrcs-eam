@@ -206,7 +206,7 @@ export const assetsRouter = router({
       }),
     
     /** Ids of every register row matching the filters (for "Select all N matching"), facility scoped. */
-    registerMatchingIds: protectedProcedure
+    registerMatchingIds: managerOrAdminProcedure
       .input(
         z
           .object({
