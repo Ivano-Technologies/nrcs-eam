@@ -19,7 +19,7 @@
     "check:entry-graph": "node scripts/check/verify-entry-graph.mjs",
     "check:mojibake": "node scripts/check/verify-no-mojibake.mjs",
     "check:layout": "node scripts/check/verify-layout-system.mjs",
-    "lint": "eslint . && node scripts/check/verify-layout-system.mjs",
+    "lint": "eslint . && node scripts/check/verify-layout-system.mjs && node scripts/check/verify-no-raw-hex.mjs",
     "format": "prettier --write .",
     "test": "tsx scripts/db/seed-db.mjs && vitest run",
     "db:push": "drizzle-kit generate && drizzle-kit migrate",

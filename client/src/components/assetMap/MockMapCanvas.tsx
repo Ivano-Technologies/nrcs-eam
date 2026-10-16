@@ -134,8 +134,8 @@ export const MockMapCanvas = forwardRef<MapController, Props>(function MockMapCa
       data-zoom={zoom}
       className="absolute inset-0 overflow-hidden"
       style={{
-        background: p.scheme === "dark" ? "#182333" : "#FAFAF7",
-        backgroundImage: `linear-gradient(${p.scheme === "dark" ? "#22324a" : "#ECEEF1"} 1px, transparent 1px), linear-gradient(90deg, ${p.scheme === "dark" ? "#22324a" : "#ECEEF1"} 1px, transparent 1px)`,
+        background: MAP_TOKENS[p.scheme].mockBg,
+        backgroundImage: `linear-gradient(${MAP_TOKENS[p.scheme].mockGrid} 1px, transparent 1px), linear-gradient(90deg, ${MAP_TOKENS[p.scheme].mockGrid} 1px, transparent 1px)`,
         backgroundSize: "48px 48px",
       }}
       onClick={(e) => {
@@ -211,7 +211,7 @@ export const MockMapCanvas = forwardRef<MapController, Props>(function MockMapCa
             type="button"
             data-testid={`asset-map-marker-${f.code ?? f.id}`}
             aria-label={facilityAriaLabelFor(f, p.pinMode)}
-            className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-[#C8102E]"
+            className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary"
             style={{ left: pos.x, top: pos.y, zIndex: zOf(f) }}
             onClick={(e) => {
               e.stopPropagation();
@@ -249,7 +249,7 @@ export const MockMapCanvas = forwardRef<MapController, Props>(function MockMapCa
       })}
       <p
         className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full px-2 py-0.5 text-[11px]"
-        style={{ color: t.muted, background: p.scheme === "dark" ? "#0F1724cc" : "#ffffffcc" }}
+        style={{ color: t.muted, background: MAP_TOKENS[p.scheme].mockLabelBg }}
       >
         Map test mode: no Google tiles
       </p>

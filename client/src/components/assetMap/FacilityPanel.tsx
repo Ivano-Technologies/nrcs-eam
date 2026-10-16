@@ -37,7 +37,7 @@ const LEGEND_KEY = "nrcs-asset-map-legend-open";
  * resting, hover and pressed chip in both themes.
  */
 const chipCountText =
-  "text-[#4B5563] group-aria-pressed:text-[#D6DCE5] dark:text-[#A3AEBD] dark:group-aria-pressed:text-[#3D4A5C]";
+  "text-foreground-tertiary group-aria-pressed:text-selected-muted-foreground dark:text-muted-foreground dark:group-aria-pressed:text-selected-muted-foreground";
 
 export type FacilityPanelProps = {
   layer: MapLayer;
@@ -175,8 +175,8 @@ export function FacilityPanel(props: FacilityPanelProps) {
           placeholder="Search facilities or codes"
           data-testid="asset-map-search"
           className={cn(
-            "h-10 w-full rounded-md border border-[#8A8F98] bg-white pl-9 pr-3 text-sm text-[#111827] placeholder:text-[#62626C] dark:border-[#64768E] dark:bg-[#0F1724] dark:text-[#E6EAF0] dark:placeholder:text-[#A3AEBD]",
-            "focus-visible:border-[#C8102E] focus-visible:ring-2 focus-visible:ring-[#C8102E]/30 focus-visible:outline-none"
+            "h-10 w-full rounded-md border border-control-border bg-white pl-9 pr-3 text-sm text-foreground-strong placeholder:text-muted-foreground dark:border-control-border dark:bg-surface-sunken dark:text-foreground-strong dark:placeholder:text-muted-foreground",
+            "focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:outline-none"
           )}
         />
       </label>
@@ -186,7 +186,7 @@ export function FacilityPanel(props: FacilityPanelProps) {
           onClick={() => setFiltersOpen((v) => !v)}
           aria-expanded={filtersOpen}
           className={cn(
-            "inline-flex h-11 items-center gap-1.5 rounded-md border border-[#8A8F98] px-3 text-sm font-medium dark:border-[#64768E]",
+            "inline-flex h-11 items-center gap-1.5 rounded-md border border-control-border px-3 text-sm font-medium dark:border-control-border",
             focusRing
           )}
         >
@@ -203,7 +203,7 @@ export function FacilityPanel(props: FacilityPanelProps) {
           title="Collapse to the search card"
           data-testid="asset-map-panel-collapse"
           className={cn(
-            "grid h-10 w-10 shrink-0 place-items-center rounded-md hover:bg-[#F3F4F6] dark:hover:bg-[#1E2B3C]",
+            "grid h-10 w-10 shrink-0 place-items-center rounded-md hover:bg-muted dark:hover:bg-muted",
             focusRing
           )}
         >
@@ -215,7 +215,7 @@ export function FacilityPanel(props: FacilityPanelProps) {
 
   const noLocationChip = filters.noLocationOnly ? (
     <div className="px-4 pb-3">
-      <span className="inline-flex h-8 items-center gap-1 rounded-full bg-[#0B2545] pl-3 pr-1 text-[13px] font-medium text-white dark:bg-[#E6EAF0] dark:text-[#0F1724]">
+      <span className="inline-flex h-8 items-center gap-1 rounded-full bg-selected pl-3 pr-1 text-[13px] font-medium text-white dark:bg-selected dark:text-selected-foreground">
         Facilities with no location
         <button
           type="button"
@@ -231,7 +231,7 @@ export function FacilityPanel(props: FacilityPanelProps) {
 
   // Search plus the count: a fixed header in the desktop panel (only the content below scrolls).
   const summaryBlock = (
-    <div className="border-b border-[#E5E7EB] px-4 pb-3.5 dark:border-[#26364A]">
+    <div className="border-b border-border px-4 pb-3.5 dark:border-border">
       {loading ? (
         <div className="space-y-2">
           <Skeleton className="h-6 w-48" />
@@ -268,8 +268,8 @@ export function FacilityPanel(props: FacilityPanelProps) {
                 onClick={onToggleOffline}
                 title={filters.offlineOnly ? "Show all facilities" : "Show offline facilities only"}
                 className={cn(
-                  "inline-flex h-7 shrink-0 items-center whitespace-nowrap rounded-full border border-dashed border-[#8A8F98] px-2.5 text-xs font-medium tabular-nums dark:border-[#64768E]",
-                  "aria-pressed:border-solid aria-pressed:border-[#0B2545] aria-pressed:bg-[#0B2545] aria-pressed:text-white dark:aria-pressed:border-[#E6EAF0] dark:aria-pressed:bg-[#E6EAF0] dark:aria-pressed:text-[#0F1724]",
+                  "inline-flex h-7 shrink-0 items-center whitespace-nowrap rounded-full border border-dashed border-control-border px-2.5 text-xs font-medium tabular-nums dark:border-control-border",
+                  "aria-pressed:border-solid aria-pressed:border-selected aria-pressed:bg-selected aria-pressed:text-white dark:aria-pressed:border-selected dark:aria-pressed:bg-selected dark:aria-pressed:text-selected-foreground",
                   focusRing
                 )}
               >
@@ -277,13 +277,13 @@ export function FacilityPanel(props: FacilityPanelProps) {
               </button>
             ) : null}
           </div>
-          <div className="mt-2 flex h-2 overflow-hidden rounded-full bg-[#E9ECF0] dark:bg-[#24344A]" aria-hidden="true">
+          <div className="mt-2 flex h-2 overflow-hidden rounded-full bg-surface-subtle dark:bg-surface-subtle" aria-hidden="true">
             {READINESS_TIERS.map((t) =>
               tierCounts[t] > 0 && totalForBar > 0 ? (
                 <span
                   key={t}
                   style={{ width: `${(tierCounts[t] / totalForBar) * 100}%`, background: tierColours[t] }}
-                  className="h-full border-r-2 border-white last:border-r-0 dark:border-[#162130]"
+                  className="h-full border-r-2 border-white last:border-r-0 dark:border-surface"
                 />
               ) : null
             )}
@@ -298,13 +298,13 @@ export function FacilityPanel(props: FacilityPanelProps) {
               {assetTotals.facilities === 1 ? "facility" : "facilities"}
             </span>
           </p>
-          <div className="mt-2 flex h-2 overflow-hidden rounded-full bg-[#E9ECF0] dark:bg-[#24344A]" aria-hidden="true">
+          <div className="mt-2 flex h-2 overflow-hidden rounded-full bg-surface-subtle dark:bg-surface-subtle" aria-hidden="true">
             {(["inUse", "maintenance", "retired"] as const).map((k) =>
               assetTotals[k] > 0 ? (
                 <span
                   key={k}
                   style={{ width: `${(assetTotals[k] / Math.max(1, assetTotals.total)) * 100}%`, background: statusColours[k] }}
-                  className="h-full border-r-2 border-white last:border-r-0 dark:border-[#162130]"
+                  className="h-full border-r-2 border-white last:border-r-0 dark:border-surface"
                 />
               ) : null
             )}
@@ -384,8 +384,8 @@ export function FacilityPanel(props: FacilityPanelProps) {
                   data-tier={t}
                   className={cn(
                     "min-h-[58px] rounded-md border p-2 text-left transition-colors",
-                    "border-[#E5E7EB] hover:bg-[#F3F4F6] dark:border-[#26364A] dark:hover:bg-[#1E2B3C]",
-                    "aria-pressed:border-2 aria-pressed:border-[#0B2545] aria-pressed:bg-[#EEF2F8] dark:aria-pressed:border-[#E6EAF0] dark:aria-pressed:bg-[#1E2B3C]",
+                    "border-border hover:bg-muted dark:border-border dark:hover:bg-muted",
+                    "aria-pressed:border-2 aria-pressed:border-selected aria-pressed:bg-selected-subtle dark:aria-pressed:border-selected dark:aria-pressed:bg-muted",
                     focusRing
                   )}
                 >
@@ -405,7 +405,7 @@ export function FacilityPanel(props: FacilityPanelProps) {
 
         {/* Type chips (shape legend and filter) */}
         {showTypeChips || filtersOpen ? (
-          <div className="border-b border-[#E5E7EB] px-4 pb-3.5 pt-3.5 dark:border-[#26364A]">
+          <div className="border-b border-border px-4 pb-3.5 pt-3.5 dark:border-border">
             <h2 className="mb-2 text-[13px] font-semibold">Type</h2>
             <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter by type" data-testid="asset-map-facility-type">
               {TYPE_ORDER.map((t) => {
@@ -428,7 +428,7 @@ export function FacilityPanel(props: FacilityPanelProps) {
             </div>
           </div>
         ) : (
-          <div className="border-b border-[#E5E7EB] pb-3.5 dark:border-[#26364A]" />
+          <div className="border-b border-border pb-3.5 dark:border-border" />
         )}
 
         {/* List */}
@@ -441,7 +441,7 @@ export function FacilityPanel(props: FacilityPanelProps) {
                 value={sort}
                 onChange={(e) => onSort(e.target.value as ListSort)}
                 className={cn(
-                  "appearance-none bg-transparent pr-5 text-right text-[13px] font-medium text-[#374151] dark:text-[#C9D3E0]",
+                  "appearance-none bg-transparent pr-5 text-right text-[13px] font-medium text-foreground-secondary dark:text-foreground-secondary",
                   focusRing
                 )}
               >
@@ -465,7 +465,7 @@ export function FacilityPanel(props: FacilityPanelProps) {
         />
         {!loading && !loadError && filtered.length === 0 ? (
           <div className="px-6 pb-6 pt-4 text-center">
-            <span className="mx-auto mb-3 grid h-10 w-10 place-items-center rounded-md bg-[#F3F4F6] dark:bg-[#1E2B3C]">
+            <span className="mx-auto mb-3 grid h-10 w-10 place-items-center rounded-md bg-muted dark:bg-muted">
               <SearchX className="h-5 w-5" />
             </span>
             <p className="text-sm font-semibold">No facilities match</p>
@@ -476,7 +476,7 @@ export function FacilityPanel(props: FacilityPanelProps) {
 
       {/* Legend (the type chips double as the legend in the mobile sheet) */}
       {variant === "panel" ? (
-      <div className="border-t border-[#E5E7EB] bg-[#F9FAFB] px-4 py-2.5 dark:border-[#26364A] dark:bg-[#132030]">
+      <div className="border-t border-border bg-surface-footer px-4 py-2.5 dark:border-border dark:bg-surface-footer">
         <button
           type="button"
           onClick={() => setLegendOpen((v) => !v)}
@@ -636,9 +636,9 @@ function FacilityList({
               onSelect(f.id, e.currentTarget);
             }}
             className={cn(
-              "relative flex cursor-pointer items-center gap-3 px-4 py-2 hover:bg-[#F3F4F6] dark:hover:bg-[#1E2B3C]",
-              selected && "bg-[#F3F4F6] shadow-[inset_3px_0_0_#0B2545] dark:bg-[#1E2B3C] dark:shadow-[inset_3px_0_0_#E6EAF0]",
-              "outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#C8102E] dark:focus-visible:outline-white"
+              "relative flex cursor-pointer items-center gap-3 px-4 py-2 hover:bg-muted dark:hover:bg-muted",
+              selected && "bg-muted shadow-[inset_3px_0_0_var(--selected)]",
+              "outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary dark:focus-visible:outline-white"
             )}
           >
             <span className="grid w-5 place-items-center">
@@ -646,14 +646,14 @@ function FacilityList({
             </span>
             <span className="min-w-0 flex-1">
               <span className="block truncate text-sm font-medium">{f.name}</span>
-              <span className={cn("block truncate text-xs", "text-[#62626C] dark:text-[#A3AEBD]")}>{meta}</span>
+              <span className={cn("block truncate text-xs", "text-muted-foreground dark:text-muted-foreground")}>{meta}</span>
             </span>
             {layer === "assets" ? (
               f.statsVisible && f.assetCount != null ? (
                 <span className="w-16 shrink-0 text-right">
                   <span className="block text-sm font-semibold tabular-nums">{formatCount(f.assetCount)}</span>
                   {f.assetsByStatus && f.assetCount > 0 ? (
-                    <span className="mt-1 flex h-1.5 overflow-hidden rounded-full bg-[#E9ECF0] dark:bg-[#24344A]" aria-hidden="true">
+                    <span className="mt-1 flex h-1.5 overflow-hidden rounded-full bg-surface-subtle dark:bg-surface-subtle" aria-hidden="true">
                       {(["inUse", "maintenance", "retired"] as const).map((k) => (
                         <span key={k} style={{ width: `${(f.assetsByStatus![k] / f.assetCount!) * 100}%`, background: statusColours[k] }} />
                       ))}
@@ -661,7 +661,7 @@ function FacilityList({
                   ) : null}
                 </span>
               ) : (
-                <span className="shrink-0 text-xs text-[#62626C] dark:text-[#A3AEBD]">Not shown</span>
+                <span className="shrink-0 text-xs text-muted-foreground dark:text-muted-foreground">Not shown</span>
               )
             ) : !located ? (
               <ReadinessPill tier="offline" scheme={scheme} dashed>
@@ -743,8 +743,8 @@ export function CompactFacilityCard({
             placeholder="Search facilities"
             data-testid="asset-map-compact-search"
             className={cn(
-              "h-10 w-full rounded-md border border-[#8A8F98] bg-white pl-8 pr-2 text-sm text-[#111827] placeholder:text-[#62626C] dark:border-[#64768E] dark:bg-[#0F1724] dark:text-[#E6EAF0] dark:placeholder:text-[#A3AEBD]",
-              "focus-visible:border-[#C8102E] focus-visible:ring-2 focus-visible:ring-[#C8102E]/30 focus-visible:outline-none"
+              "h-10 w-full rounded-md border border-control-border bg-white pl-8 pr-2 text-sm text-foreground-strong placeholder:text-muted-foreground dark:border-control-border dark:bg-surface-sunken dark:text-foreground-strong dark:placeholder:text-muted-foreground",
+              "focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:outline-none"
             )}
           />
         </label>
@@ -756,7 +756,7 @@ export function CompactFacilityCard({
           title="Show filters and the facility list"
           data-testid="asset-map-panel-expand"
           className={cn(
-            "grid h-10 w-9 shrink-0 place-items-center rounded-md hover:bg-[#F3F4F6] dark:hover:bg-[#1E2B3C]",
+            "grid h-10 w-9 shrink-0 place-items-center rounded-md hover:bg-muted dark:hover:bg-muted",
             focusRing
           )}
         >
@@ -784,7 +784,7 @@ export function DataLoadError({
 }) {
   return (
     <div role="alert" data-testid="asset-map-data-error" className={cn("flex gap-3", className)}>
-      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[#B91C1C] dark:text-[#F87171]" aria-hidden="true" />
+      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-danger dark:text-primary-on-dark" aria-hidden="true" />
       <div className="min-w-0">
         <p className="text-sm font-semibold">Facility data didn&apos;t load</p>
         <p className={cn("mt-1 text-[13px]", mutedText)}>Check your connection and try again.</p>
@@ -796,8 +796,8 @@ export function DataLoadError({
             disabled={retrying}
             aria-busy={retrying || undefined}
             className={cn(
-              "mt-3 inline-flex h-9 items-center gap-1.5 rounded-md border border-[#0B2545] bg-white px-3 text-[13px] font-semibold text-[#0B2545] transition-colors hover:bg-[#EEF2F8] disabled:cursor-progress",
-              "dark:border-[#E6EAF0] dark:bg-[#162130] dark:text-[#E6EAF0] dark:hover:bg-[#1E2B3C]",
+              "mt-3 inline-flex h-9 items-center gap-1.5 rounded-md border border-selected bg-white px-3 text-[13px] font-semibold text-selected transition-colors hover:bg-selected-subtle disabled:cursor-progress",
+              "dark:border-selected dark:bg-surface dark:text-foreground-strong dark:hover:bg-muted",
               focusRing
             )}
           >

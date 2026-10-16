@@ -46,7 +46,7 @@ export default function PageHeader({
       {back ? (
         <Link
           href={back.href}
-          className="mb-2 inline-flex items-center gap-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C8102E] dark:focus-visible:outline-white"
+          className="mb-2 inline-flex items-center gap-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:focus-visible:outline-white"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden />
           {back.label}
@@ -63,7 +63,7 @@ export default function PageHeader({
             className="flex items-center gap-2 text-3xl font-bold tracking-tight"
             data-testid={titleTestId}
           >
-            {Icon ? <Icon className="h-8 w-8 shrink-0 text-primary dark:text-[#F87171]" aria-hidden /> : null}
+            {Icon ? <Icon className="h-8 w-8 shrink-0 text-primary dark:text-primary-on-dark" aria-hidden /> : null}
             <span className="min-w-0 break-words">{title}</span>
           </h1>
           {subtitle ? (
