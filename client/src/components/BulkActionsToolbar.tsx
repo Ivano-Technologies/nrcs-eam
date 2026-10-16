@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Trash2, Download, X } from "lucide-react";
+import { formatCount } from "@/lib/formatCount";
 
 interface BulkActionsToolbarProps {
   selectedCount: number;
@@ -37,13 +38,13 @@ export function BulkActionsToolbar({
       <div aria-hidden className="h-36 md:h-24" data-testid="bulk-actions-spacer" />
       <div
         role="toolbar"
-        aria-label={`Bulk actions for ${selectedCount} selected ${itemLabel}`}
+        aria-label={`Bulk actions for ${formatCount(selectedCount)} selected ${itemLabel}`}
         data-testid="bulk-actions-toolbar"
         className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] md:bottom-6 left-1/2 z-50 flex w-[calc(100vw-2rem)] -translate-x-1/2 flex-col gap-3 rounded-xl bg-sidebar px-4 py-3 text-sidebar-foreground shadow-lg animate-in slide-in-from-bottom-5 md:w-max md:max-w-[calc(100vw-2rem)] md:flex-row md:items-center md:gap-4 md:px-5"
       >
         <div className="flex items-center justify-between gap-3 md:contents">
           <span className="text-sm font-medium tabular-nums" data-testid="bulk-actions-count">
-            {selectedCount} selected
+            {formatCount(selectedCount)} selected
           </span>
           <Button
             variant="ghost"
