@@ -93,13 +93,58 @@ function tallyStatus(
   return { compliantCount, expiringSoonCount, nonCompliantCount };
 }
 
-export async function getComplianceSummary(): Promise<ComplianceSummary> {
-  const [vehicles, generators, buildings, donors] = await Promise.all([
+type ComplianceRecords = {
+  vehicles: VehicleComplianceRow[];
+  generators: GeneratorComplianceRow[];
+  buildings: BuildingSafetyRow[];
+  donors: DonorReportingRow[];
+};
+
+/** Keep only records that belong to `siteId` (see getComplianceSummary). Pure, for testing. */
+export function scopeComplianceRecords(
+  records: ComplianceRecords,
+  siteId: number,
+  assetIdsAtSite: Set<number>
+): ComplianceRecords {
+  return {
+    vehicles: records.vehicles.filter((v) => assetIdsAtSite.has(v.assetId)),
+    generators: records.generators.filter((g) => assetIdsAtSite.has(g.assetId)),
+    buildings: records.buildings.filter((b) => b.siteId === siteId),
+    donors: records.donors.filter((d) =>
+      d.siteId != null ? d.siteId === siteId : d.assetId != null && assetIdsAtSite.has(d.assetId)
+    ),
+  };
+}
+
+const EMPTY_SUMMARY: ComplianceSummary = {
+  totalRecords: 0,
+  compliantCount: 0,
+  compliantPct: 0,
+  expiringSoonCount: 0,
+  nonCompliantCount: 0,
+};
+
+/**
+ * Compliance summary counts. With `siteId` (IVA-169) only records for that facility count: vehicles and
+ * generators by their asset's facility, buildings by facility, donor reports by their own facility or,
+ * when they have none, their asset's facility. `siteId: null` (user without a facility) gives zeros.
+ * Omit `siteId` for org-wide counts.
+ */
+export async function getComplianceSummary(scope?: { siteId: number | null }): Promise<ComplianceSummary> {
+  if (scope && scope.siteId == null) return { ...EMPTY_SUMMARY };
+  let [vehicles, generators, buildings, donors] = await Promise.all([
     listVehicleCompliance(),
     listGeneratorCompliance(),
     listBuildingSafety(),
     listDonorReporting(),
   ]);
+  if (scope && scope.siteId != null) {
+    ({ vehicles, generators, buildings, donors } = scopeComplianceRecords(
+      { vehicles, generators, buildings, donors },
+      scope.siteId,
+      await listAssetIdsAtSite(scope.siteId)
+    ));
+  }
   const statuses = [
     ...vehicles.map((v) => v.status),
     ...generators.map((g) => g.status),
@@ -570,4 +615,11 @@ export async function lookupAssetByCode(assetCode: string) {
     .where(eq(assets.assetCode, assetCode))
     .limit(1);
   return row ?? null;
+}
+
+async function listAssetIdsAtSite(siteId: number): Promise<Set<number>> {
+  const database = await db.getDb();
+  if (!database) return new Set();
+  const rows = await database.select({ id: assets.id }).from(assets).where(eq(assets.siteId, siteId));
+  return new Set(rows.map((r) => r.id));
 }

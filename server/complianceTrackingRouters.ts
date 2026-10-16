@@ -8,7 +8,10 @@ const generatorStatusZod = z.enum(["serviced", "due_soon", "overdue"]);
 const donorStatusZod = z.enum(["submitted", "due_soon", "overdue", "pending"]);
 
 export const complianceTrackingRouter = router({
-  summary: protectedProcedure.query(() => complianceDb.getComplianceSummary()),
+  // IVA-169: admins get org-wide counts; everyone else only their facility (no facility gives zeros).
+  summary: protectedProcedure.query(({ ctx }) =>
+    complianceDb.getComplianceSummary(ctx.user.role === "admin" ? undefined : { siteId: ctx.user.siteId ?? null })
+  ),
 
   lookupAsset: protectedProcedure
     .input(z.object({ assetCode: z.string().min(1) }))
