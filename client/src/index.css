@@ -402,6 +402,18 @@ html.dark {
   [type="submit"] {
     @apply min-h-[44px] min-w-[44px] text-base;
   }
+
+  /* Checkboxes keep their 16px box; an invisible halo gives the 44px touch target instead. */
+  button[data-slot="checkbox"] {
+    min-height: 1rem;
+    min-width: 1rem;
+    position: relative;
+  }
+  button[data-slot="checkbox"]::after {
+    content: "";
+    position: absolute;
+    inset: -14px;
+  }
   
   /* Larger form inputs for mobile */
   input[type="text"],
