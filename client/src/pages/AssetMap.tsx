@@ -560,11 +560,11 @@ export default function AssetMap() {
       <div
         ref={frameRef}
         data-testid="asset-map-panel"
-        className="relative min-h-0 flex-1 overflow-hidden border-b border-[#E5E7EB] bg-[#ECEEF1] dark:border-[#26364A] dark:bg-[#121B28] sm:rounded-xl sm:border"
+        className="relative min-h-0 flex-1 overflow-hidden border-b border-border bg-map-canvas dark:border-border dark:bg-map-canvas sm:rounded-xl sm:border"
       >
         {/* Map layer */}
         {mapError ? (
-          <div data-testid="asset-map-facility-fallback" className="absolute inset-0 bg-[#F3F4F6] dark:bg-[#0F1724]">
+          <div data-testid="asset-map-facility-fallback" className="absolute inset-0 bg-muted dark:bg-surface-sunken">
             <div
               className="absolute flex justify-center"
               style={isMobile ? { left: GAP, right: GAP, top: 128 } : { left: insetsFor(false).left, right: GAP, top: 132 }}
@@ -609,7 +609,7 @@ export default function AssetMap() {
         {/* Empty state: 35% scrim plus a card in the free area. Phones: the card only with the list sheet at peek. */}
         {isEmpty && !mapError ? (
           <>
-            <div className="pointer-events-none absolute inset-0 z-[2] bg-[#FAFAF7]/35 dark:bg-[#0F1724]/35" aria-hidden="true" />
+            <div className="pointer-events-none absolute inset-0 z-[2] bg-map-veil/35 dark:bg-surface-sunken/35" aria-hidden="true" />
             {!isMobile || showMobileEmptyCard(listSnap, drawerOpen) ? (
             <div
               className="pointer-events-none absolute z-[5] flex items-center justify-center"
@@ -692,7 +692,7 @@ export default function AssetMap() {
                     type="button"
                     aria-label="Close facility list"
                     onClick={() => setRailOpen(false)}
-                    className={cn("grid h-9 w-9 place-items-center rounded-md hover:bg-[#F3F4F6] dark:hover:bg-[#1E2B3C]", focusRing)}
+                    className={cn("grid h-9 w-9 place-items-center rounded-md hover:bg-muted dark:hover:bg-muted", focusRing)}
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -804,11 +804,11 @@ function RailButton({
       aria-label={badge ? `${label} (${badge} on)` : label}
       title={label}
       onClick={onClick}
-      className={cn("relative grid h-11 w-11 place-items-center rounded-md hover:bg-[#F3F4F6] dark:hover:bg-[#1E2B3C]", focusRing)}
+      className={cn("relative grid h-11 w-11 place-items-center rounded-md hover:bg-muted dark:hover:bg-muted", focusRing)}
     >
       {children}
       {badge ? (
-        <span className="absolute right-1 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-[#0B2545] px-1 text-[10px] font-semibold text-white dark:bg-[#E6EAF0] dark:text-[#0F1724]">
+        <span className="absolute right-1 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-selected px-1 text-[10px] font-semibold text-white dark:bg-selected dark:text-selected-foreground">
           {badge}
         </span>
       ) : null}

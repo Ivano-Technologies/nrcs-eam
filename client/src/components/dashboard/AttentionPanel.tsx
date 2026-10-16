@@ -67,7 +67,7 @@ export function AttentionPanel({ role }: Props) {
     <Card className="dashboard-card">
       <CardHeader>
         <CardTitle className="dashboard-section-title">Needs your attention</CardTitle>
-        <CardDescription className="text-[#334155] dark:text-[hsl(0_0%_95%)]">Personalised for {role}</CardDescription>
+        <CardDescription className="text-contrast dark:text-[hsl(0_0%_95%)]">Personalised for {role}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-1">
         {sectionState !== "ok" ? <DashboardSectionError onRetry={onRetry} /> : null}
@@ -97,11 +97,11 @@ export function AttentionPanel({ role }: Props) {
                   <Icon className="h-4 w-4" />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-[#1a2332] dark:text-[hsl(0_0%_95%)]">{item.label}</p>
-                  <p className="text-xs text-[#334155] dark:text-[hsl(0_0%_95%)]">{item.meta}</p>
+                  <p className="truncate text-sm font-medium text-navy dark:text-[hsl(0_0%_95%)]">{item.label}</p>
+                  <p className="text-xs text-contrast dark:text-[hsl(0_0%_95%)]">{item.meta}</p>
                 </div>
                 {clickable ? (
-                  <ChevronRight className="h-4 w-4 shrink-0 text-[#334155] dark:text-[hsl(0_0%_95%)]" aria-hidden />
+                  <ChevronRight className="h-4 w-4 shrink-0 text-contrast dark:text-[hsl(0_0%_95%)]" aria-hidden />
                 ) : null}
               </div>
             </RowTag>

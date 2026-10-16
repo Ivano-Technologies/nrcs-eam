@@ -191,8 +191,8 @@ describe("Asset Map (mapMock)", () => {
     fireEvent.click(screen.getByTestId("asset-map-row-KAN-001"));
     const link = screen.getByTestId("asset-map-parent-facility-link");
     expect(link).toHaveTextContent("National Headquarters");
-    expect(link.className).toContain("text-[#1E3A8A]");
-    expect(link.className).toContain("dark:text-[#93C5FD]");
+    expect(link.className).toContain("text-link");
+    expect(link.className).toContain("dark:text-link");
     expect(link.className).not.toMatch(/\btext-primary\b/);
   });
 

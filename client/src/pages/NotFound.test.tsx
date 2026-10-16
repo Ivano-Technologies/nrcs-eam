@@ -46,7 +46,7 @@ describe("NotFound (Wave B11)", () => {
     expect(card.className).toContain("bg-card");
     expect(screen.queryByRole("button", { name: /switch to (light|dark) theme/i })).not.toBeInTheDocument();
     const action = screen.getByRole("button", { name: "Back to home" });
-    expect(action.className).toContain("bg-[#C8102E]");
+    expect(action.className).toContain("bg-primary");
     expect(action.className).not.toMatch(/bg-blue/);
   });
 });

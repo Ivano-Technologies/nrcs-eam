@@ -9,11 +9,11 @@ import { Link } from "wouter";
 type KpiTone = "red" | "blue" | "purple" | "orange" | "green";
 
 const iconToneClassMap: Record<KpiTone, string> = {
-  red: "text-[#C8102E] dark:text-[hsl(0_0%_95%)]",
-  blue: "text-[#1a2332] dark:text-[hsl(0_0%_95%)]",
-  purple: "text-[#1a2332] dark:text-[hsl(0_0%_95%)]",
-  orange: "text-[#C8102E] dark:text-[hsl(0_0%_95%)]",
-  green: "text-[#1a2332] dark:text-[hsl(0_0%_95%)]",
+  red: "text-primary dark:text-[hsl(0_0%_95%)]",
+  blue: "text-navy dark:text-[hsl(0_0%_95%)]",
+  purple: "text-navy dark:text-[hsl(0_0%_95%)]",
+  orange: "text-primary dark:text-[hsl(0_0%_95%)]",
+  green: "text-navy dark:text-[hsl(0_0%_95%)]",
 };
 
 type DeltaDirection = "up" | "down" | "flat";
@@ -83,7 +83,7 @@ function KpiCardInner({
     >
       <CardContent className="flex flex-1 flex-col px-5 pb-4 pt-5">
         <header className="flex items-start justify-between gap-2">
-          <span className="text-sm font-medium leading-snug text-[#1a2332] dark:text-[hsl(0_0%_95%)]">{label}</span>
+          <span className="text-sm font-medium leading-snug text-navy dark:text-[hsl(0_0%_95%)]">{label}</span>
           <div className={cn("kpi-icon-badge shrink-0 rounded-xl p-2.5", iconToneClassMap[tone])}>
             <Icon className="h-5 w-5" />
           </div>
@@ -96,7 +96,7 @@ function KpiCardInner({
         ) : (
           <div
             className={cn(
-              "mt-3 min-w-0 whitespace-nowrap tracking-tight text-[#1a2332] dark:text-[hsl(0_0%_95%)]",
+              "mt-3 min-w-0 whitespace-nowrap tracking-tight text-navy dark:text-[hsl(0_0%_95%)]",
               KPI_VALUE_CLASS
             )}
             data-testid={valueTestId}
@@ -107,11 +107,11 @@ function KpiCardInner({
 
         <footer className="relative mt-auto flex flex-col items-start gap-2 pt-4 pr-6">
           {failed ? null : sub ? (
-            <span className="w-full min-w-0 whitespace-normal break-words text-sm leading-relaxed text-[#334155] dark:text-[hsl(0_0%_95%)]">
+            <span className="w-full min-w-0 whitespace-normal break-words text-sm leading-relaxed text-contrast dark:text-[hsl(0_0%_95%)]">
               {sub}
             </span>
           ) : (
-            <span className="w-full select-none text-sm text-[#334155] dark:text-[hsl(0_0%_95%)]" aria-hidden>
+            <span className="w-full select-none text-sm text-contrast dark:text-[hsl(0_0%_95%)]" aria-hidden>
               {"\u00a0"}
             </span>
           )}

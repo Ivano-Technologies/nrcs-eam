@@ -114,7 +114,7 @@ function WmsReportOverview() {
             <Card className="h-full transition-colors group-hover:border-primary/40">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <r.icon className="h-4 w-4 text-primary dark:text-[#F87171]" aria-hidden />
+                  <r.icon className="h-4 w-4 text-primary dark:text-primary-on-dark" aria-hidden />
                   {r.title}
                 </CardTitle>
                 <CardDescription>{r.subtitle}</CardDescription>

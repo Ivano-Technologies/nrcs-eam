@@ -42,7 +42,7 @@ export function CardQrCode({
       canvas.height = 1024;
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
-      ctx.fillStyle = "#ffffff";
+      ctx.fillStyle = "white";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
       const png = canvas.toDataURL("image/png");
