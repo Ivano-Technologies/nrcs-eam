@@ -45,4 +45,13 @@ describe("BulkActionsToolbar layout", () => {
     expect(screen.getByRole("button", { name: "Clear selection" })).toBeInTheDocument();
     expect(screen.getByTestId("bulk-actions-spacer")).toBeInTheDocument();
   });
+
+  it("keeps actions on one row below md only when nowrapActions is set", () => {
+    const { unmount } = render(<BulkActionsToolbar selectedCount={2} onClearSelection={() => {}} onExport={() => {}} nowrapActions />);
+    expect(screen.getByTestId("bulk-actions-row")).toHaveClass("flex-nowrap", "md:flex-wrap");
+    unmount();
+    render(<BulkActionsToolbar selectedCount={2} onClearSelection={() => {}} onExport={() => {}} />);
+    expect(screen.getByTestId("bulk-actions-row")).toHaveClass("flex-wrap");
+    expect(screen.getByTestId("bulk-actions-row")).not.toHaveClass("flex-nowrap");
+  });
 });
