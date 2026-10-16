@@ -870,12 +870,12 @@ export const inventoryV2Router = router({
 
     /**
      * Bulk mark catalogue items active or inactive (applies to the item in every warehouse).
-     * Manager/admin only; audited per item with old and new values.
+     * Admin only (same as catalogue.deactivate); audited per item with old and new values.
      */
     bulkSetActive: protectedProcedure
       .input(z.object({ ids: z.array(z.number().int().positive()).min(1).max(500), isActive: z.boolean() }))
       .mutation(async ({ input, ctx }) => {
-        requireRole(ctx, ["manager", "admin"]);
+        requireRole(ctx, ["admin"]);
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
         const ids = Array.from(new Set(input.ids));

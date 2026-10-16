@@ -710,7 +710,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                     <th className="px-2 py-2 text-left">Program</th>
                     <th className="px-2 py-2 text-right">On hand</th>
                     <th className="px-2 py-2 text-left">Unit</th>
-                    <th className="px-2 py-2 text-right">Min</th>
+                    <th className="px-2 py-2 text-right whitespace-nowrap">Reorder level</th>
                     <th className="px-2 py-2 text-right">Max</th>
                     <th className="px-2 py-2 text-right">Safety</th>
                     <th className="px-2 py-2 text-left">Status</th>
@@ -843,6 +843,8 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                   <SlidersHorizontal className="h-4 w-4" />
                   Set reorder level
                 </Button>
+                {isAdmin ? (
+                <>
                 <Button variant="outline" size="sm" className={BULK_BAR_BUTTON_CLASS} disabled={stockBulkPending} onClick={() => setActiveTarget(true)} data-testid="bulk-actions-activate">
                   <CircleCheck className="h-4 w-4" />
                   Mark active
@@ -851,6 +853,8 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                   <CircleOff className="h-4 w-4" />
                   Mark inactive
                 </Button>
+                </>
+                ) : null}
               </>
             ) : null}
           </BulkActionsToolbar>
@@ -1364,7 +1368,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                     <tr className="border-b bg-muted/50">
                       <th className="px-2 py-2 text-left">Location</th>
                       <th className="px-2 py-2 text-right">On hand</th>
-                      <th className="px-2 py-2 text-right">Min</th>
+                      <th className="px-2 py-2 text-right whitespace-nowrap">Reorder level</th>
                       <th className="px-2 py-2 text-right">Max</th>
                       <th className="px-2 py-2 text-right">Safety</th>
                       <th className="px-2 py-2 text-left">Zone</th>
@@ -1458,9 +1462,9 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                   <div className="space-y-2 rounded-md border p-3">
                     <Label>Edit stock levels</Label>
                     <div className="grid grid-cols-3 gap-2">
-                      <Input value={minInput} onChange={(e) => setMinInput(e.target.value)} placeholder="Min" />
-                      <Input value={maxInput} onChange={(e) => setMaxInput(e.target.value)} placeholder="Max" />
-                      <Input value={safetyInput} onChange={(e) => setSafetyInput(e.target.value)} placeholder="Safety" />
+                      <Input value={minInput} onChange={(e) => setMinInput(e.target.value)} placeholder="Reorder level" aria-label="Reorder level" />
+                      <Input value={maxInput} onChange={(e) => setMaxInput(e.target.value)} placeholder="Max" aria-label="Max" />
+                      <Input value={safetyInput} onChange={(e) => setSafetyInput(e.target.value)} placeholder="Safety" aria-label="Safety" />
                     </div>
                     <Button
                       size="sm"
