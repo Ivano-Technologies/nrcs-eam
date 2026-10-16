@@ -47,6 +47,7 @@ import { BULK_BAR_BUTTON_CLASS, BulkActionsToolbar } from "@/components/BulkActi
 import { Checkbox } from "@/components/ui/checkbox";
 import { downloadCsv, toCsv } from "@/lib/csv";
 import { parseReorderLevel, stockKeyId } from "@shared/stockKeys";
+import { formatCount } from "@/lib/formatCount";
 import { useViewMode } from "@/hooks/useViewMode";
 import { CardQrCode } from "@/components/CardQrCode";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
@@ -347,8 +348,8 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
     });
   const toggleAllStock = (on: boolean) => setSelectedStockKeys(on ? new Set(rows.map(stockKeyId)) : new Set());
   const clearStockSelection = () => setSelectedStockKeys(new Set());
-  const stockRowCount = (n: number) => `${n} stock ${n === 1 ? "row" : "rows"}`;
-  const itemCount = (n: number) => `${n} ${n === 1 ? "item" : "items"}`;
+  const stockRowCount = (n: number) => `${formatCount(n)} stock ${n === 1 ? "row" : "rows"}`;
+  const itemCount = (n: number) => `${formatCount(n)} ${n === 1 ? "item" : "items"}`;
   const [reorderDialogOpen, setReorderDialogOpen] = useState(false);
   const [reorderInput, setReorderInput] = useState("");
   const [reorderTouched, setReorderTouched] = useState(false);
