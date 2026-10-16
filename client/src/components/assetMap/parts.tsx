@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import type { FacilityType } from "@shared/facilities";
+import { MAP_TOKENS } from "@/lib/assetMap/tokens";
 import { READINESS_LABELS, READINESS_PILLS, type MapScheme, type PinTier } from "@/lib/facilityMapHelpers";
 import { glyphPrimitives, GLYPH_SIZE, type GlyphColours } from "@/lib/assetMap/glyphs";
 import { glyphColours } from "@/lib/assetMap/pinContent";
@@ -8,7 +9,7 @@ import { cn } from "@/lib/utils";
 
 /** Floating surface (panel, drawer, layer bar, controls). */
 export const surfaceClass =
-  "rounded-xl border border-[#E5E7EB] bg-white text-[#111827] shadow-[0_1px_2px_rgba(15,23,42,.06),0_8px_24px_rgba(15,23,42,.10)] dark:border-[#26364A] dark:bg-[#162130] dark:text-[#E6EAF0] dark:shadow-[0_1px_2px_rgba(0,0,0,.30),0_8px_24px_rgba(0,0,0,.35)]";
+  "rounded-xl border border-border bg-white text-foreground-strong shadow-[0_1px_2px_rgba(15,23,42,.06),0_8px_24px_rgba(15,23,42,.10)] dark:border-border dark:bg-surface dark:text-foreground-strong dark:shadow-[0_1px_2px_rgba(0,0,0,.30),0_8px_24px_rgba(0,0,0,.35)]";
 
 /**
  * Clearance for the app's mobile bottom nav: DashboardLayout reserves `pb-20` (80px) for
@@ -17,20 +18,20 @@ export const surfaceClass =
  */
 export const MOBILE_BOTTOM_NAV_CLEARANCE = "calc(80px + env(safe-area-inset-bottom, 0px))";
 
-export const mutedText = "text-[#62626C] dark:text-[#A3AEBD]";
+export const mutedText = "text-muted-foreground dark:text-muted-foreground";
 /**
  * Asset Map link token (spec `--link`): navy in light, light blue in dark. Links here never use
  * `text-primary`, so they don't pick up Wave A's dark red text (#F87171 is for the one red action).
  */
-export const linkText = "text-[#1E3A8A] dark:text-[#93C5FD]";
+export const linkText = "text-link dark:text-link";
 
 export const focusRing =
-  "outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C8102E] dark:focus-visible:outline-white";
+  "outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:focus-visible:outline-white";
 
 export const chipBase = cn(
   "inline-flex min-h-8 items-center gap-1.5 rounded-full border px-2.5 text-[13px] font-medium tabular-nums transition-colors",
-  "border-[#E5E7EB] bg-white text-[#374151] hover:bg-[#F3F4F6] dark:border-[#26364A] dark:bg-[#162130] dark:text-[#C9D3E0] dark:hover:bg-[#1E2B3C]",
-  "aria-pressed:border-[#0B2545] aria-pressed:bg-[#0B2545] aria-pressed:text-white dark:aria-pressed:border-[#E6EAF0] dark:aria-pressed:bg-[#E6EAF0] dark:aria-pressed:text-[#0F1724]",
+  "border-border bg-white text-foreground-secondary hover:bg-muted dark:border-border dark:bg-surface dark:text-foreground-secondary dark:hover:bg-muted",
+  "aria-pressed:border-selected aria-pressed:bg-selected aria-pressed:text-white dark:aria-pressed:border-selected dark:aria-pressed:bg-selected dark:aria-pressed:text-selected-foreground",
   focusRing
 );
 
@@ -69,16 +70,17 @@ export function TypeGlyph({ type, scheme, tier, neutral, size = 16, className }:
   const k = Math.min(1, (size - 1) / GLYPH_SIZE[type]);
   let colours: GlyphColours;
   if (neutral) {
-    const chip = scheme === "dark" ? "#A3AEBD" : "#475569";
-    const on = scheme === "dark" ? "#0F1724" : "#FFFFFF";
-    const surface = scheme === "dark" ? "#162130" : "#FFFFFF";
+    const t = MAP_TOKENS[scheme];
+    const chip = t.chip;
+    const on = t.pinStroke;
+    const surface = t.surface;
     colours =
       neutral === "chipOn"
-        ? { fill: on, stroke: on, inner: scheme === "dark" ? "#E6EAF0" : "#0B2545", ring: on }
+        ? { fill: on, stroke: on, inner: t.lineHi, ring: on }
         : { fill: chip, stroke: surface, inner: surface, ring: chip };
   } else {
     colours = glyphColours(tier ?? "none", scheme);
-    if (tier !== "offline") colours = { ...colours, stroke: scheme === "dark" ? "#162130" : "#FFFFFF" };
+    if (tier !== "offline") colours = { ...colours, stroke: MAP_TOKENS[scheme].surface };
   }
   const prims = glyphPrimitives(type, colours, k);
   return (
@@ -103,7 +105,7 @@ export function TypeGlyph({ type, scheme, tier, neutral, size = 16, className }:
 export function OfflineGlyph({ scheme, size = 12 }: { scheme: MapScheme; size?: number }) {
   return (
     <svg width={size} height={size} viewBox="-6 -6 12 12" aria-hidden="true" className="shrink-0">
-      <circle r={4.5} fill={scheme === "dark" ? "#162130" : "#FFFFFF"} stroke={scheme === "dark" ? "#8A9AB0" : "#6B7280"} strokeWidth={1.75} />
+      <circle r={4.5} fill={MAP_TOKENS[scheme].surface} stroke={MAP_TOKENS[scheme].offlineStroke} strokeWidth={1.75} />
     </svg>
   );
 }
@@ -124,7 +126,7 @@ export function ReadinessPill({
     <span
       className={cn(
         "inline-flex h-6 shrink-0 items-center rounded-full px-2 text-xs font-semibold tabular-nums",
-        dashed && "border border-dashed border-[#8A8F98] dark:border-[#64768E]"
+        dashed && "border border-dashed border-control-border dark:border-control-border"
       )}
       style={
         scheme === "dark"

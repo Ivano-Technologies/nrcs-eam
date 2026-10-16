@@ -15,7 +15,7 @@ function NotFoundCard({ homePath, inApp = false }: { homePath: string; inApp?: b
   const content = (
     <>
       <AuthBrandLogo />
-      <p className="text-sm font-semibold uppercase tracking-wide text-[#C8102E] dark:text-[#F87171]">404</p>
+      <p className="text-sm font-semibold uppercase tracking-wide text-primary dark:text-primary-on-dark">404</p>
       <AuthTitle>{NOT_FOUND_TITLE}</AuthTitle>
       <AuthSubtitle className="text-center">{NOT_FOUND_BODY}</AuthSubtitle>
       <Button type="button" onClick={() => setLocation(homePath)} className={cn(authPrimaryButtonClass)}>

@@ -19,13 +19,13 @@ export function glyphColours(tier: PinTier, scheme: MapScheme, solidOffline = fa
   const colour = READINESS_COLOURS[scheme][tier];
   if (solidOffline && tier === "offline") {
     // Facilities map: inactive pins are solid grey with a white outline.
-    return { fill: colour, stroke: "#FFFFFF", inner: "#FFFFFF", ring: colour };
+    return { fill: colour, stroke: t.pinInner, inner: t.pinInner, ring: colour };
   }
   const offline = tier === "offline";
   return {
     fill: offline ? t.surface : colour,
     stroke: offline ? colour : t.pinStroke,
-    inner: offline ? colour : "#FFFFFF",
+    inner: offline ? colour : t.pinInner,
     ring: colour,
   };
 }

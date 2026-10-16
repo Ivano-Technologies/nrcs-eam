@@ -17,6 +17,7 @@ import { createGoogleController, guardController, type MapController, type MapSt
 import { AssetMapOverlay } from "@/lib/assetMap/googleOverlay";
 import { facilityPosition, type MapFacility } from "@/lib/assetMap/model";
 import { useMapSelection, type Insets } from "@/lib/assetMap/useMapSelection";
+import { MAP_TOKENS } from "@/lib/assetMap/tokens";
 import { READINESS_COLOURS, type MapScheme } from "@/lib/facilityMapHelpers";
 import { DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM_COUNTRY } from "@/lib/mapDefaults";
 import { appPath } from "@/lib/routes";
@@ -96,7 +97,7 @@ function StatusDot({ tier, scheme }: { tier: "good" | "offline"; scheme: MapSche
       style={{
         background: colour,
         // Inactive: solid grey with a white outline, as on the map.
-        boxShadow: tier === "offline" ? `0 0 0 1.5px #FFFFFF, 0 0 0 2.5px ${colour}` : undefined,
+        boxShadow: tier === "offline" ? `0 0 0 1.5px ${MAP_TOKENS.light.pinInner}, 0 0 0 2.5px ${colour}` : undefined,
       }}
     />
   );
@@ -361,11 +362,11 @@ export function FacilitiesMap({ visibleIds, noLocation }: FacilitiesMapProps) {
     <div
       ref={frameRef}
       data-testid="facilities-map"
-      className="relative overflow-hidden rounded-xl border border-[#E5E7EB] bg-[#ECEEF1] dark:border-[#26364A] dark:bg-[#121B28]"
+      className="relative overflow-hidden rounded-xl border border-border bg-map-canvas dark:border-border dark:bg-map-canvas"
       style={{ height: frameHeight }}
     >
       {mapError ? (
-        <div data-testid="facilities-map-fallback" className="absolute inset-0 grid place-items-center bg-[#F3F4F6] p-4 dark:bg-[#0F1724]">
+        <div data-testid="facilities-map-fallback" className="absolute inset-0 grid place-items-center bg-muted p-4 dark:bg-surface-sunken">
           <MapErrorCard message={mapError} listBelow={false} />
         </div>
       ) : mapMock ? (
@@ -424,7 +425,7 @@ export function FacilitiesMap({ visibleIds, noLocation }: FacilitiesMapProps) {
             data-testid="facilities-map-no-location-list"
             className={cn(surfaceClass, "pointer-events-auto w-[300px] max-w-full overflow-hidden")}
           >
-            <p className={cn("border-b border-[#E5E7EB] px-3 py-2 text-xs dark:border-[#26364A]", mutedText)}>
+            <p className={cn("border-b border-border px-3 py-2 text-xs dark:border-border", mutedText)}>
               Open a facility to add its location.
             </p>
             <ul className="max-h-[240px] overflow-y-auto overscroll-contain py-1 text-[13px]">
@@ -432,7 +433,7 @@ export function FacilitiesMap({ visibleIds, noLocation }: FacilitiesMapProps) {
                 <li key={r.id}>
                   <Link
                     href={appPath(`/facilities/${r.id}`)}
-                    className={cn("flex items-baseline justify-between gap-3 px-3 py-2 hover:bg-[#F3F4F6] dark:hover:bg-[#1E2B3C]", focusRing)}
+                    className={cn("flex items-baseline justify-between gap-3 px-3 py-2 hover:bg-muted dark:hover:bg-muted", focusRing)}
                   >
                     <span className="min-w-0 truncate font-medium">{r.name}</span>
                     <span className={cn("shrink-0 text-xs tabular-nums", mutedText)}>{r.code ?? r.state ?? ""}</span>

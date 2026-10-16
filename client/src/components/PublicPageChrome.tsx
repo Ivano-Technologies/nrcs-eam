@@ -16,7 +16,7 @@ export function PublicPageChrome({
   return (
     <div
       className={cn(
-        "relative flex min-h-screen flex-col bg-background text-foreground dark:bg-[#232323]",
+        "relative flex min-h-screen flex-col bg-background text-foreground dark:bg-background",
         className
       )}
     >

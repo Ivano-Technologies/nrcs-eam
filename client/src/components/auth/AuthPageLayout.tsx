@@ -13,7 +13,7 @@ export function AuthPageLayout({ children, className }: AuthPageLayoutProps) {
       className={cn(
         "relative min-h-screen w-full flex flex-col items-center",
         "bg-gradient-to-br from-red-50/40 via-white to-rose-50/30",
-        "dark:from-[#232323] dark:via-[#2a2a2a] dark:to-[#232323]",
+        "dark:from-background dark:via-surface-raised dark:to-background",
         className
       )}
     >

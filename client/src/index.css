@@ -40,6 +40,58 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  /* IVA-154 semantic tokens (values in :root and .dark below) */
+  --color-primary-hover: var(--primary-hover);
+  --color-control-border: var(--control-border);
+  --color-primary-on-dark: var(--primary-on-dark-text);
+  --color-navy: var(--navy);
+  --color-contrast: var(--contrast);
+  --color-foreground-strong: var(--foreground-strong);
+  --color-foreground-secondary: var(--foreground-secondary);
+  --color-foreground-tertiary: var(--foreground-tertiary);
+  --color-surface: var(--surface);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-surface-subtle: var(--surface-subtle);
+  --color-surface-footer: var(--surface-footer);
+  --color-surface-raised: var(--surface-raised);
+  --color-selected: var(--selected);
+  --color-selected-foreground: var(--selected-foreground);
+  --color-selected-hover: var(--selected-hover);
+  --color-selected-subtle: var(--selected-subtle);
+  --color-selected-muted-foreground: var(--selected-muted-foreground);
+  --color-disabled: var(--disabled);
+  --color-disabled-foreground: var(--disabled-foreground);
+  --color-link: var(--link);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-subtle: var(--success-subtle);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-subtle: var(--warning-subtle);
+  --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-danger-subtle: var(--danger-subtle);
+  --color-status-none: var(--status-none);
+  --color-status-offline: var(--status-offline);
+  --color-status-chip: var(--status-chip);
+  --color-map-canvas: var(--map-canvas);
+  --color-map-veil: var(--map-veil);
+  --color-map-handle: var(--map-handle);
+  --color-map-surface: var(--map-surface);
+  --color-map-pin-stroke: var(--map-pin-stroke);
+  --color-map-line: var(--map-line);
+  --color-map-line-active: var(--map-line-active);
+  --color-map-halo: var(--map-halo);
+  --color-map-text: var(--map-text);
+  --color-map-muted: var(--map-muted);
+  --color-map-border: var(--map-border);
+  --color-map-pin-in-use: var(--map-pin-in-use);
+  --color-map-pin-maintenance: var(--map-pin-maintenance);
+  --color-map-pin-retired: var(--map-pin-retired);
+  --color-chart-inbound: var(--chart-inbound);
+  --color-chart-outbound: var(--chart-outbound);
+  --color-chart-neutral: var(--chart-neutral);
+  --color-chart-tooltip: var(--chart-tooltip);
 }
 
 :root {
@@ -98,6 +150,55 @@
   --sidebar-accent-foreground: oklch(0.99 0 0);
   --sidebar-border: oklch(0.25 0.08 250);
   --sidebar-ring: #C8102E; /* Red ring */
+  /* IVA-154 tokens: every colour used in client/src comes from here (light values) */
+  --navy: #1A2332;
+  --contrast: var(--dashboard-contrast-text);
+  --foreground-strong: #111827;
+  --foreground-secondary: #374151;
+  --foreground-tertiary: #4B5563;
+  --surface: #FFFFFF;
+  --surface-sunken: var(--muted);
+  --surface-subtle: #E9ECF0;
+  --surface-footer: #F9FAFB;
+  --surface-raised: var(--card);
+  --selected: #0B2545;
+  --selected-foreground: #FFFFFF;
+  --selected-hover: #13315C;
+  --selected-subtle: #EEF2F8;
+  --selected-muted-foreground: #D6DCE5;
+  --disabled: var(--border);
+  --disabled-foreground: var(--muted-foreground);
+  --link: #1E3A8A;
+  --success: #15803D;
+  --success-foreground: #166534;
+  --success-subtle: #DCFCE7;
+  --warning: #D97706;
+  --warning-foreground: #92400E;
+  --warning-subtle: #FEF3C7;
+  --danger: #B91C1C;
+  --danger-foreground: #991B1B;
+  --danger-subtle: #FEE2E2;
+  --status-none: #878C95;
+  --status-offline: #6B7280;
+  --status-chip: #EEF0F3;
+  --map-canvas: #ECEEF1;
+  --map-veil: #FAFAF7;
+  --map-handle: #C9CED6;
+  --map-surface: #FFFFFF;
+  --map-pin-stroke: #FFFFFF;
+  --map-line: #64748B;
+  --map-line-active: #0B2545;
+  --map-halo: #0B2545;
+  --map-text: #111827;
+  --map-muted: #62626C;
+  --map-border: #E5E7EB;
+  --map-pin-in-use: #1D4ED8;
+  --map-pin-maintenance: #5B8DEF;
+  --map-pin-retired: #878C95;
+  --chart-inbound: #DC2626;
+  --chart-outbound: #2563EB;
+  --chart-neutral: #0A1628;
+  --chart-tooltip: #FFFFFF;
 }
 
 .dark {
@@ -142,6 +243,51 @@
   --dashboard-contrast-text: hsl(0 0% 95%);
   --color-background-primary: var(--background);
   --color-background-secondary: oklch(0.274 0.006 286.033);
+  /* IVA-154 tokens (dark values) */
+  --foreground-strong: #E6EAF0;
+  --foreground-secondary: #C9D3E0;
+  --foreground-tertiary: var(--muted-foreground);
+  --surface: #162130;
+  --surface-sunken: #0F1724;
+  --surface-subtle: #24344A;
+  --surface-footer: #132030;
+  --surface-raised: #2A2A2A;
+  --selected: #E6EAF0;
+  --selected-foreground: #0F1724;
+  --selected-hover: #C9D3E0;
+  --selected-subtle: var(--muted);
+  --selected-muted-foreground: #3D4A5C;
+  --disabled: #2A2A2A;
+  --disabled-foreground: #8B8B8B;
+  --link: var(--link-on-dark);
+  --success: #22A35A;
+  --success-foreground: #4ADE80;
+  --success-subtle: color-mix(in srgb, #22A35A 15%, transparent);
+  --warning: #F59E0B;
+  --warning-foreground: #FBBF24;
+  --warning-subtle: color-mix(in srgb, #F59E0B 15%, transparent);
+  --danger: #EF4444;
+  --danger-foreground: #F87171;
+  --danger-subtle: color-mix(in srgb, #EF4444 15%, transparent);
+  --status-none: #64748B;
+  --status-offline: #8A9AB0;
+  --status-chip: transparent;
+  --map-canvas: #121B28;
+  --map-veil: #0F1724;
+  --map-handle: #3A4B62;
+  --map-surface: #162130;
+  --map-pin-stroke: #0F1724;
+  --map-line: #8A9AB0;
+  --map-line-active: #E6EAF0;
+  --map-halo: #FFFFFF;
+  --map-text: #E6EAF0;
+  --map-muted: #A3AEBD;
+  --map-border: #26364A;
+  --map-pin-in-use: #60A5FA;
+  --map-pin-maintenance: #2F6FD6;
+  --map-pin-retired: #64748B;
+  --chart-neutral: #C9D3E0;
+  --chart-tooltip: #2B2B2B;
 }
 
 html.dark {
