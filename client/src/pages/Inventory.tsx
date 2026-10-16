@@ -43,7 +43,7 @@ import { cn } from "@/lib/utils";
 import { formatEnumLabel } from "@/lib/format";
 import { HtmlTableEmptyState } from "@/components/ui/EmptyState";
 import { ViewToggle } from "@/components/ViewToggle";
-import { BULK_BAR_BUTTON_CLASS, BulkActionsToolbar } from "@/components/BulkActionsToolbar";
+import { BulkActionsToolbar, BulkBarAction } from "@/components/BulkActionsToolbar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { downloadCsv, toCsv } from "@/lib/csv";
 import { parseReorderLevel, stockKeyId } from "@shared/stockKeys";
@@ -822,16 +822,16 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
           <BulkActionsToolbar
             selectedCount={stockSelectedCount}
             itemLabel="stock rows"
+            nowrapActions
             onClearSelection={clearStockSelection}
             onExport={exportSelectedStock}
             disabled={stockBulkPending}
           >
             {isManagerOrAdmin ? (
               <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className={BULK_BAR_BUTTON_CLASS}
+                <BulkBarAction
+                  icon={SlidersHorizontal}
+                  label="Set reorder level"
                   disabled={stockBulkPending}
                   onClick={() => {
                     setReorderInput("");
@@ -839,20 +839,11 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
                     setReorderDialogOpen(true);
                   }}
                   data-testid="bulk-actions-reorder"
-                >
-                  <SlidersHorizontal className="h-4 w-4" />
-                  Set reorder level
-                </Button>
+                />
                 {isAdmin ? (
                 <>
-                <Button variant="outline" size="sm" className={BULK_BAR_BUTTON_CLASS} disabled={stockBulkPending} onClick={() => setActiveTarget(true)} data-testid="bulk-actions-activate">
-                  <CircleCheck className="h-4 w-4" />
-                  Mark active
-                </Button>
-                <Button variant="outline" size="sm" className={BULK_BAR_BUTTON_CLASS} disabled={stockBulkPending} onClick={() => setActiveTarget(false)} data-testid="bulk-actions-deactivate">
-                  <CircleOff className="h-4 w-4" />
-                  Mark inactive
-                </Button>
+                <BulkBarAction icon={CircleCheck} label="Mark active" disabled={stockBulkPending} onClick={() => setActiveTarget(true)} data-testid="bulk-actions-activate" />
+                <BulkBarAction icon={CircleOff} label="Mark inactive" disabled={stockBulkPending} onClick={() => setActiveTarget(false)} data-testid="bulk-actions-deactivate" />
                 </>
                 ) : null}
               </>
@@ -863,7 +854,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
           <Dialog open={reorderDialogOpen} onOpenChange={(open) => { if (!open && !bulkReorderMutation.isPending) setReorderDialogOpen(false); }}>
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
-                <DialogTitle className="pr-8">Set reorder level for {stockRowCount(stockSelectedCount)}</DialogTitle>
+                <DialogTitle className="pr-12 md:pr-8">Set reorder level for {stockRowCount(stockSelectedCount)}</DialogTitle>
                 <DialogDescription>
                   Stock at or below this level shows as low. It replaces the current reorder level on each selected row and
                   is recorded in the audit log.

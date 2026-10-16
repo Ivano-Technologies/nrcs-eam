@@ -21,7 +21,8 @@ import { useViewMode } from "@/hooks/useViewMode";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { toast } from "sonner";
 import { downloadBase64File } from "@/lib/download";
-import { Loader2 } from "lucide-react";
+import { Download, Loader2, MoreHorizontal } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 type ReqLine = { catalogueId: string; quantity: string; urgency: string; notes: string };
 
@@ -99,6 +100,16 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
   const downloadPdfMutation = trpc.inventoryV2.requisitions.downloadPdf.useMutation({
     onError: (e) => toast.error(e.message),
   });
+
+  const downloadPdf = async (row: { id: number; reqNumber: string }) => {
+    try {
+      const file = await downloadPdfMutation.mutateAsync({ requisitionId: row.id });
+      downloadBase64File(file.data, file.filename || `${row.reqNumber}.pdf`, file.mimeType);
+      toast.success("PDF downloaded.");
+    } catch {
+      // handled by mutation
+    }
+  };
 
   const warehouses = useMemo(() => (facilities ?? []).filter((f) => f.facilityType === "warehouse"), [facilities]);
 
@@ -221,19 +232,13 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
                   <td className="px-2 py-2">{formatEnumLabel(row.status)}</td>
                   <td className="px-2 py-2">{row.requestingFacility}</td>
                   <td className="px-2 py-2">{Array.isArray(row.items) ? row.items.length : 0}</td>
-                  <td className="px-2 py-2 space-x-2">
+                  <td className="px-2 py-2">
+                    <div className="flex items-center gap-2 whitespace-nowrap" data-testid="req-row-actions">
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={async () => {
-                        try {
-                          const file = await downloadPdfMutation.mutateAsync({ requisitionId: row.id });
-                          downloadBase64File(file.data, file.filename || `${row.reqNumber}.pdf`, file.mimeType);
-                          toast.success("PDF downloaded.");
-                        } catch {
-                          // handled by mutation
-                        }
-                      }}
+                      className="hidden md:inline-flex"
+                      onClick={() => void downloadPdf(row)}
                       disabled={downloadPdfMutation.isPending}
                     >
                       {downloadPdfMutation.isPending ? (
@@ -336,6 +341,32 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
                         )}
                       </Button>
                     ) : null}
+
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          className="size-9 md:hidden"
+                          aria-label={`More actions for ${row.reqNumber}`}
+                          title="More actions"
+                          data-testid="req-more-btn"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          disabled={downloadPdfMutation.isPending}
+                          onSelect={() => void downloadPdf(row)}
+                          data-testid="req-download-pdf-item"
+                        >
+                          <Download className="mr-2 h-4 w-4" />
+                          Download PDF
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    </div>
                   </td>
                 </tr>
               ))}
