@@ -38,3 +38,11 @@ describe("BulkActionsToolbar", () => {
     expect(screen.getByTestId("bulk-actions-clear")).not.toBeDisabled();
   });
 });
+
+describe("BulkActionsToolbar layout", () => {
+  it("has an icon-only clear button labelled for screen readers and a spacer", () => {
+    render(<BulkActionsToolbar selectedCount={2} onClearSelection={() => {}} onExport={() => {}} />);
+    expect(screen.getByRole("button", { name: "Clear selection" })).toBeInTheDocument();
+    expect(screen.getByTestId("bulk-actions-spacer")).toBeInTheDocument();
+  });
+});
