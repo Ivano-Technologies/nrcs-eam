@@ -60,7 +60,7 @@ function Gauge({ percent, tier, scheme }: { percent: number; tier: keyof typeof 
   const pill = READINESS_PILLS[tier];
   return (
     <svg width="112" height="68" viewBox="0 0 112 68" role="img" aria-label={`Stock readiness ${percent}%, ${READINESS_LABELS[tier]}`}>
-      <path d={`M${cx - r} ${cy}A${r} ${r} 0 0 1 ${cx + r} ${cy}`} fill="none" strokeWidth={10} strokeLinecap="round" className="stroke-[#E9ECF0] dark:stroke-[#24344A]" />
+      <path d={`M${cx - r} ${cy}A${r} ${r} 0 0 1 ${cx + r} ${cy}`} fill="none" strokeWidth={10} strokeLinecap="round" className="stroke-surface-subtle dark:stroke-surface-subtle" />
       {p > 0 ? (
         <path d={`M${cx - r} ${cy}A${r} ${r} 0 0 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`} fill="none" stroke={colour} strokeWidth={10} strokeLinecap="round" />
       ) : null}
@@ -76,7 +76,7 @@ function Gauge({ percent, tier, scheme }: { percent: number; tier: keyof typeof 
 
 function StatTile({ label, value, children }: { label: string; value: React.ReactNode; children?: React.ReactNode }) {
   return (
-    <div className="rounded-md border border-[#E5E7EB] p-3 dark:border-[#26364A]">
+    <div className="rounded-md border border-border p-3 dark:border-border">
       <p className={cn("text-xs", mutedText)}>{label}</p>
       <p className="mt-0.5 text-lg font-semibold tabular-nums">{value}</p>
       {children}
@@ -134,10 +134,10 @@ export const FacilityDrawer = forwardRef<HTMLDivElement, FacilityDrawerProps>(fu
       className={cn("flex min-h-0 flex-col outline-none", className)}
     >
       {/* Header */}
-      <div className="border-b border-[#E5E7EB] p-4 dark:border-[#26364A]">
+      <div className="border-b border-border p-4 dark:border-border">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 text-xs font-medium">
-            <span className="inline-flex h-6 items-center gap-1.5 rounded-full bg-[#F3F4F6] px-2 dark:bg-[#1E2B3C]">
+            <span className="inline-flex h-6 items-center gap-1.5 rounded-full bg-muted px-2 dark:bg-muted">
               <TypeGlyph type={f.facilityType} scheme={scheme} neutral="chip" size={12} />
               {TYPE_LABELS[f.facilityType]}
             </span>
@@ -147,7 +147,7 @@ export const FacilityDrawer = forwardRef<HTMLDivElement, FacilityDrawerProps>(fu
             type="button"
             onClick={onClose}
             aria-label="Close facility details"
-            className={cn("-mr-1 -mt-1 grid h-9 w-9 place-items-center rounded-md hover:bg-[#F3F4F6] dark:hover:bg-[#1E2B3C]", focusRing)}
+            className={cn("-mr-1 -mt-1 grid h-9 w-9 place-items-center rounded-md hover:bg-muted dark:hover:bg-muted", focusRing)}
           >
             <X className="h-4 w-4" />
           </button>
@@ -163,12 +163,12 @@ export const FacilityDrawer = forwardRef<HTMLDivElement, FacilityDrawerProps>(fu
         ) : null}
         <div className="mt-2.5 flex flex-wrap gap-1.5 text-xs font-medium">
           {f.isActive ? (
-            <span className="inline-flex h-6 items-center gap-1.5 rounded-full bg-[#F3F4F6] px-2 dark:bg-[#1E2B3C]">
-              <span className="h-2 w-2 rounded-full bg-[#15803D] dark:bg-[#22A35A]" />
+            <span className="inline-flex h-6 items-center gap-1.5 rounded-full bg-muted px-2 dark:bg-muted">
+              <span className="h-2 w-2 rounded-full bg-success dark:bg-success" />
               Active
             </span>
           ) : (
-            <span className="inline-flex h-6 items-center rounded-full border border-dashed border-[#8A8F98] px-2 dark:border-[#64768E]">
+            <span className="inline-flex h-6 items-center rounded-full border border-dashed border-control-border px-2 dark:border-control-border">
               Offline
             </span>
           )}
@@ -183,7 +183,7 @@ export const FacilityDrawer = forwardRef<HTMLDivElement, FacilityDrawerProps>(fu
           style={variant === "sheet" ? { paddingBottom: `calc(1rem + ${MOBILE_BOTTOM_NAV_CLEARANCE})` } : undefined}
         >
           {/* Stock readiness */}
-          <section aria-label="Stock readiness" className="flex items-center gap-4 border-b border-[#E5E7EB] pb-4 dark:border-[#26364A]">
+          <section aria-label="Stock readiness" className="flex items-center gap-4 border-b border-border pb-4 dark:border-border">
             {tier !== "none" && tier !== "offline" && f.stockScorePercent != null ? (
               <>
                 <Gauge percent={f.stockScorePercent} tier={tier} scheme={scheme} />
@@ -223,7 +223,7 @@ export const FacilityDrawer = forwardRef<HTMLDivElement, FacilityDrawerProps>(fu
                 <StatTile label="Assets" value={formatCount(f.assetCount)}>
                   {f.assetsByStatus && f.assetCount > 0 ? (
                     <>
-                      <span className="mt-1.5 flex h-1.5 overflow-hidden rounded-full bg-[#E9ECF0] dark:bg-[#24344A]" aria-hidden="true">
+                      <span className="mt-1.5 flex h-1.5 overflow-hidden rounded-full bg-surface-subtle dark:bg-surface-subtle" aria-hidden="true">
                         {(["inUse", "maintenance", "retired"] as const).map((k) => (
                           <span key={k} style={{ width: `${(f.assetsByStatus![k] / f.assetCount!) * 100}%`, background: statusColours[k] }} />
                         ))}
@@ -258,7 +258,7 @@ export const FacilityDrawer = forwardRef<HTMLDivElement, FacilityDrawerProps>(fu
               ) : null}
             </div>
             {!statsVisible ? (
-              <p className={cn("mt-2 rounded-md bg-[#F3F4F6] p-3 text-xs dark:bg-[#1E2B3C]", mutedText)} data-testid="asset-map-drawer-stats-hidden">
+              <p className={cn("mt-2 rounded-md bg-muted p-3 text-xs dark:bg-muted", mutedText)} data-testid="asset-map-drawer-stats-hidden">
                 Asset counts, book value and work orders are shown for your own facility only.
               </p>
             ) : null}
@@ -269,7 +269,7 @@ export const FacilityDrawer = forwardRef<HTMLDivElement, FacilityDrawerProps>(fu
             <h3 id={`${titleId}-contact`} className="mb-2 text-[13px] font-semibold">
               Contact and location
             </h3>
-            <dl className="divide-y divide-[#E5E7EB] dark:divide-[#26364A]">
+            <dl className="divide-y divide-border dark:divide-border">
               <div className="flex justify-between gap-3 py-2">
                 <dt className={mutedText}>Contact</dt>
                 <dd className="text-right font-medium">{detail?.contactPerson || (detailLoading ? "" : "Not recorded")}</dd>
@@ -313,7 +313,7 @@ export const FacilityDrawer = forwardRef<HTMLDivElement, FacilityDrawerProps>(fu
                         type="button"
                         onClick={copyCoords}
                         aria-label={copied ? "Coordinates copied" : "Copy coordinates"}
-                        className={cn("grid h-7 w-7 place-items-center rounded-md hover:bg-[#F3F4F6] dark:hover:bg-[#1E2B3C]", focusRing)}
+                        className={cn("grid h-7 w-7 place-items-center rounded-md hover:bg-muted dark:hover:bg-muted", focusRing)}
                       >
                         {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                       </button>
@@ -336,13 +336,13 @@ export const FacilityDrawer = forwardRef<HTMLDivElement, FacilityDrawerProps>(fu
           <div
             aria-hidden="true"
             data-testid="facility-drawer-fade"
-            className="pointer-events-none absolute inset-x-0 bottom-0 h-7 bg-gradient-to-t from-white to-transparent dark:from-[#162130]"
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-7 bg-gradient-to-t from-white to-transparent dark:from-surface"
           />
         ) : null}
       </div>
 
       {/* Sticky footer */}
-      <div className="flex items-center gap-2 border-t border-[#E5E7EB] p-3 dark:border-[#26364A]">
+      <div className="flex items-center gap-2 border-t border-border p-3 dark:border-border">
         <Button asChild className="h-10 flex-1">
           <Link href={appPath(`/facilities/${f.id}`)}>
             Open facility

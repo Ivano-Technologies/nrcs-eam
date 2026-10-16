@@ -377,7 +377,7 @@ export default function Reports() {
                   <XAxis dataKey="itemCode" hide />
                   <YAxis />
                   <Tooltip />
-                  <Line type="monotone" dataKey="cumulativePercent" stroke="#DC2626" dot={false} />
+                  <Line type="monotone" dataKey="cumulativePercent" stroke="var(--chart-inbound)" dot={false} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -390,7 +390,7 @@ export default function Reports() {
                   <XAxis dataKey="itemCode" hide />
                   <YAxis />
                   <Tooltip />
-                  <Bar dataKey="count" fill="#0A1628" />
+                  <Bar dataKey="count" fill="var(--chart-neutral)" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -403,7 +403,7 @@ export default function Reports() {
                   <XAxis dataKey="itemCode" hide />
                   <YAxis />
                   <Tooltip />
-                  <Line type="monotone" dataKey="rolling3MonthAverage" stroke="#DC2626" />
+                  <Line type="monotone" dataKey="rolling3MonthAverage" stroke="var(--chart-inbound)" />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -415,7 +415,7 @@ export default function Reports() {
                   <PolarGrid />
                   <PolarAngleAxis dataKey="warehouseName" />
                   <PolarRadiusAxis />
-                  <Radar dataKey="stockAccuracy" stroke="#DC2626" fill="#DC2626" fillOpacity={0.2} />
+                  <Radar dataKey="stockAccuracy" stroke="var(--chart-inbound)" fill="var(--chart-inbound)" fillOpacity={0.2} />
                   <Tooltip />
                 </RadarChart>
               </ResponsiveContainer>

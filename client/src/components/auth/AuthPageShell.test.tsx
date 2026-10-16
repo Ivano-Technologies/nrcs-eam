@@ -13,10 +13,10 @@ describe("auth surface tokens (Wave A2, A4, A5)", () => {
   it("inputs have a solid fill and a visible border in both themes", () => {
     for (const cls of [
       "bg-white",
-      "border-[#8A8F98]",
-      "focus-visible:border-[#C8102E]",
+      "border-control-border",
+      "focus-visible:border-primary",
       "focus-visible:ring-2",
-      "focus-visible:ring-[#C8102E]/30",
+      "focus-visible:ring-primary/30",
       "dark:bg-white/10",
       "dark:border-white/40",
       "dark:placeholder:text-white/60",
@@ -28,15 +28,15 @@ describe("auth surface tokens (Wave A2, A4, A5)", () => {
   });
 
   it("primary CTA uses the brand red", () => {
-    expect(authPrimaryButtonClass).toContain("bg-[#C8102E]");
-    expect(authPrimaryButtonClass).toContain("hover:bg-[#A50D26]");
+    expect(authPrimaryButtonClass).toContain("bg-primary");
+    expect(authPrimaryButtonClass).toContain("hover:bg-primary-hover");
     expect(authPrimaryButtonClass).not.toContain("#ef4444");
   });
 
   it("footer note meets contrast in both themes", () => {
     render(<AuthFooterNote>Authorised personnel only.</AuthFooterNote>);
     const note = screen.getByText("Authorised personnel only.");
-    expect(note.className).toContain("text-[#6B7280]");
+    expect(note.className).toContain("text-muted-foreground");
     expect(note.className).toContain("dark:text-gray-400");
   });
 });

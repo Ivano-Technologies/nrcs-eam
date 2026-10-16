@@ -198,7 +198,7 @@ export default function Login() {
           <button
             type="button"
             data-testid="login-forgot-password"
-            className="inline-flex w-full items-center justify-center gap-2 text-sm text-[#1E3A8A] dark:text-[#93C5FD] underline-offset-2 hover:underline disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex w-full items-center justify-center gap-2 text-sm text-link dark:text-link underline-offset-2 hover:underline disabled:cursor-not-allowed disabled:opacity-60"
             disabled={loginMutation.isPending || passwordResetMutation.isPending}
             onClick={handlePasswordReset}
           >
@@ -214,7 +214,7 @@ export default function Login() {
 
           <p className="pt-2 text-center text-sm text-gray-600 dark:text-gray-400">
             Don&apos;t have an account?{" "}
-            <Link href="/signup" className="font-medium text-[#C8102E] hover:underline dark:text-[#F87171]">
+            <Link href="/signup" className="font-medium text-primary hover:underline dark:text-primary-on-dark">
               Request access
             </Link>
           </p>

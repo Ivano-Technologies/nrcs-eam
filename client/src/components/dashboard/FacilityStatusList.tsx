@@ -35,7 +35,7 @@ export function FacilityStatusList() {
     <Card className="dashboard-card">
       <CardHeader>
         <CardTitle className="dashboard-section-title">Facility status</CardTitle>
-        <CardDescription className="text-[#334155] dark:text-[hsl(0_0%_95%)]">Facility records from the live sites table</CardDescription>
+        <CardDescription className="text-contrast dark:text-[hsl(0_0%_95%)]">Facility records from the live sites table</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         {sectionState !== "ok" ? <DashboardSectionError onRetry={onRetry} /> : null}
@@ -44,7 +44,7 @@ export function FacilityStatusList() {
           <div key={row.id} className="flex items-center gap-4 rounded-md border p-3">
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold truncate">{row.name}</p>
-              <p className="text-xs text-[#334155] dark:text-[hsl(0_0%_95%)]">
+              <p className="text-xs text-contrast dark:text-[hsl(0_0%_95%)]">
                 {row.code ?? "No code"} · {row.type}
               </p>
               {row.stockScore !== null ? (
@@ -52,10 +52,10 @@ export function FacilityStatusList() {
                   <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
                     <div className={cn("h-full rounded-full transition-all", scoreToneClass(row.stockScore))} style={{ width: `${row.stockScore}%` }} />
                   </div>
-                  <span className="text-xs font-medium text-[#334155] dark:text-[hsl(0_0%_95%)]">{row.stockScore}%</span>
+                  <span className="text-xs font-medium text-contrast dark:text-[hsl(0_0%_95%)]">{row.stockScore}%</span>
                 </div>
               ) : (
-                <p className="mt-2 text-xs text-[#334155] dark:text-[hsl(0_0%_95%)]">No stock data</p>
+                <p className="mt-2 text-xs text-contrast dark:text-[hsl(0_0%_95%)]">No stock data</p>
               )}
             </div>
             <span className={cn("rounded-full px-2.5 py-1 text-xs font-medium", statusClass(row.status))}>{formatEnumLabel(row.status)}</span>

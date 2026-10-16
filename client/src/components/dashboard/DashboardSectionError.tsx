@@ -15,7 +15,7 @@ export function DashboardSectionError({ onRetry, compact = false }: Props) {
       }
       role="status"
     >
-      <p className="text-sm text-[#334155] dark:text-[hsl(0_0%_95%)]">Couldn't load</p>
+      <p className="text-sm text-contrast dark:text-[hsl(0_0%_95%)]">Couldn't load</p>
       {onRetry ? (
         <Button type="button" variant="outline" size="sm" onClick={onRetry}>
           Retry

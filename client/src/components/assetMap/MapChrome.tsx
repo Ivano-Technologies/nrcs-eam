@@ -64,8 +64,8 @@ export function LayerBar({
                 "h-9 flex-1 rounded-md px-3.5 text-[13.5px] font-semibold transition-colors",
                 compact && "h-11",
                 on
-                  ? "bg-[#0B2545] text-white dark:bg-[#E6EAF0] dark:text-[#0F1724]"
-                  : "text-[#374151] hover:bg-[#F3F4F6] dark:text-[#C9D3E0] dark:hover:bg-[#1E2B3C]",
+                  ? "bg-selected text-white dark:bg-selected dark:text-selected-foreground"
+                  : "text-foreground-secondary hover:bg-muted dark:text-foreground-secondary dark:hover:bg-muted",
                 focusRing
               )}
             >
@@ -74,7 +74,7 @@ export function LayerBar({
           );
         })}
       </div>
-      <span className="mx-1 h-6 w-px bg-[#E5E7EB] dark:bg-[#26364A]" aria-hidden="true" />
+      <span className="mx-1 h-6 w-px bg-border dark:bg-border" aria-hidden="true" />
       <button
         type="button"
         role="switch"
@@ -83,9 +83,9 @@ export function LayerBar({
         data-testid="asset-map-lines-toggle"
         onClick={() => onLines(!lines)}
         className={cn(
-          "flex items-center gap-2 rounded-md px-2.5 text-[13.5px] font-medium hover:bg-[#F3F4F6] dark:hover:bg-[#1E2B3C]",
+          "flex items-center gap-2 rounded-md px-2.5 text-[13.5px] font-medium hover:bg-muted dark:hover:bg-muted",
           compact ? "h-11 w-11 justify-center px-0" : "h-9",
-          compact && lines && "bg-[#0B2545] text-white dark:bg-[#E6EAF0] dark:text-[#0F1724]",
+          compact && lines && "bg-selected text-white dark:bg-selected dark:text-selected-foreground",
           focusRing
         )}
       >
@@ -97,14 +97,14 @@ export function LayerBar({
               aria-hidden="true"
               className={cn(
                 "relative h-5 w-9 rounded-full transition-colors",
-                lines ? "bg-[#0B2545] dark:bg-[#E6EAF0]" : "bg-[#C9CED6] dark:bg-[#3A4B62]"
+                lines ? "bg-selected dark:bg-selected" : "bg-map-handle dark:bg-map-handle"
               )}
             >
               <span
                 className={cn(
-                  "absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform dark:bg-[#0F1724]",
+                  "absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform dark:bg-surface-sunken",
                   lines ? "translate-x-[18px]" : "translate-x-0.5",
-                  !lines && "dark:bg-[#E6EAF0]"
+                  !lines && "dark:bg-selected"
                 )}
               />
             </span>
@@ -136,7 +136,7 @@ export function NoLocationChip({
       data-count={count}
       className={cn(surfaceClass, "flex h-10 items-center gap-2 rounded-full pl-3 pr-1 text-[13px]", className)}
     >
-      <AlertTriangle className="h-4 w-4 text-[#D97706] dark:text-[#F59E0B]" aria-hidden="true" />
+      <AlertTriangle className="h-4 w-4 text-warning dark:text-warning" aria-hidden="true" />
       <span>
         <span className="font-semibold tabular-nums">{count}</span>{" "}
         {count === 1 ? "facility has no location" : "facilities have no location"}
@@ -145,7 +145,7 @@ export function NoLocationChip({
         type="button"
         onClick={onShow}
         aria-pressed={active}
-        className={cn("h-8 rounded-full px-3 font-semibold hover:bg-[#EEF2FF] dark:hover:bg-[#1E2B3C]", linkText, focusRing)}
+        className={cn("h-8 rounded-full px-3 font-semibold hover:bg-selected-subtle dark:hover:bg-muted", linkText, focusRing)}
       >
         {active ? "Hide" : "Show"}
       </button>
@@ -175,7 +175,7 @@ function ControlButton({
       title={label}
       onClick={onClick}
       className={cn(
-        "grid place-items-center text-[#374151] hover:bg-[#F3F4F6] dark:text-[#C9D3E0] dark:hover:bg-[#1E2B3C]",
+        "grid place-items-center text-foreground-secondary hover:bg-muted dark:text-foreground-secondary dark:hover:bg-muted",
         touch ? "h-11 w-11" : "h-10 w-10",
         focusRing,
         className
@@ -221,7 +221,7 @@ export function MapControls({
     if (document.fullscreenElement) void document.exitFullscreen();
     else void fullscreenTarget.current?.requestFullscreen?.();
   };
-  const group = cn(surfaceClass, "flex flex-col overflow-hidden rounded-md divide-y divide-[#E5E7EB] dark:divide-[#26364A]");
+  const group = cn(surfaceClass, "flex flex-col overflow-hidden rounded-md divide-y divide-border dark:divide-border");
   return (
     <div ref={ref} className={cn("flex flex-col items-end gap-2", className)} style={positionStyle} role="group" aria-label="Map controls">
       {!touch ? (
@@ -246,7 +246,7 @@ export function MapControls({
               title="Map style"
               data-testid="asset-map-style-menu"
               className={cn(
-                "grid place-items-center text-[#374151] hover:bg-[#F3F4F6] dark:text-[#C9D3E0] dark:hover:bg-[#1E2B3C]",
+                "grid place-items-center text-foreground-secondary hover:bg-muted dark:text-foreground-secondary dark:hover:bg-muted",
                 touch ? "h-11 w-11" : "h-10 w-10",
                 focusRing
               )}
@@ -291,7 +291,7 @@ export function EmptyMapCard({ summary, onClear, className }: { summary: string;
         type="button"
         onClick={onClear}
         className={cn(
-          "mt-4 h-10 rounded-md bg-[#0B2545] px-4 text-sm font-semibold text-white hover:bg-[#13315C] dark:bg-[#E6EAF0] dark:text-[#0F1724] dark:hover:bg-white",
+          "mt-4 h-10 rounded-md bg-selected px-4 text-sm font-semibold text-white hover:bg-selected-hover dark:bg-selected dark:text-selected-foreground dark:hover:bg-white",
           focusRing
         )}
       >
@@ -313,7 +313,7 @@ export function MapErrorCard({
 }) {
   return (
     <div role="alert" data-testid="asset-map-error" className={cn(surfaceClass, "flex max-w-[420px] gap-3 p-4 text-[13px]", className)}>
-      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[#B91C1C] dark:text-[#F87171]" aria-hidden="true" />
+      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-danger dark:text-primary-on-dark" aria-hidden="true" />
       <div>
         <p className="font-semibold">
           {listBelow ? "The map couldn't load. Facilities are listed below." : "The map couldn't load."}

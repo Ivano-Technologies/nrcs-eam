@@ -33,7 +33,7 @@ export function ActivityFeed() {
     <Card className="dashboard-card">
       <CardHeader>
         <CardTitle className="dashboard-section-title">Recent activity</CardTitle>
-        <CardDescription className="text-[#334155] dark:text-[hsl(0_0%_95%)]">Latest operational events</CardDescription>
+        <CardDescription className="text-contrast dark:text-[hsl(0_0%_95%)]">Latest operational events</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         {sectionState !== "ok" ? <DashboardSectionError onRetry={onRetry} /> : null}
@@ -43,14 +43,14 @@ export function ActivityFeed() {
           const showFacility = Boolean(item.facilityName) && item.facilityName !== prevFacility;
           return (
             <div key={`${item.timestamp}-${idx}`} className="flex items-center gap-3">
-              <span className="w-24 shrink-0 whitespace-nowrap font-mono text-xs text-[#334155] dark:text-[hsl(0_0%_95%)]">
+              <span className="w-24 shrink-0 whitespace-nowrap font-mono text-xs text-contrast dark:text-[hsl(0_0%_95%)]">
                 {formatDistanceToNow(new Date(item.timestamp), { addSuffix: true })}
               </span>
               <span className={cn("h-2.5 w-2.5 rounded-full shrink-0", KIND_DOT[item.type] ?? KIND_DOT.requisition)} />
               <div className="min-w-0">
                 <p className="text-sm font-medium truncate">{item.description}</p>
                 {showFacility ? (
-                  <p className="text-xs text-[#334155] dark:text-[hsl(0_0%_95%)]">{item.facilityName}</p>
+                  <p className="text-xs text-contrast dark:text-[hsl(0_0%_95%)]">{item.facilityName}</p>
                 ) : null}
               </div>
             </div>
