@@ -205,6 +205,30 @@ export const assetsRouter = router({
         return await db.getAssetRegisterList({ ...(input ?? {}), siteId: scopedSiteId });
       }),
     
+    /** Ids of every register row matching the filters (for "Select all N matching"), facility scoped. */
+    registerMatchingIds: protectedProcedure
+      .input(
+        z
+          .object({
+            siteId: z.number().optional(),
+            categoryIds: z.array(z.number().int().positive()).optional(),
+            registerStatus: z.string().optional(),
+            itemType: z.string().optional(),
+            search: z.string().optional(),
+          })
+          .optional()
+      )
+      .query(async ({ input, ctx }) => {
+        const scopedSiteId = enforceFacilityScope(ctx.user, input?.siteId);
+        const res = await db.getAssetRegisterList({
+          ...(input ?? {}),
+          siteId: scopedSiteId,
+          limit: db.ASSET_REGISTER_MAX_LIMIT,
+          offset: 0,
+        });
+        return { ids: res.rows.map((r: { id: number }) => r.id), total: res.total };
+      }),
+
     create: managerOrAdminProcedure
       .input(z.object({
         assetTag: z.string().optional(),
