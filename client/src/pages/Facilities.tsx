@@ -71,6 +71,8 @@ import { cn } from "@/lib/utils";
 import { CircleCheck, CircleOff, Edit2, Loader2, MoreHorizontal, Trash2 } from "lucide-react";
 import { CardQrCode } from "@/components/CardQrCode";
 import { BULK_BAR_BUTTON_CLASS, BulkActionsToolbar } from "@/components/BulkActionsToolbar";
+import { SelectAllMatchingStrip } from "@/components/SelectAllMatchingStrip";
+import { chunk, formatCount } from "@/lib/formatCount";
 import { Checkbox } from "@/components/ui/checkbox";
 import { downloadCsv, toCsv } from "@/lib/csv";
 import { FacilitiesToolbar } from "@/components/facilities/FacilitiesToolbar";
@@ -398,28 +400,68 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
   // so nothing is acted on that the user cannot see.
   const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set());
   const pageIdsKey = pageRows.map((f) => f.id).join(",");
+  const [allMatching, setAllMatching] = useState(false);
   useEffect(() => {
     setSelectedIds(new Set());
+    setAllMatching(false);
   }, [pageIdsKey, viewMode]);
-  const selectedOnPage = pageRows.filter((f) => selectedIds.has(f.id)).map((f) => f.id);
+  const selectedOnPage = allMatching
+    ? sorted.map((f) => f.id)
+    : pageRows.filter((f) => selectedIds.has(f.id)).map((f) => f.id);
   const selectedCount = selectedOnPage.length;
-  const allOnPageSelected = pageRows.length > 0 && selectedCount === pageRows.length;
-  const someOnPageSelected = selectedCount > 0 && !allOnPageSelected;
-  const toggleSelected = (id: number, on: boolean) =>
-    setSelectedIds((prev) => {
+  const pageSelectedCount = pageRows.filter((f) => allMatching || selectedIds.has(f.id)).length;
+  const allOnPageSelected = pageRows.length > 0 && pageSelectedCount === pageRows.length;
+  const someOnPageSelected = pageSelectedCount > 0 && !allOnPageSelected;
+  const toggleSelected = (id: number, on: boolean) => {
+    setAllMatching(false);
+    return setSelectedIds((prev) => {
       const next = new Set(prev);
       if (on) next.add(id);
       else next.delete(id);
       return next;
     });
-  const togglePageSelected = (on: boolean) => setSelectedIds(on ? new Set(pageRows.map((f) => f.id)) : new Set());
-  const clearSelection = () => setSelectedIds(new Set());
-  const facilityCount = (n: number) => `${n} ${n === 1 ? "facility" : "facilities"}`;
+  };
+  const togglePageSelected = (on: boolean) => {
+    setAllMatching(false);
+    setSelectedIds(on ? new Set(pageRows.map((f) => f.id)) : new Set());
+  };
+  const clearSelection = () => {
+    setAllMatching(false);
+    setSelectedIds(new Set());
+  };
+  const facilityCount = (n: number) => `${formatCount(n)} ${n === 1 ? "facility" : "facilities"}`;
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkActiveTarget, setBulkActiveTarget] = useState<boolean | null>(null);
 
-  const bulkDeleteMutation = trpc.sites.bulkDelete.useMutation({
-    onSuccess: async (res) => {
+  const bulkDeleteMutation = trpc.sites.bulkDelete.useMutation();
+  const bulkActiveMutation = trpc.sites.bulkSetActive.useMutation();
+  const [bulkRunning, setBulkRunning] = useState(false);
+  const runBulkDelete = async () => {
+    setBulkRunning(true);
+    try {
+      let deleted = 0;
+      for (const part of chunk(selectedOnPage, 500)) deleted += (await bulkDeleteMutation.mutateAsync({ ids: part })).deleted;
+      await onBulkDeleteDone({ deleted, total: selectedOnPage.length });
+    } catch (e) {
+      toast.error(`Could not delete the selected facilities: ${e instanceof Error ? e.message : "error"}`);
+    } finally {
+      setBulkRunning(false);
+    }
+  };
+  const runBulkActive = async (isActive: boolean) => {
+    setBulkRunning(true);
+    try {
+      let updated = 0;
+      for (const part of chunk(selectedOnPage, 500)) updated += (await bulkActiveMutation.mutateAsync({ ids: part, isActive })).updated;
+      await onBulkActiveDone({ updated, total: selectedOnPage.length }, { isActive });
+    } catch (e) {
+      toast.error(`Could not update the selected facilities: ${e instanceof Error ? e.message : "error"}`);
+    } finally {
+      setBulkRunning(false);
+    }
+  };
+  const bulkDeleteHandlers = {
+    onSuccess: async (res: { deleted: number; total: number }) => {
       if (res.deleted === res.total) toast.success(`Deleted ${facilityCount(res.deleted)}`);
       else if (res.deleted === 0) toast.error("No facilities were deleted. They may still have assets or child facilities.");
       else toast.warning(`Deleted ${res.deleted} of ${facilityCount(res.total)}. ${res.total - res.deleted} could not be deleted.`);
@@ -427,10 +469,10 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
       clearSelection();
       await refetch();
     },
-    onError: (e) => toast.error(`Could not delete the selected facilities: ${e.message}`),
-  });
-  const bulkActiveMutation = trpc.sites.bulkSetActive.useMutation({
-    onSuccess: async (res, vars) => {
+  };
+  const onBulkDeleteDone = bulkDeleteHandlers.onSuccess;
+  const bulkActiveHandlers = {
+    onSuccess: async (res: { updated: number; total: number }, vars: { isActive: boolean }) => {
       const label = vars.isActive ? "active" : "inactive";
       if (res.updated === res.total) toast.success(`Marked ${facilityCount(res.updated)} as ${label}`);
       else if (res.updated === 0) toast.error("No facilities were updated.");
@@ -439,11 +481,12 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
       clearSelection();
       await refetch();
     },
-    onError: (e) => toast.error(`Could not update the selected facilities: ${e.message}`),
-  });
-  const bulkPending = bulkDeleteMutation.isPending || bulkActiveMutation.isPending;
+  };
+  const onBulkActiveDone = bulkActiveHandlers.onSuccess;
+  const bulkPending = bulkRunning;
   const exportSelected = () => {
-    const chosen = pageRows.filter((f) => selectedIds.has(f.id));
+    const chosenIds = new Set(selectedOnPage);
+    const chosen = sorted.filter((f) => chosenIds.has(f.id));
     const csv = toCsv(
       ["Name", "Type", "Code", "State", "Address", "Parent facility", "Contact", "Phone", "Postal code", "Status"],
       chosen.map((f) => [
@@ -626,6 +669,17 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {viewMode !== "map" && !isLoading ? (
+        <SelectAllMatchingStrip
+          pageCount={pageRows.length}
+          matchingCount={sorted.length}
+          pageFullySelected={allOnPageSelected}
+          allMatchingSelected={allMatching}
+          onSelectAllMatching={() => setAllMatching(true)}
+          onClearSelection={clearSelection}
+        />
+      ) : null}
 
       {isLoading && viewMode !== "map" ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" data-testid="sites-list-loading" aria-busy="true">
@@ -814,7 +868,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
         </BulkActionsToolbar>
       ) : null}
 
-      <AlertDialog open={bulkDeleteOpen} onOpenChange={(open) => { if (!open && !bulkDeleteMutation.isPending) setBulkDeleteOpen(false); }}>
+      <AlertDialog open={bulkDeleteOpen} onOpenChange={(open) => { if (!open && !bulkRunning) setBulkDeleteOpen(false); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete {facilityCount(selectedCount)}?</AlertDialogTitle>
@@ -824,23 +878,23 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={bulkDeleteMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={bulkRunning}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               data-testid="facility-bulk-delete-confirm"
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={bulkDeleteMutation.isPending || selectedCount === 0}
+              disabled={bulkRunning || selectedCount === 0}
               onClick={(e) => {
                 e.preventDefault();
-                bulkDeleteMutation.mutate({ ids: selectedOnPage });
+                void runBulkDelete();
               }}
             >
-              {bulkDeleteMutation.isPending ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Deleting…</>) : `Delete ${selectedCount}`}
+              {bulkRunning ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Deleting…</>) : `Delete ${formatCount(selectedCount)}`}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={bulkActiveTarget !== null} onOpenChange={(open) => { if (!open && !bulkActiveMutation.isPending) setBulkActiveTarget(null); }}>
+      <AlertDialog open={bulkActiveTarget !== null} onOpenChange={(open) => { if (!open && !bulkRunning) setBulkActiveTarget(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Mark {facilityCount(selectedCount)} as {bulkActiveTarget ? "active" : "inactive"}?</AlertDialogTitle>
@@ -852,16 +906,16 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={bulkActiveMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={bulkRunning}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               data-testid="facility-bulk-active-confirm"
-              disabled={bulkActiveMutation.isPending || selectedCount === 0 || bulkActiveTarget === null}
+              disabled={bulkRunning || selectedCount === 0 || bulkActiveTarget === null}
               onClick={(e) => {
                 e.preventDefault();
-                if (bulkActiveTarget !== null) bulkActiveMutation.mutate({ ids: selectedOnPage, isActive: bulkActiveTarget });
+                if (bulkActiveTarget !== null) void runBulkActive(bulkActiveTarget);
               }}
             >
-              {bulkActiveMutation.isPending ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Updating…</>) : bulkActiveTarget ? "Mark active" : "Mark inactive"}
+              {bulkRunning ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Updating…</>) : bulkActiveTarget ? "Mark active" : "Mark inactive"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
