@@ -55,7 +55,7 @@ const GENERATORS = "generator records";
 const BUILDINGS = "building certificates";
 const DONORS = "donor reports";
 
-const docStatusZod = z.enum(["compliant", "expiring", "non_compliant"]);
+const docStatusZod = z.enum(["compliant", "expiring", "non_compliant", "no_date"]);
 const generatorStatusZod = z.enum(["serviced", "due_soon", "overdue"]);
 const donorStatusZod = z.enum(["submitted", "due_soon", "overdue", "pending"]);
 

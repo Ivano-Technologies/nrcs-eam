@@ -22,20 +22,20 @@ export async function buildScheduledReportDelivery(report: ScheduledReport): Pro
     if (report.format === "pdf") {
       const buffer = await renderFleetHealthPdf(summary);
       attachment = {
-        filename: `fleet-health-${summary.reportDate}.pdf`,
+        filename: `asset-health-${summary.reportDate}.pdf`,
         mimeType: "application/pdf",
         contentBase64: buffer.toString("base64"),
       };
     }
     return {
-      html: `<p>Fleet health summary for ${summary.reportDate}</p>
+      html: `<p>Asset health summary for ${summary.reportDate}</p>
 <ul>
 <li>Total book value: ${ow.totalBookValue.toLocaleString()}</li>
 <li>End-of-life pipeline: ${ow.endOfLifeCount} assets</li>
 <li>High-priority predictions: ${ow.highPriorityPredictions.length}</li>
 <li>Active inventory alerts: ${ow.activeInventoryAlerts}</li>
 </ul>
-<p>View full report in NRCS EAM → Reports → Fleet health.</p>`,
+<p>View full report in NRCS EAM → Maintenance → Asset health.</p>`,
       attachment,
     };
   }

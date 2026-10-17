@@ -421,6 +421,13 @@
       "when": 1780600000000,
       "tag": "0060_asset_code_search_path",
       "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1780700000000,
+      "tag": "0061_fleet_positions_driver_flag",
+      "breakpoints": true
     }
   ]
 }

@@ -46,6 +46,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { ConfirmDeleteRecordDialog } from "@/components/compliance/ConfirmDeleteRecordDialog";
+import { NoDateBadge } from "@/components/compliance/NoDateBadge";
 
 type TabKey = "vehicles" | "generators" | "buildings" | "donor" | "insurance";
 
@@ -53,6 +54,7 @@ function docBadge(status: string) {
   if (status === "compliant") return <Badge className="bg-green-100 text-green-800">Compliant</Badge>;
   if (status === "expiring") return <Badge className="bg-amber-100 text-amber-800">Expiring soon</Badge>;
   if (status === "non_compliant") return <Badge className="bg-red-100 text-red-800">Non-compliant</Badge>;
+  if (status === "no_date") return <NoDateBadge />;
   return <Badge variant="secondary">{status}</Badge>;
 }
 
@@ -101,7 +103,9 @@ export default function ComplianceRegister() {
       ? "expiring"
       : urlStatus === "non-compliant"
         ? "non_compliant"
-        : undefined;
+        : urlStatus === "no-date"
+          ? "no_date"
+          : undefined;
   const generatorStatus =
     urlStatus === "overdue" ? "overdue" : urlStatus === "due-soon" ? "due_soon" : undefined;
   const donorStatus =
@@ -274,6 +278,11 @@ export default function ComplianceRegister() {
           </CardHeader>
           <CardContent>
             <p className={KPI_VALUE_CLASS}>{summary?.totalRecords ?? 0}</p>
+            {(summary?.noDateCount ?? 0) > 0 ? (
+              <p className="mt-1 text-xs text-muted-foreground" data-testid="kpi-no-date">
+                {summary?.noDateCount} with no expiry date
+              </p>
+            ) : null}
           </CardContent>
         </Card>
         <Card size="sm">
