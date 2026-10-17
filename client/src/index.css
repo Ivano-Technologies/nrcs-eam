@@ -561,7 +561,8 @@ html.dark {
     inset: -14px;
   }
 
-  /* Switches keep their pill shape (the 44px minimum squashed them into a circle); the halo gives the target. */
+  /* Switches keep their pill shape (the 44px minimum squashed them into a circle); the halo gives the target.
+     The inset counts from inside the 1px border, so the 32x18.4 switch gets a 46x46.4 target. */
   button[data-slot="switch"] {
     min-height: 1.15rem;
     min-width: 2rem;
@@ -570,7 +571,7 @@ html.dark {
   button[data-slot="switch"]::after {
     content: "";
     position: absolute;
-    inset: -13px -6px;
+    inset: -15px -8px;
   }
 
   /* Small inline text links inside a sentence (e.g. Undo) stay inline; the halo gives the target. */

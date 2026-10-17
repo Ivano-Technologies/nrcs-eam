@@ -34,7 +34,7 @@ import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 import { AlertTriangle, FileSpreadsheet, Loader2, Plus, Shield } from "lucide-react";
 import { useMemo, useState } from "react";
-import { useLocation } from "wouter";
+import { useSearch } from "wouter";
 import { toast } from "sonner";
 
 const TYPES = ["Property", "Vehicle", "Equipment", "Liability"] as const;
@@ -45,17 +45,20 @@ function statusBadge(status: "active" | "expiring" | "expired") {
   return <Badge className="bg-red-100 text-red-800">Expired</Badge>;
 }
 
+/** Read ?status= (active, expiring or expired) from a useSearch() value, with or without the leading "?". */
+export function parseInsuranceStatus(search: string): "active" | "expiring" | "expired" | undefined {
+  const s = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search).get("status");
+  if (s === "expiring" || s === "expired" || s === "active") return s;
+  return undefined;
+}
+
 export function InsuranceRegisterContent({ embedded = false }: { embedded?: boolean }) {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const canManage = user?.role === "admin" || user?.role === "manager";
-  const [location] = useLocation();
-  const statusFilter = useMemo(() => {
-    const q = location.includes("?") ? new URLSearchParams(location.split("?")[1]) : null;
-    const s = q?.get("status");
-    if (s === "expiring" || s === "expired" || s === "active") return s;
-    return undefined;
-  }, [location]);
+  // wouter's location has no query string; useSearch() does, and updates on in-app navigation.
+  const search = useSearch();
+  const statusFilter = useMemo(() => parseInsuranceStatus(search), [search]);
 
   const utils = trpc.useUtils();
   const { data: rows } = trpc.insuranceRecords.list.useQuery({

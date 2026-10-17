@@ -4,7 +4,7 @@ import { InventoryShellActions } from "@/components/inventory/InventoryShell";
 import { EmptyState, HtmlTableEmptyState } from "@/components/ui/EmptyState";
 import { formatEnumLabel } from "@/lib/format";
 import { requisitionPriorityBadgeClass } from "@/lib/requisitionPriority";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
 import PageHeader from "@/components/ui/PageHeader";
@@ -28,7 +28,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 type ReqLine = { catalogueId: string; quantity: string; urgency: string; notes: string };
 
 export default function Requisitions({ embedInShell = false }: { embedInShell?: boolean } = {}) {
-  const [location, setLocation] = useLocation();
+  const [, setLocation] = useLocation();
+  const urlSearch = useSearch();
   const { isAdmin } = usePermissions();
   const [viewMode, setViewMode] = useViewMode("inventory_requisitions");
   const [open, setOpen] = useState(false);
@@ -44,8 +45,7 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
   const [lines, setLines] = useState<ReqLine[]>([{ catalogueId: "", quantity: "", urgency: "routine", notes: "" }]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const qs = new URLSearchParams(window.location.search);
+    const qs = new URLSearchParams(urlSearch);
     const st = qs.get("status");
     if (st && ["all", "submitted", "approved", "rejected", "fulfilled", "draft"].includes(st)) {
       setStatus(st);
@@ -57,7 +57,7 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
       const next = qs.toString() ? `${path}?${qs.toString()}` : path;
       setLocation(next, { replace: true });
     }
-  }, [location, setLocation]);
+  }, [urlSearch, setLocation]);
 
   const { data: facilities } = trpc.sites.list.useQuery();
   const { data: catalogue } = trpc.inventoryV2.catalogue.list.useQuery();

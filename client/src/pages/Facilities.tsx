@@ -340,12 +340,11 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
   const qrOrigin = typeof window !== "undefined" ? window.location.origin : "";
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const st = new URLSearchParams(window.location.search).get("status");
+    const st = new URLSearchParams(urlSearch).get("status");
     if (st === "active" || st === "inactive" || st === "all") {
       setStatusFilter(st);
     }
-  }, [location]);
+  }, [urlSearch]);
 
   const filtered = useMemo(
     () =>

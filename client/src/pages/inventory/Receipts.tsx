@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Toolbar, ToolbarMore, ToolbarSearch } from "@/components/Toolbar";
 import { useMobileTableColumns, MobileColumnsToggle, mobileSecondaryCol } from "@/hooks/useMobileTableColumns";
 import { cn } from "@/lib/utils";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { downloadBase64File } from "@/lib/download";
 import { appPath } from "@/lib/routes";
 import { Loader2 } from "lucide-react";
@@ -28,7 +28,8 @@ type Line = { catalogueId: string; ctnId: string; quantity: string; batchNumber:
 
 export default function Receipts({ embedInShell = false }: { embedInShell?: boolean } = {}) {
   const { isMobile, showAllColumns, showAll, setShowAll } = useMobileTableColumns();
-  const [location, setLocation] = useLocation();
+  const [, setLocation] = useLocation();
+  const urlSearch = useSearch();
   const { isManagerOrAdmin, isStaffOrAbove } = usePermissions();
   const [status, setStatus] = useState<"all" | "draft" | "pending_approval" | "finalized" | "claim_raised">("all");
   const [warehouseId, setWarehouseId] = useState("all");
@@ -44,12 +45,11 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
   ]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const st = new URLSearchParams(window.location.search).get("status");
+    const st = new URLSearchParams(urlSearch).get("status");
     if (st === "all" || st === "draft" || st === "pending_approval" || st === "finalized" || st === "claim_raised") {
       setStatus(st);
     }
-  }, [location]);
+  }, [urlSearch]);
 
   const { data: warehouses } = trpc.sites.list.useQuery();
   const wh = useMemo(() => (warehouses ?? []).filter((x) => x.facilityType === "warehouse"), [warehouses]);
