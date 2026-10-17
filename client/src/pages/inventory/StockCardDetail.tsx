@@ -2,6 +2,7 @@ import PageHeader from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/button";
 import { formatEmpty, formatDate } from "@/lib/format";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useMobileTableColumns, MobileColumnsToggle, mobileSecondaryCol } from "@/hooks/useMobileTableColumns";
 import { trpc } from "@/lib/trpc";
@@ -80,7 +81,7 @@ export default function StockCardDetail() {
       </div>
 
       <div className="grid gap-2 rounded-md border p-4 md:grid-cols-5">
-        <Input type="date" aria-label="Count date" value={date} onChange={(e) => setDate(e.target.value)} />
+        <DateInput aria-label="Count date" value={date} onChange={(e) => setDate(e.target.value)} />
         <Input placeholder="Counted qty" value={countedQty} onChange={(e) => setCountedQty(e.target.value)} />
         <Input placeholder="Supervisor ID (for retroactive)" value={supervisorId} onChange={(e) => setSupervisorId(e.target.value)} />
         <Input placeholder="Notes" value={notes} onChange={(e) => setNotes(e.target.value)} />

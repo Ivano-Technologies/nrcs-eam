@@ -39,26 +39,25 @@ function toValidDate(value: DateInput): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-const DATE_FORMAT = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" });
-const DATE_TIME_FORMAT = new Intl.DateTimeFormat("en-GB", {
-  day: "numeric",
-  month: "short",
-  year: "numeric",
-  hour: "2-digit",
-  minute: "2-digit",
-});
+// Fixed English month names, so dates read the same in every browser and ICU version
+// (Intl "en-GB" gives "Sept" in some engines and "Sep" in others).
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-/** "8 Oct 2026". Empty string when missing; unparseable text is shown as is. */
+function dayMonthYear(d: Date): string {
+  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+/** "8 Oct 2026". Empty string when missing; unparseable text is shown as is. Locale independent. */
 export function formatDate(value: DateInput): string {
   const d = toValidDate(value);
-  if (d) return DATE_FORMAT.format(d);
+  if (d) return dayMonthYear(d);
   return typeof value === "string" ? value : "";
 }
 
-/** "8 Oct 2026, 10:04". Empty string when missing; unparseable text is shown as is. */
+/** "8 Oct 2026, 10:04" (24 hour). Empty string when missing; unparseable text is shown as is. */
 export function formatDateTime(value: DateInput): string {
   const d = toValidDate(value);
-  if (d) return DATE_TIME_FORMAT.format(d);
+  if (d) return `${dayMonthYear(d)}, ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
   return typeof value === "string" ? value : "";
 }
 
@@ -69,9 +68,6 @@ export function formatDateRange(start: DateInput, end: DateInput): string {
   if (a && b) return `${a} to ${b}`;
   return a || b;
 }
-
-/** Placeholder hint shown next to date inputs. */
-export const DATE_INPUT_HINT = "DD/MM/YYYY";
 
 /** Known enum values with hand written labels; anything else is humanised ("relief_item" → "Relief item"). */
 const ENUM_LABELS: Record<string, string> = {
@@ -127,13 +123,4 @@ export function formatEmpty(value: ReactNode): ReactNode {
   if (value == null) return <span className="text-muted-foreground">Not set</span>;
   if (typeof value === "string" && value.trim() === "") return <span className="text-muted-foreground">Not set</span>;
   return value;
-}
-
-/** Visible format hint for native date inputs, placed inside the field label. */
-export function DateHint({ className }: { className?: string }) {
-  return (
-    <span className={`ml-1 text-xs font-normal text-muted-foreground${className ? ` ${className}` : ""}`}>
-      {DATE_INPUT_HINT}
-    </span>
-  );
 }

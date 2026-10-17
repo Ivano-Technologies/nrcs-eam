@@ -4,6 +4,7 @@ import PageHeader from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -16,7 +17,7 @@ import { downloadBase64File } from "@/lib/download";
 import { useMobileTableColumns, MobileColumnsToggle, mobileSecondaryCol } from "@/hooks/useMobileTableColumns";
 import { cn } from "@/lib/utils";
 import { appPath } from "@/lib/routes";
-import { DATE_INPUT_HINT, formatDate, formatEnumLabel } from "@/lib/format";
+import { formatDate, formatEnumLabel } from "@/lib/format";
 import { toast } from "sonner";
 
 export type WmsReportKey = "movements" | "aging" | "donor" | "loss" | "kits";
@@ -131,7 +132,7 @@ function DateField({ label, value, onChange }: { label: string; value: string; o
   return (
     <div className="space-y-1">
       <Label>{label}</Label>
-      <Input type="date" value={value} onChange={(e) => onChange(e.target.value)} aria-describedby="wms-date-hint" />
+      <DateInput value={value} onChange={(e) => onChange(e.target.value)} />
     </div>
   );
 }
@@ -302,8 +303,7 @@ function WmsSingleReport({ report }: { report: WmsReportKey }) {
               </>
             ) : null}
           
-          <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
-            <p id="wms-date-hint" className="text-xs text-muted-foreground">Dates use {DATE_INPUT_HINT}.</p>
+          <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
             <MobileColumnsToggle isMobile={isMobile} showAll={showAll} onToggle={setShowAll} />
           </div>
         </div>

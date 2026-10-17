@@ -1,5 +1,6 @@
 import { Input } from "@/components/ui/input";
-import { DateHint } from "@/lib/format";
+import { DateInput } from "@/components/ui/date-input";
+
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -52,10 +53,9 @@ export function SignatureBlock({
           />
         </div>
         <div className="space-y-1">
-          <Label>Date <DateHint /></Label>
-          <Input
+          <Label>Date</Label>
+          <DateInput
             className="h-9"
-            type="date"
             value={value.date}
             onChange={(e) => onChange({ ...value, date: e.target.value })}
           />

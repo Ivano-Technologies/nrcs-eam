@@ -2,9 +2,9 @@
  * Insurance register delete confirm (Chief, #151; Coco's copy): Delete on a policy row opens the shared
  * register confirm dialog instead of deleting on one click. Cancel keeps the policy; confirming calls the delete once.
  * A failed delete shows the generic message, never the raw server error. The add policy dialog has no
- * DD/MM/YYYY hint beside its date fields (Coco); the native date input shows the format.
+ * DD/MM/YYYY hint; each date reads back in the table format under the native picker (Coco).
  */
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Router } from "wouter";
 import { memoryLocation } from "wouter/memory-location";
@@ -137,11 +137,16 @@ describe("Insurance register delete confirm", () => {
     expect(insuranceDeleteDescription({ policyNumber: null, assetOrProperty: null })).toBe(`This policy ${end}`);
   });
 
-  it("the add policy dialog has no DD/MM/YYYY hint beside the dates", async () => {
+  it("the add policy dialog reads back picked dates and has no DD/MM/YYYY hint", async () => {
     renderPage();
     await userEvent.click(screen.getAllByRole("button", { name: /Add policy/ })[0]);
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText("Policy start")).toBeInTheDocument();
     expect(dialog.textContent).not.toContain("DD/MM/YYYY");
+    expect(within(dialog).queryByTestId("date-readback")).toBeNull();
+    const [start, end] = Array.from(dialog.querySelectorAll('input[type="date"]')) as HTMLInputElement[];
+    fireEvent.change(start, { target: { value: "2026-09-04" } });
+    fireEvent.change(end, { target: { value: "2027-01-14" } });
+    expect(within(dialog).getAllByTestId("date-readback").map((n) => n.textContent)).toEqual(["4 Sep 2026", "14 Jan 2027"]);
   });
 });

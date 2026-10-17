@@ -3,7 +3,7 @@
  * error and must not save. Before the fix the form kept the old assetId, so Save quietly saved against
  * the previously selected asset.
  */
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { Router } from "wouter";
 import { memoryLocation } from "wouter/memory-location";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -119,17 +119,37 @@ describe("Compliance register asset code (IVA-180)", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
-  // Coco (#151): the native date input shows the format, so no DD/MM/YYYY hint beside the dates.
-  it("the vehicle and generator dialogs show no DD/MM/YYYY hint beside the dates", () => {
+  // Coco (#151): native pickers with a readback line under each date, no DD/MM/YYYY hints.
+  it("the vehicle dialog reads back each set date and the generator dialog shows none while empty", () => {
     openVehicleEdit();
     const vehicle = screen.getByRole("dialog");
-    expect(vehicle.textContent).toContain("Road worthiness expiry");
     expect(vehicle.textContent).not.toContain("DD/MM/YYYY");
+    const readbacks = within(vehicle).getAllByTestId("date-readback").map((n) => n.textContent);
+    expect(readbacks).toEqual(["1 Jan 2027", "1 Jan 2027", "1 Jan 2027", "1 Sep 2026"]);
     cleanup();
     renderAt("/administration/compliance-register?tab=generators");
     fireEvent.click(screen.getByRole("button", { name: /add generator record/i }));
     const generator = screen.getByRole("dialog");
     expect(generator.textContent).toContain("Next service due");
     expect(generator.textContent).not.toContain("DD/MM/YYYY");
+    expect(within(generator).queryByTestId("date-readback")).toBeNull();
+  });
+
+  it("the building and donor dialogs read back a picked date", () => {
+    for (const [tab, button, label] of [
+      ["buildings", /add certificate|add building/i, "Expiry date"],
+      ["donor", /add donor|add report/i, "Due date"],
+    ] as const) {
+      renderAt(`/administration/compliance-register?tab=${tab}`);
+      fireEvent.click(screen.getByRole("button", { name: button }));
+      const dialog = screen.getByRole("dialog");
+      expect(dialog.textContent).not.toContain("DD/MM/YYYY");
+      const input = dialog.querySelector('input[type="date"]') as HTMLInputElement;
+      expect(input).not.toBeNull();
+      fireEvent.change(input, { target: { value: "2027-01-14" } });
+      expect(within(dialog).getByTestId("date-readback").textContent).toBe("14 Jan 2027");
+      expect(dialog.textContent).toContain(label);
+      cleanup();
+    }
   });
 });

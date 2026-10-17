@@ -3,6 +3,7 @@ import { useLocation, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,7 +14,7 @@ import { CtnInlineCreator } from "@/components/wms/CtnInlineCreator";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
 import PageHeader from "@/components/ui/PageHeader";
 import { appPath } from "@/lib/routes";
-import { DateHint, formatDateTime, formatNaira } from "@/lib/format";
+import { formatDateTime, formatNaira } from "@/lib/format";
 import { toast } from "sonner";
 import { Loader2, AlertTriangle } from "lucide-react";
 
@@ -330,8 +331,8 @@ export default function WaybillDetail() {
               />
             </div>
             <div className="space-y-1">
-              <Label>Date <DateHint /></Label>
-              <Input type="date" value={header.date} onChange={(e) => setHeader((p) => ({ ...p, date: e.target.value }))} />
+              <Label>Date</Label>
+              <DateInput value={header.date} onChange={(e) => setHeader((p) => ({ ...p, date: e.target.value }))} />
             </div>
             <div className="space-y-1">
               <Label htmlFor="waybill-warehouse">Source warehouse</Label>

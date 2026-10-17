@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { InventoryShellActions } from "@/components/inventory/InventoryShell";
 import { HtmlTableEmptyState } from "@/components/ui/EmptyState";
-import { DATE_INPUT_HINT, formatDate } from "@/lib/format";
+import { formatDate } from "@/lib/format";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
 import PageHeader from "@/components/ui/PageHeader";
@@ -80,9 +80,8 @@ export default function Issues({ embedInShell = false }: { embedInShell?: boolea
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            <Input className="h-9 w-36" type="date" aria-label="From date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-            <Input className="h-9 w-36" type="date" aria-label="To date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
-            <span className="text-xs text-muted-foreground">Dates use {DATE_INPUT_HINT}</span>
+            <DateInput className="h-9 w-36" aria-label="From date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+            <DateInput className="h-9 w-36" aria-label="To date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
             <Select value={warehouseId} onValueChange={setWarehouseId}>
               <SelectTrigger className="h-9 w-36"><SelectValue placeholder="Source warehouse" /></SelectTrigger>
               <SelectContent>

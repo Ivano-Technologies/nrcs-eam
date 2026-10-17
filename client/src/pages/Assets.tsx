@@ -6,6 +6,7 @@ import TableLoader from "@/components/ui/TableLoader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -49,7 +50,7 @@ import { toast } from "sonner";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { calculateDepreciatedValue } from "@/lib/depreciation";
 import { appPath } from "@/lib/routes";
-import { DateHint, formatDate as formatDisplayDate, formatEmpty, formatEnumLabel, formatNaira } from "@/lib/format";
+import { formatDate as formatDisplayDate, formatEmpty, formatEnumLabel, formatNaira } from "@/lib/format";
 import { HtmlTableEmptyState } from "@/components/ui/EmptyState";
 import { cn } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -1496,9 +1497,8 @@ export default function Assets() {
                     </Select>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label>Date of last physical check <DateHint /></Label>
-                      <Input
-                        type="date"
+                      <Label>Date of last physical check</Label>
+                      <DateInput
                         value={newAsset.lastPhysicalCheck}
                         onChange={(e) => setNewAsset({ ...newAsset, lastPhysicalCheck: e.target.value })}
                       />
@@ -2342,9 +2342,8 @@ export default function Assets() {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label>Last physical check <DateHint /></Label>
-                      <Input
-                        type="date"
+                      <Label>Last physical check</Label>
+                      <DateInput
                         value={editingAsset.lastPhysicalCheck ?? ""}
                         onChange={(e) =>
                           setEditingAsset({ ...editingAsset, lastPhysicalCheck: e.target.value })
@@ -2463,9 +2462,8 @@ export default function Assets() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Depreciation start date <DateHint /></Label>
-                      <Input
-                        type="date"
+                      <Label>Depreciation start date</Label>
+                      <DateInput
                         value={editingAsset.depreciationStartDate ?? ""}
                         onChange={(e) =>
                           setEditingAsset({ ...editingAsset, depreciationStartDate: e.target.value })

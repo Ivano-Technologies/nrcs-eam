@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -353,14 +354,12 @@ export function InsuranceRegisterContent({ embedded = false }: { embedded?: bool
                 onChange={(e) => setForm((f) => ({ ...f, annualPremiumNgn: e.target.value }))}
               />
               <Label>Policy start</Label>
-              <Input
-                type="date"
+              <DateInput
                 value={form.policyStart}
                 onChange={(e) => setForm((f) => ({ ...f, policyStart: e.target.value }))}
               />
               <Label>Policy end</Label>
-              <Input
-                type="date"
+              <DateInput
                 value={form.policyEnd}
                 onChange={(e) => setForm((f) => ({ ...f, policyEnd: e.target.value }))}
               />

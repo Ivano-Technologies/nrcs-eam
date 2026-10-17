@@ -1,6 +1,6 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { TableEmptyState } from "@/components/ui/EmptyState";
-import { DateHint, formatDate } from "@/lib/format";
+import { formatDate } from "@/lib/format";
 import { InsuranceRegisterContent } from "@/pages/compliance/InsuranceRegister";
 import PageHeader from "@/components/ui/PageHeader";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -694,26 +695,22 @@ export default function ComplianceRegister() {
               onChange={(e) => setVehicleForm((f) => ({ ...f, plateNumber: e.target.value }))}
             />
             <Label>Road worthiness expiry</Label>
-            <Input
-              type="date"
+            <DateInput
               value={vehicleForm.roadWorthinessExpiry}
               onChange={(e) => setVehicleForm((f) => ({ ...f, roadWorthinessExpiry: e.target.value }))}
             />
             <Label>Insurance expiry</Label>
-            <Input
-              type="date"
+            <DateInput
               value={vehicleForm.insuranceExpiry}
               onChange={(e) => setVehicleForm((f) => ({ ...f, insuranceExpiry: e.target.value }))}
             />
             <Label>Licence expiry</Label>
-            <Input
-              type="date"
+            <DateInput
               value={vehicleForm.licenceExpiry}
               onChange={(e) => setVehicleForm((f) => ({ ...f, licenceExpiry: e.target.value }))}
             />
             <Label>Last inspection</Label>
-            <Input
-              type="date"
+            <DateInput
               value={vehicleForm.lastInspectionDate}
               onChange={(e) => setVehicleForm((f) => ({ ...f, lastInspectionDate: e.target.value }))}
             />
@@ -775,8 +772,7 @@ export default function ComplianceRegister() {
             />
             <AssetCodeError id="generator-asset-code-error" message={genCodeError} />
             <Label>Next service due</Label>
-            <Input
-              type="date"
+            <DateInput
               value={genForm.nextServiceDue}
               onChange={(e) => setGenForm((f) => ({ ...f, nextServiceDue: e.target.value }))}
             />
@@ -851,9 +847,8 @@ export default function ComplianceRegister() {
                 ))}
               </SelectContent>
             </Select>
-            <Label>Expiry date <DateHint /></Label>
-            <Input
-              type="date"
+            <Label>Expiry date</Label>
+            <DateInput
               value={buildingForm.expiryDate}
               onChange={(e) => setBuildingForm((f) => ({ ...f, expiryDate: e.target.value }))}
             />
@@ -923,15 +918,13 @@ export default function ComplianceRegister() {
                 ))}
               </SelectContent>
             </Select>
-            <Label>Due date <DateHint /></Label>
-            <Input
-              type="date"
+            <Label>Due date</Label>
+            <DateInput
               value={donorForm.dueDate}
               onChange={(e) => setDonorForm((f) => ({ ...f, dueDate: e.target.value }))}
             />
-            <Label>Submitted date <DateHint /></Label>
-            <Input
-              type="date"
+            <Label>Submitted date</Label>
+            <DateInput
               value={donorForm.submittedDate}
               onChange={(e) => setDonorForm((f) => ({ ...f, submittedDate: e.target.value }))}
             />
