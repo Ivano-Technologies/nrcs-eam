@@ -11,7 +11,7 @@ export async function renderFleetHealthPdf(data: FleetHealthSummary): Promise<Bu
 
     const margin = 36;
     let y = 36;
-    doc.fontSize(14).fillColor("#111827").text("NRCS Fleet Health Summary", margin, y);
+    doc.fontSize(14).fillColor("#111827").text("NRCS Asset Health Summary", margin, y);
     y += 22;
     doc.fontSize(10).fillColor("#6B7280").text(`Report date: ${data.reportDate}`, margin, y);
     y += 28;

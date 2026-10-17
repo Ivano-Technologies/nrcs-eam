@@ -164,7 +164,7 @@ export default function ReportScheduling() {
       assetInventory: "Asset Inventory",
       maintenanceSchedule: "Maintenance Schedule",
       workOrders: "Work Orders",
-      fleetHealth: "Fleet Health",
+      fleetHealth: "Asset health",
       donorStatement: "Donor Statement",
       branchScorecards: "Branch Scorecards",
     };
@@ -290,7 +290,7 @@ export default function ReportScheduling() {
                     <SelectItem value="assetInventory">Asset inventory</SelectItem>
                     <SelectItem value="maintenanceSchedule">Maintenance schedule</SelectItem>
                     <SelectItem value="workOrders">Work orders</SelectItem>
-                    <SelectItem value="fleetHealth">Fleet health</SelectItem>
+                    <SelectItem value="fleetHealth">Asset health</SelectItem>
                     <SelectItem value="donorStatement">Donor statement</SelectItem>
                     <SelectItem value="branchScorecards">Branch scorecards</SelectItem>
                   </SelectContent>

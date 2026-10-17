@@ -45,6 +45,7 @@ describe("TASK-7.A mobile bottom nav reachability", () => {
     expect(groupIdForPath(appPath("/asset-map"))).toBe("assets");
     expect(groupIdForPath(appPath("/facilities/all"))).toBe("facilities");
     expect(groupIdForPath(appPath("/work-orders"))).toBe("maintenance");
+    expect(groupIdForPath(appPath("/asset-health"))).toBe("maintenance");
     expect(groupIdForPath(appPath("/fleet-health"))).toBe("maintenance");
     expect(groupIdForPath(appPath("/inventory/stock-overview"))).toBe("inventory");
     expect(groupIdForPath(appPath("/reports"))).toBe("reports");
