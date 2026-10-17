@@ -26,6 +26,7 @@ import { compressImageForUpload } from "@/lib/compressImage";
 import { useConnectivity } from "@/hooks/useConnectivity";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { STATUS_TONE_BADGE_CLASS } from "@/lib/statusTone";
 
 export default function MobileWorkOrderDetail() {
   const [, params] = useRoute("/app/mobile-work-order/:id");
@@ -160,7 +161,7 @@ export default function MobileWorkOrderDetail() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-4">
+      <div className="min-h-screen bg-surface-sunken p-4">
         <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
           <span>Loading…</span>
@@ -171,7 +172,7 @@ export default function MobileWorkOrderDetail() {
 
   if (!workOrder) {
     return (
-      <div className="min-h-screen bg-gray-50 p-4">
+      <div className="min-h-screen bg-surface-sunken p-4">
         <div className="text-center py-8">Work order not found</div>
       </div>
     );
@@ -180,30 +181,30 @@ export default function MobileWorkOrderDetail() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "completed":
-        return "bg-green-100 text-green-800";
+        return STATUS_TONE_BADGE_CLASS.success;
       case "in_progress":
-        return "bg-blue-100 text-blue-800";
+        return "border-border bg-secondary text-secondary-foreground";
       case "pending":
-        return "bg-yellow-100 text-yellow-800";
+        return STATUS_TONE_BADGE_CLASS.warning;
       case "cancelled":
-        return "bg-red-100 text-red-800";
+        return STATUS_TONE_BADGE_CLASS.danger;
       default:
-        return "bg-gray-100 text-gray-800";
+        return "border-border bg-secondary text-secondary-foreground";
     }
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case "critical":
-        return "bg-red-100 text-red-800 border-red-300";
+        return STATUS_TONE_BADGE_CLASS.danger;
       case "high":
-        return "bg-orange-100 text-orange-800 border-orange-300";
+        return STATUS_TONE_BADGE_CLASS.warning;
       case "medium":
-        return "bg-yellow-100 text-yellow-800 border-yellow-300";
+        return "border-border bg-secondary text-secondary-foreground";
       case "low":
-        return "bg-green-100 text-green-800 border-green-300";
+        return "border-border bg-secondary text-secondary-foreground";
       default:
-        return "bg-gray-100 text-gray-800 border-gray-300";
+        return "border-border bg-secondary text-secondary-foreground";
     }
   };
 
@@ -212,7 +213,7 @@ export default function MobileWorkOrderDetail() {
   const photoCaptureDisabled = !isOnline || uploading || !canAttachPhotos || photos.length >= 10;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-surface-sunken">
       <input
         ref={cameraInputRef}
         type="file"
@@ -231,7 +232,7 @@ export default function MobileWorkOrderDetail() {
         onChange={onFilePicked}
       />
 
-      <div className="bg-white border-b sticky top-0 z-10">
+      <div className="sticky top-0 z-10 border-b border-border bg-surface">
         <div className="p-4 flex items-center gap-3">
           <Button
             variant="ghost"
