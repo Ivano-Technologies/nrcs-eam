@@ -118,4 +118,18 @@ describe("Compliance register asset code (IVA-180)", () => {
     expect(vehicleMutate.mock.calls[0][0]).toMatchObject({ id: 1, assetId: 22 });
     expect(screen.queryByRole("alert")).toBeNull();
   });
+
+  // Coco (#151): the native date input shows the format, so no DD/MM/YYYY hint beside the dates.
+  it("the vehicle and generator dialogs show no DD/MM/YYYY hint beside the dates", () => {
+    openVehicleEdit();
+    const vehicle = screen.getByRole("dialog");
+    expect(vehicle.textContent).toContain("Road worthiness expiry");
+    expect(vehicle.textContent).not.toContain("DD/MM/YYYY");
+    cleanup();
+    renderAt("/administration/compliance-register?tab=generators");
+    fireEvent.click(screen.getByRole("button", { name: /add generator record/i }));
+    const generator = screen.getByRole("dialog");
+    expect(generator.textContent).toContain("Next service due");
+    expect(generator.textContent).not.toContain("DD/MM/YYYY");
+  });
 });

@@ -693,25 +693,25 @@ export default function ComplianceRegister() {
               value={vehicleForm.plateNumber}
               onChange={(e) => setVehicleForm((f) => ({ ...f, plateNumber: e.target.value }))}
             />
-            <Label>Road worthiness expiry <DateHint /></Label>
+            <Label>Road worthiness expiry</Label>
             <Input
               type="date"
               value={vehicleForm.roadWorthinessExpiry}
               onChange={(e) => setVehicleForm((f) => ({ ...f, roadWorthinessExpiry: e.target.value }))}
             />
-            <Label>Insurance expiry <DateHint /></Label>
+            <Label>Insurance expiry</Label>
             <Input
               type="date"
               value={vehicleForm.insuranceExpiry}
               onChange={(e) => setVehicleForm((f) => ({ ...f, insuranceExpiry: e.target.value }))}
             />
-            <Label>Licence expiry <DateHint /></Label>
+            <Label>Licence expiry</Label>
             <Input
               type="date"
               value={vehicleForm.licenceExpiry}
               onChange={(e) => setVehicleForm((f) => ({ ...f, licenceExpiry: e.target.value }))}
             />
-            <Label>Last inspection <DateHint /></Label>
+            <Label>Last inspection</Label>
             <Input
               type="date"
               value={vehicleForm.lastInspectionDate}
@@ -774,7 +774,7 @@ export default function ComplianceRegister() {
               }}
             />
             <AssetCodeError id="generator-asset-code-error" message={genCodeError} />
-            <Label>Next service due <DateHint /></Label>
+            <Label>Next service due</Label>
             <Input
               type="date"
               value={genForm.nextServiceDue}

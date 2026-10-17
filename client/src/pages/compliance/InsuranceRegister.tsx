@@ -28,7 +28,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { DateHint, formatDate, formatNaira } from "@/lib/format";
+import { formatDate, formatNaira } from "@/lib/format";
+import { ConfirmDeleteRecordDialog } from "@/components/compliance/ConfirmDeleteRecordDialog";
 import { KPI_VALUE_CLASS } from "@/lib/kpiTypography";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
@@ -50,6 +51,16 @@ function statusBadge(status: "active" | "expiring" | "expired") {
   if (status === "active") return <Badge className={STATUS_TONE_BADGE_CLASS.success}>Active</Badge>;
   if (status === "expiring") return <Badge className={STATUS_TONE_BADGE_CLASS.warning}>Expiring soon</Badge>;
   return <Badge className={STATUS_TONE_BADGE_CLASS.danger}>Expired</Badge>;
+}
+
+/** The asset code a delete names; a facility policy falls back to its property name, then its policy number. */
+export function insuranceDeleteLabel(r: { assetCode?: string | null; assetOrProperty: string; policyNumber: string }): string {
+  const code = r.assetCode?.trim();
+  if (code) return code;
+  // The list uses an em dash (U+2014) placeholder for a missing name; never put it in the copy.
+  const name = r.assetOrProperty?.trim();
+  if (name && name !== "\u2014") return name;
+  return r.policyNumber;
 }
 
 /** Read ?status= (active, expiring or expired) from a useSearch() value, with or without the leading "?". */
@@ -105,8 +116,14 @@ export function InsuranceRegisterContent({ embedded = false }: { embedded?: bool
     onError: (e) => toast.error(e.message),
   });
 
+  // IVA-181 follow up: confirm before deleting a policy, the same dialog as the other register tabs (IVA-173).
+  const [pendingDelete, setPendingDelete] = useState<{ id: number; label: string } | null>(null);
   const del = trpc.insuranceRecords.delete.useMutation({
-    onSuccess: () => void utils.insuranceRecords.list.invalidate(),
+    onSuccess: () => {
+      toast.success("Policy deleted");
+      setPendingDelete(null);
+      void utils.insuranceRecords.list.invalidate();
+    },
   });
 
   const exportExcel = trpc.insuranceRecords.exportExcel.useMutation({
@@ -258,7 +275,13 @@ export function InsuranceRegisterContent({ embedded = false }: { embedded?: bool
                     <TableCell>{statusBadge(r.status)}</TableCell>
                     {canManage ? (
                       <TableCell>
-                        <Button size="sm" variant="ghost" onClick={() => del.mutate({ id: r.id })}>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          data-testid={`insurance-delete-${r.id}`}
+                          disabled={del.isPending}
+                          onClick={() => setPendingDelete({ id: r.id, label: insuranceDeleteLabel(r) })}
+                        >
                           Delete
                         </Button>
                       </TableCell>
@@ -322,13 +345,13 @@ export function InsuranceRegisterContent({ embedded = false }: { embedded?: bool
                 value={form.annualPremiumNgn}
                 onChange={(e) => setForm((f) => ({ ...f, annualPremiumNgn: e.target.value }))}
               />
-              <Label>Policy start <DateHint /></Label>
+              <Label>Policy start</Label>
               <Input
                 type="date"
                 value={form.policyStart}
                 onChange={(e) => setForm((f) => ({ ...f, policyStart: e.target.value }))}
               />
-              <Label>Policy end <DateHint /></Label>
+              <Label>Policy end</Label>
               <Input
                 type="date"
                 value={form.policyEnd}
@@ -370,6 +393,16 @@ export function InsuranceRegisterContent({ embedded = false }: { embedded?: bool
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <ConfirmDeleteRecordDialog
+          open={pendingDelete !== null}
+          title="Delete this insurance policy?"
+          description={`This removes the policy for ${pendingDelete?.label ?? ""}. You can't undo this.`}
+          confirmLabel="Delete"
+          pending={del.isPending}
+          onCancel={() => setPendingDelete(null)}
+          onConfirm={() => (pendingDelete ? del.mutateAsync({ id: pendingDelete.id }) : Promise.resolve())}
+        />
       </div>
   );
 
