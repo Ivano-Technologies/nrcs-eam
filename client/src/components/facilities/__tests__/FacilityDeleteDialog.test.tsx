@@ -62,6 +62,29 @@ describe("FacilityDeleteDialog (IVA-181)", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it("blocked title is one plain text node in the dialog's normal title weight (Coco)", async () => {
+    mutateAsync.mockResolvedValue({
+      deleted: 0,
+      total: 1,
+      failedIds: [7],
+      failures: [{ id: 7, reason: "has_assets", message: HAS_ASSETS }],
+    });
+    setup();
+    const normalTitle = screen.getByRole("heading", { name: "Delete facility" });
+    const normalClass = normalTitle.className;
+    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    const title = await screen.findByRole("heading", { name: "You can't delete this facility yet" });
+    // One text node, no inline elements, so nothing can render part of it in another weight.
+    expect(title.childNodes).toHaveLength(1);
+    expect(title.firstChild?.nodeType).toBe(Node.TEXT_NODE);
+    expect(title.children).toHaveLength(0);
+    expect(title.textContent).toBe("You can't delete this facility yet");
+    // Same classes as the normal Delete facility title: font-semibold and no other weight.
+    expect(title.className).toBe(normalClass);
+    expect(title).toHaveClass("font-semibold");
+    expect(title.className).not.toMatch(/font-(thin|extralight|light|normal|medium|bold|extrabold|black)\b/);
+  });
+
   it("blocked by child facilities: same notice", async () => {
     const CHILDREN = FACILITY_HAS_CHILDREN_MESSAGE;
     mutateAsync.mockResolvedValue({
