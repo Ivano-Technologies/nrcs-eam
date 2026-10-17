@@ -1,8 +1,9 @@
 /** IVA-181: the facility delete dialog shows the server's reason inside the dialog, never a raw error. */
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "sonner";
+import { FACILITY_HAS_ASSETS_MESSAGE, FACILITY_HAS_CHILDREN_MESSAGE } from "@shared/facilityDelete";
 import { FacilityDeleteDialog } from "../FacilityDeleteDialog";
 
 const mutateAsync = vi.fn();
@@ -11,7 +12,7 @@ vi.mock("@/lib/trpc", () => ({
 }));
 vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { error: vi.fn(), success: vi.fn() }) }));
 
-const HAS_ASSETS = "Move or retire this facility's assets first.";
+const HAS_ASSETS = FACILITY_HAS_ASSETS_MESSAGE;
 
 function setup() {
   const onClose = vi.fn();
@@ -28,7 +29,7 @@ describe("FacilityDeleteDialog (IVA-181)", () => {
   });
   afterEach(cleanup);
 
-  it("blocked by assets: shows Coco's message in the dialog, keeps it open, disables Delete", async () => {
+  it("blocked by assets: a notice with the reason and a single Close, no Delete or undo line", async () => {
     mutateAsync.mockResolvedValue({
       deleted: 0,
       total: 1,
@@ -38,13 +39,50 @@ describe("FacilityDeleteDialog (IVA-181)", () => {
     const { onClose, onDeleted } = setup();
     await userEvent.click(screen.getByRole("button", { name: "Delete" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(HAS_ASSETS);
-    expect(screen.getByRole("alertdialog")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Delete" })).toBeDisabled();
+    const dialog = await screen.findByRole("alertdialog");
+    expect(await within(dialog).findByText("You can't delete this facility yet")).toBeInTheDocument();
+    const reason = within(dialog).getByTestId("facility-delete-blocked-reason");
+    expect(reason).toHaveTextContent(HAS_ASSETS);
+    expect(reason).not.toHaveClass("text-danger");
+    expect(within(dialog).queryByRole("alert")).toBeNull();
+    expect(dialog.textContent).not.toContain("cannot be undone");
+    expect(within(dialog).queryByRole("button", { name: "Delete" })).toBeNull();
+    expect(within(dialog).queryByRole("button", { name: "Cancel" })).toBeNull();
+    const buttons = within(dialog).getAllByRole("button");
+    expect(buttons).toHaveLength(1);
+    expect(buttons[0]).toHaveTextContent("Close");
+    expect(buttons[0]).not.toHaveClass("bg-destructive");
+    expect(buttons[0]).not.toHaveClass("bg-danger");
     expect(mutateAsync).toHaveBeenCalledWith({ ids: [7] });
     expect(onDeleted).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
     expect(toast.error).not.toHaveBeenCalled();
+
+    await userEvent.click(buttons[0]);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("blocked by child facilities: same notice", async () => {
+    const CHILDREN = FACILITY_HAS_CHILDREN_MESSAGE;
+    mutateAsync.mockResolvedValue({
+      deleted: 0,
+      total: 1,
+      failedIds: [7],
+      failures: [{ id: 7, reason: "has_children", message: CHILDREN }],
+    });
+    setup();
+    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    expect(await screen.findByText("You can't delete this facility yet")).toBeInTheDocument();
+    expect(screen.getByTestId("facility-delete-blocked-reason")).toHaveTextContent(CHILDREN);
+    expect(screen.getByRole("button", { name: "Close" })).toBeInTheDocument();
+  });
+
+  it("unblocked: the delete dialog keeps its copy and red Delete", () => {
+    setup();
+    expect(screen.getByText("Delete facility")).toBeInTheDocument();
+    expect(screen.getByText("Delete Kano State Branch? This cannot be undone.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Delete" })).toHaveClass("bg-destructive");
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
   });
 
   it("no assets: deletes, toasts and hands back to the page", async () => {

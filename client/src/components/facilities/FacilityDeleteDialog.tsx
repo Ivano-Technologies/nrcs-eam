@@ -17,8 +17,9 @@ import { toast } from "sonner";
 type DeleteError = { message: string; blocked: boolean };
 
 /**
- * IVA-181: single facility delete. A blocked delete (assets or child facilities still linked) or a failure
- * keeps the dialog open with the reason inside it, the same pattern as the compliance register (IVA-173).
+ * IVA-181: single facility delete. A blocked delete (assets or child facilities still linked) turns the dialog
+ * into a notice: "You can't delete this facility yet", the reason, and a single Close (Coco). A failure keeps
+ * the delete dialog open with a generic message and Try again, the same pattern as the compliance register (IVA-173).
  * Raw server errors never reach the user.
  */
 export function FacilityDeleteDialog({
@@ -73,40 +74,56 @@ export function FacilityDeleteDialog({
       }}
     >
       <AlertDialogContent data-testid="facility-delete-dialog">
-        <AlertDialogHeader>
-          <AlertDialogTitle>Delete facility</AlertDialogTitle>
-          <AlertDialogDescription>Delete {facility?.name}? This cannot be undone.</AlertDialogDescription>
-        </AlertDialogHeader>
-        {error ? (
-          <p role="alert" data-testid="facility-delete-error" className="text-sm font-medium text-danger dark:text-primary-on-dark">
-            {error.message}
-          </p>
-        ) : null}
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            data-testid="facility-delete-confirm"
-            // Destructive fill only while enabled, so a blocked Delete reads as disabled
-            // (bg-destructive otherwise overrides the disabled token).
-            className={blocked ? undefined : "bg-destructive text-destructive-foreground hover:bg-destructive/90"}
-            disabled={pending || blocked}
-            onClick={(e) => {
-              e.preventDefault();
-              void confirm();
-            }}
-          >
-            {pending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
-                Deleting…
-              </>
-            ) : error && !error.blocked ? (
-              "Try again"
-            ) : (
-              "Delete"
-            )}
-          </AlertDialogAction>
-        </AlertDialogFooter>
+        {blocked ? (
+          // Coco (#150): a blocked delete is not an error. Say why in normal text and offer Close only;
+          // no undo warning and no red Delete. The reason wording waits on Kezie.
+          <>
+            <AlertDialogHeader>
+              <AlertDialogTitle>You can't delete this facility yet</AlertDialogTitle>
+              <AlertDialogDescription data-testid="facility-delete-blocked-reason" aria-live="polite">
+                {error?.message}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel data-testid="facility-delete-close">Close</AlertDialogCancel>
+            </AlertDialogFooter>
+          </>
+        ) : (
+          <>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete facility</AlertDialogTitle>
+              <AlertDialogDescription>Delete {facility?.name}? This cannot be undone.</AlertDialogDescription>
+            </AlertDialogHeader>
+            {error ? (
+              <p role="alert" data-testid="facility-delete-error" className="text-sm font-medium text-danger dark:text-primary-on-dark">
+                {error.message}
+              </p>
+            ) : null}
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                data-testid="facility-delete-confirm"
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                disabled={pending}
+                onClick={(e) => {
+                  e.preventDefault();
+                  void confirm();
+                }}
+              >
+                {pending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+                    Deleting…
+                  </>
+                ) : error ? (
+                  "Try again"
+                ) : (
+                  "Delete"
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </>
+        )}
       </AlertDialogContent>
     </AlertDialog>
   );
