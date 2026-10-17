@@ -85,6 +85,7 @@ import {
 } from "@/lib/facilitiesList";
 import { useBulkImportFileInput } from "@/hooks/useBulkImportFileInput";
 import { useIsMobile } from "@/hooks/useMobile";
+import { FacilityDeleteDialog } from "@/components/facilities/FacilityDeleteDialog";
 
 type FacilitiesViewMode = "table" | "card" | "map";
 type SortKey = "code" | "name" | "facilityType" | "parentFacilityName" | "state" | "isActive";
@@ -234,14 +235,6 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
       await refetch();
     },
     onError: (e) => toast.error(`Failed to update facility: ${e.message}`),
-  });
-  const deleteMutation = trpc.sites.bulkDelete.useMutation({
-    onSuccess: async ({ deleted }) => {
-      if (deleted === 0) toast.error("Facility not deleted. It may still have assets or child facilities.");
-      else toast.success(deleted === 1 ? "Facility deleted" : `Deleted ${deleted} facilities`);
-      await refetch();
-    },
-    onError: (e) => toast.error(`Could not delete the facility: ${e.message}`),
   });
   const importMutation = trpc.bulkOperations.importSites.useMutation({
     onSuccess: async (result) => {
@@ -442,7 +435,8 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
       for (const part of chunk(selectedOnPage, 500)) deleted += (await bulkDeleteMutation.mutateAsync({ ids: part })).deleted;
       await onBulkDeleteDone({ deleted, total: selectedOnPage.length });
     } catch (e) {
-      toast.error(`Could not delete the selected facilities: ${e instanceof Error ? e.message : "error"}`);
+      console.error("Bulk facility delete failed:", e);
+      toast.error("Couldn't delete the selected facilities. Please try again.");
     } finally {
       setBulkRunning(false);
     }
@@ -645,29 +639,14 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
         </Dialog>
       )}
 
-      <AlertDialog open={pendingDelete !== null} onOpenChange={(open) => (open ? null : setPendingDelete(null))}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete facility</AlertDialogTitle>
-            <AlertDialogDescription>
-              Delete {pendingDelete?.name}? This cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              data-testid="facility-delete-confirm"
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => {
-                if (pendingDelete) deleteMutation.mutate({ ids: [pendingDelete.id] });
-                setPendingDelete(null);
-              }}
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <FacilityDeleteDialog
+        facility={pendingDelete}
+        onClose={() => setPendingDelete(null)}
+        onDeleted={async () => {
+          setPendingDelete(null);
+          await refetch();
+        }}
+      />
 
       {canEditFacilities && viewMode !== "map" && !isLoading ? (
         <SelectAllMatchingStrip
@@ -815,7 +794,6 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
                           name={f.name}
                           onEdit={() => openEdit(f)}
                           onDelete={() => setPendingDelete({ id: f.id, name: f.name })}
-                          busy={deleteMutation.isPending}
                         />
                       )}
                     </TableCell>

@@ -2,7 +2,7 @@
  * Asset Map SQL against the test database (CI Postgres), plus the role rule end to end.
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, or } from "drizzle-orm";
 import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
 import { getDb } from "./db";
@@ -97,9 +97,16 @@ beforeAll(async () => {
 afterAll(async () => {
   const db = await getDb();
   if (!db) return;
-  await db.delete(assets).where(eq(assets.siteId, childId));
-  await db.delete(inventoryItems).where(eq(inventoryItems.siteId, childId));
-  await db.delete(sites).where(inArray(sites.id, [childId, parentId]));
+  // IVA-171: assets point at a facility by siteId and by branch_code (FK to sites.code); clear both or the
+  // site delete trips the asset_code immutability trigger (IVA-181).
+  await db
+    .delete(assets)
+    .where(or(inArray(assets.siteId, [childId, parentId]), inArray(assets.branchCode, [`MC${stamp}`, `MP${stamp}`])));
+  await db.delete(inventoryItems).where(inArray(inventoryItems.siteId, [childId, parentId]));
+  // Child first: deleting both in one statement can null the child's parent (FK SET NULL), which the facility
+  // hierarchy trigger refuses ("branch requires a parent facility").
+  await db.delete(sites).where(eq(sites.id, childId));
+  await db.delete(sites).where(eq(sites.id, parentId));
   if (createdCategory) await db.delete(assetCategories).where(eq(assetCategories.id, categoryId));
   await cacheDel("sites:mapNetworkData:v2");
 });
