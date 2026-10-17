@@ -16,6 +16,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { PHOTO_UPLOAD_ERROR, PhotoUploadError, PhotosLoadError } from "@/components/workOrders/PhotoErrors";
 import { compressImageForUpload } from "@/lib/compressImage";
 import { useConnectivity } from "@/hooks/useConnectivity";
 import { usePermissions } from "@/_core/hooks/usePermissions";
@@ -30,6 +31,8 @@ export default function MobileWorkOrderDetail() {
   const { user } = useAuth();
   const [notes, setNotes] = useState("");
   const [uploading, setUploading] = useState(false);
+  // IVA-176: the last file that failed to upload, so Retry can resend it.
+  const [failedFile, setFailedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
@@ -43,6 +46,7 @@ export default function MobileWorkOrderDetail() {
     data: photos = [],
     refetch: refetchPhotos,
     isLoading: photosLoading,
+    isError: photosError,
   } = trpc.workOrders.photos.list.useQuery(
     { workOrderId },
     { enabled: workOrderId > 0 },
@@ -74,6 +78,7 @@ export default function MobileWorkOrderDetail() {
     }
 
     setUploading(true);
+    setFailedFile(null);
     try {
       const compressed = await compressImageForUpload(file);
       await uploadMutation.mutateAsync({
@@ -84,8 +89,10 @@ export default function MobileWorkOrderDetail() {
       toast.success("Photo uploaded");
       await refetchPhotos();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to upload photo";
-      toast.error(message);
+      // Keep the technical detail in the console only; users get the friendly copy and a Retry.
+      console.error("[photos] upload failed", err);
+      setFailedFile(file);
+      toast.error(PHOTO_UPLOAD_ERROR, { action: { label: "Retry", onClick: () => void uploadPhoto(file) } });
     } finally {
       setUploading(false);
     }
@@ -276,6 +283,9 @@ export default function MobileWorkOrderDetail() {
                     Photos need a connection
                   </p>
                 )}
+                {failedFile && !uploading ? (
+                  <PhotoUploadError onRetry={() => void uploadPhoto(failedFile)} disabled={!isOnline} />
+                ) : null}
                 <Button
                   className="w-full"
                   variant="ghost"
@@ -322,6 +332,8 @@ export default function MobileWorkOrderDetail() {
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Loading photos…
               </div>
+            ) : photosError ? (
+              <PhotosLoadError onRetry={() => void refetchPhotos()} />
             ) : photos.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-4">
                 No photos attached yet.
@@ -375,6 +387,9 @@ export default function MobileWorkOrderDetail() {
                     Photos need a connection
                   </p>
                 )}
+                {failedFile && !uploading ? (
+                  <PhotoUploadError onRetry={() => void uploadPhoto(failedFile)} disabled={!isOnline} />
+                ) : null}
               </div>
             )}
           </CardContent>
