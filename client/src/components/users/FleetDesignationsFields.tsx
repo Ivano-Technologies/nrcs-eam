@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -10,21 +11,35 @@ import {
 } from "@shared/fleetPositions";
 
 export type FleetDesignationsValue = { isDriver: boolean; positions: PositionDesignation[] };
+/** Someone else holds a position this user is being given (one holder per position). */
+export type PositionHolderConflict = { position: PositionDesignation; holderName: string };
 
 /**
  * IVA-168: driver flag and position designations in the admin Edit user dialog. Positions are job titles,
  * separate from the app role. Branch Secretary applies to the user's assigned facility.
+ * One holder per position: a clash shows inline with the current holder and a Reassign option.
+ * Only active staff users can be drivers.
  */
 export function FleetDesignationsFields({
   available,
   value,
   facilityName,
   onChange,
+  userName = "this user",
+  driverEligible = true,
+  conflicts = [],
+  reassign = [],
+  onReassignChange,
 }: {
   available: boolean;
   value: FleetDesignationsValue;
   facilityName: string | null;
   onChange: (next: FleetDesignationsValue) => void;
+  userName?: string;
+  driverEligible?: boolean;
+  conflicts?: PositionHolderConflict[];
+  reassign?: PositionDesignation[];
+  onReassignChange?: (next: PositionDesignation[]) => void;
 }) {
   if (!available) {
     return (
@@ -44,11 +59,16 @@ export function FleetDesignationsFields({
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1">
           <Label htmlFor="edit-user-driver">Driver</Label>
-          <p className="text-xs text-muted-foreground">Only flagged drivers can be put on a booking or trip.</p>
+          <p className="text-xs text-muted-foreground">
+            {driverEligible
+              ? "Only flagged drivers can be put on a booking or trip."
+              : "Only active staff users can be drivers."}
+          </p>
         </div>
         <Switch
           id="edit-user-driver"
-          checked={value.isDriver}
+          checked={driverEligible && value.isDriver}
+          disabled={!driverEligible}
           onCheckedChange={(c) => onChange({ ...value, isDriver: c })}
         />
       </div>
@@ -72,6 +92,42 @@ export function FleetDesignationsFields({
                   {perBranch && facilityName ? ` · ${facilityName}` : ""}
                 </Label>
                 {blocked ? <p className="text-xs text-muted-foreground">Set a facility first.</p> : null}
+                {checked
+                  ? (() => {
+                      const clash = conflicts.find((c) => c.position === p);
+                      if (!clash) return null;
+                      const moving = reassign.includes(p);
+                      return moving ? (
+                        <p className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground" data-testid={`position-reassign-${p}`}>
+                          Moves from {clash.holderName} to {userName} when you save.
+                          <Button
+                            type="button"
+                            variant="link"
+                            size="sm"
+                            className="h-auto p-0 text-xs"
+                            onClick={() => onReassignChange?.(reassign.filter((x) => x !== p))}
+                          >
+                            Undo
+                          </Button>
+                        </p>
+                      ) : (
+                        <div role="alert" className="space-y-1" data-testid={`position-conflict-${p}`}>
+                          <p className="text-xs font-medium text-danger dark:text-primary-on-dark">
+                            {clash.holderName} already holds this position. Each position has one holder.
+                          </p>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-xs"
+                            onClick={() => onReassignChange?.([...reassign, p])}
+                          >
+                            Reassign to {userName}
+                          </Button>
+                        </div>
+                      );
+                    })()
+                  : null}
               </div>
             </div>
           );

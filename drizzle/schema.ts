@@ -258,7 +258,14 @@ export const userPositions = pgTable(
     assignedByUserId: integer("assigned_by_user_id").references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
   },
-  (t) => [index("idx_user_positions_position_site").on(t.position, t.siteId)]
+  (t) => [
+    index("idx_user_positions_position_site").on(t.position, t.siteId),
+    // One holder per position: org-wide positions once, Branch Secretary once per facility.
+    uniqueIndex("user_positions_org_position_uq").on(t.position).where(sql`${t.siteId} IS NULL`),
+    uniqueIndex("user_positions_branch_secretary_site_uq")
+      .on(t.siteId)
+      .where(sql`${t.position} = 'branch_secretary'`),
+  ]
 );
 
 export type UserPosition = typeof userPositions.$inferSelect;

@@ -9,6 +9,8 @@ vi.mock("./fleetDesignationsDb", async (orig) => {
     getUserDesignations: vi.fn(async () => ({ isDriver: false, positions: [] })),
     setDriverFlag: vi.fn(async () => {}),
     replaceUserPositions: vi.fn(async () => {}),
+    findPositionConflicts: vi.fn(async () => []),
+    clearDriverFlag: vi.fn(async () => true),
   };
 });
 vi.mock("./_core/auditHelper", async (orig) => {
@@ -17,24 +19,35 @@ vi.mock("./_core/auditHelper", async (orig) => {
 });
 vi.mock("./db", async (orig) => {
   const actual = await orig<typeof import("./db")>();
-  return { ...actual, getUserById: vi.fn(async (id: number) => ({ id, siteId: id === 7 ? 3 : null, name: "U" })) };
+  // 7: active staff at site 3; 8: active staff, no facility; 9: inactive staff; 10: manager.
+  const users: Record<number, { role: string; status: string; siteId: number | null }> = {
+    7: { role: "staff", status: "active", siteId: 3 },
+    8: { role: "staff", status: "active", siteId: null },
+    9: { role: "staff", status: "inactive", siteId: 3 },
+    10: { role: "manager", status: "active", siteId: 3 },
+  };
+  return {
+    ...actual,
+    getUserById: vi.fn(async (id: number) => ({ id, name: "U", email: "u@nrcs.org", ...users[id] })),
+    updateUser: vi.fn(async () => {}),
+  };
 });
 
 import * as audit from "./_core/auditHelper";
 import * as fleetDb from "./fleetDesignationsDb";
-import { isMissingTableError, normalisePositions } from "./fleetDesignationsDb";
+import { isDriverEligible, isMissingTableError, normalisePositions } from "./fleetDesignationsDb";
 import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
 
 type User = NonNullable<TrpcContext["user"]>;
-function caller(role: User["role"]) {
+function rootCaller(role: User["role"]) {
   const user = {
     id: 1, openId: "t", authUserId: null, email: "a@nrcs.org", name: "A", loginMethod: "supabase",
     role, siteId: 3, hasCompletedOnboarding: true, createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date(),
   } as User;
-  return appRouter.createCaller({ user, req: { protocol: "https", headers: {} } as TrpcContext["req"], res: {} as TrpcContext["res"] })
-    .fleetDesignations;
+  return appRouter.createCaller({ user, req: { protocol: "https", headers: {} } as TrpcContext["req"], res: {} as TrpcContext["res"] });
 }
+const caller = (role: User["role"]) => rootCaller(role).fleetDesignations;
 
 beforeEach(() => vi.clearAllMocks());
 
@@ -90,7 +103,7 @@ describe("fleetDesignations router (IVA-168)", () => {
       { position: "branch_secretary", siteId: 3 },
       { position: "head_of_fleet", siteId: null },
     ];
-    expect(fleetDb.replaceUserPositions).toHaveBeenCalledWith(7, next, 1);
+    expect(fleetDb.replaceUserPositions).toHaveBeenCalledWith(7, next, 1, []);
     expect(audit.logAuditEvent).toHaveBeenCalledWith(
       expect.objectContaining({ action: "user.positions_update", changes: { before: { positions: [] }, after: { positions: next } } })
     );
@@ -112,5 +125,73 @@ describe("fleetDesignations router (IVA-168)", () => {
   it("explains a missing migration instead of a server error", async () => {
     vi.mocked(fleetDb.getUserDesignations).mockRejectedValueOnce(Object.assign(new Error("relation does not exist"), { code: "42P01" }));
     await expect(caller("admin").setDriver({ userId: 7, isDriver: true })).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
+  });
+
+  it("refuses a second holder and names the current one", async () => {
+    vi.mocked(fleetDb.findPositionConflicts).mockResolvedValueOnce([
+      { position: "head_of_fleet", siteId: null, holderUserId: 12, holderName: "Aisha Bello" },
+    ]);
+    await expect(caller("admin").setPositions({ userId: 7, positions: [{ position: "head_of_fleet" }] })).rejects.toMatchObject({
+      code: "CONFLICT",
+      message: "Head of Fleet is already held by Aisha Bello.",
+    });
+    expect(fleetDb.replaceUserPositions).not.toHaveBeenCalled();
+    expect(audit.logAuditEvent).not.toHaveBeenCalled();
+  });
+
+  it("reassigns from the current holder and audits both users", async () => {
+    const clash = { position: "branch_secretary" as const, siteId: 3, holderUserId: 12, holderName: "Aisha Bello" };
+    vi.mocked(fleetDb.findPositionConflicts).mockResolvedValueOnce([clash]);
+    vi.mocked(fleetDb.getUserDesignations).mockImplementation(async (id: number) =>
+      id === 12
+        ? { isDriver: false, positions: [{ position: "branch_secretary", siteId: 3 }, { position: "sg", siteId: null }] }
+        : { isDriver: false, positions: [] }
+    );
+    await caller("admin").setPositions({ userId: 7, positions: [{ position: "branch_secretary" }], reassign: true });
+    expect(fleetDb.replaceUserPositions).toHaveBeenCalledWith(7, [{ position: "branch_secretary", siteId: 3 }], 1, [clash]);
+    const calls = vi.mocked(audit.logAuditEvent).mock.calls.map((c) => c[0]);
+    expect(calls).toHaveLength(2);
+    expect(calls[0]).toMatchObject({
+      entityId: 12,
+      changes: {
+        before: { positions: [{ position: "branch_secretary", siteId: 3 }, { position: "sg", siteId: null }] },
+        after: { positions: [{ position: "sg", siteId: null }] },
+        reassignedToUserId: 7,
+      },
+    });
+    expect(calls[1]).toMatchObject({
+      entityId: 7,
+      changes: { after: { positions: [{ position: "branch_secretary", siteId: 3 }] }, reassignedFrom: [{ position: "branch_secretary", siteId: 3, userId: 12 }] },
+    });
+    vi.mocked(fleetDb.getUserDesignations).mockImplementation(async () => ({ isDriver: false, positions: [] }));
+  });
+
+  it("turns a unique-index race into a clear conflict", async () => {
+    vi.mocked(fleetDb.replaceUserPositions).mockRejectedValueOnce(Object.assign(new Error("dup"), { code: "23505" }));
+    await expect(caller("admin").setPositions({ userId: 7, positions: [{ position: "sg" }] })).rejects.toMatchObject({ code: "CONFLICT" });
+  });
+
+  it("only flags active staff users as drivers", async () => {
+    expect(isDriverEligible({ role: "staff", status: "active" })).toBe(true);
+    expect(isDriverEligible({ role: "staff", status: "inactive" })).toBe(false);
+    expect(isDriverEligible({ role: "manager", status: "active" })).toBe(false);
+    for (const userId of [9, 10]) {
+      await expect(caller("admin").setDriver({ userId, isDriver: true })).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+        message: "Only active staff users can be drivers.",
+      });
+    }
+    expect(fleetDb.setDriverFlag).not.toHaveBeenCalled();
+    // Unflagging is always allowed.
+    vi.mocked(fleetDb.getUserDesignations).mockResolvedValueOnce({ isDriver: true, positions: [] });
+    await expect(caller("admin").setDriver({ userId: 9, isDriver: false })).resolves.toMatchObject({ changed: true });
+  });
+
+  it("drops the driver flag when a user is deactivated, with an audit entry", async () => {
+    await rootCaller("admin").users.deactivate({ id: 7 });
+    expect(fleetDb.clearDriverFlag).toHaveBeenCalledWith(7);
+    expect(audit.logAuditEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ action: "user.driver_flag", entityId: 7, changes: expect.objectContaining({ after: { isDriver: false } }) })
+    );
   });
 });

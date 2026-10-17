@@ -3,8 +3,9 @@
 -- target alerts, booking approval and the monthly report.
 --   head_of_fleet, gm_assets_admin, sg: organisation-wide, so site_id is NULL.
 --   branch_secretary: one branch, so site_id is required.
--- The driver flag lives in its own table (one row per flagged user) rather than a users column, so the
--- core users queries (sign-in, auth.me) don't depend on this migration having been applied.
+-- The driver flag is for active staff users only (checked in tRPC). It lives in its own table (one row
+-- per flagged user) rather than a users column, so the core users queries (sign-in, auth.me) don't
+-- depend on this migration having been applied.
 -- RLS matches 0058: enabled with only the service_role_full_access policy. App access is in tRPC (admin only).
 
 CREATE TABLE IF NOT EXISTS fleet_drivers (
@@ -26,8 +27,12 @@ CREATE TABLE IF NOT EXISTS user_positions (
     CHECK ((position = 'branch_secretary') = (site_id IS NOT NULL))
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS user_positions_user_position_site_uq
-  ON user_positions (user_id, position, COALESCE(site_id, 0));
+-- One holder per position (Kezie, 17 Oct): one Head of Fleet, one GM Assets/Admin and one SG
+-- organisation-wide, and one Branch Secretary per facility.
+CREATE UNIQUE INDEX IF NOT EXISTS user_positions_org_position_uq
+  ON user_positions (position) WHERE site_id IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS user_positions_branch_secretary_site_uq
+  ON user_positions (site_id) WHERE position = 'branch_secretary';
 CREATE INDEX IF NOT EXISTS idx_user_positions_position_site
   ON user_positions (position, site_id);
 

@@ -51,6 +51,7 @@ import {
   FleetDesignationBadges,
   FleetDesignationsFields,
   type FleetDesignationsValue,
+  type PositionHolderConflict,
 } from "@/components/users/FleetDesignationsFields";
 import type { PositionDesignation } from "@shared/fleetPositions";
 
@@ -140,6 +141,7 @@ export default function Users() {
     positions: (designations?.positions ?? []).filter((p) => p.userId === userId).map((p) => p.position),
   });
   const [editFleet, setEditFleet] = useState<FleetDesignationsValue>({ isDriver: false, positions: [] });
+  const [editReassign, setEditReassign] = useState<PositionDesignation[]>([]);
   const [saving, setSaving] = useState(false);
 
   const deactivateMutation = trpc.users.deactivate.useMutation({
@@ -201,8 +203,26 @@ export default function Users() {
   } | null>(null);
 
   const [editRowFacilityAtOpen, setEditRowFacilityAtOpen] = useState<number | null>(null);
+  // Drivers must be active staff (Kezie, 17 Oct); follows the role and status chosen in the dialog.
+  const editDriverEligible = editRow != null && editRow.role === "staff" && editRow.status === "active";
+  // One holder per position: org-wide positions once, Branch Secretary once per facility.
+  const editConflicts: PositionHolderConflict[] = useMemo(() => {
+    if (!editRow || !designations?.available) return [];
+    return editFleet.positions.flatMap((position) => {
+      const holder = designations.positions.find(
+        (p) =>
+          p.userId !== editRow.id &&
+          p.position === position &&
+          (position === "branch_secretary" ? p.siteId === editRow.facilityId : p.siteId == null)
+      );
+      if (!holder) return [];
+      return [{ position, holderName: holder.userName ?? "Another user" }];
+    });
+  }, [editRow, editFleet.positions, designations]);
+  const unresolvedConflicts = editConflicts.filter((c) => !editReassign.includes(c.position));
+
   const saveEdit = async () => {
-    if (!editRow || saving) return;
+    if (!editRow || saving || unresolvedConflicts.length) return;
     setSaving(true);
     try {
       await updateMutation.mutateAsync({
@@ -214,8 +234,10 @@ export default function Users() {
       });
       if (designations?.available) {
         const before = designationsFor(editRow.id);
-        if (before.isDriver !== editFleet.isDriver) {
-          await setDriverMutation.mutateAsync({ userId: editRow.id, isDriver: editFleet.isDriver });
+        const nextDriver = editDriverEligible && editFleet.isDriver;
+        // The server drops the flag itself when a user stops being active staff.
+        if (before.isDriver !== nextDriver && (nextDriver || editDriverEligible)) {
+          await setDriverMutation.mutateAsync({ userId: editRow.id, isDriver: nextDriver });
         }
         // Branch Secretary is for the user's facility, so it drops when the facility is cleared.
         const nextPositions =
@@ -225,6 +247,7 @@ export default function Users() {
           await setPositionsMutation.mutateAsync({
             userId: editRow.id,
             positions: nextPositions.map((position) => ({ position, siteId: editRow.facilityId })),
+            reassign: editConflicts.some((c) => editReassign.includes(c.position)),
           });
         }
       }
@@ -406,6 +429,7 @@ export default function Users() {
                           });
                           setEditRowFacilityAtOpen(u.siteId ?? null);
                           setEditFleet(designationsFor(u.id));
+                          setEditReassign([]);
                           setEditOpen(true);
                         }}
                       >
@@ -644,6 +668,11 @@ export default function Users() {
                     available={designations.available}
                     value={editFleet}
                     facilityName={activeSites.find((x) => x.id === editRow.facilityId)?.name ?? null}
+                    userName={editRow.name.trim() || "this user"}
+                    driverEligible={editDriverEligible}
+                    conflicts={editConflicts}
+                    reassign={editReassign}
+                    onReassignChange={setEditReassign}
                     onChange={(next) =>
                       setEditFleet(
                         editRow.facilityId == null
@@ -659,7 +688,7 @@ export default function Users() {
                   Cancel
                 </Button>
                 <Button
-                  disabled={saving || !editRow.name.trim()}
+                  disabled={saving || !editRow.name.trim() || unresolvedConflicts.length > 0}
                   onClick={() => void saveEdit()}
                 >
                   {saving ? (
