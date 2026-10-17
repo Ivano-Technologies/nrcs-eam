@@ -153,7 +153,7 @@ export default function ComplianceRegister() {
       void utils.complianceTracking.vehicles.list.invalidate();
       void utils.complianceTracking.summary.invalidate();
     },
-    onError: (e) => toast.error(e.message),
+    // Errors show inside the confirm dialog (IVA-173); no toast while it is open.
   });
 
   const [genOpen, setGenOpen] = useState(false);
@@ -184,7 +184,7 @@ export default function ComplianceRegister() {
       void utils.complianceTracking.generators.list.invalidate();
       void utils.complianceTracking.summary.invalidate();
     },
-    onError: (e) => toast.error(e.message),
+    // Errors show inside the confirm dialog (IVA-173); no toast while it is open.
   });
 
   const [buildingOpen, setBuildingOpen] = useState(false);
@@ -214,7 +214,7 @@ export default function ComplianceRegister() {
       void utils.complianceTracking.buildings.list.invalidate();
       void utils.complianceTracking.summary.invalidate();
     },
-    onError: (e) => toast.error(e.message),
+    // Errors show inside the confirm dialog (IVA-173); no toast while it is open.
   });
 
   const [donorOpen, setDonorOpen] = useState(false);
@@ -243,7 +243,7 @@ export default function ComplianceRegister() {
       void utils.complianceTracking.donor.list.invalidate();
       void utils.complianceTracking.summary.invalidate();
     },
-    onError: (e) => toast.error(e.message),
+    // Errors show inside the confirm dialog (IVA-173); no toast while it is open.
   });
 
   async function resolveAssetCode(code: string): Promise<number | null> {
@@ -896,12 +896,12 @@ export default function ComplianceRegister() {
         pending={vehicleDelete.isPending || genDelete.isPending || buildingDelete.isPending || donorDelete.isPending}
         onCancel={() => setPendingDelete(null)}
         onConfirm={() => {
-          if (!pendingDelete) return;
+          if (!pendingDelete) return Promise.resolve();
           const { kind, id } = pendingDelete;
-          if (kind === "vehicle") vehicleDelete.mutate({ id });
-          else if (kind === "generator") genDelete.mutate({ id });
-          else if (kind === "building") buildingDelete.mutate({ id });
-          else donorDelete.mutate({ id });
+          if (kind === "vehicle") return vehicleDelete.mutateAsync({ id });
+          if (kind === "generator") return genDelete.mutateAsync({ id });
+          if (kind === "building") return buildingDelete.mutateAsync({ id });
+          return donorDelete.mutateAsync({ id });
         }}
       />
     </div>
