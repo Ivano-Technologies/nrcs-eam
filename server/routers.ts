@@ -30,6 +30,7 @@ import { scheduledReportsRouter } from "./routers/scheduledReportsRouter";
 import { reportsRouter } from "./routers/reportsRouter";
 import { notificationsRouter } from "./routers/notificationsRouter";
 import { usersRouter } from "./routers/usersRouter";
+import { fleetDesignationsRouter } from "./routers/fleetDesignationsRouter";
 import { workOrdersRouter } from "./routers/workOrdersRouter";
 import { maintenanceRouter } from "./routers/maintenanceRouter";
 import { inventoryRouter } from "./routers/inventoryRouter";
@@ -73,6 +74,7 @@ export const appRouter = router({
   search: searchRouter,
 
   users: usersRouter,
+  fleetDesignations: fleetDesignationsRouter,
 
   notifications: notificationsRouter,
 

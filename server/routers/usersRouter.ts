@@ -13,6 +13,30 @@ import * as notificationHelper from "../notificationHelper";
 import { generatePDFReport, generateExcelReport } from "../reportGenerator";
 import { generateEmailTemplate, sendBulkEmails, sendEmail } from "../emailService";
 import { AUDIT_ACTIONS, logAuditEvent } from "../_core/auditHelper";
+import { clearDriverFlag, isDriverEligible, isMissingTableError } from "../fleetDesignationsDb";
+
+/** IVA-168: drivers must be active users, so drop the flag when a user is no longer active (audited). */
+async function dropDriverFlagIfIneligible(
+  user: { id: number; role: string; status: string | null },
+  actorUserId: number,
+  req: Parameters<typeof logAuditEvent>[0]["req"]
+): Promise<void> {
+  if (isDriverEligible(user)) return;
+  try {
+    if (await clearDriverFlag(user.id)) {
+      await logAuditEvent({
+        userId: actorUserId,
+        action: AUDIT_ACTIONS.USER_DRIVER_FLAG,
+        entityType: "user",
+        entityId: user.id,
+        changes: { before: { isDriver: true }, after: { isDriver: false }, reason: "user is no longer active" },
+        req,
+      });
+    }
+  } catch (err) {
+    if (!isMissingTableError(err)) console.error("[users] failed to clear driver flag", err);
+  }
+}
 import {
   adminProcedure,
   managerOrAdminProcedure,
@@ -297,6 +321,11 @@ export const usersRouter = router({
           },
           req: ctx.req,
         });
+        await dropDriverFlagIfIneligible(
+          { id, role: patch.role ?? target.role, status: patch.status ?? target.status },
+          ctx.user.id,
+          ctx.req
+        );
 
         return { success: true as const };
       }),
@@ -323,6 +352,7 @@ export const usersRouter = router({
           changes: { email: target.email, name: target.name },
           req: ctx.req,
         });
+        await dropDriverFlagIfIneligible({ id: input.id, role: target.role, status: "inactive" }, ctx.user.id, ctx.req);
         return { success: true as const };
       }),
 

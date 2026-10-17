@@ -65,7 +65,7 @@ describe("getComplianceSummary with no facility", () => {
   it("returns zeros without querying", async () => {
     const actual = await vi.importActual<typeof import("./complianceTrackingDb")>("./complianceTrackingDb");
     await expect(actual.getComplianceSummary({ siteId: null })).resolves.toEqual({
-      totalRecords: 0, compliantCount: 0, compliantPct: 0, expiringSoonCount: 0, nonCompliantCount: 0,
+      totalRecords: 0, compliantCount: 0, compliantPct: 0, expiringSoonCount: 0, nonCompliantCount: 0, noDateCount: 0,
     });
   });
 });

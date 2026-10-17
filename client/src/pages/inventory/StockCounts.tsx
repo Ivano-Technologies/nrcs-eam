@@ -12,11 +12,11 @@ import { ClipboardCheck as ClipboardCheckIcon } from "lucide-react";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
-import { useLocation } from "wouter";
+import { useSearch } from "wouter";
 import { Loader2 } from "lucide-react";
 
 export default function StockCounts({ embedInShell = false }: { embedInShell?: boolean } = {}) {
-  const [location] = useLocation();
+  const urlSearch = useSearch();
   const { isManagerOrAdmin, isStaffOrAbove } = usePermissions();
   const [status, setStatus] = useState("all");
   const [warehouseId, setWarehouseId] = useState("all");
@@ -26,12 +26,11 @@ export default function StockCounts({ embedInShell = false }: { embedInShell?: b
   const [countId, setCountId] = useState<number | null>(null);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const st = new URLSearchParams(window.location.search).get("status");
+    const st = new URLSearchParams(urlSearch).get("status");
     if (st === "all" || st === "draft" || st === "in_progress" || st === "pending_review" || st === "approved") {
       setStatus(st);
     }
-  }, [location]);
+  }, [urlSearch]);
 
   const { data: sites } = trpc.sites.list.useQuery();
   const warehouses = useMemo(() => (sites ?? []).filter((x) => x.facilityType === "warehouse"), [sites]);

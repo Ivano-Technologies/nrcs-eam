@@ -47,6 +47,13 @@ import { cn } from "@/lib/utils";
 import { Ghost, Loader2, Trash2, UserPlus, Users as UsersIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import {
+  FleetDesignationBadges,
+  FleetDesignationsFields,
+  type FleetDesignationsValue,
+  type PositionHolderConflict,
+} from "@/components/users/FleetDesignationsFields";
+import type { PositionDesignation } from "@shared/fleetPositions";
 
 type AppRole = "admin" | "manager" | "staff" | "field" | "user";
 type UserStatus = "active" | "inactive" | "pending";
@@ -122,14 +129,20 @@ export default function Users() {
     onError: (e) => toast.error(e.message || "Create failed"),
   });
 
-  const updateMutation = trpc.users.update.useMutation({
-    onSuccess: () => {
-      toast.success("User updated");
-      void utils.users.list.invalidate();
-      setEditOpen(false);
-    },
-    onError: (e) => toast.error(e.message || "Update failed"),
+  const updateMutation = trpc.users.update.useMutation();
+  // IVA-168: driver flag and position designations (admin only, audited on the server).
+  const { data: designations } = trpc.fleetDesignations.list.useQuery(undefined, {
+    enabled: user?.role === "admin",
   });
+  const setDriverMutation = trpc.fleetDesignations.setDriver.useMutation();
+  const setPositionsMutation = trpc.fleetDesignations.setPositions.useMutation();
+  const designationsFor = (userId: number): FleetDesignationsValue => ({
+    isDriver: designations?.driverUserIds.includes(userId) ?? false,
+    positions: (designations?.positions ?? []).filter((p) => p.userId === userId).map((p) => p.position),
+  });
+  const [editFleet, setEditFleet] = useState<FleetDesignationsValue>({ isDriver: false, positions: [] });
+  const [editReassign, setEditReassign] = useState<PositionDesignation[]>([]);
+  const [saving, setSaving] = useState(false);
 
   const deactivateMutation = trpc.users.deactivate.useMutation({
     onSuccess: () => {
@@ -189,6 +202,66 @@ export default function Users() {
     status: UserStatus;
   } | null>(null);
 
+  const [editRowFacilityAtOpen, setEditRowFacilityAtOpen] = useState<number | null>(null);
+  // Any active user can be a driver, whatever their role (Kezie, 17 Oct); follows the status chosen here.
+  const editDriverEligible = editRow != null && editRow.status === "active";
+  // One holder per position: org-wide positions once, Branch Secretary once per facility.
+  const editConflicts: PositionHolderConflict[] = useMemo(() => {
+    if (!editRow || !designations?.available) return [];
+    return editFleet.positions.flatMap((position) => {
+      const holder = designations.positions.find(
+        (p) =>
+          p.userId !== editRow.id &&
+          p.position === position &&
+          (position === "branch_secretary" ? p.siteId === editRow.facilityId : p.siteId == null)
+      );
+      if (!holder) return [];
+      return [{ position, holderName: holder.userName ?? "Another user" }];
+    });
+  }, [editRow, editFleet.positions, designations]);
+  const unresolvedConflicts = editConflicts.filter((c) => !editReassign.includes(c.position));
+
+  const saveEdit = async () => {
+    if (!editRow || saving || unresolvedConflicts.length) return;
+    setSaving(true);
+    try {
+      await updateMutation.mutateAsync({
+        id: editRow.id,
+        name: editRow.name.trim(),
+        role: editRow.role,
+        facilityId: editRow.facilityId,
+        status: editRow.status,
+      });
+      if (designations?.available) {
+        const before = designationsFor(editRow.id);
+        const nextDriver = editDriverEligible && editFleet.isDriver;
+        // The server drops the flag itself when a user stops being active.
+        if (before.isDriver !== nextDriver && (nextDriver || editDriverEligible)) {
+          await setDriverMutation.mutateAsync({ userId: editRow.id, isDriver: nextDriver });
+        }
+        // Branch Secretary is for the user's facility, so it drops when the facility is cleared.
+        const nextPositions =
+          editRow.facilityId == null ? editFleet.positions.filter((p) => p !== "branch_secretary") : editFleet.positions;
+        const key = (ps: PositionDesignation[]) => [...ps].sort().join(",");
+        if (key(before.positions) !== key(nextPositions) || editRow.facilityId !== editRowFacilityAtOpen) {
+          await setPositionsMutation.mutateAsync({
+            userId: editRow.id,
+            positions: nextPositions.map((position) => ({ position, siteId: editRow.facilityId })),
+            reassign: editConflicts.some((c) => editReassign.includes(c.position)),
+          });
+        }
+      }
+      toast.success("User updated");
+      setEditOpen(false);
+      setEditRow(null);
+    } catch (e) {
+      toast.error((e as Error).message || "Update failed");
+    } finally {
+      setSaving(false);
+      void utils.users.list.invalidate();
+      void utils.fleetDesignations.list.invalidate();
+    }
+  };
   const [deactivateId, setDeactivateId] = useState<number | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
@@ -322,7 +395,13 @@ export default function Users() {
               const facilityName = (u as { facilityName?: string | null }).facilityName ?? null;
               return (
                 <TableRow key={u.id} data-testid={`user-row-${u.id}`}>
-                  <TableCell className="min-w-[12rem] whitespace-normal font-medium bg-background">{formatEmpty(u.name)}</TableCell>
+                  <TableCell className="min-w-[12rem] whitespace-normal font-medium bg-background">
+                    {formatEmpty(u.name)}
+                    <FleetDesignationBadges
+                      isDriver={designations?.driverUserIds.includes(u.id) ?? false}
+                      positions={(designations?.positions ?? []).filter((p) => p.userId === u.id)}
+                    />
+                  </TableCell>
                   <TableCell className={cn("bg-background", mobileSecondaryCol(showAllColumns))}>{u.email || ""}</TableCell>
                   <TableCell className="bg-background">
                     <Badge className={roleBadgeClass(u.role)} variant="secondary">
@@ -348,6 +427,9 @@ export default function Users() {
                             facilityId: u.siteId ?? null,
                             status: (st as UserStatus) || "active",
                           });
+                          setEditRowFacilityAtOpen(u.siteId ?? null);
+                          setEditFleet(designationsFor(u.id));
+                          setEditReassign([]);
                           setEditOpen(true);
                         }}
                       >
@@ -504,7 +586,7 @@ export default function Users() {
           if (!o) setEditRow(null);
         }}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Edit user</DialogTitle>
             <DialogDescription>Email cannot be changed (Supabase). Update profile and access here.</DialogDescription>
@@ -581,24 +663,35 @@ export default function Users() {
                     </SelectContent>
                   </Select>
                 </div>
+                {user?.role === "admin" && designations ? (
+                  <FleetDesignationsFields
+                    available={designations.available}
+                    value={editFleet}
+                    facilityName={activeSites.find((x) => x.id === editRow.facilityId)?.name ?? null}
+                    userName={editRow.name.trim() || "this user"}
+                    driverEligible={editDriverEligible}
+                    conflicts={editConflicts}
+                    reassign={editReassign}
+                    onReassignChange={setEditReassign}
+                    onChange={(next) =>
+                      setEditFleet(
+                        editRow.facilityId == null
+                          ? { ...next, positions: next.positions.filter((p) => p !== "branch_secretary") }
+                          : next
+                      )
+                    }
+                  />
+                ) : null}
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setEditOpen(false)}>
                   Cancel
                 </Button>
                 <Button
-                  disabled={updateMutation.isPending || !editRow.name.trim()}
-                  onClick={() =>
-                    updateMutation.mutate({
-                      id: editRow.id,
-                      name: editRow.name.trim(),
-                      role: editRow.role,
-                      facilityId: editRow.facilityId,
-                      status: editRow.status,
-                    })
-                  }
+                  disabled={saving || !editRow.name.trim() || unresolvedConflicts.length > 0}
+                  onClick={() => void saveEdit()}
                 >
-                  {updateMutation.isPending ? (
+                  {saving ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Saving…
