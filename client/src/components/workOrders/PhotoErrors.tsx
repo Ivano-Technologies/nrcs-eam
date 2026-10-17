@@ -5,6 +5,15 @@ import { Button } from "@/components/ui/button";
 export const PHOTO_UPLOAD_ERROR = "Couldn't upload photo. Try again, or contact your admin if it keeps happening.";
 export const PHOTOS_LOAD_ERROR = "Couldn't load photos";
 
+/** True when any part of the element is inside the viewport. A missing element counts as off-screen. */
+export function isElementInViewport(el: Element | null | undefined): boolean {
+  if (!el || typeof window === "undefined") return false;
+  const r = el.getBoundingClientRect();
+  const vh = window.innerHeight || document.documentElement.clientHeight;
+  const vw = window.innerWidth || document.documentElement.clientWidth;
+  return r.bottom > 0 && r.right > 0 && r.top < vh && r.left < vw;
+}
+
 export function PhotoUploadError({ onRetry, disabled }: { onRetry: () => void; disabled?: boolean }) {
   return (
     <div role="alert" data-testid="photo-upload-error" className="flex items-start gap-2 rounded-md border border-danger/30 bg-danger-subtle p-3 text-sm text-danger-foreground">

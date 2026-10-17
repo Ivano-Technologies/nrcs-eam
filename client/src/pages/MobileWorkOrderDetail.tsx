@@ -16,7 +16,12 @@ import {
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { PHOTO_UPLOAD_ERROR, PhotoUploadError, PhotosLoadError } from "@/components/workOrders/PhotoErrors";
+import {
+  PHOTO_UPLOAD_ERROR,
+  PhotoUploadError,
+  PhotosLoadError,
+  isElementInViewport,
+} from "@/components/workOrders/PhotoErrors";
 import { compressImageForUpload } from "@/lib/compressImage";
 import { useConnectivity } from "@/hooks/useConnectivity";
 import { usePermissions } from "@/_core/hooks/usePermissions";
@@ -33,6 +38,8 @@ export default function MobileWorkOrderDetail() {
   const [uploading, setUploading] = useState(false);
   // IVA-176: the last file that failed to upload, so Retry can resend it.
   const [failedFile, setFailedFile] = useState<File | null>(null);
+  // Where the inline upload error appears; a toast is only used when this is off-screen (Coco, IVA-176).
+  const uploadErrorAnchorRef = useRef<HTMLDivElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
@@ -92,7 +99,18 @@ export default function MobileWorkOrderDetail() {
       // Keep the technical detail in the console only; users get the friendly copy and a Retry.
       console.error("[photos] upload failed", err);
       setFailedFile(file);
-      toast.error(PHOTO_UPLOAD_ERROR, { action: { label: "Retry", onClick: () => void uploadPhoto(file) } });
+      // The inline alert (with Retry) is the only retry path. If it would appear off-screen, point to it
+      // with a toast that has no upload action, so nothing can upload twice.
+      // The slot is empty (hidden) until the error renders, so measure the upload button just above it.
+      const slot = uploadErrorAnchorRef.current;
+      if (!isElementInViewport(slot?.previousElementSibling ?? slot)) {
+        toast.error(PHOTO_UPLOAD_ERROR, {
+          action: {
+            label: "Show",
+            onClick: () => uploadErrorAnchorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }),
+          },
+        });
+      }
     } finally {
       setUploading(false);
     }
@@ -283,9 +301,6 @@ export default function MobileWorkOrderDetail() {
                     Photos need a connection
                   </p>
                 )}
-                {failedFile && !uploading ? (
-                  <PhotoUploadError onRetry={() => void uploadPhoto(failedFile)} disabled={!isOnline} />
-                ) : null}
                 <Button
                   className="w-full"
                   variant="ghost"
@@ -295,6 +310,11 @@ export default function MobileWorkOrderDetail() {
                   <ImagePlus className="mr-2 h-4 w-4" />
                   Choose from gallery
                 </Button>
+                <div ref={uploadErrorAnchorRef} data-testid="photo-upload-error-slot" className="empty:hidden">
+                  {failedFile && !uploading ? (
+                    <PhotoUploadError onRetry={() => void uploadPhoto(failedFile)} disabled={!isOnline} />
+                  ) : null}
+                </div>
                 <Button
                   className="w-full"
                   onClick={() => handleStatusUpdate("completed")}
@@ -387,9 +407,11 @@ export default function MobileWorkOrderDetail() {
                     Photos need a connection
                   </p>
                 )}
-                {failedFile && !uploading ? (
-                  <PhotoUploadError onRetry={() => void uploadPhoto(failedFile)} disabled={!isOnline} />
-                ) : null}
+                <div ref={uploadErrorAnchorRef} data-testid="photo-upload-error-slot" className="empty:hidden">
+                  {failedFile && !uploading ? (
+                    <PhotoUploadError onRetry={() => void uploadPhoto(failedFile)} disabled={!isOnline} />
+                  ) : null}
+                </div>
               </div>
             )}
           </CardContent>
