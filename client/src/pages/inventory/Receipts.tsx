@@ -20,6 +20,7 @@ import { Toolbar, ToolbarMore, ToolbarSearch } from "@/components/Toolbar";
 import { useMobileTableColumns, MobileColumnsToggle, mobileSecondaryCol } from "@/hooks/useMobileTableColumns";
 import { cn } from "@/lib/utils";
 import { useLocation, useSearch } from "wouter";
+import { RECEIPT_STATUS_FILTERS, statusFilterFromSearch } from "@/lib/statusFilterParam";
 import { downloadBase64File } from "@/lib/download";
 import { appPath } from "@/lib/routes";
 import { Loader2 } from "lucide-react";
@@ -44,12 +45,12 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
     { catalogueId: "", ctnId: "", quantity: "", batchNumber: "", expiryDate: "", notes: "" },
   ]);
 
+  // ?status= drives the filter; a missing or unknown value resets it to All. Keyed on the parsed value so
+  // other query params (e.g. view) don't reset a filter the user picked.
+  const urlStatus = statusFilterFromSearch(urlSearch, RECEIPT_STATUS_FILTERS);
   useEffect(() => {
-    const st = new URLSearchParams(urlSearch).get("status");
-    if (st === "all" || st === "draft" || st === "pending_approval" || st === "finalized" || st === "claim_raised") {
-      setStatus(st);
-    }
-  }, [urlSearch]);
+    setStatus(urlStatus);
+  }, [urlStatus]);
 
   const { data: warehouses } = trpc.sites.list.useQuery();
   const wh = useMemo(() => (warehouses ?? []).filter((x) => x.facilityType === "warehouse"), [warehouses]);
