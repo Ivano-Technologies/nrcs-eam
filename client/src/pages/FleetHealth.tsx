@@ -29,6 +29,7 @@ import { trpc } from "@/lib/trpc";
 import { AlertTriangle, Banknote, FileDown, Loader2, ShieldCheck, Wrench } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { toFriendlyMessage } from "@/lib/friendlyError";
 
 export default function FleetHealth() {
   const [viewMode, setViewMode] = useViewMode("fleet_health");
@@ -45,11 +46,11 @@ export default function FleetHealth() {
       downloadBase64File(r.data, r.filename, r.mimeType);
       toast.success("Asset health report downloaded");
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toast.error(toFriendlyMessage(e)),
   });
   const autoWo = trpc.maintenance.autoCreateWorkOrders.useMutation({
     onSuccess: (r) => toast.success(`Created ${r.created} preventive work order(s)`),
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toast.error(toFriendlyMessage(e)),
   });
 
   const row = useMemo(() => {

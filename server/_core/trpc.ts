@@ -1,10 +1,13 @@
 import { UNAUTHED_ERR_MSG } from '@shared/const';
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
+import { formatTrpcErrorForClient } from "./friendlyTrpcError";
 import type { TrpcContext } from "./context";
 
 const t = initTRPC.context<TrpcContext>().create({
   transformer: superjson,
+  // IVA-189: raw server text never reaches the client. Deliberate messages are flagged userFacing.
+  errorFormatter: ({ shape, error, path }) => formatTrpcErrorForClient(shape, error, path),
 });
 
 const timingMiddleware = t.middleware(async ({ path, type, next }) => {

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+import { toFriendlyMessage } from "@/lib/friendlyError";
 import { Loader2, Upload } from "lucide-react";
 import PageHeader from "@/components/ui/PageHeader";
 import { formatEnumLabel } from "@/lib/format";
@@ -24,7 +25,7 @@ export default function ImportDraftsPage({ embedInShell = false }: { embedInShel
       void drafts.refetch();
       void selected.refetch();
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toast.error(toFriendlyMessage(e)),
   });
   const discard = trpc.inventoryV2.documents.drafts.discard.useMutation({
     onSuccess: () => {
@@ -32,7 +33,7 @@ export default function ImportDraftsPage({ embedInShell = false }: { embedInShel
       void drafts.refetch();
       setSelectedId(null);
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toast.error(toFriendlyMessage(e)),
   });
 
   return (

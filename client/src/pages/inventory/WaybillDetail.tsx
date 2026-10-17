@@ -15,6 +15,7 @@ import PageHeader from "@/components/ui/PageHeader";
 import { appPath } from "@/lib/routes";
 import { DateHint, formatDateTime, formatNaira } from "@/lib/format";
 import { toast } from "sonner";
+import { toFriendlyMessage } from "@/lib/friendlyError";
 import { Loader2, AlertTriangle } from "lucide-react";
 
 type WaybillSource = {
@@ -96,17 +97,17 @@ export default function WaybillDetail() {
   const details = trpc.inventoryV2.waybills.get.useQuery({ id: waybillId ?? 0 }, { enabled: waybillId != null });
 
   const createMutation = trpc.inventoryV2.waybills.create.useMutation({
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toast.error(toFriendlyMessage(e)),
   });
   const updateMutation = trpc.inventoryV2.waybills.update.useMutation({
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toast.error(toFriendlyMessage(e)),
   });
   const dispatchMutation = trpc.inventoryV2.waybills.dispatch.useMutation({
     onSuccess: () => {
       toast.success("Waybill dispatched.");
       void details.refetch();
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toast.error(toFriendlyMessage(e)),
   });
 
   const warehouses = useMemo(() => (sites ?? []).filter((site) => site.facilityType === "warehouse"), [sites]);
@@ -209,7 +210,7 @@ export default function WaybillDetail() {
       void refreshFefoWarnings(lineIdx, suggested.map((s) => ({ ctnId: s.ctnId, quantity: s.quantity })));
       toast.success("FEFO allocation applied.");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "FEFO suggestion failed");
+      toast.error(toFriendlyMessage(e, "We couldn't suggest CTNs for this line. Please try again."));
     }
   };
 

@@ -10,6 +10,7 @@ import { Loader2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useLocation, useRoute } from "wouter";
 import { toast } from "sonner";
+import { toFriendlyMessage } from "@/lib/friendlyError";
 
 export default function StockCardDetail() {
   const [, setLocation] = useLocation();
@@ -28,7 +29,7 @@ export default function StockCardDetail() {
       setCountedQty("");
       void card.refetch();
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toast.error(toFriendlyMessage(e)),
   });
 
   const running = useMemo(() => {

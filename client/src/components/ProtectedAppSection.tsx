@@ -1,10 +1,11 @@
 import DashboardLayout from "@/components/DashboardLayout";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import PageLoader from "@/components/ui/PageLoader";
 import { appPath } from "@/lib/routes";
 import { lazy, Suspense } from "react";
-import { Redirect, Route, Switch, useRoute, useSearch } from "wouter";
+import { Redirect, Route, Switch, useLocation, useRoute, useSearch } from "wouter";
 
 const ActivityLog = lazy(() => import("@/pages/ActivityLog"));
 const ComplianceRegister = lazy(() => import("@/pages/Administration/ComplianceRegister"));
@@ -28,7 +29,7 @@ const DevShowcaseRoute = import.meta.env.DEV
             return (
               <div className="container mx-auto space-y-2 p-6 text-destructive">
                 <h1 className="text-lg font-semibold">Showcase failed to load</h1>
-                <pre className="whitespace-pre-wrap text-sm">{String(err)}</pre>
+                <p className="text-sm">Something went wrong. Please try again.</p>
               </div>
             );
           },
@@ -174,6 +175,7 @@ function ProtectedSectionSuspenseFallback() {
  * Authenticated area: all routes live under /app/...
  */
 function ProtectedAppSectionRoutes() {
+  const [location] = useLocation();
   const [isReceiptPrintRoute] = useRoute("/app/inventory/receipts/:id/print/:copyType");
   const [isWaybillPrintRoute] = useRoute("/app/inventory/issues/:id/print/:copyType");
   const [isStockCardPrintRoute] = useRoute("/app/inventory/tracking/stock-cards/:id/print");
@@ -224,7 +226,8 @@ function ProtectedAppSectionRoutes() {
     <ProtectedRoute>
       <>
         <DashboardLayout>
-          <Switch>
+          <ErrorBoundary variant="section" resetKey={location}>
+            <Switch>
             {import.meta.env.DEV && DevShowcaseRoute ? (
               <Route path="/app/showcase">
                 <Suspense fallback={<PageLoader className="p-4 sm:p-6" />}>
@@ -370,7 +373,8 @@ function ProtectedAppSectionRoutes() {
             <Route path="/app/settings" component={DashboardSettings} />
             <Route path="/app/dashboard-settings" component={LegacySettingsRedirect} />
             <Route component={NotFound} />
-          </Switch>
+            </Switch>
+          </ErrorBoundary>
         </DashboardLayout>
         <PWAInstallPrompt />
       </>

@@ -20,7 +20,8 @@ async function fetchDocumentExport(documentType: ExportDocumentType, id: number,
   const url = base ? `${base}${path}` : path;
   const response = await fetch(url, { credentials: "include" });
   if (!response.ok) {
-    throw new Error(`Export failed (${response.status})`);
+    // Keep the status for toFriendlyMessage (401, 403, 404 map to plain English); no raw text.
+    throw Object.assign(new Error("Document export failed"), { status: response.status });
   }
   const blob = await response.blob();
   const fileBase = `${documentType}-${id}${copyType ? `-${copyType}` : ""}`;

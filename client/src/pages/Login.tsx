@@ -17,6 +17,7 @@ import { Loader2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { appPath } from "@/lib/routes";
 import { TRPCClientError } from "@trpc/client";
+import { toFriendlyMessage } from "@/lib/friendlyError";
 
 function isRetryableLoginError(error: unknown): boolean {
   if (!(error instanceof TRPCClientError)) return false;
@@ -66,9 +67,9 @@ export default function Login() {
       setResetMessage(data.message);
       setErrorMessage(null);
     },
-    onError: (error: { message?: string }) => {
+    onError: (error) => {
       setResetMessage(null);
-      setErrorMessage(error.message || "Failed to send reset email");
+      setErrorMessage(toFriendlyMessage(error, "We couldn't send the reset email. Please try again."));
     },
   });
 
@@ -108,13 +109,7 @@ export default function Login() {
     try {
       await runLogin(0);
     } catch (error) {
-      const message =
-        error instanceof TRPCClientError
-          ? error.message
-          : error instanceof Error
-            ? error.message
-            : "Sign in failed";
-      setErrorMessage(message || "Sign in failed");
+      setErrorMessage(toFriendlyMessage(error, "We couldn't sign you in. Please try again."));
     }
   };
 

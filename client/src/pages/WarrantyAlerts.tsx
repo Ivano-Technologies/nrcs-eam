@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar, Loader2, Mail, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
+import { toFriendlyMessage } from "@/lib/friendlyError";
 
 export default function WarrantyAlerts() {
   const { data: expiringWarranties, isLoading } = trpc.assets.getExpiringWarranties.useQuery();
@@ -17,7 +18,7 @@ export default function WarrantyAlerts() {
       toast.success("Warranty alert sent successfully");
     },
     onError: (error) => {
-      toast.error(`Failed to send alert: ${error.message}`);
+      toast.error(toFriendlyMessage(error, "We couldn't send the alert. Please try again."));
     },
   });
 

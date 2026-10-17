@@ -15,6 +15,7 @@ import { AuthPageLayout } from "@/components/auth/AuthPageLayout";
 import { GlassCard } from "@/components/auth/GlassCard";
 import { Loader2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { toFriendlyMessage } from "@/lib/friendlyError";
 
 const SIGNUP_SUCCESS_MESSAGE =
   "Access request submitted! An administrator will review your request and you will be notified once your account is approved.";
@@ -39,7 +40,7 @@ export default function Signup() {
       }
     },
     onError: (error) => {
-      setMessage({ type: "error", text: error.message || "Request failed. Please try again." });
+      setMessage({ type: "error", text: toFriendlyMessage(error, "We couldn't send your request. Please try again.") });
     },
   });
 

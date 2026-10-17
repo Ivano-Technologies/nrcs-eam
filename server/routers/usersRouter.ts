@@ -185,11 +185,13 @@ export const usersRouter = router({
         });
 
         if (error || !data.user) {
+          if (error) console.error("[users.create] Supabase createUser failed", error);
+          const alreadyThere = /already (been )?registered|already exists/i.test(error?.message ?? "");
           throw new TRPCError({
-            code: "BAD_REQUEST",
-            message:
-              error?.message ??
-              "Failed to create auth user. They may already exist in Supabase Auth.",
+            code: alreadyThere ? "CONFLICT" : "BAD_REQUEST",
+            message: alreadyThere
+              ? "A user with this email already exists"
+              : "We couldn't create the sign in account. Please try again.",
           });
         }
 
@@ -374,9 +376,10 @@ export const usersRouter = router({
         if (target.authUserId) {
           const { error } = await supabase.auth.admin.deleteUser(target.authUserId);
           if (error && !/not found|does not exist/i.test(error.message)) {
+            console.error("[users.delete] Supabase deleteUser failed", error);
             throw new TRPCError({
               code: "BAD_REQUEST",
-              message: error.message,
+              message: "We couldn't remove the sign in account. Please try again.",
             });
           }
         }
@@ -413,9 +416,10 @@ export const usersRouter = router({
           options: { redirectTo },
         });
         if (error) {
+          console.error("[users.resetPassword] Supabase generateLink failed", error);
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: error.message,
+            message: "We couldn't create a password reset link. Please try again.",
           });
         }
         const actionLink = data?.properties?.action_link;

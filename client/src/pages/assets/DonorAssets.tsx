@@ -35,6 +35,7 @@ import PageHeader from "@/components/ui/PageHeader";
 import { ChevronDown, ChevronRight, FileSpreadsheet, Gift, Loader2 } from "lucide-react";
 import { Fragment, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { toFriendlyMessage } from "@/lib/friendlyError";
 
 export default function DonorAssets() {
   const { user } = useAuth();
@@ -67,7 +68,7 @@ export default function DonorAssets() {
       downloadBase64File(data.base64, data.filename, data.mimeType);
       toast.success("Export downloaded");
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toast.error(toFriendlyMessage(e)),
   });
 
   const donorOptions = useMemo((): string[] => {

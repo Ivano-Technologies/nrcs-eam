@@ -19,6 +19,6 @@ export default async function handler(req: any, res: any) {
     res.status(200).json({ ok: true, result });
   } catch (error) {
     logCronRun("monthly", startedAt, null, error);
-    res.status(500).json({ ok: false, error: error instanceof Error ? error.message : "Failed" });
+    res.status(500).json({ ok: false, error: "The scheduled job failed. Details are in the server logs." });
   }
 }

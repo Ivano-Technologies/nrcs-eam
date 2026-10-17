@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { toFriendlyMessage } from "@/lib/friendlyError";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
 import PageHeader from "@/components/ui/PageHeader";
 import { appPath } from "@/lib/routes";
@@ -90,13 +91,13 @@ export default function ReceiptDetail() {
   );
 
   const createDraft = trpc.inventoryV2.receipts.createDraft.useMutation({
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toast.error(toFriendlyMessage(e)),
   });
   const updateDraft = trpc.inventoryV2.receipts.updateDraft.useMutation({
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toast.error(toFriendlyMessage(e)),
   });
   const approveMutation = trpc.inventoryV2.receipts.approve.useMutation({
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toast.error(toFriendlyMessage(e)),
   });
 
   useEffect(() => {

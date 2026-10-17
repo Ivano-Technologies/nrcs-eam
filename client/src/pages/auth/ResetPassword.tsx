@@ -15,6 +15,8 @@ import { AuthPageLayout } from "@/components/auth/AuthPageLayout";
 import { GlassCard } from "@/components/auth/GlassCard";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
+import { classifyError } from "@shared/friendlyError";
+import { friendlyMessage, reportError } from "@/lib/friendlyError";
 
 type RecoveryState = "checking" | "ready" | "invalid" | "success";
 
@@ -78,8 +80,13 @@ export default function ResetPassword() {
         if (active) setState("invalid");
       } catch (error) {
         if (!active) return;
-        const message = error instanceof Error ? error.message : "Invalid or expired reset link.";
-        setErrorMessage(message);
+        const kind = classifyError(error);
+        reportError(error, "resetPassword.init");
+        setErrorMessage(
+          kind === "network" || kind === "rateLimit"
+            ? friendlyMessage(error)
+            : "This reset link is invalid or has expired. Please request a new one."
+        );
         setState("invalid");
       }
 
@@ -113,8 +120,15 @@ export default function ResetPassword() {
       setState("success");
       setTimeout(() => setLocation("/login?reset=success"), 1400);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to update password.";
-      setErrorMessage(message);
+      const code = (error as { code?: unknown } | null)?.code;
+      reportError(error, "resetPassword.update");
+      if (code === "same_password") {
+        setErrorMessage("Your new password must be different from your current one.");
+      } else if (code === "weak_password") {
+        setErrorMessage("That password is too weak. Please choose a stronger one.");
+      } else {
+        setErrorMessage(friendlyMessage(error, "We couldn't update your password. Please try again."));
+      }
     } finally {
       setIsSubmitting(false);
     }

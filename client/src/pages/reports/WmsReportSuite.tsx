@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { appPath } from "@/lib/routes";
 import { DATE_INPUT_HINT, formatDate, formatEnumLabel } from "@/lib/format";
 import { toast } from "sonner";
+import { toFriendlyMessage } from "@/lib/friendlyError";
 
 export type WmsReportKey = "movements" | "aging" | "donor" | "loss" | "kits";
 
@@ -197,7 +198,7 @@ function WmsSingleReport({ report }: { report: WmsReportKey }) {
       downloadBase64File(r.data, r.filename, r.mimeType);
       toast.success("Donor statement PDF downloaded");
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toast.error(toFriendlyMessage(e)),
   });
   const lossQuery = trpc.inventoryV2.reports.lossDamage.useQuery(
     { startDate: startDate || undefined, endDate: endDate || undefined },

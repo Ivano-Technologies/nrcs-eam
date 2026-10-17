@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ViewToggle } from "@/components/ViewToggle";
 import { useViewMode } from "@/hooks/useViewMode";
 import { toast } from "sonner";
+import { toFriendlyMessage } from "@/lib/friendlyError";
 import { downloadBase64File } from "@/lib/download";
 import { Loader2 } from "lucide-react";
 
@@ -46,10 +47,10 @@ export default function Distributions({ embedInShell = false }: { embedInShell?:
       setOpen(false);
       void list.refetch();
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toast.error(toFriendlyMessage(e)),
   });
   const downloadPdfMutation = trpc.inventoryV2.distributions.downloadPdf.useMutation({
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toast.error(toFriendlyMessage(e)),
   });
 
   const newDistributionButton = (

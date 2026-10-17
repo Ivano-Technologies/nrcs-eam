@@ -1,6 +1,7 @@
 import { useCallback, useId, useRef } from "react";
 import { readFileAsBase64Payload } from "@/lib/bulkImportFromFile";
 import { toast } from "sonner";
+import { toFriendlyMessage } from "@/lib/friendlyError";
 
 type BaseOpts = {
   accept: string;
@@ -45,7 +46,7 @@ export function useBulkImportFileInput(options: UseBulkImportFileInputOptions) {
           await o.run(file);
         }
       } catch (e) {
-        err(e instanceof Error ? e.message : "Import failed");
+        err(toFriendlyMessage(e, "We couldn't import the file. Please try again."));
       }
     },
     [disabled, isPending]

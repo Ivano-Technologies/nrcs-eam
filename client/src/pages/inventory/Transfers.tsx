@@ -12,6 +12,7 @@ import PageHeader from "@/components/ui/PageHeader";
 import { ArrowLeftRight as ArrowLeftRightIcon } from "lucide-react";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { toast } from "sonner";
+import { toFriendlyMessage } from "@/lib/friendlyError";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 
 type TransferSource = "relational" | "legacy";
@@ -68,11 +69,11 @@ export default function Transfers({ embedInShell = false }: { embedInShell?: boo
       setDraftLines([{ catalogueId: "", quantity: "" }]);
       void list.refetch();
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toast.error(toFriendlyMessage(e)),
   });
   const approveMutation = trpc.inventoryV2.transfers.approve.useMutation({
     onSuccess: () => void list.refetch(),
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toast.error(toFriendlyMessage(e)),
   });
   const dispatchMutation = trpc.inventoryV2.transfers.dispatch.useMutation({
     onSuccess: () => {
@@ -82,11 +83,11 @@ export default function Transfers({ embedInShell = false }: { embedInShell?: boo
       setAllocations([]);
       void list.refetch();
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toast.error(toFriendlyMessage(e)),
   });
   const receiveMutation = trpc.inventoryV2.transfers.receive.useMutation({
     onSuccess: () => void list.refetch(),
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toast.error(toFriendlyMessage(e)),
   });
 
   const wh = useMemo(() => (warehouses ?? []).filter((x) => x.facilityType === "warehouse"), [warehouses]);
@@ -108,7 +109,7 @@ export default function Transfers({ embedInShell = false }: { embedInShell?: boo
       setAllocations(preview.suggestedAllocations);
       setDispatchOpen(true);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to load dispatch allocation.");
+      toast.error(toFriendlyMessage(error, "We couldn't load the dispatch allocation. Please try again."));
     }
   };
 

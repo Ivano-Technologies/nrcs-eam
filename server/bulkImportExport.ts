@@ -3,6 +3,7 @@ import * as db from './db';
 import { generateNRCSAssetRegisterTemplateBuffer } from './nrcsAssetExcel';
 import type { FacilityType } from "../shared/facilities";
 import { validateHierarchyRule } from "./facilityHierarchy";
+import { safeUserMessage } from "./_core/friendlyTrpcError";
 
 /**
  * Bulk Import/Export System for Assets and other entities
@@ -153,7 +154,7 @@ export async function importAssets(fileBuffer: any, userId: number): Promise<Imp
       failed++;
       errors.push({
         row: rowNumber,
-        error: error.message || 'Unknown error',
+        error: safeUserMessage(error, "We couldn't import this row. Please check it and try again.", "bulkImport"),
         data: row.values,
       });
     }
@@ -443,7 +444,7 @@ export async function importSites(fileBuffer: any): Promise<ImportResult> {
       failed++;
       errors.push({
         row: rowNumber,
-        error: error.message || 'Unknown error',
+        error: safeUserMessage(error, "We couldn't import this row. Please check it and try again.", "bulkImport"),
         data: row.values,
       });
     }

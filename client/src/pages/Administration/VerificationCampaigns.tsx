@@ -28,6 +28,7 @@ import { useViewMode } from "@/hooks/useViewMode";
 import { ClipboardCheck, Loader2, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { toFriendlyMessage } from "@/lib/friendlyError";
 
 function statusBadge(status: string) {
   if (status === "active") return <Badge className="bg-green-100 text-green-800">Active</Badge>;
@@ -65,7 +66,7 @@ export default function VerificationCampaigns() {
       setForm({ name: "", startsAt: "", endsAt: "" });
       void utils.verification.listCampaigns.invalidate();
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toast.error(toFriendlyMessage(e)),
   });
   const activateMutation = trpc.verification.activate.useMutation({
     onSuccess: () => {
@@ -73,7 +74,7 @@ export default function VerificationCampaigns() {
       void utils.verification.listCampaigns.invalidate();
       if (selectedId) void utils.verification.campaignProgress.invalidate({ campaignId: selectedId });
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toast.error(toFriendlyMessage(e)),
   });
   const closeMutation = trpc.verification.close.useMutation({
     onSuccess: () => {
@@ -81,7 +82,7 @@ export default function VerificationCampaigns() {
       void utils.verification.listCampaigns.invalidate();
       if (selectedId) void utils.verification.campaignProgress.invalidate({ campaignId: selectedId });
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toast.error(toFriendlyMessage(e)),
   });
 
   const selected = useMemo(
