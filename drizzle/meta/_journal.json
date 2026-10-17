@@ -414,6 +414,13 @@
       "when": 1780500000000,
       "tag": "0059_asset_code_advisory_lock",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1780600000000,
+      "tag": "0060_asset_code_search_path",
+      "breakpoints": true
     }
   ]
 }
