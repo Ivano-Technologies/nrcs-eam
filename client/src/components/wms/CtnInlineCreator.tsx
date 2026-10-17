@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+import { toastError } from "@/lib/friendlyError";
 import { Loader2 } from "lucide-react";
 
 export function CtnInlineCreator({
@@ -25,7 +26,7 @@ export function CtnInlineCreator({
   const donorsQuery = trpc.wms.ctn.donors.useQuery(undefined, { enabled: open });
   const catalogueQuery = trpc.inventoryV2.catalogue.list.useQuery(undefined, { enabled: open });
   const createMutation = trpc.wms.ctn.create.useMutation({
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toastError(e),
   });
 
   const [ctnCode, setCtnCode] = useState("");

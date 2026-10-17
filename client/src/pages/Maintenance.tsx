@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar, Loader2, Plus, Wrench } from "lucide-react";
 import { toast } from "sonner";
+import { toastError } from "@/lib/friendlyError";
 import { useState } from "react";
 
 export default function Maintenance() {
@@ -54,7 +55,7 @@ export default function Maintenance() {
       });
     },
     onError: (error) => {
-      toast.error(`Failed to create schedule: ${error.message}`);
+      toastError(error, "We couldn't create the schedule. Please try again.");
     },
   });
 

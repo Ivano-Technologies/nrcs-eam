@@ -97,15 +97,14 @@ router.post("/setup/create-admin", async (req, res) => {
       return res.status(400).json({ error: "Admin already exists" });
     }
     if (e && typeof e === "object" && "code" in e && (e as { code: string }).code === "SUPABASE_ERROR") {
+      console.error("[setup/create-admin] Supabase admin API failed", e);
       return res.status(503).json({
-        error: "Supabase admin API failed",
-        detail: e instanceof Error ? e.message : String(e),
+        error: "We couldn't create the admin account right now. Please try again later.",
       });
     }
     console.error("[setup/create-admin]", e);
     return res.status(500).json({
-      error: "Setup failed",
-      detail: e instanceof Error ? e.message : String(e),
+      error: "Something went wrong. Please try again.",
     });
   }
 

@@ -11,6 +11,7 @@ import PageHeader from "@/components/ui/PageHeader";
 import { ClipboardCheck as ClipboardCheckIcon } from "lucide-react";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { toast } from "sonner";
+import { toastError } from "@/lib/friendlyError";
 import { Badge } from "@/components/ui/badge";
 import { useSearch } from "wouter";
 import { Loader2 } from "lucide-react";
@@ -44,25 +45,25 @@ export default function StockCounts({ embedInShell = false }: { embedInShell?: b
       setStep(4);
       void countsQuery.refetch();
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toastError(e),
   });
   const generateSheet = trpc.inventoryV2.counts.generateSheet.useMutation({
     onSuccess: () => toast.success("Count sheet generated."),
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toastError(e),
   });
   const submitMutation = trpc.inventoryV2.counts.submitForReview.useMutation({
     onSuccess: () => {
       toast.success("Submitted for review.");
       void countsQuery.refetch();
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toastError(e),
   });
   const approveMutation = trpc.inventoryV2.counts.approve.useMutation({
     onSuccess: () => {
       toast.success("Count approved.");
       void countsQuery.refetch();
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toastError(e),
   });
 
   return (

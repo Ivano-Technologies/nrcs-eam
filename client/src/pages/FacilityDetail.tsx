@@ -27,6 +27,7 @@ import { CardQrCode } from "@/components/CardQrCode";
 import { FACILITY_TYPE_DESCRIPTIONS, FACILITY_TYPE_LABELS } from "@shared/facilities";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { toast } from "sonner";
+import { toastError, UserFacingError } from "@/lib/friendlyError";
 import { Edit2, ExternalLink, Loader2, MapPin, X } from "lucide-react";
 
 const MAX_PHOTOS = 10;
@@ -62,7 +63,7 @@ export default function FacilityDetail() {
       setDeletePhotoId(null);
       toast.success("Photo deleted");
     },
-    onError: (e) => toast.error(e.message ?? "Failed to delete photo"),
+    onError: (e) => toastError(e, "We couldn't delete the photo. Please try again."),
   });
   const uploadUrlMutation = trpc.facilityPhotos.uploadUrl.useMutation();
 
@@ -72,7 +73,7 @@ export default function FacilityDetail() {
       toast.success(`Updated coordinates on ${res.updated} asset(s) at this facility.`);
       void utils.assets.list.invalidate();
     },
-    onError: (e) => toast.error(e.message ?? "Sync failed"),
+    onError: (e) => toastError(e, "We couldn't sync. Please try again."),
   });
 
   const photoCount = photosQuery.data?.length ?? 0;
@@ -111,7 +112,7 @@ export default function FacilityDetail() {
     if (!file) return;
 
     if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-      throw new Error(`${file.name} exceeds ${MAX_FILE_SIZE_MB}MB limit`);
+      throw new UserFacingError(`${file.name} is larger than ${MAX_FILE_SIZE_MB}MB. Please choose a smaller photo.`);
     }
 
     setUploading(true);
@@ -128,7 +129,7 @@ export default function FacilityDetail() {
         headers: { "Content-Type": file.type },
       });
       if (!putRes.ok) {
-        throw new Error(`Upload failed for ${file.name}`);
+        throw new UserFacingError(`We couldn't upload ${file.name}. Please try again.`);
       }
 
       await uploadMutation.mutateAsync({

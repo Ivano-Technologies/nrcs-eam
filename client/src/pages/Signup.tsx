@@ -15,6 +15,8 @@ import { AuthPageLayout } from "@/components/auth/AuthPageLayout";
 import { GlassCard } from "@/components/auth/GlassCard";
 import { Loader2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { ErrorRef } from "@/components/ErrorRef";
+import { toFriendlyError } from "@/lib/friendlyError";
 
 const SIGNUP_SUCCESS_MESSAGE =
   "Access request submitted! An administrator will review your request and you will be notified once your account is approved.";
@@ -24,7 +26,7 @@ export default function Signup() {
   const [name, setName] = useState("");
   const [designation, setDesignation] = useState("");
   const [department, setDepartment] = useState("");
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string; ref?: string } | null>(null);
 
   const signupMutation = trpc.auth.signup.useMutation({
     onSuccess: (data) => {
@@ -39,7 +41,8 @@ export default function Signup() {
       }
     },
     onError: (error) => {
-      setMessage({ type: "error", text: error.message || "Request failed. Please try again." });
+      const friendly = toFriendlyError(error, "We couldn't send your request. Please try again.", "signup");
+      setMessage({ type: "error", text: friendly.message, ref: friendly.ref });
     },
   });
 
@@ -75,6 +78,7 @@ export default function Signup() {
                 data-testid={message.type === "success" ? "signup-success-message" : "signup-error-message"}
               >
                 {message.text}
+                {message.type === "error" ? <ErrorRef code={message.ref} /> : null}
               </AlertDescription>
             </Alert>
           )}

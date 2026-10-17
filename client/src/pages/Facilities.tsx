@@ -60,6 +60,7 @@ import {
 } from "@/components/ui/table";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { toast } from "sonner";
+import { toastError } from "@/lib/friendlyError";
 import { appPath } from "@/lib/routes";
 import {
   FACILITY_TYPE_EXAMPLES,
@@ -223,7 +224,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
       closeDialog();
       await refetch();
     },
-    onError: (e) => toast.error(`Failed to create facility: ${e.message}`),
+    onError: (e) => toastError(e, "We couldn't create the facility. Please try again."),
   });
   const trpcUtils = trpc.useUtils();
   const updateMutation = trpc.sites.update.useMutation({
@@ -233,7 +234,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
       closeDialog();
       await refetch();
     },
-    onError: (e) => toast.error(`Failed to update facility: ${e.message}`),
+    onError: (e) => toastError(e, "We couldn't update the facility. Please try again."),
   });
   const deleteMutation = trpc.sites.bulkDelete.useMutation({
     onSuccess: async ({ deleted }) => {
@@ -254,7 +255,6 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
     accept: ".xlsx,.xls",
     isPending: importMutation.isPending,
     prepareFile: "base64",
-    onError: (message) => toast.error(`Import failed: ${message}`),
     run: async (fileData): Promise<void> => {
       await importMutation.mutateAsync({ fileData });
     },
@@ -454,7 +454,7 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
       for (const part of chunk(selectedOnPage, 500)) updated += (await bulkActiveMutation.mutateAsync({ ids: part, isActive })).updated;
       await onBulkActiveDone({ updated, total: selectedOnPage.length }, { isActive });
     } catch (e) {
-      toast.error(`Could not update the selected facilities: ${e instanceof Error ? e.message : "error"}`);
+      toastError(e, "We couldn't update the selected facilities. Please try again.");
     } finally {
       setBulkRunning(false);
     }

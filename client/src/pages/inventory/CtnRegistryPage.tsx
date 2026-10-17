@@ -33,6 +33,7 @@ import { useMobileTableColumns, MobileColumnsToggle, mobileSecondaryCol } from "
 import { cn } from "@/lib/utils";
 import { ITEM_CATEGORY_VALUES } from "@shared/itemCategory";
 import { toast } from "sonner";
+import { toastError } from "@/lib/friendlyError";
 import { format } from "date-fns";
 import { Loader2 } from "lucide-react";
 
@@ -96,7 +97,7 @@ export default function CtnRegistryPage() {
       });
       void listQuery.refetch();
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toastError(e),
   });
 
   const rows = listQuery.data?.items ?? [];

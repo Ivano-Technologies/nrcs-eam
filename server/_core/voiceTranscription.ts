@@ -116,10 +116,11 @@ export async function transcribeAudio(
         };
       }
     } catch (error) {
+      console.error("[voiceTranscription] failed to fetch audio file", error);
       return {
-        error: "Failed to fetch audio file",
+        error: "We couldn't load the audio file. Please try again.",
         code: "SERVICE_ERROR",
-        details: error instanceof Error ? error.message : "Unknown error"
+        details: "We couldn't load the audio file. Please try again."
       };
     }
 
@@ -185,11 +186,12 @@ export async function transcribeAudio(
     return whisperResponse; // Return native Whisper API response directly
 
   } catch (error) {
-    // Handle unexpected errors
+    // Handle unexpected errors: log the raw error, return plain English.
+    console.error("[voiceTranscription] transcription failed", error);
     return {
-      error: "Voice transcription failed",
+      error: "We couldn't transcribe the audio. Please try again.",
       code: "SERVICE_ERROR",
-      details: error instanceof Error ? error.message : "An unexpected error occurred"
+      details: "Something went wrong. Please try again."
     };
   }
 }

@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { trpc } from "@/lib/trpc";
 import TableLoader from "@/components/ui/TableLoader";
 import { CheckCircle, XCircle, Clock, Loader2, UserCheck } from "lucide-react";
+import { toastError } from "@/lib/friendlyError";
 
 export default function PendingUsers() {
   const [selectedUser, setSelectedUser] = useState<number | null>(null);
@@ -21,7 +22,7 @@ export default function PendingUsers() {
       refetch();
     },
     onError: (error: any) => {
-      alert(`Failed to approve user: ${error.message}`);
+      toastError(error, "We couldn't approve the user. Please try again.");
     },
   });
   
@@ -33,7 +34,7 @@ export default function PendingUsers() {
       refetch();
     },
     onError: (error: any) => {
-      alert(`Failed to reject user: ${error.message}`);
+      toastError(error, "We couldn't reject the user. Please try again.");
     },
   });
 

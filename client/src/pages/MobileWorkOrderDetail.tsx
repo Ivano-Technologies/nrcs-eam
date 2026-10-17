@@ -16,6 +16,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { toastError } from "@/lib/friendlyError";
 import {
   PHOTO_UPLOAD_ERROR,
   PhotoUploadError,
@@ -65,7 +66,7 @@ export default function MobileWorkOrderDetail() {
       toast.success("Photo deleted");
       void refetchPhotos();
     },
-    onError: (error) => toast.error(error.message),
+    onError: (error) => toastError(error),
   });
 
   const updateMutation = trpc.workOrders.update.useMutation({
@@ -74,7 +75,7 @@ export default function MobileWorkOrderDetail() {
       refetch();
     },
     onError: (error) => {
-      toast.error(`Error: ${error.message}`);
+      toastError(error);
     },
   });
 

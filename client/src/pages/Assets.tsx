@@ -46,6 +46,7 @@ import { useAssetRegisterUrlState } from "@/hooks/useAssetRegisterUrlState";
 import { ASSET_REGISTER_SORT_KEYS, type AssetRegisterSortKey } from "@/lib/assetRegisterUrlState";
 import { downloadCsv, toCsv, type CsvCell } from "@/lib/csv";
 import { toast } from "sonner";
+import { toastError } from "@/lib/friendlyError";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { calculateDepreciatedValue } from "@/lib/depreciation";
 import { appPath } from "@/lib/routes";
@@ -334,7 +335,7 @@ export default function Assets() {
         toast.success("Template downloaded");
       }
     } catch (error: unknown) {
-      toast.error(`Failed to download template: ${error instanceof Error ? error.message : "error"}`);
+      toastError(error, "We couldn't download the template. Please try again.");
     } finally {
       setIsDownloading(false);
     }
@@ -375,7 +376,7 @@ export default function Assets() {
         toast.success("Export started");
       }
     } catch (error: unknown) {
-      toast.error(`Export failed: ${error instanceof Error ? error.message : "error"}`);
+      toastError(error, "We couldn't export the assets. Please try again.");
     } finally {
       setIsExporting(false);
     }
@@ -402,7 +403,6 @@ export default function Assets() {
     accept: ".xlsx,.xls",
     isPending: previewImportMutation.isPending || confirmImportMutation.isPending,
     prepareFile: "base64",
-    onError: (message) => toast.error(message),
     run: async (fileData): Promise<void> => {
       const data = await previewImportMutation.mutateAsync({ fileData });
       const rows = (data.rows ?? []) as Array<{
@@ -458,7 +458,7 @@ export default function Assets() {
       resetNewAssetForm();
     },
     onError: (error: { message?: string }) => {
-      toast.error(`Failed to create asset: ${error.message}`);
+      toastError(error, "We couldn't create the asset. Please try again.");
     },
   });
 
@@ -469,7 +469,7 @@ export default function Assets() {
       refetch();
     },
     onError: (error: { message?: string }) => {
-      toast.error(`Failed to delete: ${error.message}`);
+      toastError(error, "We couldn't delete the asset. Please try again.");
     },
   });
 
@@ -533,7 +533,7 @@ export default function Assets() {
       finishBulk();
     } catch (error) {
       setBulkRunning(false);
-      toast.error(`Could not delete the selected assets: ${error instanceof Error ? error.message : "error"}`);
+      toastError(error, "We couldn't delete the selected assets. Please try again.");
     }
   };
 
@@ -554,7 +554,7 @@ export default function Assets() {
       finishBulk();
     } catch (error) {
       setBulkRunning(false);
-      toast.error(`Could not update the status: ${error instanceof Error ? error.message : "error"}`);
+      toastError(error, "We couldn't update the status. Please try again.");
     }
   };
 
@@ -566,7 +566,7 @@ export default function Assets() {
       refetch();
     },
     onError: (error: { message?: string }) => {
-      toast.error(`Failed to update asset: ${error.message}`);
+      toastError(error, "We couldn't update the asset. Please try again.");
     },
   });
 
@@ -576,7 +576,7 @@ export default function Assets() {
       refetch();
     },
     onError: (error: { message?: string }) => {
-      toast.error(error.message ?? "Recalculation failed");
+      toastError(error, "We couldn't recalculate. Please try again.");
     },
   });
 
@@ -586,7 +586,7 @@ export default function Assets() {
       refetch();
     },
     onError: (error: { message?: string }) => {
-      toast.error(error.message ?? "Coordinate sync failed");
+      toastError(error, "We couldn't sync the coordinates. Please try again.");
     },
   });
 
@@ -1023,7 +1023,7 @@ export default function Assets() {
         sourceRows = all.rows;
         firstSNo = 1;
       } catch (error) {
-        toast.error(`Could not export the selected assets: ${error instanceof Error ? error.message : "error"}`);
+        toastError(error, "We couldn't export the selected assets. Please try again.");
         return;
       }
     }

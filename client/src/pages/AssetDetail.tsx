@@ -31,6 +31,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
+import { toastError, UserFacingError } from "@/lib/friendlyError";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import AssetDepreciation from "@/components/AssetDepreciation";
 import { AssetMaintenanceTimeline } from "@/components/AssetMaintenanceTimeline";
@@ -120,7 +121,7 @@ export default function AssetDetail() {
       refetch();
     },
     onError: (error) => {
-      toast.error(`Failed to generate QR code: ${error.message}`);
+      toastError(error, "We couldn't generate the QR code. Please try again.");
     },
   });
 
@@ -132,7 +133,7 @@ export default function AssetDetail() {
       refetch();
     },
     onError: (error) => {
-      toast.error(`Failed to update asset: ${error.message}`);
+      toastError(error, "We couldn't update the asset. Please try again.");
     },
   });
 
@@ -142,7 +143,7 @@ export default function AssetDetail() {
       refetchPhotos();
     },
     onError: (error) => {
-      toast.error(`Failed to upload photo: ${error.message}`);
+      toastError(error, "We couldn't upload the photo. Please try again.");
     },
   });
 
@@ -152,7 +153,7 @@ export default function AssetDetail() {
       refetchPhotos();
     },
     onError: (error) => {
-      toast.error(`Failed to delete photo: ${error.message}`);
+      toastError(error, "We couldn't delete the photo. Please try again.");
     },
   });
 
@@ -193,7 +194,7 @@ export default function AssetDetail() {
           body: formData,
         });
 
-        if (!response.ok) throw new Error(`Upload failed for ${file.name}`);
+        if (!response.ok) throw new UserFacingError(`We couldn't upload ${file.name}. Please try again.`);
 
         const { url, key } = await response.json();
 
@@ -209,7 +210,7 @@ export default function AssetDetail() {
       setPendingFiles([]);
       setPhotoCaption('');
     } catch (error: any) {
-      toast.error(`Upload failed: ${error.message}`);
+      toastError(error, "We couldn't upload the file. Please try again.");
     } finally {
       setUploadingPhoto(false);
     }

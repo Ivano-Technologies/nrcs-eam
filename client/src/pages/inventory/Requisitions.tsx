@@ -21,6 +21,7 @@ import { ViewToggle } from "@/components/ViewToggle";
 import { useViewMode } from "@/hooks/useViewMode";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { toast } from "sonner";
+import { toastError } from "@/lib/friendlyError";
 import { downloadBase64File } from "@/lib/download";
 import { Download, Loader2, MoreHorizontal } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -74,7 +75,7 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
       setOpen(false);
       void list.refetch();
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toastError(e),
   });
   const submitMutation = trpc.inventoryV2.requisitions.submit.useMutation({ onSuccess: () => void list.refetch() });
   const approveBranchMutation = trpc.inventoryV2.requisitions.approveBranch.useMutation({ onSuccess: () => void list.refetch() });
@@ -89,11 +90,11 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
         },
       });
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toastError(e),
   });
   const rejectMutation = trpc.inventoryV2.requisitions.reject.useMutation({ onSuccess: () => void list.refetch() });
   const downloadPdfMutation = trpc.inventoryV2.requisitions.downloadPdf.useMutation({
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toastError(e),
   });
 
   const downloadPdf = async (row: { id: number; reqNumber: string }) => {
@@ -118,8 +119,7 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
       }
       await fulfillMutation.mutateAsync({ requisitionId, fromWarehouseId });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Fulfilment failed.";
-      toast.error(message);
+      toastError(error, "We couldn't fulfil the requisition. Please try again.");
     }
   };
 

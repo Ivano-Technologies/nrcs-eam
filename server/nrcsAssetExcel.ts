@@ -8,6 +8,7 @@ import {
 } from "./assetRegister";
 import type { AssetRegisterListParams } from "./db";
 import type { InsertAsset, Site } from "../drizzle/schema";
+import { UserFacingError } from "@shared/friendlyError";
 
 const NRCS_TITLE = "NIGERIA RED CROSS SOCIETY - ASSET REGISTER";
 
@@ -685,8 +686,8 @@ export async function previewNRCSAssetImport(fileBuffer: Buffer): Promise<{
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await wb.xlsx.load(fileBuffer as any);
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Unknown error";
-    throw new Error(`Could not read Excel file: ${msg}`);
+    console.error("[nrcsAssetExcel] could not read workbook", e);
+    throw new UserFacingError("We couldn't read that Excel file. Please check it and try again.", { cause: e });
   }
 
   const sheetName = pickAssetRegisterSheetName(wb.worksheets.map((ws) => ws.name));
@@ -708,8 +709,8 @@ export async function previewNRCSAssetImport(fileBuffer: Buffer): Promise<{
     });
     matrix = rows;
   } catch (e) {
-    const msg = e instanceof Error ? e.message : "Unknown error";
-    throw new Error(`Could not parse worksheet "${sheetName}": ${msg}`);
+    console.error(`[nrcsAssetExcel] could not parse worksheet "${sheetName}"`, e);
+    throw new UserFacingError(`We couldn't read the "${sheetName}" sheet. Please check it and try again.`, { cause: e });
   }
 
   const headerRow = findAssetRegisterHeaderRow(matrix);

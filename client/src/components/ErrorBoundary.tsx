@@ -1,72 +1,98 @@
+import { AuthBrandLogo, authPrimaryButtonClass } from "@/components/auth/AuthPageShell";
+import { Button } from "@/components/ui/button";
+import { ErrorRef } from "@/components/ErrorRef";
+import { reportError } from "@/lib/friendlyError";
+import { generateErrorRef } from "@shared/friendlyError";
 import { cn } from "@/lib/utils";
-import { AlertTriangle, RotateCcw } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import { Component, type ErrorInfo, type ReactNode } from "react";
+
+export const ERROR_PAGE_TITLE = "Something went wrong";
+export const ERROR_PAGE_BODY = "We hit a problem loading this page. Please try again.";
 
 interface Props {
   children: ReactNode;
+  /**
+   * "page" fills the screen (used at the app root). "section" sits inside the app shell so the
+   * sidebar and header stay usable.
+   */
+  variant?: "page" | "section";
+  /** Change this (for example the current path) to clear the error when the user navigates. */
+  resetKey?: string;
 }
 
 interface State {
   hasError: boolean;
-  error: Error | null;
+  /** Support ref shown on the page and logged with the raw error. */
+  errorRef: string | null;
+}
+
+/**
+ * IVA-189: friendly error page with one action (Try again) and the support ref. Never shows
+ * error.message or a stack trace; the raw error is logged with the same ref instead.
+ */
+export function ErrorFallback({
+  onRetry,
+  variant = "page",
+  errorRef,
+}: {
+  onRetry: () => void;
+  variant?: "page" | "section";
+  errorRef?: string | null;
+}) {
+  const card = (
+    <div
+      role="alert"
+      data-testid="error-fallback"
+      className="mx-auto flex w-full max-w-md flex-col items-center rounded-xl border bg-card p-8 text-center text-card-foreground shadow-sm md:p-10"
+    >
+      <AuthBrandLogo />
+      <h1 className="text-2xl font-bold leading-tight tracking-tight">{ERROR_PAGE_TITLE}</h1>
+      <p className="mt-3 text-base text-muted-foreground">{ERROR_PAGE_BODY}</p>
+      <div className="mt-6 flex w-full justify-center">
+        <Button type="button" onClick={onRetry} className={cn(authPrimaryButtonClass, "sm:w-auto sm:px-6")}>
+          <RotateCcw className="mr-2 h-4 w-4" aria-hidden />
+          Try again
+        </Button>
+      </div>
+      <ErrorRef code={errorRef} className="mt-4" />
+    </div>
+  );
+  if (variant === "section") {
+    return <div className="flex min-h-[60vh] items-center justify-center py-8">{card}</div>;
+  }
+  return <div className="flex min-h-screen items-center justify-center bg-background p-6">{card}</div>;
 }
 
 class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, errorRef: null };
   }
 
-  static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
+  static getDerivedStateFromError(): State {
+    return { hasError: true, errorRef: generateErrorRef() };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    try {
-      if (typeof window !== "undefined" && (window as any).posthog) {
-        (window as any).posthog.captureException(error, {
-          errorInfo: errorInfo.componentStack,
-        });
-      }
-    } catch (_) {
-      // never let analytics crash the error handler
+    const ref = reportError(error, "ErrorBoundary", this.state.errorRef);
+    if (errorInfo?.componentStack) console.error(`[ErrorBoundary] ref=${ref} component stack`, errorInfo.componentStack);
+  }
+
+  componentDidUpdate(prevProps: Props) {
+    if (this.state.hasError && prevProps.resetKey !== this.props.resetKey) {
+      this.setState({ hasError: false, errorRef: null });
     }
   }
 
+  private retry = () => {
+    this.setState({ hasError: false, errorRef: null });
+  };
+
   render() {
     if (this.state.hasError) {
-      return (
-        <div className="flex items-center justify-center min-h-screen p-8 bg-background">
-          <div className="flex flex-col items-center w-full max-w-2xl p-8">
-            <AlertTriangle
-              size={48}
-              className="text-destructive mb-6 flex-shrink-0"
-            />
-
-            <h2 className="text-xl mb-4">An unexpected error occurred.</h2>
-
-            <div className="p-4 w-full rounded-md bg-muted overflow-auto mb-6">
-              <pre className="text-sm text-muted-foreground whitespace-break-spaces">
-                {this.state.error?.stack}
-              </pre>
-            </div>
-
-            <button
-              onClick={() => window.location.reload()}
-              className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-md",
-                "bg-primary text-primary-foreground",
-                "hover:opacity-90 cursor-pointer"
-              )}
-            >
-              <RotateCcw size={16} />
-              Reload page
-            </button>
-          </div>
-        </div>
-      );
+      return <ErrorFallback onRetry={this.retry} variant={this.props.variant ?? "page"} errorRef={this.state.errorRef} />;
     }
-
     return this.props.children;
   }
 }

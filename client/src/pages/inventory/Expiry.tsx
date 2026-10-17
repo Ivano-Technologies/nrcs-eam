@@ -9,6 +9,7 @@ import { CalendarClock as CalendarClockIcon } from "lucide-react";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { toastError } from "@/lib/friendlyError";
 import { Loader2 } from "lucide-react";
 
 function daysRemaining(date: string | Date | null | undefined) {
@@ -30,14 +31,14 @@ export default function Expiry({ embedInShell = false }: { embedInShell?: boolea
       void soon.refetch();
       void expired.refetch();
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toastError(e),
   });
   const disposeExpired = trpc.inventoryV2.expiry.disposeExpired.useMutation({
     onSuccess: (res) => {
       toast.success(`Disposal waybill created: ${res.documentNumber}`);
       void expired.refetch();
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toastError(e),
   });
 
   const disposed = useMemo(() => (expired.data ?? []).filter((x) => x.status === "disposed"), [expired.data]);

@@ -25,6 +25,7 @@ import { useTheme } from "next-themes";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearch } from "wouter";
 import { toast } from "sonner";
+import { toastError } from "@/lib/friendlyError";
 
 export default function DashboardSettings() {
   const { user } = useAuth();
@@ -92,14 +93,14 @@ export default function DashboardSettings() {
       toast.success("Notification settings saved");
       setNotifDirty(false);
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toastError(e),
   });
 
   const sendAssetCheckRemindersMutation = trpc.notifications.sendAssetCheckReminders.useMutation({
     onSuccess: (r) => {
       toast.success(`Asset check reminders: ${r.sent} sent, ${r.failed} failed, ${r.facilitiesProcessed} facilities`);
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toastError(e),
   });
 
   const updateProfileMutation = trpc.auth.updateProfile.useMutation({
@@ -108,7 +109,7 @@ export default function DashboardSettings() {
       setAvatarOverride(undefined);
       await utils.auth.me.invalidate();
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toastError(e),
   });
   const uploadAvatarMutation = trpc.auth.uploadAvatar.useMutation();
 
@@ -230,7 +231,7 @@ export default function DashboardSettings() {
         window.history.replaceState(null, "", appPath("/settings"));
       }
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toastError(e),
   });
 
   const { refetch: refetchExportZip, isFetching: exportZipLoading } =

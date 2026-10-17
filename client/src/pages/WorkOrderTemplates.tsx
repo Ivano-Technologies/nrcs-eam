@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/select";
 import { Plus, Edit, Trash2, FileText, Loader2, Files } from "lucide-react";
 import { toast } from "sonner";
+import { toastError } from "@/lib/friendlyError";
 
 export default function WorkOrderTemplates() {
 
@@ -55,7 +56,7 @@ export default function WorkOrderTemplates() {
       resetForm();
     },
     onError: (error) => {
-      toast.error(`Error creating template: ${error.message}`);
+      toastError(error, "We couldn't create the template. Please try again.");
     },
   });
 
@@ -67,7 +68,7 @@ export default function WorkOrderTemplates() {
       resetForm();
     },
     onError: (error) => {
-      toast.error(`Error updating template: ${error.message}`);
+      toastError(error, "We couldn't update the template. Please try again.");
     },
   });
 
@@ -77,7 +78,7 @@ export default function WorkOrderTemplates() {
       utils.workOrderTemplates.list.invalidate();
     },
     onError: (error) => {
-      toast.error(`Error deleting template: ${error.message}`);
+      toastError(error, "We couldn't delete the template. Please try again.");
     },
   });
 
