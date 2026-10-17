@@ -67,7 +67,10 @@ export const complianceTrackingRouter = router({
 
   lookupAsset: protectedProcedure
     .input(z.object({ assetCode: z.string().min(1) }))
-    .query(({ input }) => complianceDb.lookupAssetByCode(input.assetCode.trim())),
+    // IVA-170: non-admins only find assets at their own facility (no facility finds nothing).
+    .query(({ input, ctx }) =>
+      complianceDb.lookupAssetByCode(input.assetCode.trim(), { siteId: vehiclePapersListSiteId(ctx.user) })
+    ),
 
   vehicles: router({
     list: protectedProcedure
