@@ -1,7 +1,36 @@
 import { z } from "zod";
 import { router, protectedProcedure } from "./_core/trpc";
 import { managerOrAdminProcedure } from "./routers/roleProcedures";
+import { TRPCError } from "@trpc/server";
 import * as complianceDb from "./complianceTrackingDb";
+
+type ScopedUser = { role: string; siteId: number | null };
+
+/** Admins see every facility; everyone else only their own (no facility means nothing). */
+export function vehiclePapersListSiteId(user: ScopedUser): number | undefined {
+  if (user.role === "admin") return undefined;
+  return user.siteId ?? -1;
+}
+
+/** Non-admins may only change papers for vehicles at their own facility (IVA-160). */
+export function assertVehicleFacility(user: ScopedUser, vehicleSiteId: number | null): void {
+  if (user.role === "admin") return;
+  if (user.siteId == null || vehicleSiteId == null || vehicleSiteId !== user.siteId) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "You can only manage vehicle papers for your own facility." });
+  }
+}
+
+async function assertVehicleAssetAccess(user: ScopedUser, assetId: number) {
+  const siteId = await complianceDb.getAssetSiteId(assetId);
+  if (siteId === undefined) throw new TRPCError({ code: "NOT_FOUND", message: "Vehicle not found." });
+  assertVehicleFacility(user, siteId);
+}
+
+async function assertVehicleRecordAccess(user: ScopedUser, id: number) {
+  const siteId = await complianceDb.getVehicleComplianceSiteId(id);
+  if (siteId === undefined) throw new TRPCError({ code: "NOT_FOUND", message: "Vehicle papers not found." });
+  assertVehicleFacility(user, siteId);
+}
 
 const docStatusZod = z.enum(["compliant", "expiring", "non_compliant"]);
 const generatorStatusZod = z.enum(["serviced", "due_soon", "overdue"]);
@@ -20,7 +49,9 @@ export const complianceTrackingRouter = router({
   vehicles: router({
     list: protectedProcedure
       .input(z.object({ status: docStatusZod.optional() }).optional())
-      .query(({ input }) => complianceDb.listVehicleCompliance(input ?? undefined)),
+      .query(({ input, ctx }) =>
+        complianceDb.listVehicleCompliance({ ...(input ?? {}), siteId: vehiclePapersListSiteId(ctx.user) })
+      ),
 
     upsert: managerOrAdminProcedure
       .input(
@@ -35,13 +66,18 @@ export const complianceTrackingRouter = router({
           notes: z.string().optional(),
         })
       )
-      .mutation(({ input, ctx }) =>
-        complianceDb.upsertVehicleCompliance({ ...input, createdBy: ctx.user.id })
-      ),
+      .mutation(async ({ input, ctx }) => {
+        if (input.id !== undefined) await assertVehicleRecordAccess(ctx.user, input.id);
+        await assertVehicleAssetAccess(ctx.user, input.assetId);
+        return complianceDb.upsertVehicleCompliance({ ...input, createdBy: ctx.user.id });
+      }),
 
     delete: managerOrAdminProcedure
       .input(z.object({ id: z.number() }))
-      .mutation(({ input }) => complianceDb.deleteVehicleCompliance(input.id)),
+      .mutation(async ({ input, ctx }) => {
+        await assertVehicleRecordAccess(ctx.user, input.id);
+        return complianceDb.deleteVehicleCompliance(input.id);
+      }),
   }),
 
   generators: router({
