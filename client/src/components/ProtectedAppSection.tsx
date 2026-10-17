@@ -245,7 +245,11 @@ function ProtectedAppSectionRoutes() {
             <Route path="/app/administration/verification-campaigns" component={VerificationCampaigns} />
             <Route path="/app/administration/observability" component={Observability} />
             <Route path="/app/reports/depreciation-schedule" component={DepreciationSchedule} />
-            <Route path="/app/fleet-health" component={FleetHealth} />
+            <Route path="/app/asset-health" component={FleetHealth} />
+            {/* IVA-162: Fleet health was renamed Asset health; keep old links working. */}
+            <Route path="/app/fleet-health">
+              <Redirect to="/app/asset-health" replace />
+            </Route>
             <Route path="/app/work-orders/:id" component={WorkOrderDetail} />
             <Route path="/app/work-orders" component={WorkOrders} />
             <Route path="/app/mobile-work-orders" component={MobileWorkOrders} />

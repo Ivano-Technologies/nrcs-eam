@@ -230,6 +230,46 @@ export const users = pgTable("users", {
   avatarUrl: text("avatar_url"),
 });
 
+/**
+ * Fleet driver flag (IVA-168, migration 0061): one row per flagged user. Vehicles are pool vehicles, so
+ * drivers are flagged, not assigned to a vehicle. Kept out of `users` so core user queries don't need 0061.
+ */
+export const fleetDrivers = pgTable("fleet_drivers", {
+  userId: integer("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  flaggedByUserId: integer("flagged_by_user_id").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+});
+
+/**
+ * Position designations (IVA-168, migration 0061). Branch Secretary rows carry a site; the others are
+ * organisation-wide (site NULL). Values come from shared/fleetPositions.ts.
+ */
+export const userPositions = pgTable(
+  "user_positions",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    position: varchar("position", { length: 32 }).notNull(),
+    siteId: integer("site_id").references((): AnyPgColumn => sites.id, { onDelete: "cascade" }),
+    assignedByUserId: integer("assigned_by_user_id").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  },
+  (t) => [
+    index("idx_user_positions_position_site").on(t.position, t.siteId),
+    // One holder per position: org-wide positions once, Branch Secretary once per facility.
+    uniqueIndex("user_positions_org_position_uq").on(t.position).where(sql`${t.siteId} IS NULL`),
+    uniqueIndex("user_positions_branch_secretary_site_uq")
+      .on(t.siteId)
+      .where(sql`${t.position} = 'branch_secretary'`),
+  ]
+);
+
+export type UserPosition = typeof userPositions.$inferSelect;
+
 /** System-wide key/value settings (e.g. openRegistration). */
 export const appSettings = pgTable("app_settings", {
   key: varchar("key", { length: 64 }).primaryKey(),

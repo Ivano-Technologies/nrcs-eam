@@ -43,7 +43,7 @@ export default function FleetHealth() {
   const exportPdf = trpc.fleetHealth.exportPdf.useMutation({
     onSuccess: (r) => {
       downloadBase64File(r.data, r.filename, r.mimeType);
-      toast.success("Fleet health report downloaded");
+      toast.success("Asset health report downloaded");
     },
     onError: (e) => toast.error(e.message),
   });
@@ -68,7 +68,7 @@ export default function FleetHealth() {
     <ManagerFinanceGate>
       <div className="space-y-6" data-testid="fleet-health-page">
         <PageHeader
-          title="Fleet health"
+          title="Asset health"
           subtitle="Depreciation, maintenance predictions, and operational alerts for HQ weekly review."
           icon={ShieldCheck}
         />

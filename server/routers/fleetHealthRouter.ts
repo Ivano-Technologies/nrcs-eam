@@ -89,7 +89,7 @@ export const fleetHealthRouter = router({
         } catch (err) {
           throw new TRPCError({
             code: "TIMEOUT",
-            message: err instanceof Error ? err.message : "Fleet health timed out",
+            message: err instanceof Error ? err.message : "Asset health timed out",
           });
         }
       }),
@@ -103,7 +103,7 @@ export const fleetHealthRouter = router({
         const buffer = await renderFleetHealthPdf(summary);
         return {
           data: buffer.toString("base64"),
-          filename: `fleet-health-${summary.reportDate}.pdf`,
+          filename: `asset-health-${summary.reportDate}.pdf`,
           mimeType: "application/pdf",
         };
       }),

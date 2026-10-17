@@ -22,6 +22,8 @@ export const AUDIT_ACTIONS = {
   USER_DEACTIVATE: "user.deactivate",
   USER_DELETE: "user.delete",
   USER_RESET_PASSWORD: "user.reset_password",
+  USER_DRIVER_FLAG: "user.driver_flag",
+  USER_POSITIONS_UPDATE: "user.positions_update",
   INVENTORY_GOODS_RECEIVED: "inventory.goods_received",
   INVENTORY_DISTRIBUTION: "inventory.distribution",
   INVENTORY_CYCLE_COUNT: "inventory.cycle_count",

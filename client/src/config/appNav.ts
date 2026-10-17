@@ -177,8 +177,8 @@ export const SIDEBAR_GROUPS: AppNavGroup[] = [
         managerOrAdminOnly: true,
       },
       {
-        label: "Fleet health",
-        path: appPath("/fleet-health"),
+        label: "Asset health",
+        path: appPath("/asset-health"),
         icon: ShieldCheck,
         managerOrAdminOnly: true,
       },
@@ -283,6 +283,7 @@ const GROUP_PREFIXES: { groupId: string; pathPrefix: string }[] = [
   { groupId: "maintenance", pathPrefix: appPath("/mobile-work-orders") },
   { groupId: "maintenance", pathPrefix: appPath("/mobile-work-order") },
   { groupId: "maintenance", pathPrefix: appPath("/reports/depreciation-schedule") },
+  { groupId: "maintenance", pathPrefix: appPath("/asset-health") },
   { groupId: "maintenance", pathPrefix: appPath("/fleet-health") },
   { groupId: "administration", pathPrefix: appPath("/administration/compliance-register") },
   { groupId: "reports", pathPrefix: appPath("/assets/donors") },

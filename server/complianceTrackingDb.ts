@@ -31,30 +31,41 @@ function daysUntil(iso: string | null): number | null {
   return Math.ceil((end.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 }
 
-export type DocComplianceStatus = "compliant" | "expiring" | "non_compliant";
-export type GeneratorServiceStatus = "serviced" | "due_soon" | "overdue";
+/** "no_date" (IVA-168): a required expiry date is missing. It is neither compliant nor expired. */
+export type DocComplianceStatus = "compliant" | "expiring" | "non_compliant" | "no_date";
+/** "no_date" (IVA-168, Kezie decision 6): no next service date recorded, so not counted as compliant. */
+export type GeneratorServiceStatus = "serviced" | "due_soon" | "overdue" | "no_date";
 export type DonorReportStatus = "submitted" | "due_soon" | "overdue" | "pending";
 
+/**
+ * Worst status across a record's expiry dates: expired beats expiring (30 days or fewer), which beats
+ * no date (any date missing, IVA-168), which beats compliant.
+ */
 export function documentComplianceStatus(
   dates: (string | null | undefined)[]
 ): DocComplianceStatus {
   const today = startOfDay(new Date());
   let hasExpiring = false;
+  let hasMissing = dates.length === 0;
   for (const raw of dates) {
     const iso = toIso(raw);
-    if (!iso) continue;
+    if (!iso) {
+      hasMissing = true;
+      continue;
+    }
     const d = startOfDay(new Date(iso));
     if (d < today) return "non_compliant";
     const days = daysUntil(iso);
     if (days != null && days <= 30) hasExpiring = true;
   }
-  return hasExpiring ? "expiring" : "compliant";
+  if (hasExpiring) return "expiring";
+  return hasMissing ? "no_date" : "compliant";
 }
 
 export function generatorServiceStatus(nextServiceDue: string | null): GeneratorServiceStatus {
-  if (!nextServiceDue) return "serviced";
+  if (!nextServiceDue) return "no_date";
   const days = daysUntil(nextServiceDue);
-  if (days == null) return "serviced";
+  if (days == null) return "no_date";
   if (days < 0) return "overdue";
   if (days <= 30) return "due_soon";
   return "serviced";
@@ -77,20 +88,24 @@ export type ComplianceSummary = {
   compliantPct: number;
   expiringSoonCount: number;
   nonCompliantCount: number;
+  /** Records missing an expiry date (IVA-168). Counted in totalRecords but not as compliant or expired. */
+  noDateCount: number;
 };
 
-function tallyStatus(
+export function tallyStatus(
   statuses: string[]
-): Pick<ComplianceSummary, "compliantCount" | "expiringSoonCount" | "nonCompliantCount"> {
+): Pick<ComplianceSummary, "compliantCount" | "expiringSoonCount" | "nonCompliantCount" | "noDateCount"> {
   let compliantCount = 0;
+  let noDateCount = 0;
   let expiringSoonCount = 0;
   let nonCompliantCount = 0;
   for (const s of statuses) {
-    if (s === "compliant" || s === "serviced" || s === "submitted") compliantCount++;
+    if (s === "no_date") noDateCount++;
+    else if (s === "compliant" || s === "serviced" || s === "submitted") compliantCount++;
     else if (s === "expiring" || s === "due_soon" || s === "pending") expiringSoonCount++;
     else nonCompliantCount++;
   }
-  return { compliantCount, expiringSoonCount, nonCompliantCount };
+  return { compliantCount, expiringSoonCount, nonCompliantCount, noDateCount };
 }
 
 type ComplianceRecords = {
@@ -122,6 +137,7 @@ const EMPTY_SUMMARY: ComplianceSummary = {
   compliantPct: 0,
   expiringSoonCount: 0,
   nonCompliantCount: 0,
+  noDateCount: 0,
 };
 
 /**
@@ -145,20 +161,28 @@ export async function getComplianceSummary(scope?: { siteId: number | null }): P
       await listAssetIdsAtSite(scope.siteId)
     ));
   }
-  const statuses = [
+  return summariseStatuses([
     ...vehicles.map((v) => v.status),
     ...generators.map((g) => g.status),
     ...buildings.map((b) => b.status),
     ...donors.map((d) => d.status),
-  ];
+  ]);
+}
+
+/**
+ * The one place a compliance percentage is calculated (Kezie decision 6): "no_date" records stay in
+ * totalRecords and are NOT compliant, so they lower compliantPct. Pure, for testing.
+ */
+export function summariseStatuses(statuses: string[]): ComplianceSummary {
   const totalRecords = statuses.length;
-  const { compliantCount, expiringSoonCount, nonCompliantCount } = tallyStatus(statuses);
+  const { compliantCount, expiringSoonCount, nonCompliantCount, noDateCount } = tallyStatus(statuses);
   return {
     totalRecords,
     compliantCount,
     compliantPct: totalRecords ? Math.round((compliantCount / totalRecords) * 100) : 100,
     expiringSoonCount,
     nonCompliantCount,
+    noDateCount,
   };
 }
 
