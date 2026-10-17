@@ -26,6 +26,12 @@ import {
   countVehiclesExpiringSoon,
 } from "../complianceTrackingDb";
 import { countInsuranceExpiringSoon } from "../financeModulesDb";
+import {
+  facilityDeleteFailure,
+  getFacilityDeleteBlocker,
+  isAssetReferenceError,
+  type FacilityDeleteFailure,
+} from "../facilityDelete";
 import { getSupabaseSecret } from "../_core/supabase";
 import {
   assetTransfers,
@@ -255,25 +261,26 @@ export const sitesRouter = router({
 
     /**
      * Bulk delete facilities (manager/admin). Each id is checked, deleted and audited one by one so a single
-     * failure (for example a facility still linked to assets) does not block the rest.
+     * failure (for example a facility still linked to assets) does not block the rest. Failures come back with
+     * a reason and a user-facing message; raw database errors never reach the client (IVA-181).
      */
     bulkDelete: managerOrAdminProcedure
       .input(z.object({ ids: z.array(z.number().int().positive()).min(1).max(500) }))
       .mutation(async ({ input, ctx }) => {
         let deleted = 0;
-        const failedIds: number[] = [];
+        const failures: FacilityDeleteFailure[] = [];
         for (const id of Array.from(new Set(input.ids))) {
           try {
             const existing = await db.getSiteById(id);
-            if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Facility not found." });
-            // assets.siteId has no foreign key, so guard here rather than orphan assets or child facilities.
-            const handle = await db.getDb();
-            if (handle) {
-              const [linkedAsset] = await handle.select({ id: assets.id }).from(assets).where(eq(assets.siteId, id)).limit(1);
-              const [child] = await handle.select({ id: sites.id }).from(sites).where(eq(sites.parentFacilityId, id)).limit(1);
-              if (linkedAsset || child) {
-                throw new TRPCError({ code: "CONFLICT", message: "Facility still has assets or child facilities." });
-              }
+            if (!existing) {
+              failures.push(facilityDeleteFailure(id, "not_found"));
+              continue;
+            }
+            // Assets point at a facility by siteId and by branch_code (FK to sites.code); either blocks the delete.
+            const blocker = await getFacilityDeleteBlocker({ id, code: existing.code ?? null });
+            if (blocker) {
+              failures.push(facilityDeleteFailure(id, blocker));
+              continue;
             }
             await db.deleteSite(id);
             await db.createAuditLog({
@@ -285,11 +292,11 @@ export const sitesRouter = router({
             });
             deleted++;
           } catch (error) {
-            failedIds.push(id);
+            failures.push(facilityDeleteFailure(id, isAssetReferenceError(error) ? "has_assets" : "error"));
             console.error(`Failed to delete facility ${id}:`, error);
           }
         }
-        return { deleted, total: input.ids.length, failedIds };
+        return { deleted, total: input.ids.length, failedIds: failures.map((f) => f.id), failures };
       }),
 
     /** Bulk mark facilities active or inactive (manager/admin), audited per facility. */
