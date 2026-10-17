@@ -45,6 +45,7 @@ import { Building2, FileText, Loader2, Plus, ShieldCheck, Truck, Zap } from "luc
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
+import { ConfirmDeleteRecordDialog } from "@/components/compliance/ConfirmDeleteRecordDialog";
 
 type TabKey = "vehicles" | "generators" | "buildings" | "donor" | "insurance";
 
@@ -89,6 +90,10 @@ export default function ComplianceRegister() {
   }, [initialTab]);
 
   const utils = trpc.useUtils();
+  // IVA-173: every register delete goes through one confirm dialog.
+  const [pendingDelete, setPendingDelete] = useState<
+    { kind: "vehicle" | "generator" | "building" | "donor"; id: number; title: string } | null
+  >(null);
   const { data: summary } = trpc.complianceTracking.summary.useQuery();
 
   const vehicleStatus =
@@ -143,10 +148,12 @@ export default function ComplianceRegister() {
   });
   const vehicleDelete = trpc.complianceTracking.vehicles.delete.useMutation({
     onSuccess: () => {
+      toast.success("Record deleted");
+      setPendingDelete(null);
       void utils.complianceTracking.vehicles.list.invalidate();
       void utils.complianceTracking.summary.invalidate();
     },
-    onError: (e) => toast.error(e.message),
+    // Errors show inside the confirm dialog (IVA-173); no toast while it is open.
   });
 
   const [genOpen, setGenOpen] = useState(false);
@@ -172,10 +179,12 @@ export default function ComplianceRegister() {
   });
   const genDelete = trpc.complianceTracking.generators.delete.useMutation({
     onSuccess: () => {
+      toast.success("Record deleted");
+      setPendingDelete(null);
       void utils.complianceTracking.generators.list.invalidate();
       void utils.complianceTracking.summary.invalidate();
     },
-    onError: (e) => toast.error(e.message),
+    // Errors show inside the confirm dialog (IVA-173); no toast while it is open.
   });
 
   const [buildingOpen, setBuildingOpen] = useState(false);
@@ -200,10 +209,12 @@ export default function ComplianceRegister() {
   });
   const buildingDelete = trpc.complianceTracking.buildings.delete.useMutation({
     onSuccess: () => {
+      toast.success("Record deleted");
+      setPendingDelete(null);
       void utils.complianceTracking.buildings.list.invalidate();
       void utils.complianceTracking.summary.invalidate();
     },
-    onError: (e) => toast.error(e.message),
+    // Errors show inside the confirm dialog (IVA-173); no toast while it is open.
   });
 
   const [donorOpen, setDonorOpen] = useState(false);
@@ -227,10 +238,12 @@ export default function ComplianceRegister() {
   });
   const donorDelete = trpc.complianceTracking.donor.delete.useMutation({
     onSuccess: () => {
+      toast.success("Record deleted");
+      setPendingDelete(null);
       void utils.complianceTracking.donor.list.invalidate();
       void utils.complianceTracking.summary.invalidate();
     },
-    onError: (e) => toast.error(e.message),
+    // Errors show inside the confirm dialog (IVA-173); no toast while it is open.
   });
 
   async function resolveAssetCode(code: string): Promise<number | null> {
@@ -382,16 +395,9 @@ export default function ComplianceRegister() {
                             size="sm"
                             variant="ghost"
                             disabled={vehicleDelete.isPending}
-                            onClick={() => vehicleDelete.mutate({ id: r.id })}
+                            onClick={() => setPendingDelete({ kind: "vehicle", id: r.id, title: `Delete ${r.plateNumber || r.assetCode || "vehicle"} papers?` })}
                           >
-                            {vehicleDelete.isPending && vehicleDelete.variables?.id === r.id ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Deleting…
-                              </>
-                            ) : (
-                              "Delete"
-                            )}
+                            Delete
                           </Button>
                         </TableCell>
                       ) : null}
@@ -452,16 +458,9 @@ export default function ComplianceRegister() {
                             size="sm"
                             variant="ghost"
                             disabled={genDelete.isPending}
-                            onClick={() => genDelete.mutate({ id: r.id })}
+                            onClick={() => setPendingDelete({ kind: "generator", id: r.id, title: `Delete ${r.assetCode || "generator"} generator record?` })}
                           >
-                            {genDelete.isPending && genDelete.variables?.id === r.id ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Deleting…
-                              </>
-                            ) : (
-                              "Delete"
-                            )}
+                            Delete
                           </Button>
                         </TableCell>
                       ) : null}
@@ -520,16 +519,9 @@ export default function ComplianceRegister() {
                             size="sm"
                             variant="ghost"
                             disabled={buildingDelete.isPending}
-                            onClick={() => buildingDelete.mutate({ id: r.id })}
+                            onClick={() => setPendingDelete({ kind: "building", id: r.id, title: `Delete ${r.facilityName} ${r.certificateType} certificate?` })}
                           >
-                            {buildingDelete.isPending && buildingDelete.variables?.id === r.id ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Deleting…
-                              </>
-                            ) : (
-                              "Delete"
-                            )}
+                            Delete
                           </Button>
                         </TableCell>
                       ) : null}
@@ -586,16 +578,9 @@ export default function ComplianceRegister() {
                             size="sm"
                             variant="ghost"
                             disabled={donorDelete.isPending}
-                            onClick={() => donorDelete.mutate({ id: r.id })}
+                            onClick={() => setPendingDelete({ kind: "donor", id: r.id, title: `Delete ${r.donorName} ${r.reportType} report?` })}
                           >
-                            {donorDelete.isPending && donorDelete.variables?.id === r.id ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Deleting…
-                              </>
-                            ) : (
-                              "Delete"
-                            )}
+                            Delete
                           </Button>
                         </TableCell>
                       ) : null}
@@ -905,6 +890,20 @@ export default function ComplianceRegister() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ConfirmDeleteRecordDialog
+        open={pendingDelete !== null}
+        title={pendingDelete?.title ?? ""}
+        pending={vehicleDelete.isPending || genDelete.isPending || buildingDelete.isPending || donorDelete.isPending}
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={() => {
+          if (!pendingDelete) return Promise.resolve();
+          const { kind, id } = pendingDelete;
+          if (kind === "vehicle") return vehicleDelete.mutateAsync({ id });
+          if (kind === "generator") return genDelete.mutateAsync({ id });
+          if (kind === "building") return buildingDelete.mutateAsync({ id });
+          return donorDelete.mutateAsync({ id });
+        }}
+      />
     </div>
   );
 }
