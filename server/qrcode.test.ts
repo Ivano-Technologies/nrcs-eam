@@ -3,6 +3,18 @@ import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
 import { assetQrUrl, generateAssetQRCode, parseAssetQRCode } from "./qrcode";
 
+/**
+ * IVA-171: always use a seeded facility. sites.list is sorted by name, so sites[0] could be another test
+ * file's temporary facility (e.g. assetMap.db.test's "Map Child ..."), which added an asset to it (expected 5,
+ * got 6) or blocked its cleanup.
+ */
+function seededSite<T extends { code: string | null }>(sites: T[]): T {
+  const site = sites.find((s) => s.code === "NHQ") ?? sites.find((s) => s.code === "LAG" || s.code === "KAN");
+  if (!site) throw new Error("Seed data missing the NHQ, LAG or KAN facility");
+  return site;
+}
+
+
 type AuthenticatedUser = NonNullable<TrpcContext["user"]>;
 
 function createTestContext(role: "admin" | "manager" | "staff" | "user" = "admin"): TrpcContext {
@@ -109,11 +121,11 @@ describe("QR Code API Endpoints", () => {
       name: "QR Test Asset",
       description: "Asset for QR code testing",
       categoryId: categories[0]!.id,
-      siteId: sites[0]!.id,
+      siteId: seededSite(sites).id,
       itemType: "Asset",
       itemCategory: "Office Equipment",
       itemCategoryCode: "OE",
-      branchCode: sites[0]!.code ?? undefined,
+      branchCode: seededSite(sites).code ?? undefined,
       manufacturer: "Test Manufacturer",
       model: "Test Model",
     });
@@ -140,11 +152,11 @@ describe("QR Code API Endpoints", () => {
       assetTag: `SCAN-TEST-${Date.now()}`,
       name: "Scan Test Asset",
       categoryId: categories[0]!.id,
-      siteId: sites[0]!.id,
+      siteId: seededSite(sites).id,
       itemType: "Asset",
       itemCategory: "Office Equipment",
       itemCategoryCode: "OE",
-      branchCode: sites[0]!.code ?? undefined,
+      branchCode: seededSite(sites).code ?? undefined,
     });
 
     // Create QR code data
@@ -192,11 +204,11 @@ describe("Asset Mapping", () => {
       assetTag: `GPS-TEST-${Date.now()}`,
       name: "GPS Test Asset",
       categoryId: categories[0]!.id,
-      siteId: sites[0]!.id,
+      siteId: seededSite(sites).id,
       itemType: "Asset",
       itemCategory: "Office Equipment",
       itemCategoryCode: "OE",
-      branchCode: sites[0]!.code ?? undefined,
+      branchCode: seededSite(sites).code ?? undefined,
     });
 
     // Update with GPS coordinates (Abuja, Nigeria)
