@@ -67,6 +67,7 @@ export function FleetDesignationsFields({
         </div>
         <Switch
           id="edit-user-driver"
+          className="mt-0.5 h-[1.15rem] w-8 shrink-0"
           checked={driverEligible && value.isDriver}
           disabled={!driverEligible}
           onCheckedChange={(c) => onChange({ ...value, isDriver: c })}
@@ -98,17 +99,16 @@ export function FleetDesignationsFields({
                       if (!clash) return null;
                       const moving = reassign.includes(p);
                       return moving ? (
-                        <p className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground" data-testid={`position-reassign-${p}`}>
-                          Moves from {clash.holderName} to {userName} when you save.
-                          <Button
+                        <p className="text-xs text-muted-foreground" data-testid={`position-reassign-${p}`}>
+                          Moves from {clash.holderName} to {userName} when you save.{" "}
+                          <button
                             type="button"
-                            variant="link"
-                            size="sm"
-                            className="h-auto p-0 text-xs"
+                            data-inline-link
+                            className="inline align-baseline text-xs font-medium text-primary underline-offset-4 hover:underline dark:text-primary-on-dark"
                             onClick={() => onReassignChange?.(reassign.filter((x) => x !== p))}
                           >
                             Undo
-                          </Button>
+                          </button>
                         </p>
                       ) : (
                         <div role="alert" className="space-y-1" data-testid={`position-conflict-${p}`}>
