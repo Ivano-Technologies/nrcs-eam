@@ -39,6 +39,7 @@ export function FacilityDeleteDialog({
   }, [facility?.id]);
 
   const pending = remove.isPending;
+  const blocked = error?.blocked === true;
 
   const confirm = async () => {
     if (!facility || inFlight.current) return;
@@ -85,8 +86,10 @@ export function FacilityDeleteDialog({
           <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
           <AlertDialogAction
             data-testid="facility-delete-confirm"
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            disabled={pending || error?.blocked === true}
+            // Destructive fill only while enabled, so a blocked Delete reads as disabled
+            // (bg-destructive otherwise overrides the disabled token).
+            className={blocked ? undefined : "bg-destructive text-destructive-foreground hover:bg-destructive/90"}
+            disabled={pending || blocked}
             onClick={(e) => {
               e.preventDefault();
               void confirm();
