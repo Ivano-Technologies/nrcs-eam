@@ -20,6 +20,7 @@ import {
 } from "./roleProcedures";
 import { observabilityRouter } from "./observabilityRouter";
 import {
+  complianceCountScope,
   countDonorReportsDueSoon,
   countGeneratorsOverdue,
   countVehiclesExpiringSoon,
@@ -688,8 +689,11 @@ export const dashboardRouter = router({
         const scope = dashboardDataScope(ctx);
         if (scope.mode === "empty") return [allClear];
 
+        // IVA-174: compliance counts follow the user's facility (admins org-wide), so they key the cache too.
+        const complianceScope = complianceCountScope(ctx.user);
+        const complianceKey = complianceScope ? `c${complianceScope.siteId ?? "none"}` : "call";
         return withDashboardCache(
-          `dashboard:attentionItems:${dashboardCacheScopeKey(scope)}:${input.role}`,
+          `dashboard:attentionItems:${dashboardCacheScopeKey(scope)}:${complianceKey}:${input.role}`,
           300,
           async () => {
         const siteId = scope.mode === "site" ? scope.siteId : undefined;
@@ -801,9 +805,9 @@ export const dashboardRouter = router({
               return Number(rows[0]?.count ?? 0);
             }),
             safe("insuranceExpiring", () => countInsuranceExpiringSoon()),
-            safe("vehiclesExpiring", () => countVehiclesExpiringSoon()),
-            safe("generatorsOverdue", () => countGeneratorsOverdue()),
-            safe("donorReportsDueSoon", () => countDonorReportsDueSoon()),
+            safe("vehiclesExpiring", () => countVehiclesExpiringSoon(complianceScope)),
+            safe("generatorsOverdue", () => countGeneratorsOverdue(complianceScope)),
+            safe("donorReportsDueSoon", () => countDonorReportsDueSoon(complianceScope)),
           ]);
 
           const items: AttentionItem[] = [];
@@ -930,9 +934,9 @@ export const dashboardRouter = router({
               return Number(rows[0]?.count ?? 0);
             }),
             safe("insuranceExpiring", () => countInsuranceExpiringSoon()),
-            safe("vehiclesExpiring", () => countVehiclesExpiringSoon()),
-            safe("generatorsOverdue", () => countGeneratorsOverdue()),
-            safe("donorReportsDueSoon", () => countDonorReportsDueSoon()),
+            safe("vehiclesExpiring", () => countVehiclesExpiringSoon(complianceScope)),
+            safe("generatorsOverdue", () => countGeneratorsOverdue(complianceScope)),
+            safe("donorReportsDueSoon", () => countDonorReportsDueSoon(complianceScope)),
           ]);
 
           const items: AttentionItem[] = [];
