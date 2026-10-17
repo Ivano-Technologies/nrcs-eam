@@ -67,6 +67,7 @@ const VEHICLE_FILTER_LABELS = {
 
 function generatorBadge(status: string) {
   if (status === "serviced") return <Badge className="bg-green-100 text-green-800">Serviced</Badge>;
+  if (status === "no_date") return <NoDateBadge />;
   if (status === "due_soon") return <Badge className="bg-amber-100 text-amber-800">Due soon</Badge>;
   return <Badge className="bg-red-100 text-red-800">Overdue</Badge>;
 }

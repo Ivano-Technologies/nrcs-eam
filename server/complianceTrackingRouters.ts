@@ -56,7 +56,7 @@ const BUILDINGS = "building certificates";
 const DONORS = "donor reports";
 
 const docStatusZod = z.enum(["compliant", "expiring", "non_compliant", "no_date"]);
-const generatorStatusZod = z.enum(["serviced", "due_soon", "overdue"]);
+const generatorStatusZod = z.enum(["serviced", "due_soon", "overdue", "no_date"]);
 const donorStatusZod = z.enum(["submitted", "due_soon", "overdue", "pending"]);
 
 export const complianceTrackingRouter = router({

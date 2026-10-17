@@ -33,7 +33,8 @@ function daysUntil(iso: string | null): number | null {
 
 /** "no_date" (IVA-168): a required expiry date is missing. It is neither compliant nor expired. */
 export type DocComplianceStatus = "compliant" | "expiring" | "non_compliant" | "no_date";
-export type GeneratorServiceStatus = "serviced" | "due_soon" | "overdue";
+/** "no_date" (IVA-168, Kezie decision 6): no next service date recorded, so not counted as compliant. */
+export type GeneratorServiceStatus = "serviced" | "due_soon" | "overdue" | "no_date";
 export type DonorReportStatus = "submitted" | "due_soon" | "overdue" | "pending";
 
 /**
@@ -62,9 +63,9 @@ export function documentComplianceStatus(
 }
 
 export function generatorServiceStatus(nextServiceDue: string | null): GeneratorServiceStatus {
-  if (!nextServiceDue) return "serviced";
+  if (!nextServiceDue) return "no_date";
   const days = daysUntil(nextServiceDue);
-  if (days == null) return "serviced";
+  if (days == null) return "no_date";
   if (days < 0) return "overdue";
   if (days <= 30) return "due_soon";
   return "serviced";
@@ -160,12 +161,19 @@ export async function getComplianceSummary(scope?: { siteId: number | null }): P
       await listAssetIdsAtSite(scope.siteId)
     ));
   }
-  const statuses = [
+  return summariseStatuses([
     ...vehicles.map((v) => v.status),
     ...generators.map((g) => g.status),
     ...buildings.map((b) => b.status),
     ...donors.map((d) => d.status),
-  ];
+  ]);
+}
+
+/**
+ * The one place a compliance percentage is calculated (Kezie decision 6): "no_date" records stay in
+ * totalRecords and are NOT compliant, so they lower compliantPct. Pure, for testing.
+ */
+export function summariseStatuses(statuses: string[]): ComplianceSummary {
   const totalRecords = statuses.length;
   const { compliantCount, expiringSoonCount, nonCompliantCount, noDateCount } = tallyStatus(statuses);
   return {

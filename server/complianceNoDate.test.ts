@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { documentComplianceStatus, tallyStatus } from "./complianceTrackingDb";
+import { documentComplianceStatus, generatorServiceStatus, summariseStatuses, tallyStatus } from "./complianceTrackingDb";
 
 // IVA-168: a missing expiry date is its own "no_date" status, not compliant and not expired.
 describe("documentComplianceStatus no_date (IVA-168)", () => {
@@ -34,5 +34,23 @@ describe("documentComplianceStatus no_date (IVA-168)", () => {
       nonCompliantCount: 1,
       noDateCount: 2,
     });
+  });
+
+  it("treats a generator with no next service date as no_date, not serviced", () => {
+    expect(generatorServiceStatus(null)).toBe("no_date");
+    expect(generatorServiceStatus("2027-06-01")).toBe("serviced");
+  });
+
+  it("keeps no_date in the total but not compliant, so it lowers the percentage (Kezie decision 6)", () => {
+    expect(summariseStatuses(["compliant", "serviced", "no_date", "no_date"])).toEqual({
+      totalRecords: 4,
+      compliantCount: 2,
+      compliantPct: 50,
+      expiringSoonCount: 0,
+      nonCompliantCount: 0,
+      noDateCount: 2,
+    });
+    expect(summariseStatuses(["no_date"]).compliantPct).toBe(0);
+    expect(summariseStatuses([]).compliantPct).toBe(100);
   });
 });
