@@ -162,18 +162,31 @@ export async function getComplianceSummary(scope?: { siteId: number | null }): P
   };
 }
 
-export async function countVehiclesExpiringSoon(): Promise<number> {
-  const rows = await listVehicleCompliance({ status: "expiring" });
+/**
+ * Facility scope for dashboard compliance counts (IVA-174, matching IVA-169): admins count org-wide
+ * (undefined); everyone else counts their facility, and no facility (null) counts zero.
+ */
+export type ComplianceCountScope = { siteId: number | null } | undefined;
+
+export function complianceCountScope(user: { role: string; siteId: number | null }): ComplianceCountScope {
+  return user.role === "admin" ? undefined : { siteId: user.siteId ?? null };
+}
+
+export async function countVehiclesExpiringSoon(scope?: ComplianceCountScope): Promise<number> {
+  if (scope && scope.siteId == null) return 0;
+  const rows = await listVehicleCompliance({ status: "expiring", siteId: scope?.siteId ?? undefined });
   return rows.length;
 }
 
-export async function countGeneratorsOverdue(): Promise<number> {
-  const rows = await listGeneratorCompliance({ status: "overdue" });
+export async function countGeneratorsOverdue(scope?: ComplianceCountScope): Promise<number> {
+  if (scope && scope.siteId == null) return 0;
+  const rows = await listGeneratorCompliance({ status: "overdue", siteId: scope?.siteId ?? undefined });
   return rows.length;
 }
 
-export async function countDonorReportsDueSoon(): Promise<number> {
-  const rows = await listDonorReporting({ status: "due_soon" });
+export async function countDonorReportsDueSoon(scope?: ComplianceCountScope): Promise<number> {
+  if (scope && scope.siteId == null) return 0;
+  const rows = await listDonorReporting({ status: "due_soon", siteId: scope?.siteId ?? undefined });
   return rows.length;
 }
 
