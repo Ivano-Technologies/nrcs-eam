@@ -184,6 +184,8 @@ export type InsuranceListRow = {
 
 export async function listInsuranceRecords(filters?: {
   siteId?: number;
+  /** The policy's facility, falling back to its asset's facility (IVA-178). */
+  facilityId?: number;
   insuranceType?: string;
   status?: "active" | "expiring" | "expired";
 }): Promise<InsuranceListRow[]> {
@@ -191,6 +193,9 @@ export async function listInsuranceRecords(filters?: {
   if (!database) return [];
   const conditions: SQL[] = [];
   if (filters?.siteId) conditions.push(eq(insuranceRecords.siteId, filters.siteId));
+  if (filters?.facilityId) {
+    conditions.push(sql`coalesce(${insuranceRecords.siteId}, ${assets.siteId}) = ${filters.facilityId}`);
+  }
   if (filters?.insuranceType) conditions.push(eq(insuranceRecords.insuranceType, filters.insuranceType));
 
   const rows = await database
@@ -244,8 +249,14 @@ export async function listInsuranceRecords(filters?: {
   return out;
 }
 
-export async function countInsuranceExpiringSoon(): Promise<number> {
-  const rows = await listInsuranceRecords({ status: "expiring" });
+/**
+ * IVA-178 (matching IVA-174): admins count org-wide (scope undefined); everyone else counts their facility,
+ * and no facility counts zero. A policy belongs to its own facility, or to its asset's facility when it was
+ * taken out against an asset without one.
+ */
+export async function countInsuranceExpiringSoon(scope?: { siteId: number | null }): Promise<number> {
+  if (scope && scope.siteId == null) return 0;
+  const rows = await listInsuranceRecords({ status: "expiring", facilityId: scope?.siteId ?? undefined });
   return rows.length;
 }
 
