@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import {
   assets,
   buildingSafety,
@@ -306,6 +306,8 @@ export type GeneratorComplianceRow = {
 
 export async function listGeneratorCompliance(filters?: {
   status?: GeneratorServiceStatus;
+  /** Restrict to this facility (IVA-172). */
+  siteId?: number;
 }): Promise<GeneratorComplianceRow[]> {
   const database = await db.getDb();
   if (!database) return [];
@@ -327,6 +329,7 @@ export async function listGeneratorCompliance(filters?: {
     .from(generatorCompliance)
     .innerJoin(assets, eq(generatorCompliance.assetId, assets.id))
     .leftJoin(sites, eq(assets.siteId, sites.id))
+    .where(filters?.siteId !== undefined ? eq(assets.siteId, filters.siteId) : undefined)
     .orderBy(asc(assets.assetCode));
 
   const out: GeneratorComplianceRow[] = [];
@@ -409,6 +412,8 @@ export type BuildingSafetyRow = {
 
 export async function listBuildingSafety(filters?: {
   status?: DocComplianceStatus;
+  /** Restrict to this facility (IVA-172). */
+  siteId?: number;
 }): Promise<BuildingSafetyRow[]> {
   const database = await db.getDb();
   if (!database) return [];
@@ -429,6 +434,7 @@ export async function listBuildingSafety(filters?: {
     })
     .from(buildingSafety)
     .innerJoin(sites, eq(buildingSafety.siteId, sites.id))
+    .where(filters?.siteId !== undefined ? eq(buildingSafety.siteId, filters.siteId) : undefined)
     .orderBy(asc(sites.name));
 
   const out: BuildingSafetyRow[] = [];
@@ -510,6 +516,8 @@ export type DonorReportingRow = {
 
 export async function listDonorReporting(filters?: {
   status?: DonorReportStatus;
+  /** Restrict to this facility (IVA-172). */
+  siteId?: number;
 }): Promise<DonorReportingRow[]> {
   const database = await db.getDb();
   if (!database) return [];
@@ -532,6 +540,9 @@ export async function listDonorReporting(filters?: {
     .from(donorReporting)
     .leftJoin(assets, eq(donorReporting.assetId, assets.id))
     .leftJoin(sites, eq(donorReporting.siteId, sites.id))
+    .where(filters?.siteId !== undefined
+        ? sql`coalesce(${donorReporting.siteId}, ${assets.siteId}) = ${filters.siteId}`
+        : undefined)
     .orderBy(asc(donorReporting.dueDate));
 
   const out: DonorReportingRow[] = [];
@@ -646,4 +657,45 @@ export async function getVehicleComplianceSiteId(id: number): Promise<number | n
     .where(eq(vehicleCompliance.id, id))
     .limit(1);
   return row ? row.siteId : undefined;
+}
+
+/** Facility of the generator behind a generator record. undefined when the record does not exist. */
+export async function getGeneratorComplianceSiteId(id: number): Promise<number | null | undefined> {
+  const database = await db.getDb();
+  if (!database) throw new Error("Database unavailable");
+  const [row] = await database
+    .select({ siteId: assets.siteId })
+    .from(generatorCompliance)
+    .innerJoin(assets, eq(generatorCompliance.assetId, assets.id))
+    .where(eq(generatorCompliance.id, id))
+    .limit(1);
+  return row ? row.siteId : undefined;
+}
+
+/** Facility of a building certificate. undefined when the record does not exist. */
+export async function getBuildingSafetySiteId(id: number): Promise<number | null | undefined> {
+  const database = await db.getDb();
+  if (!database) throw new Error("Database unavailable");
+  const [row] = await database
+    .select({ siteId: buildingSafety.siteId })
+    .from(buildingSafety)
+    .where(eq(buildingSafety.id, id))
+    .limit(1);
+  return row ? row.siteId : undefined;
+}
+
+/**
+ * Facility of a donor report: its own facility, else its asset's facility. null when it has neither,
+ * undefined when the record does not exist.
+ */
+export async function getDonorReportingSiteId(id: number): Promise<number | null | undefined> {
+  const database = await db.getDb();
+  if (!database) throw new Error("Database unavailable");
+  const [row] = await database
+    .select({ siteId: sql<number | null>`coalesce(${donorReporting.siteId}, ${assets.siteId})` })
+    .from(donorReporting)
+    .leftJoin(assets, eq(donorReporting.assetId, assets.id))
+    .where(eq(donorReporting.id, id))
+    .limit(1);
+  return row ? (row.siteId ?? null) : undefined;
 }
