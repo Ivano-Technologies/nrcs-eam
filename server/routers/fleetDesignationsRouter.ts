@@ -13,7 +13,7 @@ import { adminProcedure } from "./roleProcedures";
  */
 const MIGRATION_MISSING = "Positions and the driver flag need database migration 0061. Ask your administrator.";
 
-const DRIVER_NOT_ELIGIBLE = "Only active staff users can be drivers.";
+const DRIVER_NOT_ELIGIBLE = "Only active users can be drivers.";
 
 export function conflictMessage(conflicts: fleetDb.PositionConflict[]): string {
   return conflicts

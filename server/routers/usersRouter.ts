@@ -15,7 +15,7 @@ import { generateEmailTemplate, sendBulkEmails, sendEmail } from "../emailServic
 import { AUDIT_ACTIONS, logAuditEvent } from "../_core/auditHelper";
 import { clearDriverFlag, isDriverEligible, isMissingTableError } from "../fleetDesignationsDb";
 
-/** IVA-168: drivers must be active staff, so drop the flag when a user stops qualifying (audited). */
+/** IVA-168: drivers must be active users, so drop the flag when a user is no longer active (audited). */
 async function dropDriverFlagIfIneligible(
   user: { id: number; role: string; status: string | null },
   actorUserId: number,
@@ -29,7 +29,7 @@ async function dropDriverFlagIfIneligible(
         action: AUDIT_ACTIONS.USER_DRIVER_FLAG,
         entityType: "user",
         entityId: user.id,
-        changes: { before: { isDriver: true }, after: { isDriver: false }, reason: "no longer an active staff user" },
+        changes: { before: { isDriver: true }, after: { isDriver: false }, reason: "user is no longer active" },
         req,
       });
     }

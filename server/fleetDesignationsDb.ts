@@ -12,9 +12,12 @@ export type PositionAssignment = { position: PositionDesignation; siteId: number
 export type PositionRow = PositionAssignment & { userId: number; userName: string | null; siteName: string | null };
 export type FleetDesignations = { available: boolean; driverUserIds: number[]; positions: PositionRow[] };
 
-/** Driver flag rule (Kezie, 17 Oct): only active staff users can be flagged. */
-export function isDriverEligible(user: { role: string; status: string | null | undefined }): boolean {
-  return user.role === "staff" && (user.status ?? "active") === "active";
+/**
+ * Driver flag rule (Kezie, 17 Oct): any active user can be flagged, whatever their app role, because pool
+ * drivers come from all over. Inactive or pending users can't.
+ */
+export function isDriverEligible(user: { status: string | null | undefined }): boolean {
+  return (user.status ?? "active") === "active";
 }
 
 /** Postgres unique_violation, e.g. two admins assigning the same position at once. */
@@ -196,7 +199,7 @@ export async function clearDriverFlag(userId: number): Promise<boolean> {
   return removed.length > 0;
 }
 
-/** Active staff flagged as drivers, optionally at one facility. Only these can go on a booking or trip. */
+/** Active users flagged as drivers, optionally at one facility. Only these can go on a booking or trip. */
 export async function listFlaggedDrivers(siteId?: number) {
   const database = await db.getDb();
   if (!database) return [];
@@ -205,12 +208,12 @@ export async function listFlaggedDrivers(siteId?: number) {
     .from(fleetDrivers)
     .innerJoin(users, eq(fleetDrivers.userId, users.id))
     .where(
-      and(eq(users.status, "active"), eq(users.role, "staff"), siteId != null ? eq(users.siteId, siteId) : undefined)
+      and(eq(users.status, "active"), siteId != null ? eq(users.siteId, siteId) : undefined)
     )
     .orderBy(asc(users.name));
 }
 
-/** True when every id is an active staff user flagged as a driver (for the booking and trip writes in later waves). */
+/** True when every id is an active user flagged as a driver (for the booking and trip writes in later waves). */
 export async function areFlaggedDrivers(userIds: number[]): Promise<boolean> {
   if (!userIds.length) return true;
   const database = await db.getDb();
@@ -219,6 +222,6 @@ export async function areFlaggedDrivers(userIds: number[]): Promise<boolean> {
     .select({ id: users.id })
     .from(fleetDrivers)
     .innerJoin(users, eq(fleetDrivers.userId, users.id))
-    .where(and(inArray(fleetDrivers.userId, userIds), eq(users.status, "active"), eq(users.role, "staff")));
+    .where(and(inArray(fleetDrivers.userId, userIds), eq(users.status, "active")));
   return new Set(rows.map((r) => r.id)).size === new Set(userIds).size;
 }

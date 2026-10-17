@@ -83,13 +83,13 @@ describe("FleetDesignationsFields (IVA-168)", () => {
     expect(screen.getByTestId("position-reassign-head_of_fleet")).toHaveTextContent("Moves from Aisha Bello to Ibrahim Musa when you save.");
   });
 
-  it("disables the driver switch for users who aren't active staff", () => {
+  it("disables the driver switch for users who aren't active", () => {
     render(
       <FleetDesignationsFields available value={{ isDriver: true, positions: [] }} facilityName={null} onChange={vi.fn()} driverEligible={false} />
     );
     const sw = screen.getByRole("switch", { name: "Driver" });
     expect(sw).toBeDisabled();
     expect(sw).not.toBeChecked();
-    expect(screen.getByText("Only active staff users can be drivers.")).toBeInTheDocument();
+    expect(screen.getByText("Only active users can be drivers.")).toBeInTheDocument();
   });
 });

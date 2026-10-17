@@ -3,7 +3,7 @@
 -- target alerts, booking approval and the monthly report.
 --   head_of_fleet, gm_assets_admin, sg: organisation-wide, so site_id is NULL.
 --   branch_secretary: one branch, so site_id is required.
--- The driver flag is for active staff users only (checked in tRPC). It lives in its own table (one row
+-- The driver flag is for active users of any role (checked in tRPC). It lives in its own table (one row
 -- per flagged user) rather than a users column, so the core users queries (sign-in, auth.me) don't
 -- depend on this migration having been applied.
 -- RLS matches 0058: enabled with only the service_role_full_access policy. App access is in tRPC (admin only).

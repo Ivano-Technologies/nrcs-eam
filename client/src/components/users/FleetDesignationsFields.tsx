@@ -18,7 +18,7 @@ export type PositionHolderConflict = { position: PositionDesignation; holderName
  * IVA-168: driver flag and position designations in the admin Edit user dialog. Positions are job titles,
  * separate from the app role. Branch Secretary applies to the user's assigned facility.
  * One holder per position: a clash shows inline with the current holder and a Reassign option.
- * Only active staff users can be drivers.
+ * Any active user can be a driver, whatever their role.
  */
 export function FleetDesignationsFields({
   available,
@@ -62,7 +62,7 @@ export function FleetDesignationsFields({
           <p className="text-xs text-muted-foreground">
             {driverEligible
               ? "Only flagged drivers can be put on a booking or trip."
-              : "Only active staff users can be drivers."}
+              : "Only active users can be drivers."}
           </p>
         </div>
         <Switch

@@ -19,12 +19,13 @@ vi.mock("./_core/auditHelper", async (orig) => {
 });
 vi.mock("./db", async (orig) => {
   const actual = await orig<typeof import("./db")>();
-  // 7: active staff at site 3; 8: active staff, no facility; 9: inactive staff; 10: manager.
+  // 7: active staff at site 3; 8: active staff, no facility; 9: inactive staff; 10: active manager; 11: pending field.
   const users: Record<number, { role: string; status: string; siteId: number | null }> = {
     7: { role: "staff", status: "active", siteId: 3 },
     8: { role: "staff", status: "active", siteId: null },
     9: { role: "staff", status: "inactive", siteId: 3 },
     10: { role: "manager", status: "active", siteId: 3 },
+    11: { role: "field", status: "pending", siteId: 3 },
   };
   return {
     ...actual,
@@ -171,14 +172,17 @@ describe("fleetDesignations router (IVA-168)", () => {
     await expect(caller("admin").setPositions({ userId: 7, positions: [{ position: "sg" }] })).rejects.toMatchObject({ code: "CONFLICT" });
   });
 
-  it("only flags active staff users as drivers", async () => {
-    expect(isDriverEligible({ role: "staff", status: "active" })).toBe(true);
-    expect(isDriverEligible({ role: "staff", status: "inactive" })).toBe(false);
-    expect(isDriverEligible({ role: "manager", status: "active" })).toBe(false);
-    for (const userId of [9, 10]) {
+  it("flags any active user as a driver, whatever their role, and refuses inactive or pending users", async () => {
+    expect(isDriverEligible({ status: "active" })).toBe(true);
+    expect(isDriverEligible({ status: "inactive" })).toBe(false);
+    expect(isDriverEligible({ status: "pending" })).toBe(false);
+    await expect(caller("admin").setDriver({ userId: 10, isDriver: true })).resolves.toMatchObject({ changed: true });
+    expect(fleetDb.setDriverFlag).toHaveBeenCalledWith(10, true, 1);
+    vi.mocked(fleetDb.setDriverFlag).mockClear();
+    for (const userId of [9, 11]) {
       await expect(caller("admin").setDriver({ userId, isDriver: true })).rejects.toMatchObject({
         code: "BAD_REQUEST",
-        message: "Only active staff users can be drivers.",
+        message: "Only active users can be drivers.",
       });
     }
     expect(fleetDb.setDriverFlag).not.toHaveBeenCalled();

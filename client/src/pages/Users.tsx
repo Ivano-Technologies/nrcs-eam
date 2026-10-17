@@ -203,8 +203,8 @@ export default function Users() {
   } | null>(null);
 
   const [editRowFacilityAtOpen, setEditRowFacilityAtOpen] = useState<number | null>(null);
-  // Drivers must be active staff (Kezie, 17 Oct); follows the role and status chosen in the dialog.
-  const editDriverEligible = editRow != null && editRow.role === "staff" && editRow.status === "active";
+  // Any active user can be a driver, whatever their role (Kezie, 17 Oct); follows the status chosen here.
+  const editDriverEligible = editRow != null && editRow.status === "active";
   // One holder per position: org-wide positions once, Branch Secretary once per facility.
   const editConflicts: PositionHolderConflict[] = useMemo(() => {
     if (!editRow || !designations?.available) return [];
@@ -235,7 +235,7 @@ export default function Users() {
       if (designations?.available) {
         const before = designationsFor(editRow.id);
         const nextDriver = editDriverEligible && editFleet.isDriver;
-        // The server drops the flag itself when a user stops being active staff.
+        // The server drops the flag itself when a user stops being active.
         if (before.isDriver !== nextDriver && (nextDriver || editDriverEligible)) {
           await setDriverMutation.mutateAsync({ userId: editRow.id, isDriver: nextDriver });
         }
