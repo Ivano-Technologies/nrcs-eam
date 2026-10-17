@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import {
   assets,
   buildingSafety,
@@ -93,13 +93,58 @@ function tallyStatus(
   return { compliantCount, expiringSoonCount, nonCompliantCount };
 }
 
-export async function getComplianceSummary(): Promise<ComplianceSummary> {
-  const [vehicles, generators, buildings, donors] = await Promise.all([
+type ComplianceRecords = {
+  vehicles: VehicleComplianceRow[];
+  generators: GeneratorComplianceRow[];
+  buildings: BuildingSafetyRow[];
+  donors: DonorReportingRow[];
+};
+
+/** Keep only records that belong to `siteId` (see getComplianceSummary). Pure, for testing. */
+export function scopeComplianceRecords(
+  records: ComplianceRecords,
+  siteId: number,
+  assetIdsAtSite: Set<number>
+): ComplianceRecords {
+  return {
+    vehicles: records.vehicles.filter((v) => assetIdsAtSite.has(v.assetId)),
+    generators: records.generators.filter((g) => assetIdsAtSite.has(g.assetId)),
+    buildings: records.buildings.filter((b) => b.siteId === siteId),
+    donors: records.donors.filter((d) =>
+      d.siteId != null ? d.siteId === siteId : d.assetId != null && assetIdsAtSite.has(d.assetId)
+    ),
+  };
+}
+
+const EMPTY_SUMMARY: ComplianceSummary = {
+  totalRecords: 0,
+  compliantCount: 0,
+  compliantPct: 0,
+  expiringSoonCount: 0,
+  nonCompliantCount: 0,
+};
+
+/**
+ * Compliance summary counts. With `siteId` (IVA-169) only records for that facility count: vehicles and
+ * generators by their asset's facility, buildings by facility, donor reports by their own facility or,
+ * when they have none, their asset's facility. `siteId: null` (user without a facility) gives zeros.
+ * Omit `siteId` for org-wide counts.
+ */
+export async function getComplianceSummary(scope?: { siteId: number | null }): Promise<ComplianceSummary> {
+  if (scope && scope.siteId == null) return { ...EMPTY_SUMMARY };
+  let [vehicles, generators, buildings, donors] = await Promise.all([
     listVehicleCompliance(),
     listGeneratorCompliance(),
     listBuildingSafety(),
     listDonorReporting(),
   ]);
+  if (scope && scope.siteId != null) {
+    ({ vehicles, generators, buildings, donors } = scopeComplianceRecords(
+      { vehicles, generators, buildings, donors },
+      scope.siteId,
+      await listAssetIdsAtSite(scope.siteId)
+    ));
+  }
   const statuses = [
     ...vehicles.map((v) => v.status),
     ...generators.map((g) => g.status),
@@ -261,6 +306,8 @@ export type GeneratorComplianceRow = {
 
 export async function listGeneratorCompliance(filters?: {
   status?: GeneratorServiceStatus;
+  /** Restrict to this facility (IVA-172). */
+  siteId?: number;
 }): Promise<GeneratorComplianceRow[]> {
   const database = await db.getDb();
   if (!database) return [];
@@ -282,6 +329,7 @@ export async function listGeneratorCompliance(filters?: {
     .from(generatorCompliance)
     .innerJoin(assets, eq(generatorCompliance.assetId, assets.id))
     .leftJoin(sites, eq(assets.siteId, sites.id))
+    .where(filters?.siteId !== undefined ? eq(assets.siteId, filters.siteId) : undefined)
     .orderBy(asc(assets.assetCode));
 
   const out: GeneratorComplianceRow[] = [];
@@ -364,6 +412,8 @@ export type BuildingSafetyRow = {
 
 export async function listBuildingSafety(filters?: {
   status?: DocComplianceStatus;
+  /** Restrict to this facility (IVA-172). */
+  siteId?: number;
 }): Promise<BuildingSafetyRow[]> {
   const database = await db.getDb();
   if (!database) return [];
@@ -384,6 +434,7 @@ export async function listBuildingSafety(filters?: {
     })
     .from(buildingSafety)
     .innerJoin(sites, eq(buildingSafety.siteId, sites.id))
+    .where(filters?.siteId !== undefined ? eq(buildingSafety.siteId, filters.siteId) : undefined)
     .orderBy(asc(sites.name));
 
   const out: BuildingSafetyRow[] = [];
@@ -465,6 +516,8 @@ export type DonorReportingRow = {
 
 export async function listDonorReporting(filters?: {
   status?: DonorReportStatus;
+  /** Restrict to this facility (IVA-172). */
+  siteId?: number;
 }): Promise<DonorReportingRow[]> {
   const database = await db.getDb();
   if (!database) return [];
@@ -487,6 +540,9 @@ export async function listDonorReporting(filters?: {
     .from(donorReporting)
     .leftJoin(assets, eq(donorReporting.assetId, assets.id))
     .leftJoin(sites, eq(donorReporting.siteId, sites.id))
+    .where(filters?.siteId !== undefined
+        ? sql`coalesce(${donorReporting.siteId}, ${assets.siteId}) = ${filters.siteId}`
+        : undefined)
     .orderBy(asc(donorReporting.dueDate));
 
   const out: DonorReportingRow[] = [];
@@ -575,6 +631,13 @@ export async function lookupAssetByCode(assetCode: string) {
   return row ?? null;
 }
 
+async function listAssetIdsAtSite(siteId: number): Promise<Set<number>> {
+  const database = await db.getDb();
+  if (!database) return new Set();
+  const rows = await database.select({ id: assets.id }).from(assets).where(eq(assets.siteId, siteId));
+  return new Set(rows.map((r) => r.id));
+}
+
 /** Facility of an asset, or null when the asset has none. undefined when the asset does not exist. */
 export async function getAssetSiteId(assetId: number): Promise<number | null | undefined> {
   const database = await db.getDb();
@@ -594,4 +657,45 @@ export async function getVehicleComplianceSiteId(id: number): Promise<number | n
     .where(eq(vehicleCompliance.id, id))
     .limit(1);
   return row ? row.siteId : undefined;
+}
+
+/** Facility of the generator behind a generator record. undefined when the record does not exist. */
+export async function getGeneratorComplianceSiteId(id: number): Promise<number | null | undefined> {
+  const database = await db.getDb();
+  if (!database) throw new Error("Database unavailable");
+  const [row] = await database
+    .select({ siteId: assets.siteId })
+    .from(generatorCompliance)
+    .innerJoin(assets, eq(generatorCompliance.assetId, assets.id))
+    .where(eq(generatorCompliance.id, id))
+    .limit(1);
+  return row ? row.siteId : undefined;
+}
+
+/** Facility of a building certificate. undefined when the record does not exist. */
+export async function getBuildingSafetySiteId(id: number): Promise<number | null | undefined> {
+  const database = await db.getDb();
+  if (!database) throw new Error("Database unavailable");
+  const [row] = await database
+    .select({ siteId: buildingSafety.siteId })
+    .from(buildingSafety)
+    .where(eq(buildingSafety.id, id))
+    .limit(1);
+  return row ? row.siteId : undefined;
+}
+
+/**
+ * Facility of a donor report: its own facility, else its asset's facility. null when it has neither,
+ * undefined when the record does not exist.
+ */
+export async function getDonorReportingSiteId(id: number): Promise<number | null | undefined> {
+  const database = await db.getDb();
+  if (!database) throw new Error("Database unavailable");
+  const [row] = await database
+    .select({ siteId: sql<number | null>`coalesce(${donorReporting.siteId}, ${assets.siteId})` })
+    .from(donorReporting)
+    .leftJoin(assets, eq(donorReporting.assetId, assets.id))
+    .where(eq(donorReporting.id, id))
+    .limit(1);
+  return row ? (row.siteId ?? null) : undefined;
 }
