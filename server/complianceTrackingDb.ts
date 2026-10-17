@@ -1,4 +1,4 @@
-import { asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import {
   assets,
   buildingSafety,
@@ -627,7 +627,8 @@ export async function deleteDonorReporting(id: number) {
   await database.delete(donorReporting).where(eq(donorReporting.id, id));
 }
 
-export async function lookupAssetByCode(assetCode: string) {
+/** Find an asset by code. With `siteId` (IVA-170) only an asset at that facility matches. */
+export async function lookupAssetByCode(assetCode: string, opts?: { siteId?: number }) {
   const database = await db.getDb();
   if (!database) return null;
   const [row] = await database
@@ -639,7 +640,11 @@ export async function lookupAssetByCode(assetCode: string) {
     })
     .from(assets)
     .leftJoin(sites, eq(assets.siteId, sites.id))
-    .where(eq(assets.assetCode, assetCode))
+    .where(
+      opts?.siteId !== undefined
+        ? and(eq(assets.assetCode, assetCode), eq(assets.siteId, opts.siteId))
+        : eq(assets.assetCode, assetCode)
+    )
     .limit(1);
   return row ?? null;
 }
