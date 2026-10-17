@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { CheckCircle2, ImagePlus, Loader2, Upload, X, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { toFriendlyMessage } from "@/lib/friendlyError";
+import { toastError } from "@/lib/friendlyError";
 
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
@@ -129,7 +129,7 @@ export default function PhotoUploadZone({
           prev.map((s, idx) => (idx === i ? { ...s, status: "done" as const } : s))
         );
       } catch (err) {
-        toast.error(toFriendlyMessage(err, `We couldn't upload ${file.name}. Please try again.`));
+        toastError(err, `We couldn't upload ${file.name}. Please try again.`);
         setSelected((prev) =>
           prev.map((s, idx) => (idx === i ? { ...s, status: "error" as const } : s))
         );

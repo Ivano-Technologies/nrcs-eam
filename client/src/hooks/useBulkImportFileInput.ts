@@ -1,13 +1,13 @@
 import { useCallback, useId, useRef } from "react";
 import { readFileAsBase64Payload } from "@/lib/bulkImportFromFile";
-import { toast } from "sonner";
-import { toFriendlyMessage } from "@/lib/friendlyError";
+import { toastError, toFriendlyError } from "@/lib/friendlyError";
 
 type BaseOpts = {
   accept: string;
   disabled?: boolean;
   isPending?: boolean;
-  onError?: (message: string) => void;
+  /** Custom handler; receives the friendly message and its support ref. Defaults to an error toast. */
+  onError?: (message: string, ref: string) => void;
 };
 
 type Base64Mode = BaseOpts & {
@@ -23,7 +23,7 @@ type FileOnlyMode = BaseOpts & {
 export type UseBulkImportFileInputOptions = Base64Mode | FileOnlyMode;
 
 export function useBulkImportFileInput(options: UseBulkImportFileInputOptions) {
-  const { accept, disabled = false, isPending = false, onError = (msg) => toast.error(msg) } = options;
+  const { accept, disabled = false, isPending = false } = options;
   const busy = Boolean(disabled || isPending);
   const inputId = useId();
 
@@ -37,7 +37,6 @@ export function useBulkImportFileInput(options: UseBulkImportFileInputOptions) {
       input.value = "";
       const o = optsRef.current;
       if (!file || disabled || isPending) return;
-      const err = o.onError ?? ((msg: string) => toast.error(msg));
       try {
         if (o.prepareFile === "base64") {
           const payload = await readFileAsBase64Payload(file);
@@ -46,7 +45,13 @@ export function useBulkImportFileInput(options: UseBulkImportFileInputOptions) {
           await o.run(file);
         }
       } catch (e) {
-        err(toFriendlyMessage(e, "We couldn't import the file. Please try again."));
+        const fallback = "We couldn't import the file. Please try again.";
+        if (o.onError) {
+          const friendly = toFriendlyError(e, fallback, "bulkImport");
+          o.onError(friendly.message, friendly.ref);
+        } else {
+          toastError(e, fallback);
+        }
       }
     },
     [disabled, isPending]

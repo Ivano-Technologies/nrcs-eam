@@ -24,7 +24,9 @@ async function uploadWith(onUpload: () => Promise<void>) {
   fireEvent.change(input, { target: { files: [file] } });
   fireEvent.click(await screen.findByRole("button", { name: /Upload 1 photo/ }));
   await waitFor(() => expect(toast.error).toHaveBeenCalled());
-  return vi.mocked(toast.error).mock.calls[0][0] as string;
+  const [message, options] = vi.mocked(toast.error).mock.calls[0] as [string, { description?: string }];
+  expect(options?.description).toMatch(/^Ref: [A-Z0-9]{8}$/);
+  return message;
 }
 
 describe("PhotoUploadZone friendly errors (IVA-189)", () => {

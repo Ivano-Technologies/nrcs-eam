@@ -14,7 +14,7 @@ import { InventorySecondaryNav } from "@/components/inventory/InventorySecondary
 import PageHeader from "@/components/ui/PageHeader";
 import { PackageCheck as PackageCheckIcon } from "lucide-react";
 import { toast } from "sonner";
-import { toFriendlyMessage } from "@/lib/friendlyError";
+import { toastError } from "@/lib/friendlyError";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { Badge } from "@/components/ui/badge";
 import { Toolbar, ToolbarMore, ToolbarSearch } from "@/components/Toolbar";
@@ -70,17 +70,17 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
       void receipts.refetch();
       setOpen(false);
     },
-    onError: (e) => toast.error(toFriendlyMessage(e)),
+    onError: (e) => toastError(e),
   });
   const approveMutation = trpc.inventoryV2.receipts.approve.useMutation({
     onSuccess: () => {
       toast.success("GRN approved.");
       void receipts.refetch();
     },
-    onError: (e) => toast.error(toFriendlyMessage(e)),
+    onError: (e) => toastError(e),
   });
   const downloadPdfMutation = trpc.inventoryV2.receipts.downloadPdf.useMutation({
-    onError: (e) => toast.error(toFriendlyMessage(e)),
+    onError: (e) => toastError(e),
   });
 
   const newGrnButton = isStaffOrAbove ? (

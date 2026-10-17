@@ -27,7 +27,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { FileSpreadsheet, Loader2, RefreshCw, TrendingDown } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { toFriendlyMessage } from "@/lib/friendlyError";
+import { toastError } from "@/lib/friendlyError";
 
 const PAGE_SIZE = 25;
 
@@ -52,7 +52,7 @@ export default function DepreciationSchedule() {
       void utils.depreciationReport.summary.invalidate();
       void utils.depreciationReport.schedule.invalidate();
     },
-    onError: (e) => toast.error(toFriendlyMessage(e)),
+    onError: (e) => toastError(e),
   });
 
   const exportExcel = trpc.depreciationReport.exportExcel.useMutation({

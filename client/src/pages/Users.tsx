@@ -47,7 +47,7 @@ import { cn } from "@/lib/utils";
 import { Ghost, Loader2, Trash2, UserPlus, Users as UsersIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { toFriendlyMessage } from "@/lib/friendlyError";
+import { toastError } from "@/lib/friendlyError";
 import {
   FleetDesignationBadges,
   FleetDesignationsFields,
@@ -127,7 +127,7 @@ export default function Users() {
         sendWelcomeEmail: true,
       });
     },
-    onError: (e) => toast.error(toFriendlyMessage(e, "We couldn't create the user. Please try again.")),
+    onError: (e) => toastError(e, "We couldn't create the user. Please try again."),
   });
 
   const updateMutation = trpc.users.update.useMutation();
@@ -151,7 +151,7 @@ export default function Users() {
       void utils.users.list.invalidate();
       setDeactivateId(null);
     },
-    onError: (e) => toast.error(toFriendlyMessage(e, "We couldn't deactivate the user. Please try again.")),
+    onError: (e) => toastError(e, "We couldn't deactivate the user. Please try again."),
   });
 
   const deleteMutation = trpc.users.delete.useMutation({
@@ -161,7 +161,7 @@ export default function Users() {
       void utils.users.findOrphaned.invalidate();
       setDeleteId(null);
     },
-    onError: (e) => toast.error(toFriendlyMessage(e, "We couldn't delete the user. Please try again.")),
+    onError: (e) => toastError(e, "We couldn't delete the user. Please try again."),
   });
 
   const [orphanOpen, setOrphanOpen] = useState(false);
@@ -174,14 +174,14 @@ export default function Users() {
       void utils.users.list.invalidate();
       void refetchOrphans();
     },
-    onError: (e) => toast.error(toFriendlyMessage(e, "We couldn't delete the user. Please try again.")),
+    onError: (e) => toastError(e, "We couldn't delete the user. Please try again."),
   });
 
   const resetPasswordMutation = trpc.users.resetPassword.useMutation({
     onSuccess: (data) => {
       toast.success(data.message);
     },
-    onError: (e) => toast.error(toFriendlyMessage(e, "We couldn't reset the password. Please try again.")),
+    onError: (e) => toastError(e, "We couldn't reset the password. Please try again."),
   });
 
   const [createOpen, setCreateOpen] = useState(false);
@@ -256,7 +256,7 @@ export default function Users() {
       setEditOpen(false);
       setEditRow(null);
     } catch (e) {
-      toast.error(toFriendlyMessage(e, "We couldn't save your changes. Please try again."));
+      toastError(e, "We couldn't save your changes. Please try again.");
     } finally {
       setSaving(false);
       void utils.users.list.invalidate();

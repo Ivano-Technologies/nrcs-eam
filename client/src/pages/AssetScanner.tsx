@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { toFriendlyMessage } from "@/lib/friendlyError";
+import { toastError } from "@/lib/friendlyError";
 import { Camera, Search, Package, MapPin, CheckCircle, XCircle, Loader2, QrCode } from "lucide-react";
 import { appPath } from "@/lib/routes";
 import { CONDITION_OPTIONS } from "@/lib/assetRegisterOptions";
@@ -49,7 +49,7 @@ export default function AssetScanner() {
       setAssetTag("");
       setVerifyForm({ condition: "Good", locationSiteId: "", notes: "", manualReason: "" });
     },
-    onError: (e: { message: string }) => toast.error(toFriendlyMessage(e)),
+    onError: (e: { message: string }) => toastError(e),
   });
 
   const updateAssetMutation = trpc.assets.update.useMutation({
@@ -60,7 +60,7 @@ export default function AssetScanner() {
       setUpdateForm({ status: "", location: "", notes: "" });
     },
     onError: (error) => {
-      toast.error(toFriendlyMessage(error, "We couldn't update the asset. Please try again."));
+      toastError(error, "We couldn't update the asset. Please try again.");
     },
   });
 

@@ -18,7 +18,9 @@ describe("formatTrpcErrorForClient (IVA-189)", () => {
     expect(out.message).toBe(FRIENDLY_MESSAGES.generic);
     expect(out.data.userFacing).toBe(false);
     expect("stack" in out.data).toBe(false);
-    expect(spy).toHaveBeenCalled();
+    expect(out.data.ref).toMatch(/^[A-Z0-9]{8}$/);
+    // The same ref is in the server log line.
+    expect(spy.mock.calls.some((c) => String(c[0]).includes(`"ref":"${out.data.ref}"`))).toBe(true);
   });
 
   it("maps a wrapped Postgres unique violation", () => {
@@ -29,10 +31,12 @@ describe("formatTrpcErrorForClient (IVA-189)", () => {
   });
 
   it("flags deliberate messages as userFacing", () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
     const err = new TRPCError({ code: "NOT_FOUND", message: "Transfer not found" });
     const out = formatTrpcErrorForClient(shape(err.message, err.code), err);
     expect(out.message).toBe("Transfer not found");
     expect(out.data.userFacing).toBe(true);
+    expect(out.data.ref).toMatch(/^[A-Z0-9]{8}$/);
   });
 
   it("hides raw text even under a deliberate code", () => {
@@ -44,12 +48,14 @@ describe("formatTrpcErrorForClient (IVA-189)", () => {
   });
 
   it("turns Zod input errors into the validation line", () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
     const parsed = z.object({ n: z.number() }).safeParse({ n: "x" });
     const err = new TRPCError({ code: "BAD_REQUEST", message: "bad", cause: parsed.error });
     expect(formatTrpcErrorForClient(shape(err.message, err.code), err).message).toBe(FRIENDLY_MESSAGES.validation);
   });
 
   it("unwraps a UserFacingError thrown from server code", () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
     const err = new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "x", cause: new UserFacingError("We couldn't read that Excel file.") });
     const out = formatTrpcErrorForClient(shape(err.message, err.code), err);
     expect(out.message).toBe("We couldn't read that Excel file.");

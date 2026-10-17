@@ -8,7 +8,7 @@
  */
 
 export const FRIENDLY_MESSAGES = {
-  invalidLogin: "That email and password don't match. Please try again.",
+  invalidLogin: "That email or password doesn't match. Check and try again.",
   sessionExpired: "Your session has expired. Please sign in again.",
   permission: "You don't have permission to do that.",
   notFound: "We couldn't find that. It may have been moved or deleted.",
@@ -219,4 +219,30 @@ export function mapErrorToFriendlyMessage(err: unknown, fallback?: string): stri
   const kind = classifyError(err);
   if (kind !== "generic") return FRIENDLY_MESSAGES[kind];
   return fallback && fallback.trim() ? fallback : FRIENDLY_MESSAGES.generic;
+}
+
+/** Characters for support refs: no 0/O or 1/I/L so they read clearly over the phone. */
+const REF_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+export const ERROR_REF_LENGTH = 8;
+
+/** A fresh 8 character support reference, for example "K7QM2XWA". */
+export function generateErrorRef(): string {
+  const bytes = new Uint8Array(ERROR_REF_LENGTH);
+  const c = (globalThis as { crypto?: { getRandomValues?: (a: Uint8Array) => Uint8Array } }).crypto;
+  if (c?.getRandomValues) c.getRandomValues(bytes);
+  else for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
+  let out = "";
+  for (let i = 0; i < bytes.length; i++) out += REF_ALPHABET[bytes[i] % REF_ALPHABET.length];
+  return out;
+}
+
+/** Turn an event or request id (Sentry, PostHog uuid) into an 8 character ref. */
+export function refFromId(id: unknown): string | null {
+  if (typeof id !== "string") return null;
+  const compact = id.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+  return compact.length >= ERROR_REF_LENGTH ? compact.slice(0, ERROR_REF_LENGTH) : null;
+}
+
+export function isErrorRef(value: unknown): value is string {
+  return typeof value === "string" && /^[A-Z0-9]{8}$/.test(value);
 }

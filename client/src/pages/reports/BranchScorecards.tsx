@@ -22,7 +22,7 @@ import { ArrowDown, ArrowUp, FileDown, Loader2, Trophy } from "lucide-react";
 import { useMemo } from "react";
 import { Link } from "wouter";
 import { toast } from "sonner";
-import { toFriendlyMessage } from "@/lib/friendlyError";
+import { toastError } from "@/lib/friendlyError";
 import { useFullBleed } from "@/lib/fullBleed";
 
 export default function BranchScorecards() {
@@ -34,7 +34,7 @@ export default function BranchScorecards() {
       downloadBase64File(r.data, r.filename, r.mimeType);
       toast.success("Branch scorecards exported");
     },
-    onError: (e) => toast.error(toFriendlyMessage(e)),
+    onError: (e) => toastError(e),
   });
 
   const rows = useMemo(() => data ?? [], [data]);

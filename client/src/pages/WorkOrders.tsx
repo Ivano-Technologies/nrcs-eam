@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { toFriendlyMessage } from "@/lib/friendlyError";
+import { toastError } from "@/lib/friendlyError";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { appPath } from "@/lib/routes";
 
@@ -64,7 +64,7 @@ export default function WorkOrders() {
       });
     },
     onError: (error) => {
-      toast.error(toFriendlyMessage(error, "We couldn't create the work order. Please try again."));
+      toastError(error, "We couldn't create the work order. Please try again.");
     },
   });
 

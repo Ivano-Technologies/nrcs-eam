@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { toast } from "sonner";
-import { toFriendlyMessage } from "@/lib/friendlyError";
+import { toastError } from "@/lib/friendlyError";
 import { Loader2 } from "lucide-react";
 
 type ComponentLine = { catalogueId: string; quantity: string };
@@ -39,10 +39,10 @@ export default function Kits({ embedInShell = false }: { embedInShell?: boolean 
       setOpen(false);
       void kits.refetch();
     },
-    onError: (e) => toast.error(toFriendlyMessage(e)),
+    onError: (e) => toastError(e),
   });
-  const assembleMutation = trpc.inventoryV2.kits.assemble.useMutation({ onSuccess: () => toast.success("Assembled"), onError: (e) => toast.error(toFriendlyMessage(e)) });
-  const disassembleMutation = trpc.inventoryV2.kits.disassemble.useMutation({ onSuccess: () => toast.success("Disassembled"), onError: (e) => toast.error(toFriendlyMessage(e)) });
+  const assembleMutation = trpc.inventoryV2.kits.assemble.useMutation({ onSuccess: () => toast.success("Assembled"), onError: (e) => toastError(e) });
+  const disassembleMutation = trpc.inventoryV2.kits.disassemble.useMutation({ onSuccess: () => toast.success("Disassembled"), onError: (e) => toastError(e) });
 
   return (
     <div className="space-y-6">

@@ -31,7 +31,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
-import { toFriendlyMessage, UserFacingError } from "@/lib/friendlyError";
+import { toastError, UserFacingError } from "@/lib/friendlyError";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import AssetDepreciation from "@/components/AssetDepreciation";
 import { AssetMaintenanceTimeline } from "@/components/AssetMaintenanceTimeline";
@@ -121,7 +121,7 @@ export default function AssetDetail() {
       refetch();
     },
     onError: (error) => {
-      toast.error(toFriendlyMessage(error, "We couldn't generate the QR code. Please try again."));
+      toastError(error, "We couldn't generate the QR code. Please try again.");
     },
   });
 
@@ -133,7 +133,7 @@ export default function AssetDetail() {
       refetch();
     },
     onError: (error) => {
-      toast.error(toFriendlyMessage(error, "We couldn't update the asset. Please try again."));
+      toastError(error, "We couldn't update the asset. Please try again.");
     },
   });
 
@@ -143,7 +143,7 @@ export default function AssetDetail() {
       refetchPhotos();
     },
     onError: (error) => {
-      toast.error(toFriendlyMessage(error, "We couldn't upload the photo. Please try again."));
+      toastError(error, "We couldn't upload the photo. Please try again.");
     },
   });
 
@@ -153,7 +153,7 @@ export default function AssetDetail() {
       refetchPhotos();
     },
     onError: (error) => {
-      toast.error(toFriendlyMessage(error, "We couldn't delete the photo. Please try again."));
+      toastError(error, "We couldn't delete the photo. Please try again.");
     },
   });
 
@@ -210,7 +210,7 @@ export default function AssetDetail() {
       setPendingFiles([]);
       setPhotoCaption('');
     } catch (error: any) {
-      toast.error(toFriendlyMessage(error, "We couldn't upload the file. Please try again."));
+      toastError(error, "We couldn't upload the file. Please try again.");
     } finally {
       setUploadingPhoto(false);
     }

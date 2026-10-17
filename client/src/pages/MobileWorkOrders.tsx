@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle2, Clock, AlertCircle, XCircle, ChevronRight, Camera, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { toFriendlyMessage } from "@/lib/friendlyError";
+import { toastError } from "@/lib/friendlyError";
 import { useLocation } from "wouter";
 import { appPath } from "@/lib/routes";
 import { useConnectivity } from "@/hooks/useConnectivity";
@@ -28,7 +28,7 @@ export default function MobileWorkOrders() {
       refetch();
     },
     onError: (error) => {
-      toast.error(toFriendlyMessage(error));
+      toastError(error);
     },
   });
 

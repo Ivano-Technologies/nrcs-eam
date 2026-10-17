@@ -17,7 +17,8 @@ import { Loader2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { appPath } from "@/lib/routes";
 import { TRPCClientError } from "@trpc/client";
-import { toFriendlyMessage } from "@/lib/friendlyError";
+import { ErrorRef } from "@/components/ErrorRef";
+import { toFriendlyError } from "@/lib/friendlyError";
 
 function isRetryableLoginError(error: unknown): boolean {
   if (!(error instanceof TRPCClientError)) return false;
@@ -38,7 +39,17 @@ export default function Login() {
   const utils = trpc.useUtils();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessageText] = useState<string | null>(null);
+  const [errorRef, setErrorRef] = useState<string | null>(null);
+  /** Local validation messages have no ref; errors from the server or network do. */
+  const setErrorMessage = (text: string | null, ref: string | null = null) => {
+    setErrorMessageText(text);
+    setErrorRef(ref);
+  };
+  const showError = (error: unknown, fallback: string) => {
+    const friendly = toFriendlyError(error, fallback, "login");
+    setErrorMessage(friendly.message, friendly.ref);
+  };
   const [resetMessage, setResetMessage] = useState<string | null>(null);
 
   const loginMutation = trpc.auth.loginWithPassword.useMutation({
@@ -69,7 +80,7 @@ export default function Login() {
     },
     onError: (error) => {
       setResetMessage(null);
-      setErrorMessage(toFriendlyMessage(error, "We couldn't send the reset email. Please try again."));
+      showError(error, "We couldn't send the reset email. Please try again.");
     },
   });
 
@@ -109,7 +120,7 @@ export default function Login() {
     try {
       await runLogin(0);
     } catch (error) {
-      setErrorMessage(toFriendlyMessage(error, "We couldn't sign you in. Please try again."));
+      showError(error, "We couldn't sign you in. Please try again.");
     }
   };
 
@@ -135,7 +146,10 @@ export default function Login() {
         <form onSubmit={handleSubmit} className="mt-8 w-full space-y-4 text-left">
           {errorMessage && (
             <Alert variant="destructive" className="text-left">
-              <AlertDescription>{errorMessage}</AlertDescription>
+              <AlertDescription>
+                {errorMessage}
+                <ErrorRef code={errorRef} />
+              </AlertDescription>
             </Alert>
           )}
           {resetMessage && !errorMessage && (

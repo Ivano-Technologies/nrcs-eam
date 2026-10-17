@@ -1,7 +1,10 @@
 import { TRPCClientError } from "@trpc/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { FRIENDLY_MESSAGES, UserFacingError, looksLikeRawServerText } from "@shared/friendlyError";
-import { friendlyMessage, toFriendlyMessage } from "./friendlyError";
+import { friendlyMessage, toFriendlyError, toFriendlyMessage, toastError } from "./friendlyError";
+import { toast } from "sonner";
+
+vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { error: vi.fn(), success: vi.fn() }) }));
 
 function trpcError(message: string, data: Record<string, unknown>) {
   return new TRPCClientError(message, { result: { error: { message, code: -32600, data } } } as never);
@@ -10,6 +13,10 @@ function trpcError(message: string, data: Record<string, unknown>) {
 afterEach(() => vi.restoreAllMocks());
 
 describe("friendlyMessage (IVA-189)", () => {
+  it("uses the exact login copy", () => {
+    expect(FRIENDLY_MESSAGES.invalidLogin).toBe("That email or password doesn't match. Check and try again.");
+  });
+
   it("maps Supabase invalid login to plain English", () => {
     expect(friendlyMessage({ message: "Invalid login credentials", status: 400 })).toBe(FRIENDLY_MESSAGES.invalidLogin);
     expect(friendlyMessage(trpcError("Invalid email or password", { code: "UNAUTHORIZED", userFacing: true }))).toBe(
@@ -111,7 +118,38 @@ describe("friendlyMessage (IVA-189)", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     const err = new Error('duplicate key value violates unique constraint "x"');
     expect(toFriendlyMessage(err)).toBe(FRIENDLY_MESSAGES.duplicate);
-    expect(spy).toHaveBeenCalledWith("[error]", err);
+    expect(spy).toHaveBeenCalledWith(expect.stringMatching(/^\[error\] ref=[A-Z0-9]{8}$/), err);
+  });
+
+  it("returns { message, action, ref } and reuses the server ref", () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const fromServer = trpcError("boom", { code: "INTERNAL_SERVER_ERROR", userFacing: false, ref: "K7QM2XWA" });
+    expect(toFriendlyError(fromServer)).toEqual({ message: FRIENDLY_MESSAGES.generic, action: "retry", ref: "K7QM2XWA" });
+    expect(console.error).toHaveBeenCalledWith("[error] ref=K7QM2XWA", fromServer);
+    const session = toFriendlyError(trpcError("Please sign in (10001)", { code: "UNAUTHORIZED", userFacing: true }));
+    expect(session.action).toBe("signIn");
+    expect(session.ref).toMatch(/^[A-Z0-9]{8}$/);
+    const deliberate = toFriendlyError(trpcError("Transfer not found", { code: "NOT_FOUND", userFacing: true }));
+    expect(deliberate.action).toBeUndefined();
+  });
+
+  it("uses the Sentry event id as the ref when Sentry is present", () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    (window as unknown as { Sentry?: unknown }).Sentry = { captureException: () => "9f3c2a1be4d84f0a9c1d2e3f4a5b6c7d" };
+    try {
+      expect(toFriendlyError(new Error("x")).ref).toBe("9F3C2A1B");
+    } finally {
+      delete (window as unknown as { Sentry?: unknown }).Sentry;
+    }
+  });
+
+  it("toastError shows the message with the ref as muted description", () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const result = toastError(new TypeError("Failed to fetch"));
+    expect(toast.error).toHaveBeenCalledWith(FRIENDLY_MESSAGES.network, {
+      description: `Ref: ${result.ref}`,
+      classNames: { description: expect.stringContaining("text-muted-foreground") },
+    });
   });
 
   it("detects raw server text", () => {
@@ -123,7 +161,7 @@ describe("friendlyMessage (IVA-189)", () => {
 
   it("keeps every friendly line free of dashes used as punctuation", () => {
     for (const line of Object.values(FRIENDLY_MESSAGES)) {
-      expect(line).not.toMatch(/[\u2013\u2014]| - /);
+      expect(line).not.toMatch(/[\u2010-\u2015-]/);
       expect(line[0]).toBe(line[0].toUpperCase());
     }
   });

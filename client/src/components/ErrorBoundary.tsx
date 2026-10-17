@@ -1,8 +1,10 @@
 import { AuthBrandLogo, authPrimaryButtonClass } from "@/components/auth/AuthPageShell";
 import { Button } from "@/components/ui/button";
+import { ErrorRef } from "@/components/ErrorRef";
 import { reportError } from "@/lib/friendlyError";
+import { generateErrorRef } from "@shared/friendlyError";
 import { cn } from "@/lib/utils";
-import { Home, RotateCcw } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import { Component, type ErrorInfo, type ReactNode } from "react";
 
 export const ERROR_PAGE_TITLE = "Something went wrong";
@@ -21,24 +23,22 @@ interface Props {
 
 interface State {
   hasError: boolean;
-}
-
-function homePath(): string {
-  if (typeof window === "undefined") return "/";
-  const p = window.location.pathname;
-  return p === "/app" || p.startsWith("/app/") ? "/app" : "/";
+  /** Support ref shown on the page and logged with the raw error. */
+  errorRef: string | null;
 }
 
 /**
- * IVA-189: friendly error page. Never shows error.message or a stack trace; the raw error is
- * logged with console.error and sent to PostHog (or Sentry if present) instead.
+ * IVA-189: friendly error page with one action (Try again) and the support ref. Never shows
+ * error.message or a stack trace; the raw error is logged with the same ref instead.
  */
 export function ErrorFallback({
   onRetry,
   variant = "page",
+  errorRef,
 }: {
   onRetry: () => void;
   variant?: "page" | "section";
+  errorRef?: string | null;
 }) {
   const card = (
     <div
@@ -49,21 +49,13 @@ export function ErrorFallback({
       <AuthBrandLogo />
       <h1 className="text-2xl font-bold leading-tight tracking-tight">{ERROR_PAGE_TITLE}</h1>
       <p className="mt-3 text-base text-muted-foreground">{ERROR_PAGE_BODY}</p>
-      <div className="mt-6 flex w-full flex-col gap-3 sm:flex-row sm:justify-center">
+      <div className="mt-6 flex w-full justify-center">
         <Button type="button" onClick={onRetry} className={cn(authPrimaryButtonClass, "sm:w-auto sm:px-6")}>
           <RotateCcw className="mr-2 h-4 w-4" aria-hidden />
           Try again
         </Button>
-        <Button
-          type="button"
-          variant="outline"
-          className="h-12 sm:px-6"
-          onClick={() => window.location.assign(homePath())}
-        >
-          <Home className="mr-2 h-4 w-4" aria-hidden />
-          Go home
-        </Button>
       </div>
+      <ErrorRef code={errorRef} className="mt-4" />
     </div>
   );
   if (variant === "section") {
@@ -75,31 +67,31 @@ export function ErrorFallback({
 class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { hasError: false, errorRef: null };
   }
 
   static getDerivedStateFromError(): State {
-    return { hasError: true };
+    return { hasError: true, errorRef: generateErrorRef() };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    reportError(error, "ErrorBoundary");
-    if (errorInfo?.componentStack) console.error("[ErrorBoundary] component stack", errorInfo.componentStack);
+    const ref = reportError(error, "ErrorBoundary", this.state.errorRef);
+    if (errorInfo?.componentStack) console.error(`[ErrorBoundary] ref=${ref} component stack`, errorInfo.componentStack);
   }
 
   componentDidUpdate(prevProps: Props) {
     if (this.state.hasError && prevProps.resetKey !== this.props.resetKey) {
-      this.setState({ hasError: false });
+      this.setState({ hasError: false, errorRef: null });
     }
   }
 
   private retry = () => {
-    this.setState({ hasError: false });
+    this.setState({ hasError: false, errorRef: null });
   };
 
   render() {
     if (this.state.hasError) {
-      return <ErrorFallback onRetry={this.retry} variant={this.props.variant ?? "page"} />;
+      return <ErrorFallback onRetry={this.retry} variant={this.props.variant ?? "page"} errorRef={this.state.errorRef} />;
     }
     return this.props.children;
   }

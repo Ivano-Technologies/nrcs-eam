@@ -46,7 +46,7 @@ import { useAssetRegisterUrlState } from "@/hooks/useAssetRegisterUrlState";
 import { ASSET_REGISTER_SORT_KEYS, type AssetRegisterSortKey } from "@/lib/assetRegisterUrlState";
 import { downloadCsv, toCsv, type CsvCell } from "@/lib/csv";
 import { toast } from "sonner";
-import { toFriendlyMessage } from "@/lib/friendlyError";
+import { toastError } from "@/lib/friendlyError";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { calculateDepreciatedValue } from "@/lib/depreciation";
 import { appPath } from "@/lib/routes";
@@ -335,7 +335,7 @@ export default function Assets() {
         toast.success("Template downloaded");
       }
     } catch (error: unknown) {
-      toast.error(toFriendlyMessage(error, "We couldn't download the template. Please try again."));
+      toastError(error, "We couldn't download the template. Please try again.");
     } finally {
       setIsDownloading(false);
     }
@@ -376,7 +376,7 @@ export default function Assets() {
         toast.success("Export started");
       }
     } catch (error: unknown) {
-      toast.error(toFriendlyMessage(error, "We couldn't export the assets. Please try again."));
+      toastError(error, "We couldn't export the assets. Please try again.");
     } finally {
       setIsExporting(false);
     }
@@ -403,7 +403,6 @@ export default function Assets() {
     accept: ".xlsx,.xls",
     isPending: previewImportMutation.isPending || confirmImportMutation.isPending,
     prepareFile: "base64",
-    onError: (message) => toast.error(message),
     run: async (fileData): Promise<void> => {
       const data = await previewImportMutation.mutateAsync({ fileData });
       const rows = (data.rows ?? []) as Array<{
@@ -459,7 +458,7 @@ export default function Assets() {
       resetNewAssetForm();
     },
     onError: (error: { message?: string }) => {
-      toast.error(toFriendlyMessage(error, "We couldn't create the asset. Please try again."));
+      toastError(error, "We couldn't create the asset. Please try again.");
     },
   });
 
@@ -470,7 +469,7 @@ export default function Assets() {
       refetch();
     },
     onError: (error: { message?: string }) => {
-      toast.error(toFriendlyMessage(error, "We couldn't delete the asset. Please try again."));
+      toastError(error, "We couldn't delete the asset. Please try again.");
     },
   });
 
@@ -534,7 +533,7 @@ export default function Assets() {
       finishBulk();
     } catch (error) {
       setBulkRunning(false);
-      toast.error(toFriendlyMessage(error, "We couldn't delete the selected assets. Please try again."));
+      toastError(error, "We couldn't delete the selected assets. Please try again.");
     }
   };
 
@@ -555,7 +554,7 @@ export default function Assets() {
       finishBulk();
     } catch (error) {
       setBulkRunning(false);
-      toast.error(toFriendlyMessage(error, "We couldn't update the status. Please try again."));
+      toastError(error, "We couldn't update the status. Please try again.");
     }
   };
 
@@ -567,7 +566,7 @@ export default function Assets() {
       refetch();
     },
     onError: (error: { message?: string }) => {
-      toast.error(toFriendlyMessage(error, "We couldn't update the asset. Please try again."));
+      toastError(error, "We couldn't update the asset. Please try again.");
     },
   });
 
@@ -577,7 +576,7 @@ export default function Assets() {
       refetch();
     },
     onError: (error: { message?: string }) => {
-      toast.error(toFriendlyMessage(error, "We couldn't recalculate. Please try again."));
+      toastError(error, "We couldn't recalculate. Please try again.");
     },
   });
 
@@ -587,7 +586,7 @@ export default function Assets() {
       refetch();
     },
     onError: (error: { message?: string }) => {
-      toast.error(toFriendlyMessage(error, "We couldn't sync the coordinates. Please try again."));
+      toastError(error, "We couldn't sync the coordinates. Please try again.");
     },
   });
 
@@ -1024,7 +1023,7 @@ export default function Assets() {
         sourceRows = all.rows;
         firstSNo = 1;
       } catch (error) {
-        toast.error(toFriendlyMessage(error, "We couldn't export the selected assets. Please try again."));
+        toastError(error, "We couldn't export the selected assets. Please try again.");
         return;
       }
     }

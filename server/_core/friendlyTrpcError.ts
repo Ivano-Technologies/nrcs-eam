@@ -1,6 +1,7 @@
 import type { TRPCError } from "@trpc/server";
 import {
   FRIENDLY_MESSAGES,
+  generateErrorRef,
   isUserFacingError,
   looksLikeRawServerText,
   mapErrorToFriendlyMessage,
@@ -28,35 +29,50 @@ function isZodError(cause: unknown): boolean {
  * - Every other TRPCError was written deliberately and is flagged `userFacing: true` so the client
  *   helper can show it as is.
  * - Stack traces are never sent.
+ * - Every error carries `data.ref`, an 8 character support ref logged with the raw error.
  */
 export function formatTrpcErrorForClient<S extends ShapeLike>(shape: S, error: TRPCError, path?: string): S {
   const { stack: _stack, ...data } = shape.data ?? {};
+  // Every error gets a support ref. The same ref is logged here and shown to the user as "Ref: XXXXXXXX".
+  const ref = generateErrorRef();
+  const log = (level: "error" | "warn", userFacing: boolean) => {
+    const line = JSON.stringify({
+      type: "trpc_error",
+      ref,
+      path: path ?? null,
+      code: error.code,
+      userFacing,
+      message: error.message,
+      cause: error.cause instanceof Error ? { name: error.cause.name, message: error.cause.message } : undefined,
+    });
+    if (level === "error") {
+      console.error(line);
+      if (error.cause && error.cause !== error) console.error(`[trpc_error] ref=${ref} cause`, error.cause);
+    } else {
+      console.warn(line);
+    }
+  };
+
   if (isZodError(error.cause)) {
-    return { ...shape, message: FRIENDLY_MESSAGES.validation, data: { ...data, userFacing: false } };
+    log("warn", false);
+    return { ...shape, message: FRIENDLY_MESSAGES.validation, data: { ...data, userFacing: false, ref } };
   }
   // Server code can throw UserFacingError anywhere; tRPC wraps it, so unwrap and show it as written.
   if (isUserFacingError(error.cause) && !looksLikeRawServerText(error.cause.message)) {
-    return { ...shape, message: error.cause.message, data: { ...data, userFacing: true } };
+    log("warn", true);
+    return { ...shape, message: error.cause.message, data: { ...data, userFacing: true, ref } };
   }
   const internal = error.code === "INTERNAL_SERVER_ERROR";
   if (internal || looksLikeRawServerText(error.message)) {
-    console.error(
-      JSON.stringify({
-        type: "trpc_error",
-        path: path ?? null,
-        code: error.code,
-        message: error.message,
-        cause: error.cause instanceof Error ? { name: error.cause.name, message: error.cause.message } : undefined,
-      })
-    );
-    if (error.cause && error.cause !== error) console.error(error.cause);
+    log("error", false);
     // Keep the existing login retry signal working without exposing the raw text.
     const message = /temporarily unavailable/i.test(error.message)
       ? "The service is temporarily unavailable. Please try again."
       : mapErrorToFriendlyMessage(error.cause ?? error);
-    return { ...shape, message, data: { ...data, userFacing: false } };
+    return { ...shape, message, data: { ...data, userFacing: false, ref } };
   }
-  return { ...shape, data: { ...data, userFacing: true } };
+  log("warn", true);
+  return { ...shape, data: { ...data, userFacing: true, ref } };
 }
 
 /**

@@ -27,7 +27,7 @@ import { CardQrCode } from "@/components/CardQrCode";
 import { FACILITY_TYPE_DESCRIPTIONS, FACILITY_TYPE_LABELS } from "@shared/facilities";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { toast } from "sonner";
-import { toFriendlyMessage, UserFacingError } from "@/lib/friendlyError";
+import { toastError, UserFacingError } from "@/lib/friendlyError";
 import { Edit2, ExternalLink, Loader2, MapPin, X } from "lucide-react";
 
 const MAX_PHOTOS = 10;
@@ -63,7 +63,7 @@ export default function FacilityDetail() {
       setDeletePhotoId(null);
       toast.success("Photo deleted");
     },
-    onError: (e) => toast.error(toFriendlyMessage(e, "We couldn't delete the photo. Please try again.")),
+    onError: (e) => toastError(e, "We couldn't delete the photo. Please try again."),
   });
   const uploadUrlMutation = trpc.facilityPhotos.uploadUrl.useMutation();
 
@@ -73,7 +73,7 @@ export default function FacilityDetail() {
       toast.success(`Updated coordinates on ${res.updated} asset(s) at this facility.`);
       void utils.assets.list.invalidate();
     },
-    onError: (e) => toast.error(toFriendlyMessage(e, "We couldn't sync. Please try again.")),
+    onError: (e) => toastError(e, "We couldn't sync. Please try again."),
   });
 
   const photoCount = photosQuery.data?.length ?? 0;

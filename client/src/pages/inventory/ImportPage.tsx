@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import { toFriendlyMessage } from "@/lib/friendlyError";
+import { toastError } from "@/lib/friendlyError";
 import { Loader2, Upload } from "lucide-react";
 import PageHeader from "@/components/ui/PageHeader";
 import { formatEnumLabel } from "@/lib/format";
@@ -27,7 +27,7 @@ export default function ImportPage({ embedInShell = false }: { embedInShell?: bo
   const parsePdf = trpc.inventoryV2.documents.parseTypedPdfImport.useMutation();
   const createDraft = trpc.inventoryV2.documents.drafts.create.useMutation({
     onSuccess: () => toast.success("Draft saved"),
-    onError: (e) => toast.error(toFriendlyMessage(e)),
+    onError: (e) => toastError(e),
   });
 
   const hasError = useMemo(() => rows.some((r) => r.status === "error"), [rows]);
@@ -36,7 +36,6 @@ export default function ImportPage({ embedInShell = false }: { embedInShell?: bo
     accept: source === "excel" ? ".xlsx" : ".pdf",
     isPending: parseExcel.isPending || parsePdf.isPending,
     prepareFile: "base64",
-    onError: (m) => toast.error(m),
     run: async (base64, file): Promise<void> => {
       setFileName(file.name);
       const parsed =

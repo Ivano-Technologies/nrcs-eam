@@ -28,7 +28,7 @@ import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "../../../server/routers";
 import { usePermissions } from "@/_core/hooks/usePermissions";
 import { toast } from "sonner";
-import { toFriendlyMessage } from "@/lib/friendlyError";
+import { toastError } from "@/lib/friendlyError";
 import {
   ArrowDownToLine,
   Loader2,
@@ -240,7 +240,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
       void catalogueQuery.refetch();
       refetchOverview();
     },
-    onError: (e) => toast.error(toFriendlyMessage(e)),
+    onError: (e) => toastError(e),
   });
 
   const updateLevels = trpc.inventoryV2.stock.updateLevels.useMutation({
@@ -249,7 +249,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
       refetchOverview();
       void selectedStockByItem.refetch();
     },
-    onError: (e) => toast.error(toFriendlyMessage(e)),
+    onError: (e) => toastError(e),
   });
   const setZoneLocation = trpc.inventoryV2.stock.setZoneLocation.useMutation({
     onSuccess: () => {
@@ -257,7 +257,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
       refetchOverview();
       void selectedStockByItem.refetch();
     },
-    onError: (e) => toast.error(toFriendlyMessage(e)),
+    onError: (e) => toastError(e),
   });
   const catalogueCreate = trpc.inventoryV2.catalogue.create.useMutation({
     onSuccess: () => {
@@ -271,7 +271,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
       void catalogueQuery.refetch();
       refetchOverview();
     },
-    onError: (e) => toast.error(toFriendlyMessage(e)),
+    onError: (e) => toastError(e),
   });
   const catalogueUpdate = trpc.inventoryV2.catalogue.update.useMutation({
     onSuccess: () => {
@@ -280,7 +280,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
       void selectedItemDetail.refetch();
       refetchOverview();
     },
-    onError: (e) => toast.error(toFriendlyMessage(e)),
+    onError: (e) => toastError(e),
   });
   const openingDryRun = trpc.inventoryV2.adminData.importOpeningStockDryRun.useMutation();
   const openingConfirm = trpc.inventoryV2.adminData.importOpeningStockConfirm.useMutation();
@@ -305,7 +305,6 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
       setOpeningRows(mapped);
       toast.success(`Loaded ${mapped.length} opening stock rows.`);
     },
-    onError: (m) => toast.error(m),
   });
 
   const movementStockFile = useBulkImportFileInput({
@@ -325,7 +324,6 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
       setMovementRows(mapped);
       toast.success(`Loaded ${mapped.length} historical movement rows.`);
     },
-    onError: (m) => toast.error(m),
   });
 
   const rows = overviewQuery.data ?? [];
@@ -367,7 +365,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
       clearStockSelection();
       await overviewQuery.refetch();
     },
-    onError: (e) => toast.error(toFriendlyMessage(e, "We couldn't set the reorder level. Please try again.")),
+    onError: (e) => toastError(e, "We couldn't set the reorder level. Please try again."),
   });
   const bulkActiveMutation = trpc.inventoryV2.catalogue.bulkSetActive.useMutation({
     onSuccess: async (res, vars) => {
@@ -379,7 +377,7 @@ export default function Inventory({ embedInShell = false }: { embedInShell?: boo
       clearStockSelection();
       await overviewQuery.refetch();
     },
-    onError: (e) => toast.error(toFriendlyMessage(e, "We couldn't update the selected items. Please try again.")),
+    onError: (e) => toastError(e, "We couldn't update the selected items. Please try again."),
   });
   const stockBulkPending = bulkReorderMutation.isPending || bulkActiveMutation.isPending;
   const exportSelectedStock = () => {

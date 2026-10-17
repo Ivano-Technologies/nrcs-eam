@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { useLocation, useRoute } from "wouter";
 import { toast } from "sonner";
-import { toFriendlyMessage } from "@/lib/friendlyError";
+import { toastError } from "@/lib/friendlyError";
 import { Loader2 } from "lucide-react";
 
 export default function BinCardDetail() {
@@ -23,7 +23,7 @@ export default function BinCardDetail() {
       toast.success("Bin card closed.");
       void data.refetch();
     },
-    onError: (e) => toast.error(toFriendlyMessage(e)),
+    onError: (e) => toastError(e),
   });
   const { isMobile, showAllColumns, showAll, setShowAll } = useMobileTableColumns();
   const reopen = trpc.inventoryV2.binCards.reopen.useMutation({
@@ -32,7 +32,7 @@ export default function BinCardDetail() {
       setReason("");
       void data.refetch();
     },
-    onError: (e) => toast.error(toFriendlyMessage(e)),
+    onError: (e) => toastError(e),
   });
 
   if (!data.data) return <div className="p-4 text-sm text-muted-foreground">Loading bin card…</div>;

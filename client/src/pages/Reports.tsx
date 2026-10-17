@@ -15,7 +15,7 @@ import { usePermissions } from "@/_core/hooks/usePermissions";
 import { Download, FileBarChart, Loader2 } from "lucide-react";
 import { ExportMenu } from "@/components/ExportMenu";
 import { toast } from "sonner";
-import { toFriendlyMessage } from "@/lib/friendlyError";
+import { toastError } from "@/lib/friendlyError";
 import {
   Bar,
   BarChart,
@@ -238,7 +238,7 @@ export default function Reports() {
                   downloadBase64File(file.data, file.filename, file.mimeType);
                   toast.success("Branch summary downloaded");
                 } catch (e) {
-                  toast.error(toFriendlyMessage(e, "We couldn't download the report. Please try again."));
+                  toastError(e, "We couldn't download the report. Please try again.");
                 }
               }}
             >

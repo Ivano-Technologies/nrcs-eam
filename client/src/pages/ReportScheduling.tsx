@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/select";
 import { Plus, Edit, Trash2, Calendar, Mail, Clock, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { toFriendlyMessage } from "@/lib/friendlyError";
+import { toastError } from "@/lib/friendlyError";
 
 export default function ReportScheduling() {
   const utils = trpc.useUtils();
@@ -59,7 +59,7 @@ export default function ReportScheduling() {
       resetForm();
     },
     onError: (error) => {
-      toast.error(toFriendlyMessage(error, "We couldn't create the schedule. Please try again."));
+      toastError(error, "We couldn't create the schedule. Please try again.");
     },
   });
 
@@ -71,7 +71,7 @@ export default function ReportScheduling() {
       resetForm();
     },
     onError: (error) => {
-      toast.error(toFriendlyMessage(error, "We couldn't update the schedule. Please try again."));
+      toastError(error, "We couldn't update the schedule. Please try again.");
     },
   });
 
@@ -81,7 +81,7 @@ export default function ReportScheduling() {
       utils.scheduledReports.list.invalidate();
     },
     onError: (error) => {
-      toast.error(toFriendlyMessage(error, "We couldn't delete the schedule. Please try again."));
+      toastError(error, "We couldn't delete the schedule. Please try again.");
     },
   });
 

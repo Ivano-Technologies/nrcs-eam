@@ -16,6 +16,7 @@ import { GlassCard } from "@/components/auth/GlassCard";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { classifyError } from "@shared/friendlyError";
+import { ErrorRef } from "@/components/ErrorRef";
 import { friendlyMessage, reportError } from "@/lib/friendlyError";
 
 type RecoveryState = "checking" | "ready" | "invalid" | "success";
@@ -30,7 +31,13 @@ export default function ResetPassword() {
   const [state, setState] = useState<RecoveryState>("checking");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessageText] = useState<string | null>(null);
+  const [errorRef, setErrorRef] = useState<string | null>(null);
+  /** Local validation messages have no ref; errors from Supabase or the network do. */
+  const setErrorMessage = (text: string | null, ref: string | null = null) => {
+    setErrorMessageText(text);
+    setErrorRef(ref);
+  };
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const validationMessage = useMemo(() => {
@@ -81,11 +88,12 @@ export default function ResetPassword() {
       } catch (error) {
         if (!active) return;
         const kind = classifyError(error);
-        reportError(error, "resetPassword.init");
+        const ref = reportError(error, "resetPassword.init");
         setErrorMessage(
           kind === "network" || kind === "rateLimit"
             ? friendlyMessage(error)
-            : "This reset link is invalid or has expired. Please request a new one."
+            : "This reset link is invalid or has expired. Please request a new one.",
+          ref
         );
         setState("invalid");
       }
@@ -121,13 +129,13 @@ export default function ResetPassword() {
       setTimeout(() => setLocation("/login?reset=success"), 1400);
     } catch (error) {
       const code = (error as { code?: unknown } | null)?.code;
-      reportError(error, "resetPassword.update");
+      const ref = reportError(error, "resetPassword.update");
       if (code === "same_password") {
-        setErrorMessage("Your new password must be different from your current one.");
+        setErrorMessage("Your new password must be different from your current one.", ref);
       } else if (code === "weak_password") {
-        setErrorMessage("That password is too weak. Please choose a stronger one.");
+        setErrorMessage("That password is too weak. Please choose a stronger one.", ref);
       } else {
-        setErrorMessage(friendlyMessage(error, "We couldn't update your password. Please try again."));
+        setErrorMessage(friendlyMessage(error, "We couldn't update your password. Please try again."), ref);
       }
     } finally {
       setIsSubmitting(false);
@@ -153,6 +161,7 @@ export default function ResetPassword() {
           <Alert variant="destructive" className="mt-6 text-left">
             <AlertDescription>
               {errorMessage ?? "This link has expired or is invalid. Request a new password reset."}
+              <ErrorRef code={errorRef} />
             </AlertDescription>
           </Alert>
         )}
@@ -161,7 +170,10 @@ export default function ResetPassword() {
           <form onSubmit={onSubmit} className="mt-6 space-y-4 text-left">
             {errorMessage && (
               <Alert variant="destructive">
-                <AlertDescription>{errorMessage}</AlertDescription>
+                <AlertDescription>
+                  {errorMessage}
+                  <ErrorRef code={errorRef} />
+                </AlertDescription>
               </Alert>
             )}
 
