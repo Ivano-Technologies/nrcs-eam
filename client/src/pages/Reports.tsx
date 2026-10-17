@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { Toolbar } from "@/components/Toolbar";
-import { DateHint } from "@/lib/format";
+
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import PageHeader from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
@@ -261,12 +261,12 @@ export default function Reports() {
         filters={
           <>
           <div className="space-y-1">
-            <Label>Start date <DateHint /></Label>
-            <Input className="h-9 w-36" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            <Label>Start date</Label>
+            <DateInput className="h-9 w-36" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
           </div>
           <div className="space-y-1">
-            <Label>End date <DateHint /></Label>
-            <Input className="h-9 w-36" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+            <Label>End date</Label>
+            <DateInput className="h-9 w-36" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
           </div>
           <div className="space-y-1">
             <Label>Warehouse</Label>

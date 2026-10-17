@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -28,10 +29,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { DateHint, formatNaira } from "@/lib/format";
+import { formatDate, formatNaira } from "@/lib/format";
+import { ConfirmDeleteRecordDialog } from "@/components/compliance/ConfirmDeleteRecordDialog";
 import { KPI_VALUE_CLASS } from "@/lib/kpiTypography";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
+import { STATUS_TONE_BADGE_CLASS, STATUS_TONE_TEXT_CLASS } from "@/lib/statusTone";
 import { AlertTriangle, FileSpreadsheet, Loader2, Plus, Shield } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useSearch } from "wouter";
@@ -39,10 +42,33 @@ import { toast } from "sonner";
 
 const TYPES = ["Property", "Vehicle", "Equipment", "Liability"] as const;
 
+function renewalLabel(days: number): string {
+  if (days < 0) return `${Math.abs(days)} ${Math.abs(days) === 1 ? "day" : "days"} ago`;
+  if (days === 0) return "Today";
+  return `In ${days} ${days === 1 ? "day" : "days"}`;
+}
+
 function statusBadge(status: "active" | "expiring" | "expired") {
-  if (status === "active") return <Badge className="bg-green-100 text-green-800">Active</Badge>;
-  if (status === "expiring") return <Badge className="bg-amber-100 text-amber-800">Expiring soon</Badge>;
-  return <Badge className="bg-red-100 text-red-800">Expired</Badge>;
+  if (status === "active") return <Badge className={STATUS_TONE_BADGE_CLASS.success}>Active</Badge>;
+  if (status === "expiring") return <Badge className={STATUS_TONE_BADGE_CLASS.warning}>Expiring soon</Badge>;
+  return <Badge className={STATUS_TONE_BADGE_CLASS.danger}>Expired</Badge>;
+}
+
+/**
+ * Coco's body copy for the delete confirm: "Policy <number> for <asset> will be removed. This cannot be undone."
+ * A missing policy number or asset description drops that part. The list uses an em dash (U+2014) placeholder
+ * for a missing name; it never reaches the copy.
+ */
+export function insuranceDeleteDescription(r: { policyNumber?: string | null; assetOrProperty?: string | null }): string {
+  const number = r.policyNumber?.trim() ?? "";
+  const rawAsset = r.assetOrProperty?.trim() ?? "";
+  const asset = rawAsset === "\u2014" ? "" : rawAsset;
+  let lead: string;
+  if (number && asset) lead = `Policy ${number} for ${asset}`;
+  else if (number) lead = `Policy ${number}`;
+  else if (asset) lead = `This policy for ${asset}`;
+  else lead = "This policy";
+  return `${lead} will be removed. This cannot be undone.`;
 }
 
 /** Read ?status= (active, expiring or expired) from a useSearch() value, with or without the leading "?". */
@@ -98,8 +124,14 @@ export function InsuranceRegisterContent({ embedded = false }: { embedded?: bool
     onError: (e) => toast.error(e.message),
   });
 
+  // IVA-181 follow up: confirm before deleting a policy, the same dialog as the other register tabs (IVA-173).
+  const [pendingDelete, setPendingDelete] = useState<{ id: number; description: string } | null>(null);
   const del = trpc.insuranceRecords.delete.useMutation({
-    onSuccess: () => void utils.insuranceRecords.list.invalidate(),
+    onSuccess: () => {
+      toast.success("Policy deleted");
+      setPendingDelete(null);
+      void utils.insuranceRecords.list.invalidate();
+    },
   });
 
   const exportExcel = trpc.insuranceRecords.exportExcel.useMutation({
@@ -114,9 +146,9 @@ export function InsuranceRegisterContent({ embedded = false }: { embedded?: bool
   const content = (
       <div className={"space-y-6"}>
         {summary.expiring > 0 ? (
-          <Card className="border-amber-300 bg-amber-50 dark:bg-amber-950/30">
+          <Card className="border-warning/40 bg-warning-subtle">
             <CardContent className="flex items-center gap-3 py-4">
-              <AlertTriangle className="h-5 w-5 text-amber-600" />
+              <AlertTriangle className="h-5 w-5 text-warning-foreground" aria-hidden />
               <p className="text-sm">
                 {summary.expiring} insurance {summary.expiring === 1 ? "policy expires" : "policies expire"} within
                 30 days. Review renewals promptly.
@@ -210,7 +242,7 @@ export function InsuranceRegisterContent({ embedded = false }: { embedded?: bool
               <CardTitle className="text-sm">Expiring within 30 days</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className={cn(KPI_VALUE_CLASS, summary.expiring > 0 && "text-amber-600")}>{summary.expiring}</p>
+              <p className={cn(KPI_VALUE_CLASS, summary.expiring > 0 && STATUS_TONE_TEXT_CLASS.warning)}>{summary.expiring}</p>
             </CardContent>
           </Card>
         </div>
@@ -220,15 +252,13 @@ export function InsuranceRegisterContent({ embedded = false }: { embedded?: bool
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Asset / property</TableHead>
+                  <TableHead className="whitespace-normal">Asset / property</TableHead>
                   <TableHead>Facility</TableHead>
-                  <TableHead>Type</TableHead>
                   <TableHead>Insurer</TableHead>
                   <TableHead>Policy #</TableHead>
                   <TableHead className="text-right">Insured</TableHead>
                   <TableHead className="text-right">Premium</TableHead>
                   <TableHead>End</TableHead>
-                  <TableHead>Days</TableHead>
                   <TableHead>Status</TableHead>
                   {canManage ? <TableHead /> : null}
                 </TableRow>
@@ -236,19 +266,30 @@ export function InsuranceRegisterContent({ embedded = false }: { embedded?: bool
               <TableBody>
                 {(rows ?? []).map((r) => (
                   <TableRow key={r.id}>
-                    <TableCell>{r.assetOrProperty}</TableCell>
-                    <TableCell>{r.facilityName}</TableCell>
-                    <TableCell>{r.insuranceType}</TableCell>
-                    <TableCell>{r.insurer}</TableCell>
+                    {/* IVA-180: type under the asset and days under the end date, so the table fits its card. */}
+                    <TableCell className="min-w-[7rem] whitespace-normal">
+                      <div>{r.assetOrProperty}</div>
+                      <div className="text-xs text-muted-foreground">{r.insuranceType}</div>
+                    </TableCell>
+                    <TableCell className="min-w-[7rem] whitespace-normal">{r.facilityName}</TableCell>
+                    <TableCell className="min-w-[7rem] whitespace-normal">{r.insurer}</TableCell>
                     <TableCell>{r.policyNumber}</TableCell>
                     <TableCell className="text-right">{formatNaira(r.insuredValueNgn)}</TableCell>
                     <TableCell className="text-right">{formatNaira(r.annualPremiumNgn)}</TableCell>
-                    <TableCell>{r.policyEnd}</TableCell>
-                    <TableCell>{r.daysToRenewal}</TableCell>
+                    <TableCell>
+                      <div>{formatDate(r.policyEnd)}</div>
+                      <div className="text-xs text-muted-foreground">{renewalLabel(r.daysToRenewal)}</div>
+                    </TableCell>
                     <TableCell>{statusBadge(r.status)}</TableCell>
                     {canManage ? (
                       <TableCell>
-                        <Button size="sm" variant="ghost" onClick={() => del.mutate({ id: r.id })}>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          data-testid={`insurance-delete-${r.id}`}
+                          disabled={del.isPending}
+                          onClick={() => setPendingDelete({ id: r.id, description: insuranceDeleteDescription(r) })}
+                        >
                           Delete
                         </Button>
                       </TableCell>
@@ -312,15 +353,13 @@ export function InsuranceRegisterContent({ embedded = false }: { embedded?: bool
                 value={form.annualPremiumNgn}
                 onChange={(e) => setForm((f) => ({ ...f, annualPremiumNgn: e.target.value }))}
               />
-              <Label>Policy start <DateHint /></Label>
-              <Input
-                type="date"
+              <Label>Policy start</Label>
+              <DateInput
                 value={form.policyStart}
                 onChange={(e) => setForm((f) => ({ ...f, policyStart: e.target.value }))}
               />
-              <Label>Policy end <DateHint /></Label>
-              <Input
-                type="date"
+              <Label>Policy end</Label>
+              <DateInput
                 value={form.policyEnd}
                 onChange={(e) => setForm((f) => ({ ...f, policyEnd: e.target.value }))}
               />
@@ -360,6 +399,16 @@ export function InsuranceRegisterContent({ embedded = false }: { embedded?: bool
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <ConfirmDeleteRecordDialog
+          open={pendingDelete !== null}
+          title="Delete this policy?"
+          description={pendingDelete?.description ?? ""}
+          confirmLabel="Delete"
+          pending={del.isPending}
+          onCancel={() => setPendingDelete(null)}
+          onConfirm={() => (pendingDelete ? del.mutateAsync({ id: pendingDelete.id }) : Promise.resolve())}
+        />
       </div>
   );
 

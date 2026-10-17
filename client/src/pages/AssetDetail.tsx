@@ -25,6 +25,7 @@ import {
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -35,7 +36,7 @@ import { usePermissions } from "@/_core/hooks/usePermissions";
 import AssetDepreciation from "@/components/AssetDepreciation";
 import { AssetMaintenanceTimeline } from "@/components/AssetMaintenanceTimeline";
 import { hasTechnicalDetails } from "@/lib/assetDetail";
-import { DateHint, formatDate, formatDateTime, formatEnumLabel, formatNaira } from "@/lib/format";
+import { formatDate, formatDateTime, formatEnumLabel, formatNaira } from "@/lib/format";
 import { calculateDepreciatedValue } from "@/lib/depreciation";
 import {
   CONDITION_OPTIONS,
@@ -1255,9 +1256,8 @@ export default function AssetDetail() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Last physical check <DateHint /></Label>
-                <Input
-                  type="date"
+                <Label>Last physical check</Label>
+                <DateInput
                   value={editForm.lastPhysicalCheck}
                   onChange={(e) => setEditForm({ ...editForm, lastPhysicalCheck: e.target.value })}
                 />
@@ -1357,9 +1357,8 @@ export default function AssetDetail() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Depreciation start <DateHint /></Label>
-                <Input
-                  type="date"
+                <Label>Depreciation start</Label>
+                <DateInput
                   value={editForm.depreciationStartDate}
                   onChange={(e) =>
                     setEditForm({ ...editForm, depreciationStartDate: e.target.value })

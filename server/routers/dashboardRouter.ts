@@ -689,7 +689,7 @@ export const dashboardRouter = router({
         const scope = dashboardDataScope(ctx);
         if (scope.mode === "empty") return [allClear];
 
-        // IVA-174: compliance counts follow the user's facility (admins org-wide), so they key the cache too.
+        // IVA-174/IVA-178: compliance and insurance counts follow the user's facility (admins org-wide), so they key the cache too.
         const complianceScope = complianceCountScope(ctx.user);
         const complianceKey = complianceScope ? `c${complianceScope.siteId ?? "none"}` : "call";
         return withDashboardCache(
@@ -804,7 +804,7 @@ export const dashboardRouter = router({
                 .where(eq(goodsReceivedNotes.status, "draft"));
               return Number(rows[0]?.count ?? 0);
             }),
-            safe("insuranceExpiring", () => countInsuranceExpiringSoon()),
+            safe("insuranceExpiring", () => countInsuranceExpiringSoon(complianceScope)),
             safe("vehiclesExpiring", () => countVehiclesExpiringSoon(complianceScope)),
             safe("generatorsOverdue", () => countGeneratorsOverdue(complianceScope)),
             safe("donorReportsDueSoon", () => countDonorReportsDueSoon(complianceScope)),
@@ -933,7 +933,7 @@ export const dashboardRouter = router({
                 .where(eq(goodsReceivedNotes.status, "draft"));
               return Number(rows[0]?.count ?? 0);
             }),
-            safe("insuranceExpiring", () => countInsuranceExpiringSoon()),
+            safe("insuranceExpiring", () => countInsuranceExpiringSoon(complianceScope)),
             safe("vehiclesExpiring", () => countVehiclesExpiringSoon(complianceScope)),
             safe("generatorsOverdue", () => countGeneratorsOverdue(complianceScope)),
             safe("donorReportsDueSoon", () => countDonorReportsDueSoon(complianceScope)),

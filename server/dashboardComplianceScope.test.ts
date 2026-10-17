@@ -21,11 +21,12 @@ vi.mock("./complianceTrackingDb", async (orig) => ({
 }));
 vi.mock("./financeModulesDb", async (orig) => ({
   ...(await orig<typeof import("./financeModulesDb")>()),
-  countInsuranceExpiringSoon: vi.fn(async () => 0),
+  countInsuranceExpiringSoon: vi.fn(async () => 4),
 }));
 
 import * as cache from "./_core/cache";
 import * as complianceDb from "./complianceTrackingDb";
+import * as financeDb from "./financeModulesDb";
 import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
 
@@ -58,7 +59,13 @@ describe("complianceCountScope (IVA-174)", () => {
 });
 
 describe("dashboard attention items compliance counts (IVA-174)", () => {
-  const counts = [complianceDb.countVehiclesExpiringSoon, complianceDb.countGeneratorsOverdue, complianceDb.countDonorReportsDueSoon];
+  // IVA-178: the insurance-expiring count follows the same scope.
+  const counts = [
+    complianceDb.countVehiclesExpiringSoon,
+    complianceDb.countGeneratorsOverdue,
+    complianceDb.countDonorReportsDueSoon,
+    financeDb.countInsuranceExpiringSoon,
+  ];
   const lastKey = () => vi.mocked(cache.withDashboardCache).mock.calls.at(-1)?.[0];
 
   it.each(["Admin", "Manager"] as const)("admin user gets org-wide counts (%s view)", async (view) => {
@@ -78,5 +85,18 @@ describe("dashboard attention items compliance counts (IVA-174)", () => {
     await caller("manager", null).dashboard.attentionItems({ role: "Manager" });
     for (const c of counts) expect(c).toHaveBeenLastCalledWith({ siteId: null });
     expect(lastKey()).toContain(":cnone:");
+  });
+});
+
+describe("insurance-expiring count scope (IVA-178)", () => {
+  it("counts zero without a facility, without querying", async () => {
+    const actual = await vi.importActual<typeof import("./financeModulesDb")>("./financeModulesDb");
+    await expect(actual.countInsuranceExpiringSoon({ siteId: null })).resolves.toBe(0);
+  });
+
+  it("shows the scoped insurance count in the attention items", async () => {
+    const items = await caller("manager", 7).dashboard.attentionItems({ role: "Manager" });
+    expect(financeDb.countInsuranceExpiringSoon).toHaveBeenLastCalledWith({ siteId: 7 });
+    expect(items.map((i) => i.label).join(" ")).toMatch(/4 insurance policies expiring soon/);
   });
 });

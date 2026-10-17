@@ -5,6 +5,7 @@ import TableLoader from "@/components/ui/TableLoader";
 import PageHeader from "@/components/ui/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useMobileTableColumns, MobileColumnsToggle, mobileSecondaryCol } from "@/hooks/useMobileTableColumns";
@@ -12,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { Search, Activity } from "lucide-react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { formatActivityAction, formatActivityDetails, formatActivityResource } from "@/lib/activityLog";
-import { DATE_INPUT_HINT, formatDateTime } from "@/lib/format";
+import { formatDateTime } from "@/lib/format";
 import { EmptyState } from "@/components/ui/EmptyState";
 
 export default function ActivityLog() {
@@ -148,27 +149,22 @@ export default function ActivityLog() {
                 ))}
               </SelectContent>
             </Select>
-            <Input className="h-9 w-36"
-              type="date"
+            <DateInput className="h-9 w-36"
               aria-label="Start date"
-              aria-describedby="activity-date-hint"
               value={startDate}
               onChange={(e) => {
                 setStartDate(e.target.value);
                 setPage(1);
               }}
             />
-            <Input className="h-9 w-36"
-              type="date"
+            <DateInput className="h-9 w-36"
               aria-label="End date"
-              aria-describedby="activity-date-hint"
               value={endDate}
               onChange={(e) => {
                 setEndDate(e.target.value);
                 setPage(1);
               }}
             />
-            <span id="activity-date-hint" className="text-xs text-muted-foreground">Dates use {DATE_INPUT_HINT}.</span>
           </>
         }
         end={<MobileColumnsToggle isMobile={isMobile} showAll={showAll} onToggle={setShowAll} />}

@@ -26,12 +26,18 @@ export const DELETE_RECORD_ERROR = "Couldn't delete this record. Please try agai
 export function ConfirmDeleteRecordDialog({
   open,
   title,
+  description = "This removes the record for everyone. You can't undo this.",
+  confirmLabel = "Delete record",
   pending,
   onCancel,
   onConfirm,
 }: {
   open: boolean;
   title: string;
+  /** Body copy under the title. Defaults to the register record copy (IVA-173). */
+  description?: string;
+  /** Label on the danger button. Defaults to "Delete record". */
+  confirmLabel?: string;
   pending: boolean;
   onCancel: () => void;
   onConfirm: () => Promise<unknown>;
@@ -39,7 +45,7 @@ export function ConfirmDeleteRecordDialog({
   const inFlight = useRef(false);
   const [failed, setFailed] = useState(false);
   // Clear a previous error when the dialog reopens or targets another record.
-  const openKey = open ? title : null;
+  const openKey = open ? `${title}\n${description}` : null;
   const [lastOpenKey, setLastOpenKey] = useState(openKey);
   if (openKey !== lastOpenKey) {
     setLastOpenKey(openKey);
@@ -75,7 +81,7 @@ export function ConfirmDeleteRecordDialog({
         >
           <AlertDialogHeader>
             <AlertDialogTitle>{title}</AlertDialogTitle>
-            <AlertDialogDescription>This removes the record for everyone. You can't undo this.</AlertDialogDescription>
+            <AlertDialogDescription>{description}</AlertDialogDescription>
           </AlertDialogHeader>
           {failed ? (
             <p role="alert" data-testid="confirm-delete-error" className="text-sm font-medium text-danger dark:text-primary-on-dark">
@@ -94,7 +100,7 @@ export function ConfirmDeleteRecordDialog({
               onClick={() => void confirm()}
             >
               {pending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-              {failed ? "Try again" : "Delete record"}
+              {failed ? "Try again" : confirmLabel}
             </Button>
           </AlertDialogFooter>
         </AlertDialogPrimitive.Content>

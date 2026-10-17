@@ -1,6 +1,6 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { TableEmptyState } from "@/components/ui/EmptyState";
-import { DateHint, formatDate } from "@/lib/format";
+import { formatDate } from "@/lib/format";
 import { InsuranceRegisterContent } from "@/pages/compliance/InsuranceRegister";
 import PageHeader from "@/components/ui/PageHeader";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -34,6 +35,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { KPI_VALUE_CLASS } from "@/lib/kpiTypography";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
+import { STATUS_TONE_BADGE_CLASS, STATUS_TONE_TEXT_CLASS } from "@/lib/statusTone";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "../../../../server/routers";
 
@@ -49,12 +51,39 @@ import { ConfirmDeleteRecordDialog } from "@/components/compliance/ConfirmDelete
 import { NoDateBadge } from "@/components/compliance/NoDateBadge";
 import { parseComplianceRegisterQuery as parseQuery } from "@/lib/complianceRegisterQuery";
 
+const TAB_TRIGGER_CLASS = "flex-none shrink-0";
+/** IVA-180: text columns and multi-word headers wrap so the table fits its card at 1280; dates, codes,
+ *  money and badges stay on one line. */
+const WRAP_HEAD = "whitespace-normal";
+const WRAP_CELL = "min-w-[7rem] whitespace-normal";
+
+const ASSET_CODE_NOT_FOUND = "No asset has this code. Check the code and try again.";
+
+function AssetCodeError({ id, message }: { id: string; message: string | null }) {
+  if (!message) return null;
+  return (
+    <p id={id} role="alert" className="-mt-1 text-sm text-danger dark:text-primary-on-dark">
+      {message}
+    </p>
+  );
+}
+
+/** Asset code with its description underneath (one column instead of two, IVA-180). */
+function AssetCell({ code, description }: { code: string | null; description: string | null }) {
+  return (
+    <div className="min-w-0">
+      <div className="font-medium whitespace-nowrap">{code}</div>
+      {description ? <div className="text-xs text-muted-foreground">{description}</div> : null}
+    </div>
+  );
+}
+
 type TabKey = "vehicles" | "generators" | "buildings" | "donor" | "insurance";
 
 function docBadge(status: string) {
-  if (status === "compliant") return <Badge className="bg-green-100 text-green-800">Compliant</Badge>;
-  if (status === "expiring") return <Badge className="bg-amber-100 text-amber-800">Expiring soon</Badge>;
-  if (status === "non_compliant") return <Badge className="bg-red-100 text-red-800">Non-compliant</Badge>;
+  if (status === "compliant") return <Badge className={STATUS_TONE_BADGE_CLASS.success}>Compliant</Badge>;
+  if (status === "expiring") return <Badge className={STATUS_TONE_BADGE_CLASS.warning}>Expiring soon</Badge>;
+  if (status === "non_compliant") return <Badge className={STATUS_TONE_BADGE_CLASS.danger}>Non-compliant</Badge>;
   if (status === "no_date") return <NoDateBadge />;
   return <Badge variant="secondary">{status}</Badge>;
 }
@@ -66,16 +95,16 @@ const VEHICLE_FILTER_LABELS = {
 } as const;
 
 function generatorBadge(status: string) {
-  if (status === "serviced") return <Badge className="bg-green-100 text-green-800">Serviced</Badge>;
+  if (status === "serviced") return <Badge className={STATUS_TONE_BADGE_CLASS.success}>Serviced</Badge>;
   if (status === "no_date") return <NoDateBadge />;
-  if (status === "due_soon") return <Badge className="bg-amber-100 text-amber-800">Due soon</Badge>;
-  return <Badge className="bg-red-100 text-red-800">Overdue</Badge>;
+  if (status === "due_soon") return <Badge className={STATUS_TONE_BADGE_CLASS.warning}>Due soon</Badge>;
+  return <Badge className={STATUS_TONE_BADGE_CLASS.danger}>Overdue</Badge>;
 }
 
 function donorBadge(status: string) {
-  if (status === "submitted") return <Badge className="bg-green-100 text-green-800">Submitted</Badge>;
-  if (status === "due_soon") return <Badge className="bg-amber-100 text-amber-800">Due soon</Badge>;
-  if (status === "overdue") return <Badge className="bg-red-100 text-red-800">Overdue</Badge>;
+  if (status === "submitted") return <Badge className={STATUS_TONE_BADGE_CLASS.success}>Submitted</Badge>;
+  if (status === "due_soon") return <Badge className={STATUS_TONE_BADGE_CLASS.warning}>Due soon</Badge>;
+  if (status === "overdue") return <Badge className={STATUS_TONE_BADGE_CLASS.danger}>Overdue</Badge>;
   return <Badge variant="secondary">Pending</Badge>;
 }
 
@@ -252,6 +281,17 @@ export default function ComplianceRegister() {
     // Errors show inside the confirm dialog (IVA-173); no toast while it is open.
   });
 
+  // IVA-180: an unknown asset code is shown inline and blocks Save, instead of
+  // silently saving against the previously selected asset.
+  const [vehicleCodeError, setVehicleCodeError] = useState<string | null>(null);
+  const [genCodeError, setGenCodeError] = useState<string | null>(null);
+  useEffect(() => {
+    if (vehicleOpen) setVehicleCodeError(null);
+  }, [vehicleOpen]);
+  useEffect(() => {
+    if (genOpen) setGenCodeError(null);
+  }, [genOpen]);
+
   async function resolveAssetCode(code: string): Promise<number | null> {
     const trimmed = code.trim();
     if (!trimmed) return null;
@@ -303,7 +343,7 @@ export default function ComplianceRegister() {
             <CardTitle className="text-sm">Expiring soon</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className={cn(KPI_VALUE_CLASS, (summary?.expiringSoonCount ?? 0) > 0 && "text-amber-600")}>
+            <p className={cn(KPI_VALUE_CLASS, (summary?.expiringSoonCount ?? 0) > 0 && STATUS_TONE_TEXT_CLASS.warning)}>
               {summary?.expiringSoonCount ?? 0}
             </p>
           </CardContent>
@@ -313,7 +353,7 @@ export default function ComplianceRegister() {
             <CardTitle className="text-sm">Not compliant or overdue</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className={cn(KPI_VALUE_CLASS, (summary?.nonCompliantCount ?? 0) > 0 && "text-red-600")}>
+            <p className={cn(KPI_VALUE_CLASS, (summary?.nonCompliantCount ?? 0) > 0 && STATUS_TONE_TEXT_CLASS.danger)}>
               {summary?.nonCompliantCount ?? 0}
             </p>
           </CardContent>
@@ -321,12 +361,13 @@ export default function ComplianceRegister() {
       </div>
 
       <Tabs value={tab} onValueChange={onTabChange}>
-        <TabsList className="flex h-auto flex-wrap gap-1">
-          <TabsTrigger value="vehicles">Vehicles</TabsTrigger>
-          <TabsTrigger value="generators">Generators</TabsTrigger>
-          <TabsTrigger value="buildings">Building safety</TabsTrigger>
-          <TabsTrigger value="donor">Donor reporting</TabsTrigger>
-          <TabsTrigger value="insurance">Insurance register</TabsTrigger>
+        {/* IVA-180: one row that scrolls sideways at narrow widths instead of wrapping into overlapping labels. */}
+        <TabsList className="flex max-w-full justify-start gap-1 overflow-x-auto" data-testid="compliance-tabs">
+          <TabsTrigger value="vehicles" className={TAB_TRIGGER_CLASS}>Vehicles</TabsTrigger>
+          <TabsTrigger value="generators" className={TAB_TRIGGER_CLASS}>Generators</TabsTrigger>
+          <TabsTrigger value="buildings" className={TAB_TRIGGER_CLASS}>Building safety</TabsTrigger>
+          <TabsTrigger value="donor" className={TAB_TRIGGER_CLASS}>Donor reporting</TabsTrigger>
+          <TabsTrigger value="insurance" className={TAB_TRIGGER_CLASS}>Insurance register</TabsTrigger>
         </TabsList>
 
         <TabsContent value="vehicles" className="space-y-4">
@@ -364,14 +405,13 @@ export default function ComplianceRegister() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Asset code</TableHead>
-                    <TableHead>Description</TableHead>
+                    <TableHead>Asset</TableHead>
                     <TableHead>Branch</TableHead>
                     <TableHead>Plate</TableHead>
-                    <TableHead>Road worthiness</TableHead>
+                    <TableHead className={WRAP_HEAD}>Road worthiness</TableHead>
                     <TableHead>Insurance</TableHead>
                     <TableHead>Licence</TableHead>
-                    <TableHead>Last inspection</TableHead>
+                    <TableHead className={WRAP_HEAD}>Last inspection</TableHead>
                     <TableHead>Status</TableHead>
                     {canEdit ? <TableHead /> : null}
                   </TableRow>
@@ -379,9 +419,10 @@ export default function ComplianceRegister() {
                 <TableBody>
                   {(vehicles ?? []).map((r: VehicleRow) => (
                     <TableRow key={r.id}>
-                      <TableCell>{r.assetCode}</TableCell>
-                      <TableCell>{r.description}</TableCell>
-                      <TableCell>{r.branch}</TableCell>
+                      <TableCell className={WRAP_CELL}>
+                        <AssetCell code={r.assetCode} description={r.description} />
+                      </TableCell>
+                      <TableCell className={WRAP_CELL}>{r.branch}</TableCell>
                       <TableCell>{r.plateNumber}</TableCell>
                       <TableCell>{formatDate(r.roadWorthinessExpiry)}</TableCell>
                       <TableCell>{formatDate(r.insuranceExpiry)}</TableCell>
@@ -424,7 +465,7 @@ export default function ComplianceRegister() {
                   ))}
                   {(vehicles ?? []).length === 0 ? (
                     <TableEmptyState
-                      colSpan={9 + (canEdit ? 1 : 0)}
+                      colSpan={8 + (canEdit ? 1 : 0)}
                       icon={Truck}
                       title="No vehicle records yet"
                     />
@@ -447,14 +488,13 @@ export default function ComplianceRegister() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Asset code</TableHead>
-                    <TableHead>Description</TableHead>
+                    <TableHead>Asset</TableHead>
                     <TableHead>Branch</TableHead>
-                    <TableHead>Last service</TableHead>
-                    <TableHead>Next due</TableHead>
+                    <TableHead className={WRAP_HEAD}>Last service</TableHead>
+                    <TableHead className={WRAP_HEAD}>Next due</TableHead>
                     <TableHead>Provider</TableHead>
                     <TableHead>Hours</TableHead>
-                    <TableHead>Safety cert</TableHead>
+                    <TableHead className={WRAP_HEAD}>Safety cert</TableHead>
                     <TableHead>Status</TableHead>
                     {canEdit ? <TableHead /> : null}
                   </TableRow>
@@ -462,12 +502,13 @@ export default function ComplianceRegister() {
                 <TableBody>
                   {(generators ?? []).map((r: GeneratorRow) => (
                     <TableRow key={r.id}>
-                      <TableCell>{r.assetCode}</TableCell>
-                      <TableCell>{r.description}</TableCell>
-                      <TableCell>{r.branch}</TableCell>
+                      <TableCell className={WRAP_CELL}>
+                        <AssetCell code={r.assetCode} description={r.description} />
+                      </TableCell>
+                      <TableCell className={WRAP_CELL}>{r.branch}</TableCell>
                       <TableCell>{formatDate(r.lastServiceDate)}</TableCell>
                       <TableCell>{r.nextServiceDue ?? ""}</TableCell>
-                      <TableCell>{r.serviceProvider ?? ""}</TableCell>
+                      <TableCell className={WRAP_CELL}>{r.serviceProvider ?? ""}</TableCell>
                       <TableCell>{r.runningHoursAtService ?? ""}</TableCell>
                       <TableCell>{formatDate(r.safetyCertExpiry)}</TableCell>
                       <TableCell>{generatorBadge(r.status)}</TableCell>
@@ -487,7 +528,7 @@ export default function ComplianceRegister() {
                   ))}
                   {(generators ?? []).length === 0 ? (
                     <TableEmptyState
-                      colSpan={9 + (canEdit ? 1 : 0)}
+                      colSpan={8 + (canEdit ? 1 : 0)}
                       icon={Zap}
                       title="No generator records yet"
                     />
@@ -514,7 +555,7 @@ export default function ComplianceRegister() {
                     <TableHead>State</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Authority</TableHead>
-                    <TableHead>Certificate #</TableHead>
+                    <TableHead className={WRAP_HEAD}>Certificate #</TableHead>
                     <TableHead>Issue</TableHead>
                     <TableHead>Expiry</TableHead>
                     <TableHead>Status</TableHead>
@@ -524,10 +565,10 @@ export default function ComplianceRegister() {
                 <TableBody>
                   {(buildings ?? []).map((r: BuildingRow) => (
                     <TableRow key={r.id}>
-                      <TableCell>{r.facilityName}</TableCell>
+                      <TableCell className={WRAP_CELL}>{r.facilityName}</TableCell>
                       <TableCell>{r.state}</TableCell>
-                      <TableCell>{r.certificateType}</TableCell>
-                      <TableCell>{r.issuingAuthority}</TableCell>
+                      <TableCell className={WRAP_CELL}>{r.certificateType}</TableCell>
+                      <TableCell className={WRAP_CELL}>{r.issuingAuthority}</TableCell>
                       <TableCell>{r.certificateNumber}</TableCell>
                       <TableCell>{formatDate(r.issueDate)}</TableCell>
                       <TableCell>{formatDate(r.expiryDate)}</TableCell>
@@ -573,7 +614,7 @@ export default function ComplianceRegister() {
                   <TableRow>
                     <TableHead>Donor</TableHead>
                     <TableHead>Programme</TableHead>
-                    <TableHead>Asset / facility</TableHead>
+                    <TableHead className={WRAP_HEAD}>Asset / facility</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Due</TableHead>
                     <TableHead>Submitted</TableHead>
@@ -584,11 +625,11 @@ export default function ComplianceRegister() {
                 <TableBody>
                   {(donorRows ?? []).map((r: DonorRow) => (
                     <TableRow key={r.id}>
-                      <TableCell>{r.donorName}</TableCell>
+                      <TableCell className={WRAP_CELL}>{r.donorName}</TableCell>
                       <TableCell>{r.programmeRef}</TableCell>
-                      <TableCell>{r.assetOrFacility}</TableCell>
+                      <TableCell className={WRAP_CELL}>{r.assetOrFacility}</TableCell>
                       <TableCell>{r.reportType}</TableCell>
-                      <TableCell>{r.dueDate}</TableCell>
+                      <TableCell>{formatDate(r.dueDate)}</TableCell>
                       <TableCell>{formatDate(r.submittedDate)}</TableCell>
                       <TableCell>{donorBadge(r.status)}</TableCell>
                       {canEdit ? (
@@ -632,38 +673,44 @@ export default function ComplianceRegister() {
             <Label>Asset code</Label>
             <Input
               value={vehicleForm.assetCode}
-              onChange={(e) => setVehicleForm((f) => ({ ...f, assetCode: e.target.value }))}
+              aria-invalid={vehicleCodeError ? true : undefined}
+              aria-describedby={vehicleCodeError ? "vehicle-asset-code-error" : undefined}
+              data-testid="vehicle-asset-code"
+              onChange={(e) => {
+                setVehicleCodeError(null);
+                // A changed code must be looked up again before it can be saved.
+                setVehicleForm((f) => ({ ...f, assetCode: e.target.value, assetId: 0 }));
+              }}
               onBlur={async () => {
+                if (!vehicleForm.assetCode.trim() || vehicleForm.assetId) return;
                 const id = await resolveAssetCode(vehicleForm.assetCode);
                 if (id) setVehicleForm((f) => ({ ...f, assetId: id }));
+                else setVehicleCodeError(ASSET_CODE_NOT_FOUND);
               }}
             />
+            <AssetCodeError id="vehicle-asset-code-error" message={vehicleCodeError} />
             <Label>Plate number</Label>
             <Input
               value={vehicleForm.plateNumber}
               onChange={(e) => setVehicleForm((f) => ({ ...f, plateNumber: e.target.value }))}
             />
-            <Label>Road worthiness expiry <DateHint /></Label>
-            <Input
-              type="date"
+            <Label>Road worthiness expiry</Label>
+            <DateInput
               value={vehicleForm.roadWorthinessExpiry}
               onChange={(e) => setVehicleForm((f) => ({ ...f, roadWorthinessExpiry: e.target.value }))}
             />
-            <Label>Insurance expiry <DateHint /></Label>
-            <Input
-              type="date"
+            <Label>Insurance expiry</Label>
+            <DateInput
               value={vehicleForm.insuranceExpiry}
               onChange={(e) => setVehicleForm((f) => ({ ...f, insuranceExpiry: e.target.value }))}
             />
-            <Label>Licence expiry <DateHint /></Label>
-            <Input
-              type="date"
+            <Label>Licence expiry</Label>
+            <DateInput
               value={vehicleForm.licenceExpiry}
               onChange={(e) => setVehicleForm((f) => ({ ...f, licenceExpiry: e.target.value }))}
             />
-            <Label>Last inspection <DateHint /></Label>
-            <Input
-              type="date"
+            <Label>Last inspection</Label>
+            <DateInput
               value={vehicleForm.lastInspectionDate}
               onChange={(e) => setVehicleForm((f) => ({ ...f, lastInspectionDate: e.target.value }))}
             />
@@ -676,7 +723,7 @@ export default function ComplianceRegister() {
                 if (!assetId) {
                   const resolved = await resolveAssetCode(vehicleForm.assetCode);
                   if (!resolved) {
-                    toast.error("Asset code not found");
+                    setVehicleCodeError(ASSET_CODE_NOT_FOUND);
                     return;
                   }
                   assetId = resolved;
@@ -715,11 +762,17 @@ export default function ComplianceRegister() {
             <Label>Asset code</Label>
             <Input
               value={genForm.assetCode}
-              onChange={(e) => setGenForm((f) => ({ ...f, assetCode: e.target.value }))}
+              aria-invalid={genCodeError ? true : undefined}
+              aria-describedby={genCodeError ? "generator-asset-code-error" : undefined}
+              data-testid="generator-asset-code"
+              onChange={(e) => {
+                setGenCodeError(null);
+                setGenForm((f) => ({ ...f, assetCode: e.target.value }));
+              }}
             />
-            <Label>Next service due <DateHint /></Label>
-            <Input
-              type="date"
+            <AssetCodeError id="generator-asset-code-error" message={genCodeError} />
+            <Label>Next service due</Label>
+            <DateInput
               value={genForm.nextServiceDue}
               onChange={(e) => setGenForm((f) => ({ ...f, nextServiceDue: e.target.value }))}
             />
@@ -735,7 +788,7 @@ export default function ComplianceRegister() {
               onClick={async () => {
                 const assetId = await resolveAssetCode(genForm.assetCode);
                 if (!assetId) {
-                  toast.error("Asset code not found");
+                  setGenCodeError(ASSET_CODE_NOT_FOUND);
                   return;
                 }
                 genUpsert.mutate({
@@ -794,9 +847,8 @@ export default function ComplianceRegister() {
                 ))}
               </SelectContent>
             </Select>
-            <Label>Expiry date <DateHint /></Label>
-            <Input
-              type="date"
+            <Label>Expiry date</Label>
+            <DateInput
               value={buildingForm.expiryDate}
               onChange={(e) => setBuildingForm((f) => ({ ...f, expiryDate: e.target.value }))}
             />
@@ -866,15 +918,13 @@ export default function ComplianceRegister() {
                 ))}
               </SelectContent>
             </Select>
-            <Label>Due date <DateHint /></Label>
-            <Input
-              type="date"
+            <Label>Due date</Label>
+            <DateInput
               value={donorForm.dueDate}
               onChange={(e) => setDonorForm((f) => ({ ...f, dueDate: e.target.value }))}
             />
-            <Label>Submitted date <DateHint /></Label>
-            <Input
-              type="date"
+            <Label>Submitted date</Label>
+            <DateInput
               value={donorForm.submittedDate}
               onChange={(e) => setDonorForm((f) => ({ ...f, submittedDate: e.target.value }))}
             />

@@ -1,6 +1,6 @@
 import { trpc } from "@/lib/trpc";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { DateHint, formatDate, formatEnumLabel } from "@/lib/format";
+import { formatDate, formatEnumLabel } from "@/lib/format";
 import PageHeader from "@/components/ui/PageHeader";
 import PageLoader from "@/components/ui/PageLoader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -168,10 +169,9 @@ export default function Maintenance() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="nextDue">Next due date * <DateHint /></Label>
-                      <Input
+                      <Label htmlFor="nextDue">Next due date *</Label>
+                      <DateInput
                         id="nextDue"
-                        type="date"
                         value={formData.nextDue}
                         onChange={(e) => setFormData({ ...formData, nextDue: e.target.value })}
                         required

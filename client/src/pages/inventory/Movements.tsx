@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
-import { DATE_INPUT_HINT, formatDateTime } from "@/lib/format";
+import { formatDateTime } from "@/lib/format";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
@@ -87,9 +87,8 @@ export default function Movements({ embedInShell = false }: { embedInShell?: boo
               <SelectItem value="transfer_in">Transfer in</SelectItem>
             </SelectContent>
           </Select>
-          <Input type="date" aria-label="From date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-[180px]" />
-          <Input type="date" aria-label="To date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-[180px]" />
-          <span className="text-xs text-muted-foreground">Dates use {DATE_INPUT_HINT}</span>
+          <DateInput aria-label="From date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-[180px]" />
+          <DateInput aria-label="To date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-[180px]" />
           <Button variant="outline" className="ml-auto" onClick={exportCsv}>Export to Excel</Button>
         </CardContent>
       </Card>

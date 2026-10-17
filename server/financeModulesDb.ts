@@ -155,6 +155,19 @@ export async function recalculateAllRegisterDepreciation() {
   return { updated, skipped: Math.max(0, total - updated) };
 }
 
+/**
+ * YYYY-MM-DD for a date column. Drizzle returns a Date (mode "date"); String(date).slice(0, 10) gave
+ * "Tue Oct 27", which parsed as 2001 and made every policy "expired" (IVA-178). Local parts, because the
+ * driver builds the Date at local midnight.
+ */
+export function toIsoDate(value: Date | string | null | undefined): string {
+  if (!value) return "";
+  if (typeof value === "string") return value.slice(0, 10);
+  if (Number.isNaN(value.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`;
+}
+
 export function insuranceStatus(policyEnd: string): "active" | "expiring" | "expired" {
   const end = new Date(policyEnd);
   const now = new Date();
@@ -184,6 +197,8 @@ export type InsuranceListRow = {
 
 export async function listInsuranceRecords(filters?: {
   siteId?: number;
+  /** The policy's facility, falling back to its asset's facility (IVA-178). */
+  facilityId?: number;
   insuranceType?: string;
   status?: "active" | "expiring" | "expired";
 }): Promise<InsuranceListRow[]> {
@@ -191,6 +206,9 @@ export async function listInsuranceRecords(filters?: {
   if (!database) return [];
   const conditions: SQL[] = [];
   if (filters?.siteId) conditions.push(eq(insuranceRecords.siteId, filters.siteId));
+  if (filters?.facilityId) {
+    conditions.push(sql`coalesce(${insuranceRecords.siteId}, ${assets.siteId}) = ${filters.facilityId}`);
+  }
   if (filters?.insuranceType) conditions.push(eq(insuranceRecords.insuranceType, filters.insuranceType));
 
   const rows = await database
@@ -218,7 +236,7 @@ export async function listInsuranceRecords(filters?: {
 
   const out: InsuranceListRow[] = [];
   for (const r of rows) {
-    const policyEnd = r.policyEnd ? String(r.policyEnd).slice(0, 10) : "";
+    const policyEnd = toIsoDate(r.policyEnd);
     const status = insuranceStatus(policyEnd);
     if (filters?.status && status !== filters.status) continue;
     const end = new Date(policyEnd);
@@ -234,7 +252,7 @@ export async function listInsuranceRecords(filters?: {
       policyNumber: r.policyNumber,
       insuredValueNgn: num(r.insuredValueNgn),
       annualPremiumNgn: num(r.annualPremiumNgn),
-      policyStart: r.policyStart ? String(r.policyStart).slice(0, 10) : "",
+      policyStart: toIsoDate(r.policyStart),
       policyEnd,
       daysToRenewal,
       status,
@@ -244,8 +262,14 @@ export async function listInsuranceRecords(filters?: {
   return out;
 }
 
-export async function countInsuranceExpiringSoon(): Promise<number> {
-  const rows = await listInsuranceRecords({ status: "expiring" });
+/**
+ * IVA-178 (matching IVA-174): admins count org-wide (scope undefined); everyone else counts their facility,
+ * and no facility counts zero. A policy belongs to its own facility, or to its asset's facility when it was
+ * taken out against an asset without one.
+ */
+export async function countInsuranceExpiringSoon(scope?: { siteId: number | null }): Promise<number> {
+  if (scope && scope.siteId == null) return 0;
+  const rows = await listInsuranceRecords({ status: "expiring", facilityId: scope?.siteId ?? undefined });
   return rows.length;
 }
 

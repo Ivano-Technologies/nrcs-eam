@@ -1,6 +1,6 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { EmptyState, TableEmptyState } from "@/components/ui/EmptyState";
-import { DateHint, formatDateRange } from "@/lib/format";
+import { formatDateRange } from "@/lib/format";
 import PageHeader from "@/components/ui/PageHeader";
 import { ViewToggle } from "@/components/ViewToggle";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import {
   Table,
@@ -286,12 +287,12 @@ export default function VerificationCampaigns() {
               <Input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} />
             </div>
             <div className="space-y-1">
-              <Label>Starts <DateHint /></Label>
-              <Input type="date" value={form.startsAt} onChange={(e) => setForm((p) => ({ ...p, startsAt: e.target.value }))} />
+              <Label>Starts</Label>
+              <DateInput value={form.startsAt} onChange={(e) => setForm((p) => ({ ...p, startsAt: e.target.value }))} />
             </div>
             <div className="space-y-1">
-              <Label>Ends <DateHint /></Label>
-              <Input type="date" value={form.endsAt} onChange={(e) => setForm((p) => ({ ...p, endsAt: e.target.value }))} />
+              <Label>Ends</Label>
+              <DateInput value={form.endsAt} onChange={(e) => setForm((p) => ({ ...p, endsAt: e.target.value }))} />
             </div>
           </div>
           <DialogFooter>

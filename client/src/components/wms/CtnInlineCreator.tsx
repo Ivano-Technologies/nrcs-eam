@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
-import { DateHint } from "@/lib/format";
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
@@ -108,12 +109,12 @@ export function CtnInlineCreator({
             </Select>
           </div>
           <div className="space-y-1">
-            <Label htmlFor="ctn-inline-received-date">Received date <DateHint /></Label>
-            <Input id="ctn-inline-received-date" type="date" value={receivedDate} onChange={(e) => setReceivedDate(e.target.value)} />
+            <Label htmlFor="ctn-inline-received-date">Received date</Label>
+            <DateInput id="ctn-inline-received-date" value={receivedDate} onChange={(e) => setReceivedDate(e.target.value)} />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="ctn-inline-expiry-date">Expiry date <DateHint /></Label>
-            <Input id="ctn-inline-expiry-date" type="date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} />
+            <Label htmlFor="ctn-inline-expiry-date">Expiry date</Label>
+            <DateInput id="ctn-inline-expiry-date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} />
           </div>
           <div className="space-y-1">
             <Label htmlFor="ctn-inline-unit">Unit</Label>

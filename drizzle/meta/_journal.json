@@ -428,6 +428,13 @@
       "when": 1780700000000,
       "tag": "0061_fleet_positions_driver_flag",
       "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1780800000000,
+      "tag": "0062_function_search_paths",
+      "breakpoints": true
     }
   ]
 }

@@ -2,11 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import { Upload } from "lucide-react";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { InventoryShellActions } from "@/components/inventory/InventoryShell";
-import { DATE_INPUT_HINT, formatDate } from "@/lib/format";
+import { formatDate } from "@/lib/format";
 import { HtmlTableEmptyState } from "@/components/ui/EmptyState";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -20,6 +21,7 @@ import { Toolbar, ToolbarMore, ToolbarSearch } from "@/components/Toolbar";
 import { useMobileTableColumns, MobileColumnsToggle, mobileSecondaryCol } from "@/hooks/useMobileTableColumns";
 import { cn } from "@/lib/utils";
 import { useLocation, useSearch } from "wouter";
+import { RECEIPT_STATUS_FILTERS, statusFilterFromSearch } from "@/lib/statusFilterParam";
 import { downloadBase64File } from "@/lib/download";
 import { appPath } from "@/lib/routes";
 import { Loader2 } from "lucide-react";
@@ -44,12 +46,12 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
     { catalogueId: "", ctnId: "", quantity: "", batchNumber: "", expiryDate: "", notes: "" },
   ]);
 
+  // ?status= drives the filter; a missing or unknown value resets it to All. Keyed on the parsed value so
+  // other query params (e.g. view) don't reset a filter the user picked.
+  const urlStatus = statusFilterFromSearch(urlSearch, RECEIPT_STATUS_FILTERS);
   useEffect(() => {
-    const st = new URLSearchParams(urlSearch).get("status");
-    if (st === "all" || st === "draft" || st === "pending_approval" || st === "finalized" || st === "claim_raised") {
-      setStatus(st);
-    }
-  }, [urlSearch]);
+    setStatus(urlStatus);
+  }, [urlStatus]);
 
   const { data: warehouses } = trpc.sites.list.useQuery();
   const wh = useMemo(() => (warehouses ?? []).filter((x) => x.facilityType === "warehouse"), [warehouses]);
@@ -111,9 +113,8 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
               value={receivedFrom}
               onChange={(e) => setReceivedFrom(e.target.value)}
             />
-            <Input className="h-9 w-36" type="date" aria-label="From date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-            <Input className="h-9 w-36" type="date" aria-label="To date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
-            <span className="text-xs text-muted-foreground">Dates use {DATE_INPUT_HINT}</span>
+            <DateInput className="h-9 w-36" aria-label="From date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+            <DateInput className="h-9 w-36" aria-label="To date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
             <Select value={status} onValueChange={(v) => setStatus(v as typeof status)}>
               <SelectTrigger className="h-9 w-36"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -311,8 +312,7 @@ export default function Receipts({ embedInShell = false }: { embedInShell?: bool
                     value={line.batchNumber}
                     onChange={(e) => setLines((prev) => prev.map((x, i) => (i === idx ? { ...x, batchNumber: e.target.value } : x)))}
                   /></div>
-                  <div className="space-y-1"><Label className="text-xs text-muted-foreground">Expiry date</Label><Input
-                    type="date"
+                  <div className="space-y-1"><Label className="text-xs text-muted-foreground">Expiry date</Label><DateInput
                     aria-label="Expiry date"
                     value={line.expiryDate}
                     onChange={(e) => setLines((prev) => prev.map((x, i) => (i === idx ? { ...x, expiryDate: e.target.value } : x)))}

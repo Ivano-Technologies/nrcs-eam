@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { DateHint, formatDate, formatEnumLabel } from "@/lib/format";
+import { formatDate, formatEnumLabel } from "@/lib/format";
 import { InventoryShell, InventoryShellActions } from "@/components/inventory/InventoryShell";
 import { Toolbar, ToolbarSearch } from "@/components/Toolbar";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -146,18 +147,16 @@ export default function CtnRegistryPage() {
               </Select>
               <div className="flex flex-wrap items-end gap-2">
                 <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Expiry from <DateHint /></Label>
-                  <Input
-                    type="date"
+                  <Label className="text-xs text-muted-foreground">Expiry from</Label>
+                  <DateInput
                     className="h-9 w-[160px]"
                     value={expiryFrom}
                     onChange={(e) => setExpiryFrom(e.target.value)}
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Expiry to <DateHint /></Label>
-                  <Input
-                    type="date"
+                  <Label className="text-xs text-muted-foreground">Expiry to</Label>
+                  <DateInput
                     className="h-9 w-[160px]"
                     value={expiryTo}
                     onChange={(e) => setExpiryTo(e.target.value)}
@@ -312,19 +311,17 @@ export default function CtnRegistryPage() {
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
-                  <Label htmlFor="ctn-rec">Received date <DateHint /></Label>
-                  <Input
+                  <Label htmlFor="ctn-rec">Received date</Label>
+                  <DateInput
                     id="ctn-rec"
-                    type="date"
                     value={form.receivedDate}
                     onChange={(e) => setForm((f) => ({ ...f, receivedDate: e.target.value }))}
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="ctn-exp">Expiry date <DateHint /></Label>
-                  <Input
+                  <Label htmlFor="ctn-exp">Expiry date</Label>
+                  <DateInput
                     id="ctn-exp"
-                    type="date"
                     value={form.expiryDate}
                     onChange={(e) => setForm((f) => ({ ...f, expiryDate: e.target.value }))}
                   />

@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { DateHint, formatDateTime, formatEmpty } from "@/lib/format";
+import { formatDateTime, formatEmpty } from "@/lib/format";
 import { useLocation, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -326,8 +327,8 @@ export default function ReceiptDetail() {
                 <Input id="grn-received-from" value={form.receivedFrom} onChange={(e) => { setForm((p) => ({ ...p, receivedFrom: e.target.value })); setDirty(true); }} />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="grn-date-of-arrival">Date of arrival <DateHint /></Label>
-                <Input id="grn-date-of-arrival" type="date" value={form.dateOfArrival} onChange={(e) => { setForm((p) => ({ ...p, dateOfArrival: e.target.value })); setDirty(true); }} />
+                <Label htmlFor="grn-date-of-arrival">Date of arrival</Label>
+                <DateInput id="grn-date-of-arrival" value={form.dateOfArrival} onChange={(e) => { setForm((p) => ({ ...p, dateOfArrival: e.target.value })); setDirty(true); }} />
               </div>
               <div className="space-y-1">
                 <Label>Means of transport</Label>

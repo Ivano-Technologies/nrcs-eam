@@ -5,6 +5,7 @@ import { EmptyState, HtmlTableEmptyState } from "@/components/ui/EmptyState";
 import { formatEnumLabel } from "@/lib/format";
 import { requisitionPriorityBadgeClass } from "@/lib/requisitionPriority";
 import { useLocation, useSearch } from "wouter";
+import { REQUISITION_STATUS_FILTERS, statusFilterFromSearch } from "@/lib/statusFilterParam";
 import { trpc } from "@/lib/trpc";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
 import PageHeader from "@/components/ui/PageHeader";
@@ -44,12 +45,14 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
   const [affectedPopulation, setAffectedPopulation] = useState("");
   const [lines, setLines] = useState<ReqLine[]>([{ catalogueId: "", quantity: "", urgency: "routine", notes: "" }]);
 
+  // ?status= drives the filter; a missing or unknown value resets it to All (keyed on the parsed value).
+  const urlStatus = statusFilterFromSearch(urlSearch, REQUISITION_STATUS_FILTERS);
+  useEffect(() => {
+    setStatus(urlStatus);
+  }, [urlStatus]);
+
   useEffect(() => {
     const qs = new URLSearchParams(urlSearch);
-    const st = qs.get("status");
-    if (st && ["all", "submitted", "approved", "rejected", "fulfilled", "draft"].includes(st)) {
-      setStatus(st);
-    }
     if (qs.get("new") === "1") {
       setOpen(true);
       qs.delete("new");
@@ -146,7 +149,7 @@ export default function Requisitions({ embedInShell = false }: { embedInShell?: 
               <SelectTrigger className="h-9 w-36"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All statuses</SelectItem>
-                {["draft", "submitted", "branch_approved", "hq_approved", "fulfilled", "rejected", "cancelled"].map((s) => (
+                {REQUISITION_STATUS_FILTERS.filter((s) => s !== "all").map((s) => (
                   <SelectItem key={s} value={s}>{formatEnumLabel(s)}</SelectItem>
                 ))}
               </SelectContent>

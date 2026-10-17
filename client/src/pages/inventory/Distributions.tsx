@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Toolbar } from "@/components/Toolbar";
 import { InventoryShellActions } from "@/components/inventory/InventoryShell";
-import { DateHint, formatEmpty } from "@/lib/format";
+import { formatEmpty } from "@/lib/format";
 import { trpc } from "@/lib/trpc";
 import { InventorySecondaryNav } from "@/components/inventory/InventorySecondaryNav";
 import PageHeader from "@/components/ui/PageHeader";
@@ -9,6 +9,7 @@ import { HandHeart as HandHeartIcon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -154,8 +155,8 @@ export default function Distributions({ embedInShell = false }: { embedInShell?:
               <SelectTrigger><SelectValue placeholder="Select dispatched waybill" /></SelectTrigger>
               <SelectContent>{(waybills.data ?? []).map((w) => <SelectItem key={w.id} value={String(w.id)}>{w.wbNumber}</SelectItem>)}</SelectContent>
             </Select>
-            <Label>Distribution date <DateHint /></Label>
-            <Input type="date" value={distributionDate} onChange={(e) => setDistributionDate(e.target.value)} />
+            <Label>Distribution date</Label>
+            <DateInput value={distributionDate} onChange={(e) => setDistributionDate(e.target.value)} />
             <Label>Location</Label>
             <Input value={location} onChange={(e) => setLocation(e.target.value)} />
             <Label>Location type</Label>

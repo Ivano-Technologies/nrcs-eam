@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useState, type ComponentProps } fr
 import { useFullBleed } from "@/lib/fullBleed";
 import { formatEmpty } from "@/lib/format";
 import { Link, useLocation, useSearch } from "wouter";
+import { FACILITY_STATUS_FILTERS, statusFilterFromSearch } from "@/lib/statusFilterParam";
 import type { FacilitiesSegment } from "@/lib/facilityRoutes";
 import {
   FACILITIES_VIEW_NAME,
@@ -339,12 +340,12 @@ export function FacilitiesPage({ segment, autoOpenCreate }: FacilitiesPageProps)
 
   const qrOrigin = typeof window !== "undefined" ? window.location.origin : "";
 
+  // ?status= drives the filter; a missing or unknown value resets it to All. Keyed on the parsed value so
+  // other query params (e.g. view) don't reset a filter the user picked.
+  const urlStatus = statusFilterFromSearch(urlSearch, FACILITY_STATUS_FILTERS);
   useEffect(() => {
-    const st = new URLSearchParams(urlSearch).get("status");
-    if (st === "active" || st === "inactive" || st === "all") {
-      setStatusFilter(st);
-    }
-  }, [urlSearch]);
+    setStatusFilter(urlStatus);
+  }, [urlStatus]);
 
   const filtered = useMemo(
     () =>

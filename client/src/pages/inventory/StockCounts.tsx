@@ -13,6 +13,7 @@ import { usePermissions } from "@/_core/hooks/usePermissions";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { useSearch } from "wouter";
+import { STOCK_COUNT_STATUS_FILTERS, statusFilterFromSearch } from "@/lib/statusFilterParam";
 import { Loader2 } from "lucide-react";
 
 export default function StockCounts({ embedInShell = false }: { embedInShell?: boolean } = {}) {
@@ -25,12 +26,12 @@ export default function StockCounts({ embedInShell = false }: { embedInShell?: b
   const [countType, setCountType] = useState<"full" | "cycle" | "spot_check">("cycle");
   const [countId, setCountId] = useState<number | null>(null);
 
+  // ?status= drives the filter; a missing or unknown value resets it to All. Keyed on the parsed value so
+  // other query params (e.g. view) don't reset a filter the user picked.
+  const urlStatus = statusFilterFromSearch(urlSearch, STOCK_COUNT_STATUS_FILTERS);
   useEffect(() => {
-    const st = new URLSearchParams(urlSearch).get("status");
-    if (st === "all" || st === "draft" || st === "in_progress" || st === "pending_review" || st === "approved") {
-      setStatus(st);
-    }
-  }, [urlSearch]);
+    setStatus(urlStatus);
+  }, [urlStatus]);
 
   const { data: sites } = trpc.sites.list.useQuery();
   const warehouses = useMemo(() => (sites ?? []).filter((x) => x.facilityType === "warehouse"), [sites]);

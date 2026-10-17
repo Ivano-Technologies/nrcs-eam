@@ -1,7 +1,7 @@
 import { render } from "@testing-library/react";
 import React from "react";
 import { describe, expect, it } from "vitest";
-import { DATE_INPUT_HINT, DateHint, formatDate, formatDateRange, formatDateTime, formatEmpty, formatEnumLabel } from "./format";
+import { formatDate, formatDateRange, formatDateTime, formatEmpty, formatEnumLabel } from "./format";
 
 describe("formatDate and formatDateTime (Wave B13)", () => {
   it("formats dates as day, short month, year", () => {
@@ -27,10 +27,12 @@ describe("formatDate and formatDateTime (Wave B13)", () => {
     expect(formatDateRange("2026-10-01", null)).toBe("1 Oct 2026");
   });
 
-  it("shows the DD/MM/YYYY hint", () => {
-    expect(DATE_INPUT_HINT).toBe("DD/MM/YYYY");
-    const { container } = render(<DateHint />);
-    expect(container.textContent).toBe("DD/MM/YYYY");
+  it("uses fixed month names in every locale and engine (Sep, never Sept)", () => {
+    expect(formatDate("2026-09-04")).toBe("4 Sep 2026");
+    expect(formatDate("2027-01-14")).toBe("14 Jan 2027");
+    expect(formatDateTime(new Date(2026, 8, 4, 7, 5))).toBe("4 Sep 2026, 07:05");
+    const months = Array.from({ length: 12 }, (_, m) => formatDate(new Date(2026, m, 1)).split(" ")[1]);
+    expect(months).toEqual(["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]);
   });
 });
 
