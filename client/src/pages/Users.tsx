@@ -562,7 +562,7 @@ export default function Users() {
           if (!o) setEditRow(null);
         }}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Edit user</DialogTitle>
             <DialogDescription>Email cannot be changed (Supabase). Update profile and access here.</DialogDescription>

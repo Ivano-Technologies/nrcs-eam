@@ -43,10 +43,11 @@ type BuildingRow = inferRouterOutputs<AppRouter>["complianceTracking"]["building
 type DonorRow = inferRouterOutputs<AppRouter>["complianceTracking"]["donor"]["list"][number];
 import { Building2, FileText, Loader2, Plus, ShieldCheck, Truck, Zap } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { toast } from "sonner";
 import { ConfirmDeleteRecordDialog } from "@/components/compliance/ConfirmDeleteRecordDialog";
 import { NoDateBadge } from "@/components/compliance/NoDateBadge";
+import { parseComplianceRegisterQuery as parseQuery } from "@/lib/complianceRegisterQuery";
 
 type TabKey = "vehicles" | "generators" | "buildings" | "donor" | "insurance";
 
@@ -57,6 +58,12 @@ function docBadge(status: string) {
   if (status === "no_date") return <NoDateBadge />;
   return <Badge variant="secondary">{status}</Badge>;
 }
+
+const VEHICLE_FILTER_LABELS = {
+  expiring: "expiring soon",
+  non_compliant: "non-compliant",
+  no_date: "no date",
+} as const;
 
 function generatorBadge(status: string) {
   if (status === "serviced") return <Badge className="bg-green-100 text-green-800">Serviced</Badge>;
@@ -71,20 +78,14 @@ function donorBadge(status: string) {
   return <Badge variant="secondary">Pending</Badge>;
 }
 
-function parseQuery(location: string) {
-  const q = location.includes("?") ? new URLSearchParams(location.split("?")[1]) : new URLSearchParams();
-  const tab = q.get("tab") as TabKey | null;
-  const status = q.get("status");
-  return { tab: tab ?? "vehicles", status };
-}
-
 export default function ComplianceRegister() {
   const { user } = useAuth();
   const canEdit = user?.role === "admin" || user?.role === "manager";
   // IVA-160: non-admins can only add papers for vehicles at their own facility, so hide Add without one.
   const canAddVehicle = canEdit && (user?.role === "admin" || user?.siteId != null);
-  const [location, setLocation] = useLocation();
-  const { tab: initialTab, status: urlStatus } = useMemo(() => parseQuery(location), [location]);
+  const [, setLocation] = useLocation();
+  const search = useSearch();
+  const { tab: initialTab, status: urlStatus } = useMemo(() => parseQuery(search), [search]);
   const [tab, setTab] = useState<TabKey>(initialTab);
 
   useEffect(() => {
@@ -328,6 +329,14 @@ export default function ComplianceRegister() {
         </TabsList>
 
         <TabsContent value="vehicles" className="space-y-4">
+          {vehicleStatus ? (
+            <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground" data-testid="vehicle-status-filter">
+              Showing {VEHICLE_FILTER_LABELS[vehicleStatus]} only.
+              <Button variant="link" size="sm" className="h-auto p-0" onClick={() => onTabChange("vehicles")}>
+                Show all
+              </Button>
+            </p>
+          ) : null}
           {canAddVehicle ? (
             <Button
               onClick={() => {
