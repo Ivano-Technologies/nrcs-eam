@@ -155,6 +155,19 @@ export async function recalculateAllRegisterDepreciation() {
   return { updated, skipped: Math.max(0, total - updated) };
 }
 
+/**
+ * YYYY-MM-DD for a date column. Drizzle returns a Date (mode "date"); String(date).slice(0, 10) gave
+ * "Tue Oct 27", which parsed as 2001 and made every policy "expired" (IVA-178). Local parts, because the
+ * driver builds the Date at local midnight.
+ */
+export function toIsoDate(value: Date | string | null | undefined): string {
+  if (!value) return "";
+  if (typeof value === "string") return value.slice(0, 10);
+  if (Number.isNaN(value.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`;
+}
+
 export function insuranceStatus(policyEnd: string): "active" | "expiring" | "expired" {
   const end = new Date(policyEnd);
   const now = new Date();
@@ -223,7 +236,7 @@ export async function listInsuranceRecords(filters?: {
 
   const out: InsuranceListRow[] = [];
   for (const r of rows) {
-    const policyEnd = r.policyEnd ? String(r.policyEnd).slice(0, 10) : "";
+    const policyEnd = toIsoDate(r.policyEnd);
     const status = insuranceStatus(policyEnd);
     if (filters?.status && status !== filters.status) continue;
     const end = new Date(policyEnd);
@@ -239,7 +252,7 @@ export async function listInsuranceRecords(filters?: {
       policyNumber: r.policyNumber,
       insuredValueNgn: num(r.insuredValueNgn),
       annualPremiumNgn: num(r.annualPremiumNgn),
-      policyStart: r.policyStart ? String(r.policyStart).slice(0, 10) : "",
+      policyStart: toIsoDate(r.policyStart),
       policyEnd,
       daysToRenewal,
       status,
