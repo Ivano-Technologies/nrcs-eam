@@ -53,14 +53,21 @@ function statusBadge(status: "active" | "expiring" | "expired") {
   return <Badge className={STATUS_TONE_BADGE_CLASS.danger}>Expired</Badge>;
 }
 
-/** The asset code a delete names; a facility policy falls back to its property name, then its policy number. */
-export function insuranceDeleteLabel(r: { assetCode?: string | null; assetOrProperty: string; policyNumber: string }): string {
-  const code = r.assetCode?.trim();
-  if (code) return code;
-  // The list uses an em dash (U+2014) placeholder for a missing name; never put it in the copy.
-  const name = r.assetOrProperty?.trim();
-  if (name && name !== "\u2014") return name;
-  return r.policyNumber;
+/**
+ * Coco's body copy for the delete confirm: "Policy <number> for <asset> will be removed. This cannot be undone."
+ * A missing policy number or asset description drops that part. The list uses an em dash (U+2014) placeholder
+ * for a missing name; it never reaches the copy.
+ */
+export function insuranceDeleteDescription(r: { policyNumber?: string | null; assetOrProperty?: string | null }): string {
+  const number = r.policyNumber?.trim() ?? "";
+  const rawAsset = r.assetOrProperty?.trim() ?? "";
+  const asset = rawAsset === "\u2014" ? "" : rawAsset;
+  let lead: string;
+  if (number && asset) lead = `Policy ${number} for ${asset}`;
+  else if (number) lead = `Policy ${number}`;
+  else if (asset) lead = `This policy for ${asset}`;
+  else lead = "This policy";
+  return `${lead} will be removed. This cannot be undone.`;
 }
 
 /** Read ?status= (active, expiring or expired) from a useSearch() value, with or without the leading "?". */
@@ -117,7 +124,7 @@ export function InsuranceRegisterContent({ embedded = false }: { embedded?: bool
   });
 
   // IVA-181 follow up: confirm before deleting a policy, the same dialog as the other register tabs (IVA-173).
-  const [pendingDelete, setPendingDelete] = useState<{ id: number; label: string } | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<{ id: number; description: string } | null>(null);
   const del = trpc.insuranceRecords.delete.useMutation({
     onSuccess: () => {
       toast.success("Policy deleted");
@@ -280,7 +287,7 @@ export function InsuranceRegisterContent({ embedded = false }: { embedded?: bool
                           variant="ghost"
                           data-testid={`insurance-delete-${r.id}`}
                           disabled={del.isPending}
-                          onClick={() => setPendingDelete({ id: r.id, label: insuranceDeleteLabel(r) })}
+                          onClick={() => setPendingDelete({ id: r.id, description: insuranceDeleteDescription(r) })}
                         >
                           Delete
                         </Button>
@@ -396,8 +403,8 @@ export function InsuranceRegisterContent({ embedded = false }: { embedded?: bool
 
         <ConfirmDeleteRecordDialog
           open={pendingDelete !== null}
-          title="Delete this insurance policy?"
-          description={`This removes the policy for ${pendingDelete?.label ?? ""}. You can't undo this.`}
+          title="Delete this policy?"
+          description={pendingDelete?.description ?? ""}
           confirmLabel="Delete"
           pending={del.isPending}
           onCancel={() => setPendingDelete(null)}

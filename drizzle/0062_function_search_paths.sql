@@ -6,3 +6,8 @@
 ALTER FUNCTION public.nrcs_item_category_code(text) SET search_path = public;
 --> statement-breakpoint
 ALTER FUNCTION public.enforce_facility_hierarchy() SET search_path = public;
+--> statement-breakpoint
+-- IVA-179 hardening: fleet_drivers and user_positions (created in 0061) are service-role only. The app reaches
+-- them through the server with the service role; anon and authenticated (PostgREST) get no table privileges.
+-- Idempotent: revoking privileges that are already gone is a no-op. 0061 runs first, so both tables exist.
+REVOKE ALL ON public.fleet_drivers, public.user_positions FROM anon, authenticated;

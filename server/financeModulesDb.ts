@@ -182,8 +182,6 @@ export type InsuranceListRow = {
   assetId: number | null;
   siteId: number | null;
   assetOrProperty: string;
-  /** The insured asset's code, or null for a facility (property) policy. */
-  assetCode: string | null;
   facilityName: string;
   insuranceType: string;
   insurer: string;
@@ -248,7 +246,6 @@ export async function listInsuranceRecords(filters?: {
       assetId: r.assetId,
       siteId: r.siteId,
       assetOrProperty: r.assetName ?? r.siteName ?? "—",
-      assetCode: r.assetCode ?? null,
       facilityName: r.siteName ?? "—",
       insuranceType: r.insuranceType,
       insurer: r.insurer,

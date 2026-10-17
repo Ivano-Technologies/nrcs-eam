@@ -1,6 +1,6 @@
 /**
- * Insurance register delete confirm (Chief, #151): Delete on a policy row opens the shared register confirm
- * dialog instead of deleting on one click. Cancel keeps the policy; confirming calls the delete once.
+ * Insurance register delete confirm (Chief, #151; Coco's copy): Delete on a policy row opens the shared
+ * register confirm dialog instead of deleting on one click. Cancel keeps the policy; confirming calls the delete once.
  * A failed delete shows the generic message, never the raw server error. The add policy dialog has no
  * DD/MM/YYYY hint beside its date fields (Coco); the native date input shows the format.
  */
@@ -19,12 +19,11 @@ const ROWS = [
     id: 7,
     assetId: 3,
     siteId: 1,
-    assetOrProperty: "Toyota Hilux",
-    assetCode: "NRCS-VEH-0007",
+    assetOrProperty: "Toyota Hilux 2.4 double cab",
     facilityName: "Abuja NHQ",
     insuranceType: "Vehicle",
     insurer: "Leadway",
-    policyNumber: "POL-7",
+    policyNumber: "AXA/MV/2026/00142",
     insuredValueNgn: 1000,
     annualPremiumNgn: 100,
     policyStart: "2026-01-01",
@@ -65,7 +64,7 @@ vi.mock("@/lib/trpc", () => {
 vi.mock("@/_core/hooks/useAuth", () => ({ useAuth: () => ({ user: { id: 1, role: "admin" } }) }));
 
 import { DELETE_RECORD_ERROR } from "@/components/compliance/ConfirmDeleteRecordDialog";
-import { InsuranceRegisterContent, insuranceDeleteLabel } from "../InsuranceRegister";
+import { InsuranceRegisterContent, insuranceDeleteDescription } from "../InsuranceRegister";
 
 function renderPage() {
   const loc = memoryLocation({ path: "/administration/compliance-register?tab=insurance" });
@@ -88,8 +87,8 @@ describe("Insurance register delete confirm", () => {
     renderPage();
     await userEvent.click(screen.getByTestId("insurance-delete-7"));
     const dialog = await screen.findByRole("alertdialog");
-    expect(within(dialog).getByText("Delete this insurance policy?")).toBeInTheDocument();
-    expect(within(dialog).getByText("This removes the policy for NRCS-VEH-0007. You can't undo this.")).toBeInTheDocument();
+    expect(within(dialog).getByText("Delete this policy?")).toBeInTheDocument();
+    expect(within(dialog).getByText("Policy AXA/MV/2026/00142 for Toyota Hilux 2.4 double cab will be removed. This cannot be undone.")).toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: "Cancel" })).toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: "Delete" })).toHaveClass("bg-danger");
     expect(dialog.textContent).not.toMatch(/\u2014|\u2013/);
@@ -102,7 +101,7 @@ describe("Insurance register delete confirm", () => {
     await userEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Cancel" }));
     await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
     expect(deleteSpy).not.toHaveBeenCalled();
-    expect(screen.getByText("POL-7")).toBeInTheDocument();
+    expect(screen.getByText("AXA/MV/2026/00142")).toBeInTheDocument();
   });
 
   it("confirming calls delete once for that policy and closes", async () => {
@@ -130,10 +129,12 @@ describe("Insurance register delete confirm", () => {
     expect(screen.getByTestId("insurance-delete-7")).toBeDisabled();
   });
 
-  it("names the asset code, then the property, never the em dash placeholder", () => {
-    expect(insuranceDeleteLabel({ assetCode: "A-1", assetOrProperty: "Hilux", policyNumber: "P" })).toBe("A-1");
-    expect(insuranceDeleteLabel({ assetCode: null, assetOrProperty: "Abuja NHQ", policyNumber: "P" })).toBe("Abuja NHQ");
-    expect(insuranceDeleteLabel({ assetCode: null, assetOrProperty: "\u2014", policyNumber: "POL-9" })).toBe("POL-9");
+  it("drops a missing policy number or asset description gracefully, never the em dash placeholder", () => {
+    const end = "will be removed. This cannot be undone.";
+    expect(insuranceDeleteDescription({ policyNumber: "P-1", assetOrProperty: "Hilux" })).toBe(`Policy P-1 for Hilux ${end}`);
+    expect(insuranceDeleteDescription({ policyNumber: "", assetOrProperty: "Hilux" })).toBe(`This policy for Hilux ${end}`);
+    expect(insuranceDeleteDescription({ policyNumber: "P-1", assetOrProperty: "\u2014" })).toBe(`Policy P-1 ${end}`);
+    expect(insuranceDeleteDescription({ policyNumber: null, assetOrProperty: null })).toBe(`This policy ${end}`);
   });
 
   it("the add policy dialog has no DD/MM/YYYY hint beside the dates", async () => {
